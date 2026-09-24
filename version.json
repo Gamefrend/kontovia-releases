@@ -1,12 +1,12 @@
 {
   "version": "1.2.0",
-  "released": "2026-09-24T17:01:12.749Z",
+  "released": "2026-09-24T17:03:19.331Z",
   "notes": "Diese Fassung setzt die Wünsche aus der letzten Testrunde um: umschaltbare\nDiagramme, Durchschnittswerte, Google Kalender, nicht gelistete Buchungen und\nein schneller Weg zum dunklen Erscheinungsbild.\n\n* Diagramme umschaltbar. Der Verlauf in Übersicht und Auswertungen lässt sich\n  als Säulen, Linien, aufgelaufene Summen oder Tabelle zeigen, die Aufteilung\n  nach Kategorien als Balken oder Torte. Umgeschaltet wird mit eigenen Knöpfen\n  im Kopf jeder Karte – unabhängig vom Zeitraum. Beim Überfahren zeigt ein\n  Hinweisfeld die genauen Beträge; Kontovia merkt sich die Wahl.\n* Durchschnittswerte. Ø je Monat unter den Kennzahlen, als gestrichelte\n  Linie im Verlauf, als Spalte in den Kategorietabellen, als Zeile in der\n  Monatstabelle und im PDF, dazu eine Karte mit Ø je Buchung sowie bestem und\n  schwächstem Monat. Gemittelt wird über die Monate, die schon begonnen haben.\n* Google Kalender. Kontovia legt in Ihrem Google-Konto einen eigenen\n  Kalender „Kontovia“ an und gleicht Termine in beide Richtungen ab – auch\n  Veranstaltungstermine aus Anzahlungen und auf Wunsch Fälligkeiten, jeweils\n  ohne Beträge. Einzurichten unter Einstellungen → Kalender-Abgleich oder im\n  Kalender über „Abgleich“. Zusätzlich lassen sich Termine als Kalenderdatei\n  (.ics) exportieren und importieren, etwa für Apple Kalender oder Outlook.\n* Nicht gelistete Buchungen. Eine Buchung lässt sich als „nicht gelistet“\n  kennzeichnen. Sie fehlt dann in allen Unterlagen für Finanzamt und\n  Steuerkanzlei und zählt in Übersicht und Auswertungen nur, wenn dort\n  „Nicht gelistete Buchungen einbeziehen“ angehakt ist. Daneben steht, wie viele\n  es im Zeitraum gibt.\n* Hell und dunkel mit einem Klick über den neuen Umschalter unten in der\n  Seitenleiste. Das dunkle Erscheinungsbild ist überarbeitet, auch der\n  Sperrbildschirm folgt jetzt der Wahl.\n* Aufklapplisten überdecken keine Diagramme mehr. Die Auswahllisten in\n  Kopf- und Filterleisten sind durch eigene ersetzt, die direkt unter ihrem\n  Knopf aufgehen, in der Höhe begrenzt sind und sich per Tastatur bedienen\n  lassen.\n* Finanzamt-Export rechtlich eingeordnet. Die Exporte dürfen als Arbeitshilfe\n  verwendet werden; ein KI-Hinweis ist nicht nötig, weil die Werte nach festen\n  Rechenregeln entstehen. Begründung unter Hilfe → Rechtliches. Berichte tragen\n  freiwillig einen Herkunftsvermerk.\n* Neu: Web-Fassung für iPhone, iPad und Mac – dieselbe Oberfläche im\n  Browser, als App auf dem Home-Bildschirm ablegbar.\n* Behoben: „Gesamter Bestand“ zeigte im Verlauf 600 leere Monate ab 1900; die\n  Beschriftung der Diagramme war je nach Fensterbreite verzerrt; die\n  Buchungsliste ragte bei schmalem Fenster über den Rand, sodass der\n  Bruttobetrag abgeschnitten war.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "1adfb21ead96347a5408addb9af47ed5c5500a2f2d80a614cfec0a98cc31f0f1",
-      "size": 35247
+      "sha256": "b4a7a17ba2306db2897261cd6025e01a74aef463c390ce564cba8fba0db851c8",
+      "size": 34486
     },
     {
       "path": "icons/apple-touch-icon.png",
@@ -30,8 +30,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "17051205d88d2720adca1ed26c065aabe8498f0aa5f54a3ae8f7c3e6861452bf",
-      "size": 2038
+      "sha256": "09a0a34cd6b0ed6c6be84dcae63caefa179d259f7eb0125beac5d2d23511c6bc",
+      "size": 2014
     },
     {
       "path": "lib/calc.js",
@@ -90,13 +90,13 @@
     },
     {
       "path": "lib/store.js",
-      "sha256": "869ca1c5e8a734d4bc975411152fcb5e8437b368b9281fd9df479f185ced56bc",
-      "size": 20301
+      "sha256": "977fb892f75cdd3a05d67771e1967eb12c0093e9f84055a51bd772baecd875a8",
+      "size": 19800
     },
     {
       "path": "lib/sync.js",
-      "sha256": "4ab55607905039940773d1bef690d2bf8ef78075b438187f81b0741cd42a508f",
-      "size": 6425
+      "sha256": "265bbea4b29b0188deb86143c2cedd168d45a9e386bfded22c11d72053380f59",
+      "size": 6254
     },
     {
       "path": "lib/ui.js",
@@ -110,8 +110,8 @@
     },
     {
       "path": "lib/util.js",
-      "sha256": "f3d120910983e53e94c745899ff85c78235c9ca65d5dac497a32b486ac7603f0",
-      "size": 11804
+      "sha256": "5f44eab55067783e2c6e08961e6271514e991e8f9e1407084df69d93fc2fbd8c",
+      "size": 11470
     },
     {
       "path": "manifest.webmanifest",
@@ -130,13 +130,13 @@
     },
     {
       "path": "styles.css",
-      "sha256": "693c9235e5cebc72dad6cca8a0f6ad3242fcdbb50d3c9080a554f67ed8fbd492",
-      "size": 33978
+      "sha256": "8cea5f6e4320066faf3f64cd40cb4c73e6ca0c0cac2b189c3996a92cf62f194b",
+      "size": 33304
     },
     {
       "path": "views/calendar.js",
-      "sha256": "58acb5676ab11c413e9bee8388fe18d62f2e228e45692fce364e8497faff0ec5",
-      "size": 26496
+      "sha256": "64a36889de2aa1cb85a2dd93ce9da28d188c9fe7bbfcc836b5fa9328705d0a46",
+      "size": 25950
     },
     {
       "path": "views/calendarsync.js",
@@ -175,13 +175,13 @@
     },
     {
       "path": "views/settings.js",
-      "sha256": "01647e7c05a2104588e0e1c2c774de4a151973fd7fb874315750a9f908b8e8b5",
-      "size": 22216
+      "sha256": "7f16816cc6949e37bf8854431a3e918684f6503fc37c54db5762813620014609",
+      "size": 21799
     },
     {
       "path": "views/transactions.js",
-      "sha256": "29447181b97da906123cc205fc1f470d069373d28f66c3d14117b0ebde32bd72",
-      "size": 58487
+      "sha256": "d96aa16ad33d8759f9516c9910f249fdf851b6978fcbd65c9e57f68d68543077",
+      "size": 57349
     },
     {
       "path": "web/ablage.js",
