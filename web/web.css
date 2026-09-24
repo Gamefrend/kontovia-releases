@@ -1,0 +1,108 @@
+/* =========================================================================
+   Kontovia – Ergänzungen der Web-Fassung
+   Wird nur im Browser geladen, nach styles.css. Die Windows-Fassung hat eine
+   Mindestfenstergröße von 1040 px und sieht nichts davon.
+   ========================================================================= */
+
+/* iPhone: 100vh schließt die Adressleiste mit ein, 100dvh nicht. */
+#app, .shell, .gate { height: 100vh; height: 100dvh; }
+body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+
+/* Als App auf dem Home-Bildschirm läuft die Seite unter der Statusleiste. */
+.topbar { padding-top: env(safe-area-inset-top); height: calc(56px + env(safe-area-inset-top)); }
+.brand { padding-top: calc(16px + env(safe-area-inset-top)); }
+.gate { padding-top: calc(24px + env(safe-area-inset-top)); padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+.statusbar { height: calc(26px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); }
+#toasts { bottom: calc(18px + env(safe-area-inset-bottom)); }
+
+.kv-menu { display: none; }
+.kv-nav-hg { display: none; }
+
+/* Druck (siehe druck.js): nur der eingesetzte Bericht. */
+#kv-druck { display: none; }
+@media print {
+  html, body { height: auto !important; overflow: visible !important; background: #fff !important; }
+  body > *:not(#kv-druck) { display: none !important; }
+  #kv-druck { display: block !important; }
+}
+
+/* ------------------------------------------------------------- Bedienung */
+
+/* Finger statt Maus: größere Ziele, und 16 px Schrift in Feldern – bei
+   weniger vergrößert Safari die Seite beim Antippen und bleibt dort stehen. */
+@media (pointer: coarse) {
+  input, select, textarea { font-size: 16px; }
+  .btn { padding: 9px 14px; }
+  .btn.sm { padding: 6px 10px; }
+  .nav-item { padding: 11px 12px; }
+  .kbd, .nav-item .kbd { display: none !important; }
+  .check input { width: 20px; height: 20px; }
+}
+
+/* ------------------------------------------------------ Schmale Bildschirme */
+
+@media (max-width: 820px) {
+  .shell { grid-template-columns: 1fr; position: relative; }
+
+  /* Die Seitenleiste wird zur ausklappbaren Leiste (Knopf oben links). */
+  .sidebar {
+    position: fixed; inset: 0 auto 0 0; width: min(290px, 84vw); z-index: 160;
+    transform: translateX(-102%); transition: transform .2s ease;
+    box-shadow: var(--shadow-lg);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .shell.nav-offen .sidebar { transform: none; }
+  .shell.nav-offen .kv-nav-hg { display: block; position: fixed; inset: 0; z-index: 150; background: rgba(8, 11, 15, .45); }
+  .kv-menu { display: grid; margin-left: -6px; }
+
+  .topbar {
+    height: auto; min-height: calc(52px + env(safe-area-inset-top));
+    flex-wrap: wrap; gap: 8px; padding: env(safe-area-inset-top) 12px 0;
+  }
+  .topbar h1 { font-size: 15px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar .spacer { display: none; }
+  #topActions { flex-wrap: wrap; gap: 6px; padding-bottom: 8px; width: 100%; }
+  #topActions:empty { display: none; }
+  #topActions select, #topActions input { width: auto; max-width: 100%; }
+
+  .content { padding: 14px 12px calc(40px + env(safe-area-inset-bottom)); }
+  .page-head { flex-wrap: wrap; }
+
+  .grid.c2, .grid.c3, .grid.side { grid-template-columns: 1fr; }
+  .grid.c4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .form-grid, .form-grid.c3 { grid-template-columns: 1fr; }
+  .stat .value { font-size: 21px; }
+
+  /* Breite Tabellen scrollen in sich, statt die Seite zu sprengen. */
+  .table-wrap, .table-wrap:has(> table.fixed) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.data.fixed { min-width: 680px; }
+
+  .filters { padding: 10px 12px; }
+  .filters .search { min-width: 0; max-width: none; flex: 1 1 100%; }
+  .filters input[type="search"], .filters select, .filters input[type="date"] { min-width: 0; }
+
+  /* Fenster kommen von unten, wie auf dem Telefon üblich. */
+  .modal-backdrop { padding: 0; place-items: end stretch; }
+  .modal, .modal.wide, .modal.slim {
+    width: 100%; max-height: calc(100dvh - env(safe-area-inset-top) - 12px);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  .modal-body { padding: 16px; }
+  .modal-foot { flex-wrap: wrap; border-radius: 0; padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
+  .modal-foot .btn { flex: 1 1 auto; }
+  .modal-foot .left { flex-basis: 100%; }
+
+  .statusbar { gap: 8px; overflow: hidden; white-space: nowrap; }
+  .statusbar #statCounts, .statusbar #statLock, .statusbar .sep { display: none; }
+
+  #toasts { left: 12px; right: 12px; }
+  .toast { min-width: 0; max-width: none; }
+
+  .cal-cell { min-height: 62px; padding: 3px 4px; }
+  .cal-ev { font-size: 10px; padding: 1px 3px; }
+  .cal-head { font-size: 10px; padding: 5px 2px; }
+
+  .gate { padding-left: 12px; padding-right: 12px; }
+  .gate-card { padding: 22px 18px; }
+  .preview-frame { height: 60dvh; }
+}

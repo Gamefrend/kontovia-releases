@@ -1,0 +1,454 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+<title>Rechtliche Einordnung – Kontovia</title>
+<style>body{font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;max-width:860px;margin:0 auto;padding:24px 18px 60px;color:#131a22;background:#fff}
+pre{white-space:pre-wrap;word-wrap:break-word;font:inherit}
+@media (prefers-color-scheme:dark){body{background:#0e1116;color:#e7ecf2}}</style></head>
+<body><pre># Kontovia – rechtliche Einordnung
+
+Stand: September 2026, Programmversion 1.2.0
+
+Dieses Dokument hält fest, welche Regelwerke auf Kontovia anwendbar sind, wie
+die Bewertung zustande kommt und was offen bleibt. Es ist eine technische
+Einschätzung, keine Rechtsberatung. Vor einer Auslieferung an Dritte gehört
+der Abschnitt „Vor der Weitergabe an Dritte" anwaltlich geprüft.
+
+---
+
+## Überblick
+
+| Regelwerk | Anwendbar? | Status |
+| --- | --- | --- |
+| KI-Verordnung (EU) 2024/1689 („AI Act") | **Nein** – kein KI-System | Bewertung dokumentiert, siehe unten |
+| DSGVO | Ja; ohne Cloud nur beim Nutzer, mit Firebase auch beim Anbieter, mit Google Kalender auch bei Google | Technische Maßnahmen umgesetzt, Dokumente als Vorlage beiliegend |
+| GoBD | Ja | Umgesetzt: Journal, Festschreibung, Storno, Datenträgerüberlassung |
+| Verwendung der Exporte beim Finanzamt | Ja, als Arbeitshilfe; **kein KI-Hinweis nötig** | Bewertung in Abschnitt 7 |
+| Urheberrecht Dritter | Ja | Nur Electron/Chromium/Node; Lizenztexte liegen bei |
+| Markenrecht Dritter | Ja | DATEV, ELSTER, Google, Microsoft nur beschreibend genannt |
+
+---
+
+## 1. KI-Verordnung (AI Act)
+
+**Ergebnis: Die Verordnung ist auf Kontovia nicht anwendbar. Es bestehen keine
+Pflichten, weil kein KI-System vorliegt.**
+
+### Begründung
+
+Art. 3 Nr. 1 der Verordnung (EU) 2024/1689 definiert ein KI-System über die
+Fähigkeit, aus Eingaben **abzuleiten** („to infer"), wie Ausgaben erzeugt
+werden. Erwägungsgrund 12 stellt klar, dass genau diese Ableitungsfähigkeit das
+unverzichtbare Merkmal ist, und nimmt ausdrücklich aus:
+
+&gt; Systeme, die auf ausschließlich von natürlichen Personen definierten Regeln
+&gt; beruhen, um Operationen automatisch auszuführen.
+
+Kontovia ist vollständig ein solches System:
+
+* **Keine Modelle, kein Training, keine Inferenz.** Es gibt kein neuronales
+  Netz, kein statistisches Modell, keine Gewichte, keine Trainingsdaten. Der
+  gesamte Programmumfang besteht aus handgeschriebener, deterministischer
+  Arithmetik.
+* **Jede Zuordnung ist eine vom Menschen gepflegte Tabelle.** Welche Kategorie
+  in welche EÜR-Zeile fließt, steht in den Stammdaten und wird von der Nutzerin
+  oder dem Nutzer gesetzt – nicht gelernt, nicht geraten.
+* **Gleiche Eingabe, gleiche Ausgabe, immer.** Es gibt keine Anpassung nach der
+  Inbetriebnahme im Sinne von Art. 3 Nr. 1.
+* **Keine Netzverbindung im Kern.** Ohne eingerichteten Cloud-Abgleich schickt
+  das Programm nichts irgendwohin; es gibt keinen Dienst, der Ausgaben liefern
+  könnte.
+
+Die Plausibilitätsprüfungen („mögliche Doppelerfassung", „Netto plus Steuer
+ergibt nicht den Bruttobetrag") sind fest verdrahtete Vergleiche, keine
+Erkennung. Die Konfliktlösung beim Cloud-Abgleich vergleicht Zeitstempel nach
+festen Regeln.
+
+Damit greift weder eine Verbotsnorm (Art. 5), noch die Einstufung als
+Hochrisiko-System (Art. 6 i. V. m. Anhang III), noch die Transparenzpflicht
+nach Art. 50, noch die KI-Kompetenzpflicht nach Art. 4 – letztere richtet sich
+an Anbieter und Betreiber **von KI-Systemen**.
+
+### Zeitliche Einordnung
+
+Die Verordnung ist am 1. August 2024 in Kraft getreten. Die Verbote und die
+KI-Kompetenzpflicht gelten seit 2. Februar 2025, die Regeln für Modelle mit
+allgemeinem Verwendungszweck seit 2. August 2025, der überwiegende Teil der
+übrigen Pflichten seit 2. August 2026. Alle diese Fristen sind zum heutigen
+Stand abgelaufen – für Kontovia ohne Folgen, da der Anwendungsbereich nicht
+eröffnet ist.
+
+### Was die Bewertung ändern würde
+
+Sobald eine Funktion hinzukommt, die aus Daten ableitet statt festen Regeln zu
+folgen, ist neu zu bewerten. Konkrete Beispiele:
+
+* automatisches Vorschlagen einer Kategorie anhand früherer Buchungen
+* Auslesen von Rechnungen per Texterkennung mit Modell
+* jede Anbindung an ein Sprachmodell
+
+Eine solche Funktion wäre nach heutiger Einschätzung **kein** Hochrisiko-System
+(Anhang III nennt Buchhaltung nicht), löste aber die Transparenzpflicht nach
+Art. 50 aus, sobald Menschen unmittelbar damit interagieren, sowie die
+KI-Kompetenzpflicht nach Art. 4. In diesem Fall gehört die Einordnung neu
+geprüft, bevor die Funktion ausgeliefert wird.
+
+---
+
+## 2. Datenschutz (DSGVO)
+
+Kontovia verarbeitet personenbezogene Daten – in den Kontaktdaten von Kunden
+und Lieferanten und mittelbar in jeder Buchung. Verantwortlicher im Sinne von
+Art. 4 Nr. 7 DSGVO ist der Betrieb, der das Programm einsetzt, nicht der
+Hersteller: **an den Hersteller fließen keinerlei Daten.**
+
+### Ohne Cloud-Abgleich
+
+Alles bleibt auf dem Gerät. Es gibt keine Telemetrie, keine Absturzberichte,
+keine Nutzungsstatistik, kein Benutzerkonto. Der Hauptprozess verwirft jede
+nicht-lokale Netzanfrage der Oberfläche.
+
+### Mit Cloud-Abgleich
+
+Hier ändert sich die Lage je nach gewählter Ablage erheblich.
+
+#### Variante Google Drive
+
+Übertragen wird der **bereits verschlüsselte** Tresor in einen versteckten,
+der Anwendung vorbehaltenen Bereich des Google-Drive-Kontos **der Nutzerin oder
+des Nutzers**. Der Anbieter der Anwendung hält nichts – auch nichts
+Verschlüsseltes. Google erhält Chiffretext, Dateigröße, Änderungszeitpunkt und
+die Kontoidentität.
+
+Wer Google gewerblich als Speicherort einsetzt, bindet einen
+Auftragsverarbeiter ein und braucht einen Auftragsverarbeitungsvertrag. Bei
+Google Workspace ist er Teil der Nutzungsbedingungen; bei einem privaten
+Google-Konto besteht keiner – dann ist der gewerbliche Einsatz problematisch.
+
+#### Variante Firebase (Voreinstellung)
+
+Hier liegt der verschlüsselte Tresor im Firebase-Projekt **des Anbieters der
+Anwendung**. Das ist der Preis dafür, dass Endnutzer nichts einrichten müssen,
+und es verschiebt die datenschutzrechtliche Rolle:
+
+* **Der Anbieter hält fremde Daten.** Zwar nur Chiffretext, zu dem ihm der
+  Schlüssel fehlt – aber Firebase Authentication speichert zusätzlich
+  **E-Mail-Adresse und Kontokennung im Klartext**. Das ist unzweifelhaft
+  personenbezogen.
+* Wer die Anwendung an Dritte weitergibt, wird damit **Verantwortlicher oder
+  Auftragsverarbeiter** gegenüber diesen Nutzern und braucht eine
+  Datenschutzerklärung, ein Verzeichnis von Verarbeitungstätigkeiten und –
+  je nach Konstellation – einen Auftragsverarbeitungsvertrag mit den Nutzern.
+* Mit Google selbst ist ein Auftragsverarbeitungsvertrag nötig. Google bietet
+  dafür die *Firebase Data Processing and Security Terms* an; sie werden im
+  Projekt einmalig angenommen.
+
+**Zum Speicherort.** Der Storage-Bucket sollte auf `europe-west3` (Frankfurt)
+stehen. Das erspart die Diskussion um Drittlandübermittlung und passt zu
+§ 146 Abs. 2a AO, der elektronische Bücher innerhalb der EU ohne weiteres
+zulässt. Die Wahl lässt sich nachträglich **nicht** ändern.
+
+**Ehrlich bleiben muss man bei Firebase Authentication:** Für dessen Kontodaten
+ist kein Speicherort wählbar, sie liegen in Googles globaler Infrastruktur.
+Grundlage für die Übermittlung ist das EU-US Data Privacy Framework, unter dem
+Google zertifiziert ist. Wer das vermeiden will, nimmt die Drive-Variante –
+dort entsteht beim Anbieter überhaupt kein Datenbestand.
+
+**Was in beiden Fällen gilt:** Die Buchungsinhalte selbst – Beträge, Namen von
+Kunden, Belege – sind für den Anbieter und für Google nicht lesbar. Sie sind vor
+dem Verlassen des Geräts mit AES-256-GCM verschlüsselt, und der Schlüssel wird
+aus dem Passwort abgeleitet, das den Rechner nie verlässt. Das ist eine
+technische Maßnahme nach Art. 32 DSGVO, die deutlich für die Zulässigkeit
+spricht – die genannten Verträge ersetzt sie nicht.
+
+### Programmaktualisierung
+
+Die Suche nach neuen Fassungen überträgt die IP-Adresse an den Betreiber des
+Update-Servers (derzeit GitHub). Sie läuft nur nach ausdrücklicher Zustimmung
+(Art. 6 Abs. 1 lit. a DSGVO), die beim Einrichten als offene Frage ohne
+Vorauswahl gestellt wird – eine vorangekreuzte Zustimmung wäre nach der
+Rechtsprechung des EuGH (Planet49, C-673/17) keine wirksame
+Einwilligung. Die Zustimmung wird im Tresor festgehalten, nicht an den Server
+gemeldet, und ist jederzeit unter *Einstellungen → Programmaktualisierung*
+widerrufbar. Eine von der Nutzerin oder dem Nutzer selbst über das Menü
+ausgelöste Suche ist davon unabhängig.
+
+### Google Kalender
+
+Der Kalenderabgleich ist die einzige Funktion, bei der Inhalte **unverschlüsselt**
+das Gerät verlassen – anders ließe sich ein Termin im Google-Kalender nicht
+anzeigen. Deshalb gilt:
+
+* **Nur nach ausdrücklichem Verbinden.** Vorher erklärt ein Dialog, was
+  übertragen wird; Rechtsgrundlage ist die Einwilligung bzw. – bei geschäftlicher
+  Nutzung – das berechtigte Interesse des Betriebs an einem gemeinsamen Kalender.
+* **Datensparsam.** Übertragen werden Titel, Datum, Uhrzeit, Ort und Wiederholung
+  der Termine, abschaltbar die Notiz, auf Wunsch Veranstaltungstermine und
+  Fälligkeiten **ohne Beträge**. Buchungen, Beträge, Kontakte und Belege gehen nie
+  an Google.
+* **Kleinstmöglicher Zugriff.** Angefragt wird nur `calendar.app.created`:
+  Kontovia sieht und schreibt ausschließlich den selbst angelegten Kalender
+  „Kontovia“, nicht die übrigen Kalender des Kontos.
+* **Rolle.** Der Hersteller erhält nichts; die Verbindung besteht zwischen dem
+  Gerät und dem Google-Konto der Nutzerin oder des Nutzers. Stehen Namen von
+  Kunden im Termintitel, verarbeitet Google personenbezogene Daten im Auftrag des
+  Betriebs – bei gewerblicher Nutzung gehört dazu ein Auftragsverarbeitungsvertrag,
+  wie ihn Google Workspace enthält; bei einem privaten Google-Konto fehlt er.
+* **Widerruf.** „Trennen“ zieht die Freigabe bei Google zurück und löscht auf
+  Wunsch den Kalender „Kontovia“.
+
+Für den Betreiber: Kalenderbereiche gelten bei Google als sensibel. Ohne
+Überprüfung durch Google zeigt der Anmeldedialog einen Warnhinweis, und es
+können höchstens 100 Konten verbunden werden. Außerdem muss im Google-Cloud-Projekt
+die *Google Calendar API* eingeschaltet sein.
+
+### Trennen der Cloud-Verbindung
+
+Beim Trennen wird der Zugriff bei Google widerrufen. Zusätzlich lässt sich der
+verschlüsselte Tresor samt Belegen in der Cloud löschen; die Wahl steht im
+Trennen-Dialog und ist nicht vorausgewählt, damit niemand versehentlich den
+Stand eines zweiten Geräts entfernt.
+
+### Spannungsfeld Löschung und Aufbewahrung
+
+Betroffene können nach Art. 17 Löschung verlangen. Buchungsbelege unterliegen
+zugleich der Aufbewahrungspflicht nach § 147 AO (acht Jahre für Buchungsbelege,
+zehn Jahre für Bücher und Jahresabschlüsse, seit dem Wachstumschancengesetz
+verkürzt). Die steuerliche Aufbewahrung geht vor (Art. 17 Abs. 3 lit. b DSGVO).
+Praktisch heißt das: Kontaktdaten dürfen bereinigt werden, die Buchung selbst
+nicht. Kontovia bildet das ab, indem Kontakte unabhängig von Buchungen
+gelöscht werden können.
+
+---
+
+## 3. GoBD
+
+Umgesetzt:
+
+* **Unveränderbarkeit** – jede Änderung erzeugt einen Journaleintrag; die
+  Einträge sind je Gerät über SHA-256 verkettet. Nachträgliches Verändern
+  bricht die Kette nachweisbar.
+* **Festschreibung** – abgeschlossene Zeiträume lassen sich sperren; danach
+  sind nur noch Stornierungen möglich. Die Sperre greift in beide Richtungen:
+  eine Buchung lässt sich weder aus einem festgeschriebenen Zeitraum
+  herausnehmen noch nachträglich in einen solchen hineindatieren, und auch das
+  Zahlungsdatum – bei der Ist-Besteuerung das periodenbestimmende Datum – kann
+  dort nicht mehr nachgetragen werden.
+* **Storno statt Löschung** – Original und Gegenbuchung bleiben beide erhalten.
+* **Belegsicherung** – jeder Beleg wird mit SHA-256-Prüfsumme abgelegt.
+* **Datenträgerüberlassung** – Export im Format Z3 mit beschreibender
+  `index.xml` nach dem GDPdU-Beschreibungsstandard.
+
+### Nicht gelistete Buchungen
+
+Seit Fassung 1.2.0 lässt sich eine Buchung als „nicht gelistet“ kennzeichnen.
+Sie erscheint dann in keiner Unterlage für Finanzamt, Steuerkanzlei oder
+Betriebsprüfung (EÜR, Umsatzsteuer, DATEV, Z3-Export, Buchungsjournal, Belege)
+und zählt in Übersicht und Auswertungen nur, wenn dort ausdrücklich ein
+Häkchen gesetzt wird. Gefiltert wird in den Exportfunktionen selbst, nicht nur in
+der Oberfläche.
+
+Gedacht ist das für Vorgänge, die steuerlich **nicht zum Betrieb** gehören –
+private Ausgaben, die man trotzdem im Blick behalten will, oder reine Merkposten.
+Betriebliche Einnahmen und Ausgaben müssen vollständig, richtig und zeitgerecht
+erfasst und erklärt werden (§ 146 Abs. 1 AO); das Weglassen betrieblicher
+Vorgänge wäre eine unrichtige Erklärung. Die Anwendung sagt das im Buchungsdialog
+und in der Hilfe.
+
+Das **Änderungsjournal bleibt vollständig**, auch im Z3-Export: Es verzeichnet
+Anlegen und Ändern nicht gelisteter Buchungen (mit dem Vermerk „nicht gelistet“).
+Einträge daraus zu entfernen, würde die Prüfsummenkette unterbrechen und die
+Unveränderbarkeit gerade dort in Frage stellen, wo sie nachgewiesen werden soll.
+
+Nicht vom Programm leistbar und Sache des Betriebs:
+
+* die **Verfahrensdokumentation** nach GoBD Rz. 151 ff. – eine Beschreibung
+  des eigenen Ablaufs von der Belegentstehung bis zur Archivierung. Der
+  README-Abschnitt zum Datenfluss kann als Baustein dienen, ersetzt sie nicht.
+* die tatsächliche **Aufbewahrung der Sicherungen** über die gesetzliche Frist.
+
+---
+
+## 4. Urheberrecht und Lizenzen Dritter
+
+Kontovia enthält **keinen fremden Quellcode**. Es gibt null
+Laufzeitabhängigkeiten; alle Programmteile, Formatvorlagen und Symbole sind für
+dieses Projekt geschrieben beziehungsweise gezeichnet worden.
+
+Mitgeliefert wird die Laufzeitumgebung:
+
+| Bestandteil | Lizenz | Pflicht |
+| --- | --- | --- |
+| Electron | MIT | Lizenztext beilegen |
+| Chromium und seine Bestandteile | BSD-3-Clause und weitere | Lizenzsammlung beilegen |
+| Node.js | MIT | im Electron-Lizenztext enthalten |
+
+Die Lizenztexte liegen dem Installationsverzeichnis als `LICENSE.electron.txt`
+und `LICENSES.chromium.html` bei und sind in der Anwendung über
+**Hilfe → Rechtliches** erreichbar. Damit ist der Namensnennungs- und
+Textbeilagepflicht genügt.
+
+**Schriftarten** werden nur über den Namen angesprochen („Segoe UI", danach die
+Systemschrift). Es wird keine Schriftdatei mitgeliefert, es entsteht also keine
+Verbreitung und keine Lizenzpflicht.
+
+---
+
+## 5. Marken Dritter
+
+Folgende Zeichen sind Marken ihrer jeweiligen Inhaber und werden ausschließlich
+beschreibend verwendet, um eine Schnittstelle oder ein Format zu benennen. Es
+besteht keine geschäftliche Verbindung, keine Empfehlung und keine
+Zertifizierung durch die Inhaber:
+
+* **DATEV** – DATEV eG. Kontovia erzeugt eine Datei im DATEV-Importformat.
+* **ELSTER** – Marke der deutschen Finanzverwaltung. Kontovia bereitet Werte
+  zur Eingabe in ELSTER auf und übermittelt selbst nichts.
+* **Google, Google Drive, Firebase** – Google LLC.
+* **Windows, Excel** – Microsoft Corporation.
+* **LibreOffice** – The Document Foundation.
+
+Diese Hinweise stehen in der Anwendung unter **Hilfe → Rechtliches**.
+
+### Kontenrahmen SKR03 / SKR04
+
+Die Standardkontenrahmen SKR03 und SKR04 stammen von der DATEV eG. Kontovia
+hinterlegt für etwa 45 Kategorien je eine Kontonummer als Vorschlag, damit der
+Export in einer Kanzlei ohne Nacharbeit einlesbar ist. Einzelne Kontonummern
+sind als solche keine schutzfähigen Werke; es handelt sich um einen kleinen,
+funktional notwendigen Auszug zur Herstellung von Kompatibilität, nicht um eine
+Übernahme des Kontenrahmens. Der vollständige Kontenrahmen wird weder
+mitgeliefert noch nachgebildet, und alle Nummern sind vom Nutzer änderbar.
+
+Wer Kontovia kommerziell vertreibt, sollte diesen Punkt dennoch anwaltlich
+absichern lassen – ein Datenbankherstellerrecht nach §§ 87a ff. UrhG an der
+Sammlung ist nicht auszuschließen.
+
+---
+
+## 6. Vor der Weitergabe an Dritte
+
+Was noch fehlt, sobald Kontovia nicht mehr nur selbst genutzt wird:
+
+1. **Impressum und Datenschutzerklärung** – Vorlage liegt als
+   `DATENSCHUTZ.md` bei, muss auf den tatsächlichen Anbieter angepasst und
+   geprüft werden.
+2. **Nutzungsbedingungen mit Haftungsbegrenzung** – besonders wichtig, weil
+   fehlerhafte Steuerangaben beim Nutzer Schaden anrichten können. Der
+   Hinweis „ersetzt keine Steuerberatung" steht bereits in der Anwendung.
+3. **Code-Signing-Zertifikat** – ohne Signatur warnt Windows SmartScreen bei
+   jeder Installation. Ein Zertifikat für Organisationen liegt bei etwa
+   200–400 € im Jahr.
+4. **Google-OAuth-Verifizierung** – nur bei der Drive-Variante nötig, weil
+   `drive.appdata` als sensibel gilt. Die Firebase-Variante kommt mit
+   `openid email profile` aus und ist nicht prüfpflichtig.
+5. **Markenrecherche** – die Websuche zu „Kontovia" blieb ohne Treffer. Eine
+   Recherche in den Registern von DPMA und EUIPO ersetzt das nicht und kostet
+   bei anwaltlicher Begleitung etwa 300 €.
+
+---
+
+## 7. Verwendung der Exporte beim Finanzamt – braucht es einen KI-Hinweis?
+
+Anlass: Eine Testerin fragte, ob sich ein „KI-generierter“ Export rechtlich
+verwenden lässt und ob er als KI-generiert gekennzeichnet werden müsste. Sie
+würde ihre Unterlagen im Zweifel lieber selbst erstellen.
+
+**Ergebnis: Die Exporte dürfen verwendet werden – als Arbeitshilfe, wie die
+Ausgaben jedes anderen Buchhaltungsprogramms. Eine Kennzeichnung als
+KI-generiert ist weder nötig noch zutreffend. Die Verantwortung für die
+Erklärung liegt, wie immer, beim Steuerpflichtigen.**
+
+### Was beim Finanzamt ankommt
+
+Kontovia übermittelt nichts. Abgegeben wird die Erklärung, die der Betrieb selbst
+in „Mein ELSTER“ ausfüllt; die Anlage EÜR ist nach § 60 Abs. 4 EStDV ohnehin
+elektronisch nach amtlichem Datensatz zu übermitteln. Die Exporte sind die
+Vorlage, aus der abgeschrieben wird, bzw. die Datei, die eine Steuerkanzlei
+einliest und prüft. Für die Richtigkeit der Erklärung steht nach §§ 90, 150 AO
+der Steuerpflichtige ein – unabhängig davon, womit sie vorbereitet wurde.
+
+### Keine Zulassung, keine bindenden Zertifikate
+
+Buchhaltungsprogramme werden in Deutschland weder zugelassen noch amtlich
+zertifiziert. Die GoBD (BMF-Schreiben vom 28.11.2019 mit späteren Änderungen)
+stellen in Rz. 181 klar, dass Zertifikate oder Testate Dritter bei der Auswahl
+helfen können, gegenüber der Finanzbehörde aber **keine Bindungswirkung**
+entfalten. Die Ordnungsmäßigkeit wird am Einzelfall beurteilt; die
+Verantwortung bleibt beim Betrieb. Ein Programm, das mit KI-Hilfe entwickelt
+wurde, steht damit nicht anders da als jedes andere.
+
+### Ist der Export „KI-generiert“?
+
+Nein. Zu unterscheiden sind zwei Dinge:
+
+1. **Wie die Zahlen entstehen.** Jeder Wert wird zur Laufzeit nach festen, im
+   Quelltext niedergelegten Rechenregeln aus den Buchungen berechnet: gleiche
+   Buchungen ergeben immer dieselben Werte (Abschnitt 1). Das ist kein
+   KI-System im Sinne von Art. 3 Nr. 1 der KI-Verordnung und damit auch kein
+   „von einem KI-System erzeugter Inhalt“.
+2. **Wie das Programm entstanden ist.** Am Quelltext von Kontovia haben
+   KI-Werkzeuge mitgeschrieben. Das macht das Programm nicht zum KI-System –
+   maßgeblich ist, wie es arbeitet, nicht womit es geschrieben wurde. Es
+   verändert auch nicht, wer für seine Richtigkeit einsteht: der Hersteller
+   gegenüber den Nutzern (Tests: `scripts/check.js`, `scripts/selftest.js`), der
+   Steuerpflichtige gegenüber dem Finanzamt.
+
+### Kennzeichnungspflichten der KI-Verordnung
+
+Art. 50 der Verordnung (EU) 2024/1689 gilt seit dem 2. August 2026; die
+Änderungsverordnung (EU) 2026/1744 („Digital Omnibus“, in Kraft seit
+27. Juli 2026) hat daran nur für die maschinenlesbare Kennzeichnung nach
+Art. 50 Abs. 2 eine Übergangsfrist bis 2. Dezember 2026 für Altsysteme
+eingeführt. Die Pflichten richten sich an **Anbieter und Betreiber von
+KI-Systemen**: Chatbots müssen sich zu erkennen geben, synthetisch erzeugte
+Inhalte maschinenlesbar markiert, Deepfakes und KI-Texte zu Angelegenheiten von
+öffentlichem Interesse offengelegt werden. Nichts davon trifft auf einen
+regelbasiert berechneten Buchhaltungsexport zu.
+
+Auch wer selbst ein KI-Werkzeug benutzt, um Steuerunterlagen vorzubereiten, muss
+das dem Finanzamt gegenüber nicht angeben: Das Steuerrecht kennt keine Pflicht,
+die Hilfsmittel einer Erklärung zu benennen. Es verlangt, dass sie richtig und
+vollständig ist.
+
+### Was Kontovia trotzdem tut – freiwillig
+
+* Jeder PDF-Bericht und das `LIESMICH.txt` des Finanzamt-Pakets tragen einen
+  **Herkunftsvermerk**: erstellt mit Kontovia (Version, Datum), berechnet nach
+  festen Rechenregeln ohne Mitwirkung künstlicher Intelligenz, Arbeitshilfe –
+  bitte prüfen. Das ist Transparenz, keine Pflicht.
+* Die Oberfläche nennt die Exporte an allen Stellen „aufbereitete Werte“ bzw.
+  „Vorschläge“ und empfiehlt, die Zuordnung einmal mit der Steuerberatung
+  abzugleichen.
+* Wer lieber selbst zusammenstellt, bekommt die Rohdaten als CSV; die Werte in
+  ELSTER trägt ohnehin der Betrieb selbst ein.
+
+### Was offen bleibt
+
+Die Einschätzung ist technisch begründet, aber keine Rechtsberatung. Vor einem
+Vertrieb an Dritte gehört sie – zusammen mit den Nutzungsbedingungen und der
+Haftungsbegrenzung aus Abschnitt 6 – anwaltlich bzw. steuerberatend geprüft.
+
+---
+
+## Prüfprotokoll
+
+| Geprüft | Ergebnis |
+| --- | --- |
+| Fremder Quellcode im Projekt | keiner gefunden; null Laufzeitabhängigkeiten |
+| Mitgelieferte Schriftarten | keine |
+| Mitgelieferte Bilddateien | nur das selbst erzeugte Programmsymbol |
+| Symbole in der Oberfläche | selbst gezeichnete SVG-Pfade |
+| Netzverbindungen ohne Cloud | keine; die Update-Prüfung läuft erst nach einer einmalig abgefragten, nicht vorausgewählten Zustimmung |
+| Trennen der Cloud-Verbindung | widerruft den Zugriff bei Google; auf Wunsch wird die Ablage in der Cloud gelöscht |
+| Hinweistexte zu Netzverbindungen | Einrichtung, Einstellungen und Hilfe nennen Cloud-Abgleich und Update-Prüfung als die einzigen, jeweils freiwilligen Verbindungen |
+| Telemetrie oder Absturzberichte | keine |
+| KI-Bestandteile | keine |
+| Lizenztexte der Laufzeitumgebung | beigelegt und in der Anwendung erreichbar |
+| Diese Datei und `DATENSCHUTZ.md` | werden mit ausgeliefert und sind über **Hilfe → Rechtliches** zu öffnen |
+| Formeln in CSV-/DATEV-Ausgaben | neutralisiert – eine Zelle, die mit `=`, `+`, `@` beginnt, wird von Excel beim Empfänger nicht als Formel ausgeführt |
+| Belege mit ausführbarer Endung | werden nicht extern geöffnet |
+| Nicht gelistete Buchungen | fehlen in EÜR, UStVA, DATEV, Z3, Journal, Belegexport und Finanzamt-Paket (in `scripts/check.js` geprüft); Änderungsjournal bleibt vollständig |
+| Google Kalender | nur nach Verbinden; Bereich `calendar.app.created`; ohne Beträge, Kontakte, Belege; Trennen widerruft |
+| Herkunftsvermerk in Berichten | vorhanden, freiwillig; kein KI-Hinweis nötig (Abschnitt 7) |
+</pre></body></html>

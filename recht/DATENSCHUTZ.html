@@ -1,0 +1,224 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+<title>Datenschutzhinweise – Kontovia</title>
+<style>body{font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;max-width:860px;margin:0 auto;padding:24px 18px 60px;color:#131a22;background:#fff}
+pre{white-space:pre-wrap;word-wrap:break-word;font:inherit}
+@media (prefers-color-scheme:dark){body{background:#0e1116;color:#e7ecf2}}</style></head>
+<body><pre># Datenschutzhinweise zu Kontovia
+
+&gt; **Vorlage.** Dieser Text beschreibt zutreffend, was das Programm technisch tut.
+&gt; Bevor Sie ihn veröffentlichen oder an Nutzer weitergeben, tragen Sie unter
+&gt; „Verantwortlicher" Ihre Angaben ein und lassen Sie ihn juristisch prüfen.
+&gt; Rechtsberatung ist das hier nicht.
+
+Stand: September 2026, Programmversion 1.2.0
+
+---
+
+## Verantwortlicher
+
+    [Name / Firma]
+    [Anschrift]
+    [E-Mail]
+
+## Kurzfassung
+
+Kontovia ist ein Programm, das auf Ihrem eigenen Rechner läuft. Es gibt keinen
+Server des Anbieters, kein Benutzerkonto und keine Auswertung Ihrer Nutzung.
+Ohne den ausdrücklich eingerichteten Cloud-Abgleich und ohne verbundenen
+Google Kalender verlässt kein einziges Byte Ihren Rechner.
+
+## Welche Daten das Programm verarbeitet
+
+Sie geben Ihre Buchhaltung ein: Beträge, Belege, Kategorien, Termine und die
+Kontaktdaten Ihrer Kunden und Lieferanten. Darunter sind personenbezogene Daten
+Dritter. Verantwortlich für diese Verarbeitung sind **Sie als Betrieb**, nicht
+der Anbieter des Programms – an ihn fließt nichts.
+
+Alle Daten liegen verschlüsselt in einer einzigen Datei unter
+`%APPDATA%\Kontovia\daten\`. Die Verschlüsselung erfolgt mit AES-256-GCM; der
+Schlüssel wird mit scrypt aus Ihrem Passwort abgeleitet und existiert nur im
+Arbeitsspeicher, solange das Programm entsperrt ist.
+
+## Was das Programm nicht tut
+
+* keine Telemetrie, keine Nutzungsstatistik, keine Absturzberichte
+* keine Werbung, kein Tracking, keine Weitergabe an Dritte
+* keine automatische Übermittlung an Finanzbehörden
+* keine künstliche Intelligenz und damit keine Verarbeitung Ihrer Daten durch
+  Modelle Dritter
+
+Der Hauptprozess verwirft jede nicht-lokale Netzanfrage der Oberfläche. Die
+einzigen Verbindungen, die das Programm überhaupt aufbauen kann, sind die unten
+genannten – der Cloud-Abgleich, der Abgleich mit Google Kalender und die Suche
+nach einer neuen Programmversion. Alle drei laufen erst, wenn Sie ihnen
+ausdrücklich zustimmen.
+
+## Cloud-Abgleich (freiwillig)
+
+Der Abgleich ist ausgeschaltet, bis Sie ihn einrichten. Übertragen wird
+ausschließlich der **bereits verschlüsselte** Tresor sowie die einzeln
+verschlüsselten Belegdateien.
+
+**Was der Betreiber der Ablage sehen kann:** Dateigröße, Änderungszeitpunkt und
+die Identität des angemeldeten Kontos. **Nicht** den Inhalt – dafür wäre Ihr
+Tresorpasswort nötig, und das verlässt Ihren Rechner nie.
+
+**Rechtsgrundlage:** Art. 6 Abs. 1 lit. b und f DSGVO (Durchführung der eigenen
+Buchhaltung, berechtigtes Interesse an einer Datensicherung).
+
+### Bei der Ablage in Firebase
+
+Empfänger ist [Anbieter eintragen] als Betreiber des Firebase-Projekts sowie
+Google Ireland Limited beziehungsweise Google LLC als Auftragsverarbeiter.
+Gespeichert werden:
+
+* der verschlüsselte Tresor und die verschlüsselten Belege im Cloud Storage
+  (Standort: [Region eintragen, empfohlen europe-west3 Frankfurt])
+* über Firebase Authentication Ihre E-Mail-Adresse und eine Kontokennung –
+  diese liegen unverschlüsselt vor und dienen allein dazu, Ihnen beim Anmelden
+  Ihren eigenen Bereich zuzuordnen
+
+Für die Kontodaten aus Firebase Authentication ist kein Speicherort wählbar;
+sie liegen in der globalen Infrastruktur von Google. Grundlage für die
+Übermittlung in die USA ist das EU-US Data Privacy Framework, unter dem Google
+zertifiziert ist.
+
+### Bei der Ablage in Google Drive
+
+Ziel ist ein versteckter, der Anwendung vorbehaltener Bereich
+(`appDataFolder`) **Ihres eigenen** Google-Drive-Kontos. Der Anbieter der
+Anwendung erhält dabei überhaupt keine Daten. Empfänger ist allein Google als
+Ihr Speicheranbieter.
+
+Kontovia fragt allein den Bereich `drive.appdata` an. Auf Ihre übrigen Dateien
+in Google Drive hat das Programm keinen Zugriff und kann ihn technisch auch
+nicht erlangen.
+
+### Für beide Varianten
+
+**Auftragsverarbeitung:** Für den gewerblichen Einsatz brauchen Sie einen
+Auftragsverarbeitungsvertrag mit Google. Bei Google Workspace und im
+Firebase-Projekt ist er verfügbar; bei einem privaten Google-Konto in der
+Drive-Variante besteht keiner – in dem Fall ist der gewerbliche Einsatz
+datenschutzrechtlich problematisch.
+
+**Widerruf:** In den Einstellungen unter „Verbindung trennen". Der Zugriff wird
+dann auch bei Google widerrufen. Im selben Dialog können Sie wählen, ob der
+verschlüsselte Tresor samt Belegen in der Cloud gelöscht werden soll.
+
+## Google Kalender (freiwillig, nur Windows-Fassung)
+
+Auf Wunsch gleicht Kontovia Ihre Termine mit Ihrem Google-Kalender ab. Das
+geschieht erst, nachdem Sie unter *Einstellungen → Kalender-Abgleich* (oder im
+Kalender über *Abgleich*) ausdrücklich verbunden und sich bei Google angemeldet
+haben.
+
+Kontovia legt dafür in Ihrem Google-Konto einen eigenen Kalender „Kontovia“ an
+und erhält nur auf diesen Kalender Zugriff (Bereich `calendar.app.created`); Ihre
+übrigen Kalender kann Kontovia weder lesen noch ändern.
+
+**Was übertragen wird – anders als beim Cloud-Abgleich unverschlüsselt**, weil
+Google die Termine sonst nicht anzeigen könnte: Titel, Datum, Uhrzeit, Ort und
+Wiederholung Ihrer Termine, sofern eingeschaltet die Notiz, auf Wunsch außerdem
+Veranstaltungstermine aus Anzahlungen und Fälligkeiten offener Rechnungen –
+jeweils **ohne Beträge**. Buchungen, Beträge, Kontakte und Belege werden nicht
+übertragen. Umgekehrt übernimmt Kontovia Termine, die Sie in Google im Kalender
+„Kontovia“ anlegen oder ändern.
+
+Stehen Namen von Kunden im Titel eines Termins, gelangen sie damit zu Google.
+Bei geschäftlicher Nutzung sollte das Google-Konto deshalb von einem
+Auftragsverarbeitungsvertrag gedeckt sein (etwa Google Workspace).
+
+**Rechtsgrundlage:** Ihre Einwilligung durch das Verbinden (Art. 6 Abs. 1 lit. a
+DSGVO) bzw. bei geschäftlicher Nutzung das berechtigte Interesse an einem
+gemeinsamen Terminkalender (Art. 6 Abs. 1 lit. f DSGVO). Der Hersteller von
+Kontovia erhält dabei keine Daten.
+
+**Widerruf:** *Trennen* zieht die Freigabe bei Google zurück; auf Wunsch wird
+der Kalender „Kontovia“ in Google gelöscht. Die Termine in Kontovia bleiben
+erhalten.
+
+Ohne Google-Konto lassen sich Termine als Kalenderdatei (.ics) exportieren und
+importieren; dabei entsteht keine Verbindung ins Netz.
+
+## Programmaktualisierung (freiwillig)
+
+Kontovia bringt die Adresse einer Versionsdatei mit. Abgefragt wird sie
+**erst nach Ihrer Zustimmung**: Beim Einrichten werden Sie einmal gefragt, ob
+das Programm nach neuen Fassungen suchen soll; die Frage ist nicht
+vorausgewählt, und wer sie offen lässt, bekommt sie beim nächsten Start
+erneut. Vorher geht nichts hinaus.
+
+**Rechtsgrundlage:** Ihre Einwilligung (Art. 6 Abs. 1 lit. a DSGVO). Sie ist
+freiwillig und lässt sich jederzeit unter *Einstellungen →
+Programmaktualisierung* widerrufen. Eine von Ihnen selbst über *Hilfe → Nach
+neuer Version suchen* ausgelöste Suche ist davon unabhängig und findet nur auf
+Ihren Klick hin statt.
+
+Haben Sie zugestimmt, ruft Kontovia die Versionsdatei beim Start und danach
+alle sechs Stunden ab, solange das Programm geöffnet ist. Liegt eine neuere
+Fassung vor, erscheint ein Hinweis; heruntergeladen und installiert wird erst
+nach einer weiteren ausdrücklichen Bestätigung.
+
+Bei jeder solchen Abfrage erfährt der Betreiber dieses Servers zwangsläufig Ihre
+IP-Adresse und den Zeitpunkt der Anfrage. Es werden keine Kennungen Ihres Geräts
+und keine Angaben aus Ihrer Buchhaltung mitgesendet. Sie können die Prüfung
+jederzeit unter *Einstellungen → Programmaktualisierung* wieder abschalten oder
+statt der mitgelieferten eine eigene Adresse eintragen.
+
+## Web-Fassung (Browser, iPhone, iPad)
+
+Kontovia gibt es zusätzlich als Web-App, die im Browser läuft und sich auf
+iPhone, iPad und Mac „zum Home-Bildschirm“ bzw. „zum Dock“ hinzufügen lässt. Für
+sie gilt alles oben Gesagte mit folgenden Abweichungen:
+
+* **Auslieferung.** Die Programmdateien kommen von einem Webserver
+  ([Betreiber eintragen, vorgesehen: GitHub Pages der GitHub, Inc.]). Beim
+  ersten Aufruf und bei einer bestätigten Aktualisierung werden sie dort
+  abgerufen; danach liegen sie auf dem Gerät und Kontovia läuft ohne Netz.
+  Unabhängig davon fragt der Browser beim Öffnen selbstständig nach, ob sich die
+  Steuerdatei `sw.js` geändert hat. Bei jedem dieser Abrufe erfährt der
+  Betreiber des Servers Ihre IP-Adresse und den Zeitpunkt; Angaben aus Ihrer
+  Buchhaltung werden nie übertragen.
+* **Speicherort.** Statt in einem Ordner liegen Tresor und Belege im Speicher
+  des Browsers (IndexedDB) – in derselben Verschlüsselung wie oben beschrieben.
+  Browser dürfen solche Daten bei Platzmangel räumen. Kontovia bittet deshalb um
+  dauerhafte Speicherung und zeigt unter *Einstellungen* an, ob der Browser sie
+  gewährt hat. Auf iPhone und iPad ist der Cloud-Abgleich oder eine regelmäßige
+  Vollsicherung dringend zu empfehlen.
+* **Anmeldung bei Google.** Für den Cloud-Abgleich zeigt die Web-Fassung einen
+  kurzen Code, den Sie auf `google.com/device` eingeben. Was dabei an Google und
+  Firebase geht, entspricht dem oben Beschriebenen.
+
+## Speicherdauer
+
+Sie bestimmen sie. Das Programm löscht von sich aus nichts. Beachten Sie die
+steuerlichen Aufbewahrungspflichten nach § 147 AO – Buchungsbelege acht Jahre,
+Bücher und Abschlüsse zehn Jahre. Ein Löschverlangen nach Art. 17 DSGVO tritt
+für diese Zeit hinter die Aufbewahrungspflicht zurück (Art. 17 Abs. 3 lit. b
+DSGVO). Praktisch: Kontaktdaten dürfen Sie bereinigen, die Buchung selbst nicht.
+
+## Rechte betroffener Personen
+
+Personen, deren Daten in Ihrer Buchhaltung stehen, haben Ihnen gegenüber die
+Rechte aus Art. 15 bis 21 DSGVO – Auskunft, Berichtigung, Löschung im Rahmen der
+gesetzlichen Grenzen, Einschränkung, Datenübertragbarkeit und Widerspruch. Für
+die Auskunft hilft der Kontakt-Export unter „Export → Rohdaten".
+
+## Technische und organisatorische Maßnahmen
+
+* Verschlüsselung im Ruhezustand: AES-256-GCM, authentifiziert
+* Schlüsselableitung: scrypt mit N = 2¹⁷, r = 8 (rund 134 MiB je Versuch)
+* automatische Sperre bei Inaktivität, im Ruhezustand und bei
+  Bildschirmsperre
+* Belegdateien einzeln verschlüsselt, Dateinamen ohne Aussagekraft
+* verkettetes Änderungsjournal zum Nachweis der Unveränderbarkeit
+* Verschlüsselung vor jeder Übertragung in die Cloud
+
+## Änderungen
+
+Diese Hinweise gelten für die oben genannte Programmversion. Neue Fassungen
+liegen der jeweiligen Version bei.
+</pre></body></html>

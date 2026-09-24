@@ -1,0 +1,287 @@
+{
+  "version": "1.2.0",
+  "released": "2026-09-24T17:01:12.749Z",
+  "notes": "Diese Fassung setzt die Wünsche aus der letzten Testrunde um: umschaltbare\nDiagramme, Durchschnittswerte, Google Kalender, nicht gelistete Buchungen und\nein schneller Weg zum dunklen Erscheinungsbild.\n\n* Diagramme umschaltbar. Der Verlauf in Übersicht und Auswertungen lässt sich\n  als Säulen, Linien, aufgelaufene Summen oder Tabelle zeigen, die Aufteilung\n  nach Kategorien als Balken oder Torte. Umgeschaltet wird mit eigenen Knöpfen\n  im Kopf jeder Karte – unabhängig vom Zeitraum. Beim Überfahren zeigt ein\n  Hinweisfeld die genauen Beträge; Kontovia merkt sich die Wahl.\n* Durchschnittswerte. Ø je Monat unter den Kennzahlen, als gestrichelte\n  Linie im Verlauf, als Spalte in den Kategorietabellen, als Zeile in der\n  Monatstabelle und im PDF, dazu eine Karte mit Ø je Buchung sowie bestem und\n  schwächstem Monat. Gemittelt wird über die Monate, die schon begonnen haben.\n* Google Kalender. Kontovia legt in Ihrem Google-Konto einen eigenen\n  Kalender „Kontovia“ an und gleicht Termine in beide Richtungen ab – auch\n  Veranstaltungstermine aus Anzahlungen und auf Wunsch Fälligkeiten, jeweils\n  ohne Beträge. Einzurichten unter Einstellungen → Kalender-Abgleich oder im\n  Kalender über „Abgleich“. Zusätzlich lassen sich Termine als Kalenderdatei\n  (.ics) exportieren und importieren, etwa für Apple Kalender oder Outlook.\n* Nicht gelistete Buchungen. Eine Buchung lässt sich als „nicht gelistet“\n  kennzeichnen. Sie fehlt dann in allen Unterlagen für Finanzamt und\n  Steuerkanzlei und zählt in Übersicht und Auswertungen nur, wenn dort\n  „Nicht gelistete Buchungen einbeziehen“ angehakt ist. Daneben steht, wie viele\n  es im Zeitraum gibt.\n* Hell und dunkel mit einem Klick über den neuen Umschalter unten in der\n  Seitenleiste. Das dunkle Erscheinungsbild ist überarbeitet, auch der\n  Sperrbildschirm folgt jetzt der Wahl.\n* Aufklapplisten überdecken keine Diagramme mehr. Die Auswahllisten in\n  Kopf- und Filterleisten sind durch eigene ersetzt, die direkt unter ihrem\n  Knopf aufgehen, in der Höhe begrenzt sind und sich per Tastatur bedienen\n  lassen.\n* Finanzamt-Export rechtlich eingeordnet. Die Exporte dürfen als Arbeitshilfe\n  verwendet werden; ein KI-Hinweis ist nicht nötig, weil die Werte nach festen\n  Rechenregeln entstehen. Begründung unter Hilfe → Rechtliches. Berichte tragen\n  freiwillig einen Herkunftsvermerk.\n* Neu: Web-Fassung für iPhone, iPad und Mac – dieselbe Oberfläche im\n  Browser, als App auf dem Home-Bildschirm ablegbar.\n* Behoben: „Gesamter Bestand“ zeigte im Verlauf 600 leere Monate ab 1900; die\n  Beschriftung der Diagramme war je nach Fensterbreite verzerrt; die\n  Buchungsliste ragte bei schmalem Fenster über den Rand, sodass der\n  Bruttobetrag abgeschnitten war.",
+  "files": [
+    {
+      "path": "app.js",
+      "sha256": "1adfb21ead96347a5408addb9af47ed5c5500a2f2d80a614cfec0a98cc31f0f1",
+      "size": 35247
+    },
+    {
+      "path": "icons/apple-touch-icon.png",
+      "sha256": "47fcffae0ac27df8bf70241f83248ff5cf1821b116cc739ed0a85b2419b62ecb",
+      "size": 3125
+    },
+    {
+      "path": "icons/icon-192.png",
+      "sha256": "5acfe36ec10c067dffc659c2a859282e05fe4a68c3101388e88e0dd34e3096a7",
+      "size": 3692
+    },
+    {
+      "path": "icons/icon-512.png",
+      "sha256": "baf0569511c2c515d268440642c6276eba590ea30f91ca9d23201acec48284d4",
+      "size": 11640
+    },
+    {
+      "path": "icons/icon-maskable-512.png",
+      "sha256": "0ddc28672c0de636d3ea8ba181941acd8438e9c0b248be4cd28232875c1af231",
+      "size": 10728
+    },
+    {
+      "path": "index.html",
+      "sha256": "17051205d88d2720adca1ed26c065aabe8498f0aa5f54a3ae8f7c3e6861452bf",
+      "size": 2038
+    },
+    {
+      "path": "lib/calc.js",
+      "sha256": "126205c5dab53a7d6596c1bb68a30bb342804f037bd467d1e48b36c1f9adb571",
+      "size": 29770
+    },
+    {
+      "path": "lib/dropdown.js",
+      "sha256": "aedf25e4af5398747c742d21900c51c227faf7a876f03fc03b22ead4a557324f",
+      "size": 8523
+    },
+    {
+      "path": "lib/exports.js",
+      "sha256": "3f1f77e39f72e9023b8759a3aa5040b8211e973a9c1045f9b6eacc24593b4b62",
+      "size": 23989
+    },
+    {
+      "path": "lib/gcal.js",
+      "sha256": "04efdced2aebffc679e8b9fe8a0fc7b86f040e1118abb87a04d7b689f4baa772",
+      "size": 17794
+    },
+    {
+      "path": "lib/gcalsync.js",
+      "sha256": "2c5ae150c0d0637ca5f7f1b16907b1a88ada9638a5e7b85776707b966e96932e",
+      "size": 7303
+    },
+    {
+      "path": "lib/ics.js",
+      "sha256": "f608e6271bacd053b9a1cdb4b4975511ff8e944fa9302752a8c2472ff600d404",
+      "size": 8426
+    },
+    {
+      "path": "lib/merge.js",
+      "sha256": "46f8ecca4fbc5167864f1c8058ed28f77729b8d1d81cddf7aedc0c199ebc3873",
+      "size": 11029
+    },
+    {
+      "path": "lib/period.js",
+      "sha256": "99003ec83399eeeaddb87c1774a0cc884692521b816cd464c5092b56a09f46c4",
+      "size": 3868
+    },
+    {
+      "path": "lib/prefs.js",
+      "sha256": "c487e699661ea5e36d79cea4fa77a8713242194af648a34e3911910174975743",
+      "size": 5174
+    },
+    {
+      "path": "lib/reports.js",
+      "sha256": "4512ad9d17a280dc48082ab181ef12819caf5979b0872048a73c5a5b4ba47c79",
+      "size": 32375
+    },
+    {
+      "path": "lib/router.js",
+      "sha256": "913221aa2870f02794f00bc8092088a1c7ce0e44651148dfdbceb8eee5877d3a",
+      "size": 461
+    },
+    {
+      "path": "lib/store.js",
+      "sha256": "869ca1c5e8a734d4bc975411152fcb5e8437b368b9281fd9df479f185ced56bc",
+      "size": 20301
+    },
+    {
+      "path": "lib/sync.js",
+      "sha256": "4ab55607905039940773d1bef690d2bf8ef78075b438187f81b0741cd42a508f",
+      "size": 6425
+    },
+    {
+      "path": "lib/ui.js",
+      "sha256": "3a2f8330114da36bc9a4775b93961f6f105eb7b2962d45d60cb8afcc0abcea31",
+      "size": 39783
+    },
+    {
+      "path": "lib/updates.js",
+      "sha256": "ec6ecd25c5bc85fc60edc208cadbcf75cbb818055aae42084a2230491369d19a",
+      "size": 3343
+    },
+    {
+      "path": "lib/util.js",
+      "sha256": "f3d120910983e53e94c745899ff85c78235c9ca65d5dac497a32b486ac7603f0",
+      "size": 11804
+    },
+    {
+      "path": "manifest.webmanifest",
+      "sha256": "83e43b299c6ac24cd372845a96b7f0a41cfc7a5f991d131f7f58d813ff38bdd3",
+      "size": 886
+    },
+    {
+      "path": "recht/COMPLIANCE.html",
+      "sha256": "f2f6c50267479fded2355104e83944f1030c94163270c2c00af185a98e3a4216",
+      "size": 23526
+    },
+    {
+      "path": "recht/DATENSCHUTZ.html",
+      "sha256": "117ec9e87cdcc36a03e46cb207d7e6de8e942aa6b86e96755b9e74c3f6f0b684",
+      "size": 11082
+    },
+    {
+      "path": "styles.css",
+      "sha256": "693c9235e5cebc72dad6cca8a0f6ad3242fcdbb50d3c9080a554f67ed8fbd492",
+      "size": 33978
+    },
+    {
+      "path": "views/calendar.js",
+      "sha256": "58acb5676ab11c413e9bee8388fe18d62f2e228e45692fce364e8497faff0ec5",
+      "size": 26496
+    },
+    {
+      "path": "views/calendarsync.js",
+      "sha256": "e0c778fa97ab2e773ae2c2eddde6fe430372658bcd54f895cd91409b16c7e86c",
+      "size": 17511
+    },
+    {
+      "path": "views/cloudpanel.js",
+      "sha256": "eda5e63a32815a9fe10197bd6f9735bb8a423e38bcb02d1ec735b6361f87577e",
+      "size": 32277
+    },
+    {
+      "path": "views/dashboard.js",
+      "sha256": "7c1f5285abdf0f22949c6587427b722ea2421bbbd526d5f8d66b2f4701784e31",
+      "size": 12573
+    },
+    {
+      "path": "views/export.js",
+      "sha256": "b5155959bdd375b12b8fd451a3cbf676aecf77a534f6f70799672593c4aed034",
+      "size": 17415
+    },
+    {
+      "path": "views/help.js",
+      "sha256": "9ccad6d0e2431e76b52a7e5fd14e4430538a3f4b560ee0ccada055176391caa1",
+      "size": 33133
+    },
+    {
+      "path": "views/master.js",
+      "sha256": "5b93781d5e860919d06ed51ecf9e6ee7e927e145f72614db9fbb5b45c24a8d42",
+      "size": 24337
+    },
+    {
+      "path": "views/reports.js",
+      "sha256": "fe6737a54e5dbcacfc07bb744efb6234d1d9d263964d7ac15e2c232106c1eaf8",
+      "size": 39672
+    },
+    {
+      "path": "views/settings.js",
+      "sha256": "01647e7c05a2104588e0e1c2c774de4a151973fd7fb874315750a9f908b8e8b5",
+      "size": 22216
+    },
+    {
+      "path": "views/transactions.js",
+      "sha256": "29447181b97da906123cc205fc1f470d069373d28f66c3d14117b0ebde32bd72",
+      "size": 58487
+    },
+    {
+      "path": "web/ablage.js",
+      "sha256": "9309c834a1df4feb759d2f2e690989ca8a77e6122c38ae9e222f6b05c83294a2",
+      "size": 4139
+    },
+    {
+      "path": "web/aktualisierung.js",
+      "sha256": "9972874bf90b83b78073795e972df4a3df235f2ad988c6b39b3197b7d52956bd",
+      "size": 6944
+    },
+    {
+      "path": "web/anmeldung.js",
+      "sha256": "4aaefdc25fb580b515ccf92e842ef5faaf9ea71b370df0447e14808746ef067e",
+      "size": 6550
+    },
+    {
+      "path": "web/bridge.js",
+      "sha256": "b58ae23f906522364ab8b3adf455ac0cf78a7f921f77440dcdad1bcce8ba7168",
+      "size": 25845
+    },
+    {
+      "path": "web/cloud.js",
+      "sha256": "06c6e94f784169187ddecb07912f9902e6f960719531dc470600c263adffa028",
+      "size": 11190
+    },
+    {
+      "path": "web/cloudconfig.js",
+      "sha256": "3509bb3468acd8c8039fed38a10f02e18dfb0e4f774c25bab0855301fe7a1a9f",
+      "size": 462
+    },
+    {
+      "path": "web/dateien.js",
+      "sha256": "084614da5a1da9c8a28df6c72f3ef154e71d77a33ba4c8ba5d02da200282fd01",
+      "size": 7809
+    },
+    {
+      "path": "web/druck.js",
+      "sha256": "2234a1934254f18ae7578a8e8f7fb13c0432303eff24c3ed10e2eb4c49966ceb",
+      "size": 3115
+    },
+    {
+      "path": "web/firebase.js",
+      "sha256": "ee846d0766ed9e4e26e9e4cb0b1d0460657ad358cc42d877589b1b4070d62cb7",
+      "size": 8123
+    },
+    {
+      "path": "web/googledrive.js",
+      "sha256": "5bb4588e3233fe6e078b30e50d491ca519e93f43eb84d59d6ab342c398cc0c79",
+      "size": 7548
+    },
+    {
+      "path": "web/kern.js",
+      "sha256": "685485c3dd589651f969bbb5e0800035bb6fe50a977329942373e73907c4986e",
+      "size": 10322
+    },
+    {
+      "path": "web/mobil.js",
+      "sha256": "0c62fa62fb4572c1c4eb6ebba8e777b4ba82a5201effead00c7f732ccc8f3ed2",
+      "size": 1634
+    },
+    {
+      "path": "web/netz.js",
+      "sha256": "be695ec28ac6252c01b04bd8e9a6e34c38dadfc243468cd38a21befd54dea1fa",
+      "size": 3894
+    },
+    {
+      "path": "web/scrypt-worker.js",
+      "sha256": "716793d4d1391c214ba089c8026585743e07c4e6916edb9e2b6dc16b17236e25",
+      "size": 522
+    },
+    {
+      "path": "web/scrypt.js",
+      "sha256": "273e681a10aafe9ab8c176365eae4c92aa56cf7648d845a767ef08fa4deec0d7",
+      "size": 5673
+    },
+    {
+      "path": "web/seed.js",
+      "sha256": "fd373951b926f4d1d15ab91d73796160a91bd2c0ad1481477954e4cc562cffe7",
+      "size": 7151
+    },
+    {
+      "path": "web/tresor.js",
+      "sha256": "f63fa3fd18e70c4aff577aa74c526b7acc6275321b4e5a9e1d7602e1eb24f461",
+      "size": 9208
+    },
+    {
+      "path": "web/updateinfo.js",
+      "sha256": "2b29f968a14eaa4eb37403f6ca2fc7002cefd6488ee5f938a27c21a1c33570a7",
+      "size": 2768
+    },
+    {
+      "path": "web/web.css",
+      "sha256": "d970dfc4d88cfd374ae89b206fe0e5d180e71b9a97c52bef9f61fff56ee0a5cc",
+      "size": 4977
+    },
+    {
+      "path": "web/zip.js",
+      "sha256": "dfce2a9f4256cc89ae2af0d6c9b683a41267d8babe7a4c80412fdc2979d74ebf",
+      "size": 4225
+    }
+  ]
+}

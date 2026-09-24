@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="de" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://oauth2.googleapis.com https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebasestorage.googleapis.com; media-src 'self' blob:; frame-src blob:; object-src blob:; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>Kontovia – Buchhaltung</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="web/web.css">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="description" content="Buchhaltung, die auf dem eigenen Gerät bleibt – verschlüsselt, offline, ohne Konto beim Hersteller.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Kontovia">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#f5f6f8" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0e1116" media="(prefers-color-scheme: dark)">
+  <meta name="format-detection" content="telephone=no">
+</head>
+<body>
+  <div id="app">
+    <div class="gate">
+      <div class="gate-card">
+        <div class="gate-logo">K</div>
+        <h2>Kontovia wird gestartet …</h2>
+        <p class="lead">Einen Moment bitte.</p>
+      </div>
+    </div>
+  </div>
+  <div id="toasts" role="status" aria-live="polite"></div>
+  <div id="overlays"></div>
+  <script type="module" src="web/bridge.js"></script>
+</body>
+</html>
