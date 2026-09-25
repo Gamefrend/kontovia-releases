@@ -11,16 +11,18 @@ import {
   totalDepreciation, healthChecks, scopeDb, unlistedStats, averages,
 } from '../lib/calc.js';
 import {
-  prefs, setPref, scope, scopeBarHtml, wireScopeBar, verlaufControls, wireVerlauf, verlaufBody,
+  prefs, setPref, scope, scopeToggleHtml, wireScopeToggle, verlaufControls, wireVerlauf, verlaufBody,
   anteilControls, wireAnteil,
 } from '../lib/prefs.js';
-import { defaultPeriod, periodPickerHtml, wirePeriodPicker, periodLabel } from '../lib/period.js';
+import { defaultPeriod, periodControl, periodLabel, setPeriod } from '../lib/period.js';
 import * as R from '../lib/reports.js';
 import { openTransactionDialog } from './transactions.js';
 
 const api = window.kontovia;
 const period = defaultPeriod();
 let tab = 'guv';
+/** Die Zeitraumwahl oben rechts – der Umsatzsteuer-Reiter setzt den Zeitraum auch von sich aus. */
+let periodCtl = null;
 
 const TABS = {
   guv: 'Gewinn & Verlust',
@@ -35,10 +37,10 @@ const TABS = {
 export async function render(root, params, { actions } = {}) {
   if (params?.tab) tab = params.tab;
   actions.innerHTML = html`
-    ${raw(periodPickerHtml(period, 'rp'))}
+    <div id="rpPeriod"></div>
     <button class="btn" id="btnPreview">${icon('eye', 16)} Vorschau</button>
     <button class="btn primary" id="btnPdf">${icon('pdf', 16)} Als PDF</button>`;
-  wirePeriodPicker(actions, period, () => draw(root), 'rp');
+  periodCtl = periodControl($('#rpPeriod', actions), period, () => draw(root));
   actions.querySelector('#btnPdf').addEventListener('click', () => exportPdf(false));
   actions.querySelector('#btnPreview').addEventListener('click', () => exportPdf(true));
   draw(root);
@@ -52,16 +54,23 @@ function draw(root) {
   // vor einem Wechsel der Einstellung aktiv, fällt die Ansicht auf die GuV zurück.
   if (tab === 'ust' && isKleinunternehmer(db)) tab = 'guv';
   root.innerHTML = html`
-    <div class="seg mb16" id="tabs">
-      ${raw(Object.entries(TABS)
-        .filter(([k]) => !(k === 'ust' && isKleinunternehmer(db)))
-        .map(([k, v]) => `<button data-tab="${k}" class="${tab === k ? 'active' : ''}">${esc(v)}</button>`).join(''))}
+    <div class="row wrap mb16" style="gap:10px 16px">
+      <div class="seg tabs" id="tabs" role="group" aria-label="Auswertung">
+        ${raw(Object.entries(TABS)
+          .filter(([k]) => !(k === 'ust' && isKleinunternehmer(db)))
+          .map(([k, v]) => `<button aria-pressed="${tab === k}" data-tab="${k}" class="${tab === k ? 'active' : ''}">${esc(v)}</button>`).join(''))}
+      </div>
+      <div class="spacer"></div>
+      ${scopeToggleHtml(store.db, period.from, period.to)}
     </div>
-    ${scopeBarHtml(store.db, period.from, period.to)}
     <div id="tabBody"></div>`;
 
-  $$('[data-tab]', root).forEach((b) => b.addEventListener('click', () => { tab = b.dataset.tab; draw(root); }));
-  wireScopeBar(root, () => draw(root));
+  $$('[data-tab]', root).forEach((b) => b.addEventListener('click', () => {
+    tab = b.dataset.tab;
+    draw(root);
+    $(`[data-tab="${tab}"]`, root)?.focus();
+  }));
+  wireScopeToggle(root, () => draw(root));
 
   const body = $('#tabBody', root);
   ({ guv, euer, ust, bilanz, opos, konten, anlagen }[tab] || guv)(body, db);
@@ -414,15 +423,8 @@ function ust(root, db) {
     </div>`;
 
   $$('[data-from]', root).forEach((tr) => tr.addEventListener('click', () => {
-    period.preset = 'benutzerdefiniert';
-    period.from = tr.dataset.from;
-    period.to = tr.dataset.to;
-    const wrap = document.getElementById('topActions');
-    wrap.querySelector('#rpPreset').value = 'benutzerdefiniert';
-    wrap.querySelector('#rpFrom').value = period.from;
-    wrap.querySelector('#rpFrom').disabled = false;
-    wrap.querySelector('#rpTo').value = period.to;
-    wrap.querySelector('#rpTo').disabled = false;
+    setPeriod(period, tr.dataset.from, tr.dataset.to);
+    periodCtl?.update();
     draw(root.closest('#content') || root.parentElement);
   }));
 }

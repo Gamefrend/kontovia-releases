@@ -84,7 +84,8 @@ function anleitung(root) {
         <h3 class="mt0">Anzahlungen und der Ort der Leistung</h3>
         <p>Bei einer Einnahme lässt sich der <strong>Ort</strong> festhalten – wo die Leistung
         erbracht wurde. Bereits verwendete Orte schlägt das Feld vor, und in der
-        <a data-go="transactions">Buchungsliste</a> filtern Sie danach.</p>
+        <a data-go="transactions">Buchungsliste</a> filtern Sie danach – über den Trichter im
+        Kopf der Spalte <em>Beschreibung</em>.</p>
         <p>Wird nur ein Teil im Voraus bezahlt, setzen Sie das Häkchen bei
         <strong>Anzahlung</strong> und tragen den Termin der Veranstaltung – bei einer Hochzeit
         das Hochzeitsdatum – sowie den Anteil in Prozent ein. Aus Anzahlung und Anteil
@@ -113,6 +114,37 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
+        <h3 class="mt0">Zeitraum wählen und filtern</h3>
+        <p><strong>Zeitraum.</strong> Oben rechts steht der gewählte Zeitraum, etwa „Jahr ${esc(String(new Date().getFullYear()))}“.
+        Die Pfeile daneben blättern um genau diese Länge weiter – vom März zum April, vom
+        2. zum 3. Quartal, von einem Jahr ins nächste. Ein Klick auf den Zeitraum öffnet die
+        Schnellwahl (dieser Monat, letztes Quartal …), ein Raster zum direkten Anklicken von
+        Jahr, Quartal oder Monat und darunter zwei Felder für einen eigenen Zeitraum.</p>
+        <p><strong>Filter in den Spaltenköpfen.</strong> In der <a data-go="transactions">Buchungsliste</a>
+        filtern Sie dort, wo die Werte stehen: über den kleinen Trichter im Kopf der Spalten
+        <em>Kategorie</em>, <em>Kontakt</em>, <em>Status</em> (offen, bezahlt, überfällig, dazu stornierte und
+        nicht gelistete Buchungen), <em>Brutto</em> (nur Einnahmen oder nur Ausgaben), im Kopf der
+        Belegspalte (mit oder ohne Beleg) und – sobald Orte erfasst sind – bei <em>Beschreibung</em>.
+        Neben jeder Möglichkeit steht, wie viele Buchungen sie ergibt. Ein Klick auf den
+        Spaltennamen sortiert.</p>
+        <p>Was gerade gefiltert ist, steht als Chip über der Liste; das Kreuz im Chip hebt den
+        Filter auf, „Alle Filter zurücksetzen“ alle zusammen. Ein gesetzter Filter färbt außerdem
+        seinen Trichter ein.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
+        <h3 class="mt0">Die Übersicht anpassen</h3>
+        <p>Über <strong>Anpassen</strong> oben in der <a data-go="dashboard">Übersicht</a> ordnen Sie die
+        Module so, wie Sie arbeiten: mit der Maus an einen anderen Platz ziehen oder mit den Pfeilen
+        verschieben, die Breite von einem Viertel bis zur ganzen Zeile wählen, Nicht-Benötigtes
+        ausblenden. Ausgeblendete Module und zusätzliche wie <em>Letzte Buchungen</em>,
+        <em>Durchschnittswerte</em> oder <em>Kontostände heute</em> holen Sie über die Knöpfe oben im
+        Anpassen-Modus zurück. „Voreinstellung“ stellt die ursprüngliche Anordnung wieder her.</p>
+        <p class="small">Die Anordnung gilt für dieses Gerät – am Telefon passt oft eine andere als am
+        großen Bildschirm. In den Tresor und den Cloud-Abgleich geht sie nicht.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Diagramme und Durchschnittswerte</h3>
         <p>In der <a data-go="dashboard">Übersicht</a> und unter <a data-go="reports">Auswertungen</a>
         schalten Sie die Darstellung mit den Knöpfen im Kopf jeder Karte um – unabhängig vom
@@ -132,10 +164,11 @@ function anleitung(root) {
         für Vorgänge, die Sie für die eigene Übersicht festhalten wollen, die steuerlich aber nicht
         zum Betrieb gehören. Nicht gelistete Buchungen fehlen in allen Unterlagen für Finanzamt und
         Steuerkanzlei: EÜR, Umsatzsteuer, DATEV-Stapel, Prüfungsordner, Buchungsjournal.</p>
-        <p>In Übersicht und Auswertungen zählen sie nur mit, wenn Sie dort das Häkchen
-        <strong>„Nicht gelistete Buchungen einbeziehen“</strong> setzen. Daneben steht, wie viele es
-        im gewählten Zeitraum gibt. Das Häkchen gilt bis zum Sperren. In der Buchungsliste zeigt
-        ein Abzeichen, welche Buchung nicht gelistet ist, und ein Filter blendet sie ein oder aus.</p>
+        <p>In Übersicht und Auswertungen zählen sie nur mit, wenn Sie dort oben den Schalter
+        <strong>„Nicht gelistete einbeziehen“</strong> setzen. Die Zahl daneben nennt, wie viele es
+        im gewählten Zeitraum gibt; die Beträge stehen im Hinweis beim Darüberfahren. Der Schalter
+        gilt bis zum Sperren. In der Buchungsliste zeigt ein Abzeichen, welche Buchung nicht
+        gelistet ist, und der Filter im Kopf der Spalte <em>Status</em> blendet sie ein oder aus.</p>
         <p class="small">Wichtig: Betriebliche Einnahmen und Ausgaben müssen vollständig erklärt werden
         (§ 146 Abs. 1 AO). Das Änderungsjournal bleibt deshalb vollständig – es verzeichnet auch
         Änderungen an nicht gelisteten Buchungen, sonst wäre seine Prüfsummenkette unterbrochen.</p>

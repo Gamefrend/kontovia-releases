@@ -9,7 +9,7 @@ import { store, setDb, subscribe, saveNow, sel, lockedUntil, setDevice, commit }
 import { startAutoSync, syncState, onSync, syncNow } from './lib/sync.js';
 import { updateState, onUpdate, startUpdateWatch, markNotified } from './lib/updates.js';
 import { router, onNavigate, navigate, refresh } from './lib/router.js';
-import { startDropdowns, schliessen as closeDropdown } from './lib/dropdown.js';
+import { closePopover } from './lib/popover.js';
 import { scope } from './lib/prefs.js';
 import { startCalendarSync, stopCalendarSync } from './lib/gcalsync.js';
 
@@ -97,7 +97,6 @@ function renderThemeToggle() {
 
 async function boot() {
   applyTheme(lastTheme());
-  startDropdowns();
   try {
     appInfo = await api.app.info();
     // Ohne Gerätekennung könnte das Änderungsjournal beim Abgleich zweier
@@ -624,6 +623,7 @@ onNavigate(async (view, params) => {
   const conf = VIEWS[view] || VIEWS.dashboard;
   const content = $('#content');
   if (!content) return;
+  closePopover();
   document.querySelectorAll('.nav-item').forEach((n) => {
     const aktiv = n.dataset.view === view;
     n.classList.toggle('active', aktiv);
@@ -648,7 +648,7 @@ onNavigate(async (view, params) => {
 
 api.on.locked(async ({ reason }) => {
   document.getElementById('overlays').innerHTML = '';
-  closeDropdown();
+  closePopover();
   // Nach dem Entsperren gelten wieder die Zahlen ohne nicht gelistete Buchungen.
   scope.includeUnlisted = false;
   stopCalendarSync();

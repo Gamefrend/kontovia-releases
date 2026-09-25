@@ -64,6 +64,10 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   #topActions { flex-wrap: wrap; gap: 6px; padding-bottom: 8px; width: 100%; }
   #topActions:empty { display: none; }
   #topActions select, #topActions input { width: auto; max-width: 100%; }
+  /* Die Zeitraumwahl nimmt die ganze Zeile, damit der Zeitraum lesbar bleibt. */
+  #topActions .period { flex: 1 1 100%; }
+  #topActions .period-btn { flex: 1; min-width: 0; }
+  .page-head .scope-toggle { white-space: normal; }
 
   .content { padding: 14px 12px calc(40px + env(safe-area-inset-bottom)); }
   .page-head { flex-wrap: wrap; }
@@ -80,6 +84,8 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   .filters { padding: 10px 12px; }
   .filters .search { min-width: 0; max-width: none; flex: 1 1 100%; }
   .filters input[type="search"], .filters select, .filters input[type="date"] { min-width: 0; }
+  .filter-chips { padding: 8px 12px; }
+  .th-filter { width: 28px; height: 28px; opacity: .8; }
 
   /* Fenster kommen von unten, wie auf dem Telefon üblich. */
   .modal-backdrop { padding: 0; place-items: end stretch; }

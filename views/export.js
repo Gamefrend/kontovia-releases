@@ -6,7 +6,7 @@ import { store, sel } from '../lib/store.js';
 import {
   euerReport, vatReturn, isKleinunternehmer, basisOf, effectiveDate, listedOnly, unlistedStats,
 } from '../lib/calc.js';
-import { defaultPeriod, periodPickerHtml, wirePeriodPicker, periodLabel } from '../lib/period.js';
+import { defaultPeriod, periodControl, periodLabel } from '../lib/period.js';
 import { navigate } from '../lib/router.js';
 import { appInfo } from '../app.js';
 import * as X from '../lib/exports.js';
@@ -18,8 +18,8 @@ const WEB = api.platform === 'web';
 const period = defaultPeriod();
 
 export async function render(root, params, { actions } = {}) {
-  actions.innerHTML = raw(periodPickerHtml(period, 'ex')).__raw;
-  wirePeriodPicker(actions, period, () => draw(root), 'ex');
+  actions.innerHTML = '<div id="exPeriod"></div>';
+  periodControl($('#exPeriod', actions), period, () => draw(root));
   draw(root);
 }
 

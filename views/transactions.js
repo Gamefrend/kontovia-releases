@@ -9,7 +9,8 @@ import {
   store, sel, upsertTransaction, deleteTransaction, voidTransaction, isLockedDate,
   newTransactionDraft, commit, nextInvoiceNumber, upsertEntity, removeAttachmentRecord,
 } from '../lib/store.js';
-import { defaultPeriod, periodPickerHtml, wirePeriodPicker, periodLabel } from '../lib/period.js';
+import { defaultPeriod, periodControl } from '../lib/period.js';
+import { openMenu } from '../lib/popover.js';
 import { navigate, refresh } from '../lib/router.js';
 import { vatTreatment, depositInfo } from '../lib/calc.js';
 
@@ -34,6 +35,17 @@ const filters = {
   showVoided: false,
 };
 
+/** Die Spaltenfilter ohne Zeitraum und Suche – das, was „Alle Filter zurücksetzen“ leert. */
+const COLUMN_FILTERS = {
+  type: 'alle', categoryId: '', accountId: '', contactId: '', location: '',
+  status: 'alle', hasReceipt: 'alle', listing: 'alle', showVoided: false,
+};
+
+const STATUS_TEXT = { offen: 'offen', bezahlt: 'bezahlt', ueberfaellig: 'überfällig' };
+
+/** Die Zeitraumwahl oben rechts; wird neu gezeichnet, wenn der Zeitraum von hier aus springt. */
+let periodCtl = null;
+
 const VAT_TREATMENTS = {
   standard: 'Regelbesteuert',
   steuerfrei: 'Steuerfrei / nicht steuerbar',
@@ -47,25 +59,31 @@ const VAT_TREATMENTS = {
 /* Filterung                                                                   */
 /* -------------------------------------------------------------------------- */
 
-export function filtered() {
+/**
+ * Buchungen, die zu Zeitraum, Suche und Filtern passen. `except` lässt einen
+ * Filter außen vor – so zählt ein Spaltenfilter, wie viele Treffer jede seiner
+ * Möglichkeiten zusammen mit allen übrigen Filtern ergäbe.
+ */
+export function filtered(except = '') {
   const q = norm(filters.search);
   const { from, to } = filters.period;
+  const f = except ? { ...filters, [except]: COLUMN_FILTERS[except] } : filters;
   return sel.transactions().filter((t) => {
-    if (t.voided && !filters.showVoided) return false;
+    if (t.voided && !f.showVoided) return false;
     const d = t.date;
     if (d < from || d > to) return false;
-    if (filters.type !== 'alle' && t.type !== filters.type) return false;
-    if (filters.categoryId && t.categoryId !== filters.categoryId) return false;
-    if (filters.accountId && t.accountId !== filters.accountId) return false;
-    if (filters.contactId && t.contactId !== filters.contactId) return false;
-    if (filters.location && (t.location || '') !== filters.location) return false;
-    if (filters.status === 'offen' && t.paidDate) return false;
-    if (filters.status === 'bezahlt' && !t.paidDate) return false;
-    if (filters.status === 'ueberfaellig' && (t.paidDate || (t.dueDate || t.date) >= todayISO())) return false;
-    if (filters.hasReceipt === 'mit' && !(t.attachments || []).length) return false;
-    if (filters.hasReceipt === 'ohne' && (t.attachments || []).length) return false;
-    if (filters.listing === 'gelistet' && t.unlisted) return false;
-    if (filters.listing === 'nicht-gelistet' && !t.unlisted) return false;
+    if (f.type !== 'alle' && t.type !== f.type) return false;
+    if (f.categoryId && t.categoryId !== f.categoryId) return false;
+    if (f.accountId && t.accountId !== f.accountId) return false;
+    if (f.contactId && t.contactId !== f.contactId) return false;
+    if (f.location && (t.location || '') !== f.location) return false;
+    if (f.status === 'offen' && t.paidDate) return false;
+    if (f.status === 'bezahlt' && !t.paidDate) return false;
+    if (f.status === 'ueberfaellig' && (t.paidDate || (t.dueDate || t.date) >= todayISO())) return false;
+    if (f.hasReceipt === 'mit' && !(t.attachments || []).length) return false;
+    if (f.hasReceipt === 'ohne' && (t.attachments || []).length) return false;
+    if (f.listing === 'gelistet' && t.unlisted) return false;
+    if (f.listing === 'nicht-gelistet' && !t.unlisted) return false;
     if (q) {
       const hay = norm([t.description, t.invoiceNumber, t.reference, t.notes, t.location,
         sel.categoryName(t.categoryId), sel.contactName(t.contactId), (t.gross / 100).toFixed(2)].join(' '));
@@ -91,8 +109,10 @@ export async function render(root, params = {}, { actions } = {}) {
   if (params.categoryId) filters.categoryId = params.categoryId;
 
   actions.innerHTML = html`
+    <div id="txPeriod"></div>
     <button class="btn income" id="newIncome">${icon('plus', 16)} Einnahme</button>
     <button class="btn expense" id="newExpense">${icon('plus', 16)} Ausgabe</button>`;
+  periodCtl = periodControl($('#txPeriod', actions), filters.period, () => drawList(root));
   actions.querySelector('#newIncome').addEventListener('click', () => openTransactionDialog(null, 'income'));
   actions.querySelector('#newExpense').addEventListener('click', () => openTransactionDialog(null, 'expense'));
 
@@ -106,12 +126,122 @@ export function knownLocations() {
   return [...set].sort((a, b) => a.localeCompare(b, 'de'));
 }
 
+/**
+ * Was in den Spaltenköpfen gefiltert werden kann. Jede Möglichkeit zeigt, wie
+ * viele Buchungen sie zusammen mit den übrigen Filtern ergäbe.
+ */
+function columnMenu(col) {
+  const opts = (key, list) => {
+    const basis = filtered(key);
+    return list.map(([value, label, test, sub]) => ({ value, label, sub, count: basis.filter(test).length }));
+  };
+  const alle = () => true;
+  switch (col) {
+    case 'description': {
+      const orte = knownLocations();
+      return {
+        label: 'Nach Ort filtern',
+        sections: [{
+          key: 'location', title: 'Ort der Leistung', value: filters.location, search: orte.length > 8, hideEmpty: true,
+          options: opts('location', [['', 'Alle Orte', alle], ...orte.map((o) => [o, o, (t) => (t.location || '') === o])]),
+        }],
+      };
+    }
+    case 'category': {
+      const cats = sortBy(sel.categories(), (c) => (c.kind === 'income' ? '0' : '1') + c.name.toLowerCase());
+      return {
+        label: 'Nach Kategorie filtern',
+        sections: [{
+          key: 'categoryId', title: 'Kategorie', value: filters.categoryId, search: cats.length > 8, hideEmpty: true,
+          options: opts('categoryId', [['', 'Alle Kategorien', alle],
+            ...cats.map((c) => [c.id, c.name, (t) => t.categoryId === c.id, c.kind === 'income' ? 'Einnahme' : 'Ausgabe'])]),
+        }],
+      };
+    }
+    case 'contact': {
+      const kontakte = sortBy(sel.contacts(), (c) => c.name.toLowerCase());
+      return {
+        label: 'Nach Kontakt filtern',
+        sections: [{
+          key: 'contactId', title: 'Kunde oder Lieferant', value: filters.contactId, search: kontakte.length > 8, hideEmpty: true,
+          options: opts('contactId', [['', 'Alle Kontakte', alle], ...kontakte.map((c) => [c.id, c.name, (t) => t.contactId === c.id])]),
+        }],
+      };
+    }
+    case 'status': {
+      const heute = todayISO();
+      const unlisted = filters.listing !== 'alle' || sel.transactions().some((t) => t.unlisted);
+      return {
+        label: 'Nach Status filtern',
+        sections: [
+          {
+            key: 'status', title: 'Zahlung', value: filters.status,
+            options: opts('status', [
+              ['alle', 'Jeder Zahlstatus', alle],
+              ['offen', 'Offen', (t) => !t.paidDate],
+              ['bezahlt', 'Bezahlt', (t) => !!t.paidDate],
+              ['ueberfaellig', 'Überfällig', (t) => !t.paidDate && (t.dueDate || t.date) < heute],
+            ]),
+          },
+          unlisted && {
+            key: 'listing', title: 'Finanzamt-Unterlagen', value: filters.listing,
+            options: opts('listing', [
+              ['alle', 'Gelistete und nicht gelistete', alle],
+              ['gelistet', 'Nur gelistete', (t) => !t.unlisted],
+              ['nicht-gelistet', 'Nur nicht gelistete', (t) => !!t.unlisted],
+            ]),
+          },
+          {
+            key: 'showVoided', title: 'Stornierte Buchungen', value: filters.showVoided ? 'ja' : 'nein',
+            options: [
+              { value: 'nein', label: 'Ausblenden' },
+              { value: 'ja', label: 'Einblenden', count: filtered('showVoided').filter((t) => t.voided).length },
+            ],
+          },
+        ],
+      };
+    }
+    case 'amount':
+      return {
+        label: 'Nach Art filtern',
+        sections: [{
+          key: 'type', title: 'Art der Buchung', value: filters.type,
+          options: opts('type', [['alle', 'Einnahmen und Ausgaben', alle],
+            ['income', 'Nur Einnahmen', (t) => t.type === 'income'], ['expense', 'Nur Ausgaben', (t) => t.type === 'expense']]),
+        }],
+      };
+    case 'receipt':
+      return {
+        label: 'Nach Beleg filtern',
+        sections: [{
+          key: 'hasReceipt', title: 'Beleg', value: filters.hasReceipt,
+          options: opts('hasReceipt', [['alle', 'Mit und ohne Beleg', alle],
+            ['mit', 'Mit Beleg', (t) => (t.attachments || []).length > 0], ['ohne', 'Ohne Beleg', (t) => !(t.attachments || []).length]]),
+        }],
+      };
+    default: return null;
+  }
+}
+
+/** Die gesetzten Spaltenfilter als Chips – was gerade wirkt, soll man sehen. */
+function activeFilters() {
+  const out = [];
+  if (filters.type !== 'alle') out.push(['type', filters.type === 'income' ? 'Nur Einnahmen' : 'Nur Ausgaben', 'amount']);
+  if (filters.categoryId) out.push(['categoryId', `Kategorie: ${sel.categoryName(filters.categoryId)}`, 'category']);
+  if (filters.contactId) out.push(['contactId', `Kontakt: ${sel.contactName(filters.contactId)}`, 'contact']);
+  if (filters.accountId) out.push(['accountId', `Konto: ${sel.accounts().find((a) => a.id === filters.accountId)?.name || '–'}`, '']);
+  if (filters.location) out.push(['location', `Ort: ${filters.location}`, 'description']);
+  if (filters.status !== 'alle') out.push(['status', `Status: ${STATUS_TEXT[filters.status] || filters.status}`, 'status']);
+  if (filters.listing !== 'alle') out.push(['listing', filters.listing === 'gelistet' ? 'Nur gelistete' : 'Nur nicht gelistete', 'status']);
+  if (filters.showVoided) out.push(['showVoided', 'Mit stornierten', 'status']);
+  if (filters.hasReceipt !== 'alle') out.push(['hasReceipt', filters.hasReceipt === 'mit' ? 'Mit Beleg' : 'Ohne Beleg', 'receipt']);
+  return out;
+}
+
 function drawList(root) {
-  const cats = sel.categories();
-  const orte = knownLocations();
   // Wurde der letzte Beleg zu einem Ort geändert, fällt der Ort aus der Liste –
   // ein Filter darauf würde sonst unsichtbar weiterwirken.
-  if (filters.location && !orte.includes(filters.location)) filters.location = '';
+  if (filters.location && !knownLocations().includes(filters.location)) filters.location = '';
   const rows = sortBy(filtered(), (t) => {
     if (filters.sort === 'amount') return t.gross;
     if (filters.sort === 'category') return sel.categoryName(t.categoryId);
@@ -125,67 +255,32 @@ function drawList(root) {
   const sumExpense = sum(expense, (t) => t.gross);
   const openCount = rows.filter((t) => !t.paidDate).length;
   const unlistedCount = rows.filter((t) => t.unlisted && !t.voided).length;
-  const anyUnlisted = unlistedCount > 0 || sel.transactions().some((t) => t.unlisted);
+  const aktiv = activeFilters();
 
   root.innerHTML = html`
     <div class="card">
       <div class="filters">
-        <input type="search" class="search" id="txSearch" placeholder="Suchen in Text, Rechnungsnummer, Betrag …" value="${filters.search}">
-        ${raw(periodPickerHtml(filters.period, 'tx'))}
-        <select id="fType" aria-label="Art der Buchung">
-          <option value="alle">Alle Arten</option>
-          <option value="income" ${filters.type === 'income' ? 'selected' : ''}>Nur Einnahmen</option>
-          <option value="expense" ${filters.type === 'expense' ? 'selected' : ''}>Nur Ausgaben</option>
-        </select>
-        <select id="fCat" aria-label="Kategorie">
-          <option value="">Alle Kategorien</option>
-          ${raw(cats.map((c) => `<option value="${esc(c.id)}" ${filters.categoryId === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join(''))}
-        </select>
-        ${orte.length ? raw(`
-        <select id="fOrt" aria-label="Ort der Leistung">
-          <option value="">Alle Orte</option>
-          ${orte.map((o) => `<option value="${esc(o)}" ${filters.location === o ? 'selected' : ''}>${esc(o)}</option>`).join('')}
-        </select>`) : ''}
-        <select id="fStatus" aria-label="Zahlstatus">
-          <option value="alle">Jeder Zahlstatus</option>
-          <option value="offen" ${filters.status === 'offen' ? 'selected' : ''}>Offen</option>
-          <option value="bezahlt" ${filters.status === 'bezahlt' ? 'selected' : ''}>Bezahlt</option>
-          <option value="ueberfaellig" ${filters.status === 'ueberfaellig' ? 'selected' : ''}>Überfällig</option>
-        </select>
-        <select id="fReceipt" aria-label="Beleg vorhanden">
-          <option value="alle">Beleg egal</option>
-          <option value="mit" ${filters.hasReceipt === 'mit' ? 'selected' : ''}>Mit Beleg</option>
-          <option value="ohne" ${filters.hasReceipt === 'ohne' ? 'selected' : ''}>Ohne Beleg</option>
-        </select>
-        ${anyUnlisted || filters.listing !== 'alle' ? raw(`
-        <select id="fListing" aria-label="Gelistet oder nicht gelistet">
-          <option value="alle">Gelistete und nicht gelistete</option>
-          <option value="gelistet" ${filters.listing === 'gelistet' ? 'selected' : ''}>Nur gelistete</option>
-          <option value="nicht-gelistet" ${filters.listing === 'nicht-gelistet' ? 'selected' : ''}>Nur nicht gelistete</option>
-        </select>`) : ''}
-        <label class="check"><input type="checkbox" id="fVoid" ${filters.showVoided ? 'checked' : ''}> Stornierte zeigen</label>
+        <input type="search" class="search" id="txSearch" placeholder="Suchen: Text, Rechnungsnummer, Betrag …" value="${filters.search}" aria-label="Buchungen durchsuchen">
         <div class="spacer"></div>
-        <button class="btn sm ghost" id="resetFilter">Filter zurücksetzen</button>
+        <div class="tx-sum" aria-live="polite">
+          <span><strong>${int(rows.length)}</strong> <span class="muted">${rows.length === 1 ? 'Buchung' : 'Buchungen'}</span></span>
+          <span><span class="muted">Einnahmen</span> <strong class="amount pos">${money(sumIncome)} €</strong></span>
+          <span><span class="muted">Ausgaben</span> <strong class="amount neg">${money(sumExpense)} €</strong></span>
+          <span><span class="muted">Saldo</span> <strong class="amount ${sumIncome - sumExpense >= 0 ? 'pos' : 'neg'}">${money(sumIncome - sumExpense)} €</strong></span>
+          ${openCount ? raw(`<span class="badge warn">${openCount} offen</span>`) : ''}
+          ${unlistedCount ? raw(`<span class="badge unlisted" title="In den Summen enthalten, in Finanzamt-Unterlagen nicht">${unlistedCount} nicht gelistet</span>`) : ''}
+        </div>
       </div>
 
-      <div class="row wrap" style="padding:10px 16px;gap:18px;border-bottom:1px solid var(--border);font-size:13px">
-        <span><span class="muted">Treffer:</span> <strong>${int(rows.length)}</strong></span>
-        <span><span class="muted">Einnahmen:</span> <strong class="amount pos">${money(sumIncome)} €</strong></span>
-        <span><span class="muted">Ausgaben:</span> <strong class="amount neg">${money(sumExpense)} €</strong></span>
-        <span><span class="muted">Saldo:</span> <strong class="amount ${sumIncome - sumExpense >= 0 ? 'pos' : 'neg'}">${money(sumIncome - sumExpense)} €</strong></span>
-        ${openCount ? raw(`<span class="badge warn">${openCount} offen</span>`) : ''}
-        ${unlistedCount ? raw(`<span class="badge unlisted" title="In den Summen enthalten, in Finanzamt-Unterlagen nicht">${unlistedCount} nicht gelistet</span>`) : ''}
-        <div class="spacer"></div>
-        <span class="muted tiny">${esc(periodLabel(filters.period))}</span>
-      </div>
+      ${aktiv.length ? raw(`
+      <div class="filter-chips" role="group" aria-label="Gesetzte Filter">
+        <span class="muted small">${icon('filter', 13).__raw} Gefiltert:</span>
+        ${aktiv.map(([key, text]) => `<span class="chip active">${esc(text)}<button type="button" class="chip-x" data-clear="${esc(key)}" aria-label="Filter „${esc(text)}“ entfernen" title="Filter entfernen">${icon('x', 12).__raw}</button></span>`).join('')}
+        ${aktiv.length > 1 || filters.search ? '<button type="button" class="btn sm ghost" id="resetFilter">Alle Filter zurücksetzen</button>' : ''}
+      </div>`) : ''}
 
       <div class="table-wrap">
-        ${rows.length ? raw(tableHtml(rows)) : sel.transactions().length
-          ? emptyState(
-            'Keine Treffer',
-            'Keine Buchung passt zu Zeitraum, Suche und Filtern.',
-            '<button class="btn mt16" data-reset>Filter zurücksetzen</button>',
-          )
+        ${sel.transactions().length ? raw(tableHtml(rows))
           : emptyState(
             'Noch keine Buchungen',
             'Erfassen Sie Ihre erste Einnahme oder Ausgabe – oben rechts.',
@@ -204,24 +299,47 @@ function drawList(root) {
     neu.focus();
     try { neu.setSelectionRange(pos, pos); } catch { /* Schreibmarke ans Ende ist auch in Ordnung */ }
   }, 120));
-  wirePeriodPicker(root, filters.period, () => drawList(root), 'tx');
-  const bind = (id, key) => $(id, root)?.addEventListener('change', (e) => { filters[key] = e.target.value; drawList(root); });
-  bind('#fType', 'type'); bind('#fCat', 'categoryId'); bind('#fStatus', 'status'); bind('#fReceipt', 'hasReceipt');
-  bind('#fOrt', 'location'); bind('#fListing', 'listing');
-  $('#fVoid', root).addEventListener('change', (e) => { filters.showVoided = e.target.checked; drawList(root); });
-  const resetFilters = () => {
-    Object.assign(filters, { search: '', type: 'alle', categoryId: '', accountId: '', contactId: '', location: '', status: 'alle', hasReceipt: 'alle', listing: 'alle', showVoided: false, period: defaultPeriod() });
+
+  $$('[data-clear]', root).forEach((b) => b.addEventListener('click', () => {
+    filters[b.dataset.clear] = COLUMN_FILTERS[b.dataset.clear];
     drawList(root);
-  };
-  $('#resetFilter', root).addEventListener('click', resetFilters);
-  $('[data-reset]', root)?.addEventListener('click', resetFilters);
+    ($('.chip-x', root) || $('#txSearch', root)).focus();
+  }));
+  $('#resetFilter', root)?.addEventListener('click', () => {
+    Object.assign(filters, COLUMN_FILTERS, { search: '' });
+    drawList(root);
+    $('#txSearch', root).focus();
+  });
+  // Findet gar nichts mehr, setzt dieser Knopf auch den Zeitraum zurück.
+  $('[data-reset]', root)?.addEventListener('click', () => {
+    Object.assign(filters, COLUMN_FILTERS, { search: '' });
+    Object.assign(filters.period, defaultPeriod());
+    periodCtl?.update();
+    drawList(root);
+  });
   $('[data-first]', root)?.addEventListener('click', () => openTransactionDialog(null, 'expense'));
 
-  $$('th.sortable', root).forEach((th) => th.addEventListener('click', () => {
-    const key = th.dataset.sort;
+  $$('[data-sort]', root).forEach((b) => b.addEventListener('click', () => {
+    const key = b.dataset.sort;
     if (filters.sort === key) filters.dir = -filters.dir;
     else { filters.sort = key; filters.dir = key === 'date' ? -1 : 1; }
     drawList(root);
+    $(`[data-sort="${key}"]`, root)?.focus();
+  }));
+
+  $$('[data-filter]', root).forEach((b) => b.addEventListener('click', () => {
+    const col = b.dataset.filter;
+    const menu = columnMenu(col);
+    if (!menu) return;
+    openMenu(b, {
+      ...menu,
+      align: b.closest('th')?.classList.contains('num') || col === 'receipt' ? 'end' : 'start',
+      onPick: (key, val) => {
+        filters[key] = key === 'showVoided' ? val === 'ja' : val;
+        drawList(root);
+        $(`[data-filter="${col}"]`, root)?.focus();
+      },
+    });
   }));
 
   $$('tr[data-id]', root).forEach((tr) => {
@@ -250,26 +368,54 @@ function drawList(root) {
   }));
 }
 
+/**
+ * Spaltenkopf mit Sortierknopf und – wo es etwas zu filtern gibt – einem
+ * Trichter. Ein gesetzter Filter färbt den Trichter ein.
+ */
+function th(label, { sort = '', filter = '', on = false, width = '', cls = '', title = '' } = {}) {
+  const arrow = sort && filters.sort === sort ? (filters.dir === 1 ? ' ▲' : ' ▼') : '';
+  const sortBtn = sort
+    ? `<button type="button" class="th-sort" data-sort="${sort}" title="Nach ${esc(label)} sortieren">${esc(label)}${arrow}</button>`
+    : `<span>${esc(label)}</span>`;
+  const name = title || FILTER_TITLES[filter];
+  const filterBtn = filter
+    ? `<button type="button" class="th-filter${on ? ' on' : ''}" data-filter="${filter}" aria-haspopup="dialog" aria-expanded="false"
+        aria-label="${esc(name)}${on ? ' (aktiv)' : ''}" title="${esc(name)}">${icon('filter', 13).__raw}</button>`
+    : '';
+  const sortiert = sort && filters.sort === sort ? ` aria-sort="${filters.dir === 1 ? 'ascending' : 'descending'}"` : '';
+  return `<th class="${cls}"${sortiert}${width ? ` style="width:${width}"` : ''}><div class="th">${label ? sortBtn : ''}${filterBtn}</div></th>`;
+}
+
+const FILTER_TITLES = {
+  description: 'Nach Ort filtern', category: 'Nach Kategorie filtern', contact: 'Nach Kontakt filtern',
+  status: 'Nach Status filtern', amount: 'Nach Art filtern (Einnahmen/Ausgaben)', receipt: 'Nach Beleg filtern',
+};
+
 function tableHtml(rows) {
   const klein = store.db.settings.taxMode === 'kleinunternehmer';
-  const arrow = (k) => (filters.sort === k ? (filters.dir === 1 ? ' ▲' : ' ▼') : '');
+  const orte = filters.location || knownLocations().length;
+  const statusOn = filters.status !== 'alle' || filters.listing !== 'alle' || filters.showVoided;
   return html`
     <table class="data fixed">
       <thead>
         <tr>
-          <th class="sortable" data-sort="date" style="width:88px">Datum${raw(arrow('date'))}</th>
-          <th class="col-nr" style="width:82px">Beleg-Nr.</th>
-          <th class="sortable" data-sort="description">Beschreibung${raw(arrow('description'))}</th>
-          <th class="sortable" data-sort="category" style="width:142px">Kategorie${raw(arrow('category'))}</th>
-          <th class="sortable col-kontakt" data-sort="contact" style="width:110px">Kontakt${raw(arrow('contact'))}</th>
-          <th style="width:124px">Status</th>
+          ${raw(th('Datum', { sort: 'date', width: '92px' }))}
+          ${raw(th('Beleg-Nr.', { width: '82px', cls: 'col-nr' }))}
+          ${raw(th('Beschreibung', { sort: 'description', filter: orte ? 'description' : '', on: !!filters.location }))}
+          ${raw(th('Kategorie', { sort: 'category', filter: 'category', on: !!filters.categoryId, width: '150px' }))}
+          ${raw(th('Kontakt', { sort: 'contact', filter: sel.contacts().length ? 'contact' : '', on: !!filters.contactId, width: '120px', cls: 'col-kontakt' }))}
+          ${raw(th('Status', { filter: 'status', on: statusOn, width: '132px' }))}
           ${klein ? '' : raw('<th class="num" style="width:92px">Netto</th><th class="num col-ust" style="width:78px">USt</th>')}
-          <th class="num sortable" data-sort="amount" style="width:110px">Brutto${raw(arrow('amount'))}</th>
-          <th style="width:32px"></th>
+          ${raw(th('Brutto', { sort: 'amount', filter: 'amount', on: filters.type !== 'alle', width: '118px', cls: 'num' }))}
+          ${raw(th('', { filter: 'receipt', on: filters.hasReceipt !== 'alle', width: '40px', cls: 'center' }))}
         </tr>
       </thead>
       <tbody>
-        ${raw(rows.map((t) => rowHtml(t, klein)).join(''))}
+        ${raw(rows.map((t) => rowHtml(t, klein)).join('') || `<tr class="empty-row"><td colspan="${klein ? 8 : 10}">${emptyState(
+          'Keine Treffer',
+          'Keine Buchung passt zu Zeitraum, Suche und Filtern.',
+          '<button class="btn mt16" data-reset>Filter und Zeitraum zurücksetzen</button>',
+        ).__raw}</td></tr>`)}
       </tbody>
     </table>`;
 }

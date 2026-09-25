@@ -11,6 +11,7 @@ import { navigate, refresh } from '../lib/router.js';
 import { openTransactionDialog } from './transactions.js';
 import { openCalendarSyncDialog, statusText } from './calendarsync.js';
 import { calState, onCalendarSync, refreshCalendarStatus, syncCalendar } from '../lib/gcalsync.js';
+import { openMenu } from '../lib/popover.js';
 
 const state = {
   cursor: monthStart(todayISO()),
@@ -95,15 +96,32 @@ function eventEntries(from, to) {
 
 export async function render(root, params, { actions } = {}) {
   actions.innerHTML = html`
-    <div class="seg">
-      <button data-mode="month" class="${state.mode === 'month' ? 'active' : ''}">Monat</button>
-      <button data-mode="agenda" class="${state.mode === 'agenda' ? 'active' : ''}">Liste</button>
+    <div class="seg" role="group" aria-label="Darstellung">
+      <button data-mode="month" class="${state.mode === 'month' ? 'active' : ''}" aria-pressed="${state.mode === 'month'}">Monat</button>
+      <button data-mode="agenda" class="${state.mode === 'agenda' ? 'active' : ''}" aria-pressed="${state.mode === 'agenda'}">Liste</button>
     </div>
+    <button class="btn" id="calShow" aria-haspopup="dialog" aria-expanded="false" title="Was der Kalender zeigt">${icon('eye', 16)} Anzeige ${icon('down', 14)}</button>
     <button class="btn" id="calSync" title="Mit Google Kalender oder per Kalenderdatei (.ics) abgleichen">${icon('refresh', 16)} Abgleich</button>
     <button class="btn primary" id="newAppt">${icon('plus', 16)} Termin</button>`;
   $$('[data-mode]', actions).forEach((b) => b.addEventListener('click', () => {
     state.mode = b.dataset.mode;
     render(root, params, { actions });
+  }));
+  // Was eingeblendet wird, steht in einem Menü statt in drei Häkchen über dem Kalender.
+  actions.querySelector('#calShow').addEventListener('click', (e) => openMenu(e.currentTarget, {
+    label: 'Anzeige',
+    keepOpen: true,
+    align: 'end',
+    sections: () => [{
+      key: 'show',
+      title: 'Im Kalender zeigen',
+      options: [
+        state.mode === 'month' && { value: 'showDue', label: 'Zahlungstermine offener Rechnungen', on: state.showDue },
+        { value: 'showEvents', label: 'Veranstaltungen aus Anzahlungen', on: state.showEvents },
+        { value: 'showDone', label: 'Erledigte Termine', on: state.showDone },
+      ].filter(Boolean),
+    }],
+    onPick: (_, key) => { state[key] = !state[key]; draw(root); },
   }));
   actions.querySelector('#newAppt').addEventListener('click', () => openAppointmentDialog(null, { date: todayISO() }));
   actions.querySelector('#calSync').addEventListener('click', openCalendarSyncDialog);
@@ -175,10 +193,7 @@ function drawMonth(root) {
         <h3 style="margin:0 0 0 8px;font-size:16px">${monthName}</h3>
         <div class="spacer"></div>
         ${raw(syncBadge())}
-        <span class="badge">${int(monthEvents.length)} Termine</span>
-        <label class="check"><input type="checkbox" id="tDue" ${state.showDue ? 'checked' : ''}> Zahlungstermine</label>
-        <label class="check"><input type="checkbox" id="tEvent" ${state.showEvents ? 'checked' : ''}> Veranstaltungen</label>
-        <label class="check"><input type="checkbox" id="tDone" ${state.showDone ? 'checked' : ''}> Erledigte</label>
+        ${raw(hiddenHint())}
       </div>
       <div class="cal-grid">
         ${raw(WEEKDAYS.map((w) => `<div class="cal-head">${w}</div>`).join(''))}
@@ -187,7 +202,7 @@ function drawMonth(root) {
     </div>
 
     <div class="card mt16">
-      <div class="card-head"><h3>Termine im ${esc(monthName)}</h3></div>
+      <div class="card-head"><h3>Termine im ${esc(monthName)}</h3><div class="spacer"></div><span class="badge">${int(monthEvents.length)}</span></div>
       <div class="card-body ${monthEvents.length ? 'tight' : ''}">
         ${monthEvents.length
           ? raw('<div style="padding:0 16px">' + sortBy(monthEvents, (e) => e.occurrence + (e.startTime || '')).map(agendaRow).join('') + '</div>')
@@ -198,12 +213,22 @@ function drawMonth(root) {
   $('#prev', root).addEventListener('click', () => { state.cursor = addMonths(state.cursor, -1); draw(root); });
   $('#next', root).addEventListener('click', () => { state.cursor = addMonths(state.cursor, 1); draw(root); });
   $('#today', root).addEventListener('click', () => { state.cursor = monthStart(todayISO()); draw(root); });
-  $('#tDue', root).addEventListener('change', (e) => { state.showDue = e.target.checked; draw(root); });
-  $('#tEvent', root).addEventListener('change', (e) => { state.showEvents = e.target.checked; draw(root); });
-  $('#tDone', root).addEventListener('change', (e) => { state.showDone = e.target.checked; draw(root); });
 
   wireEvents(root);
   wireSyncBadge(root);
+}
+
+/**
+ * Was gerade ausgeblendet ist – sonst fiele nicht auf, dass etwas fehlt.
+ * Geändert wird es über „Anzeige“ oben rechts.
+ */
+function hiddenHint() {
+  const weg = [
+    state.mode === 'month' && !state.showDue && 'Zahlungstermine',
+    !state.showEvents && 'Veranstaltungen',
+    !state.showDone && 'Erledigte',
+  ].filter(Boolean);
+  return weg.length ? `<span class="small muted" title="Über „Anzeige“ oben rechts wieder einblenden">${icon('hide', 13).__raw} ausgeblendet: ${esc(weg.join(', '))}</span>` : '';
 }
 
 function cellHtml(date, monthRef, items) {
@@ -264,7 +289,7 @@ function drawAgenda(root) {
         <span class="sub">nächste zwölf Monate</span>
         <div class="spacer"></div>
         ${raw(syncBadge())}
-        <label class="check"><input type="checkbox" id="tDone" ${state.showDone ? 'checked' : ''}> Erledigte zeigen</label>
+        ${raw(hiddenHint())}
       </div>
       <div class="card-body ${events.length ? 'tight' : ''}">
         ${events.length ? raw('<div style="padding:0 16px">' + events.map(agendaRow).join('') + '</div>')
@@ -280,7 +305,6 @@ function drawAgenda(root) {
       </div>
     </div>`;
 
-  $('#tDone', root).addEventListener('change', (e) => { state.showDone = e.target.checked; draw(root); });
   wireEvents(root);
   wireSyncBadge(root);
 }
