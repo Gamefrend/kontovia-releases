@@ -83,14 +83,14 @@ function listSpec() {
   const klein = store.db.settings.taxMode === 'kleinunternehmer';
   const alle = () => true;
   const columns = [
-    { key: 'date', label: 'Datum', type: 'date', width: '92px', tdCls: 'nowrap', cell: (t) => esc(fmtDate(t.date)) },
+    { key: 'date', label: 'Datum', type: 'date', width: '92px', cls: 'col-datum', tdCls: 'nowrap', cell: (t) => esc(fmtDate(t.date)) },
     {
       key: 'nr', label: 'Nr.', sortLabel: 'Beleg-Nr.', type: 'text', width: '84px', cls: 'col-nr', tdCls: 'tiny muted nowrap',
       value: (t) => t.invoiceNumber || '', cell: (t) => esc(t.invoiceNumber || ''),
     },
-    { key: 'description', label: 'Beschreibung', type: 'text', value: (t) => t.description || '', cell: descriptionCell },
+    { key: 'description', label: 'Beschreibung', type: 'text', cls: 'col-text', value: (t) => t.description || '', cell: descriptionCell },
     {
-      key: 'category', label: 'Kategorie', type: 'text', width: '146px', tdCls: 'small truncate',
+      key: 'category', label: 'Kategorie', type: 'text', width: '146px', cls: 'col-kat', tdCls: 'small truncate',
       value: (t) => sel.categoryName(t.categoryId),
       cell: (t) => {
         const cat = sel.category(t.categoryId);
@@ -102,20 +102,20 @@ function listSpec() {
       value: (t) => (t.contactId ? sel.contactName(t.contactId) : ''), cell: (t) => esc(sel.contactName(t.contactId)),
     },
     {
-      key: 'status', label: 'Status', type: 'num', align: 'left', width: '132px', value: statusRank, dir: 1,
+      key: 'status', label: 'Status', type: 'num', align: 'left', width: '132px', cls: 'col-status', value: statusRank, dir: 1,
       dirText: ['Offenes zuerst', 'Bezahltes zuerst'], cell: statusCell,
     },
     ...(klein ? [] : [
-      { key: 'net', label: 'Netto', type: 'num', width: '94px', cell: (t) => esc(money(t.net)) },
+      { key: 'net', label: 'Netto', type: 'num', width: '94px', cls: 'col-netto', cell: (t) => esc(money(t.net)) },
       {
         key: 'vat', label: 'USt', type: 'num', width: '74px', cls: 'col-ust', tdCls: 'muted',
         cell: (t) => (t.vat ? esc(money(t.vat)) : '–'),
       },
     ]),
-    { key: 'amount', label: 'Brutto', type: 'num', width: '118px', value: (t) => t.gross, cell: (t) => amountCell(t.gross, t.type).__raw },
+    { key: 'amount', label: 'Brutto', type: 'num', width: '118px', cls: 'col-brutto', value: (t) => t.gross, cell: (t) => amountCell(t.gross, t.type).__raw },
     {
       // Nur Filter: in der schmalen Belegspalte ist kein Platz für einen zweiten Knopf.
-      key: 'receipt', label: '', type: 'none', width: '44px', cls: 'center',
+      key: 'receipt', label: '', type: 'none', width: '44px', cls: 'center col-beleg',
       value: (t) => (t.attachments || []).length,
       cell: (t) => {
         const n = (t.attachments || []).length;
@@ -183,7 +183,8 @@ function listSpec() {
 
   return {
     id: TABLE,
-    cls: 'data fixed',
+    // tx-list: auf dem Telefon als Kartenliste (web.css).
+    cls: 'data fixed tx-list',
     defaultSort: { key: 'date', dir: -1 },
     columns,
     filters,

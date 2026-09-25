@@ -89,6 +89,7 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   .th-sort { padding: 6px 4px; }
   .th-sort .th-arrow { opacity: .6; }
   .dt-sort { max-width: 100%; }
+  .dt-filter-all { display: inline-flex; }
   .dt-sum { flex-basis: 100%; order: 3; }
 
   /* Fenster kommen von unten, wie auf dem Telefon üblich. */
@@ -115,4 +116,28 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   .gate { padding-left: 12px; padding-right: 12px; }
   .gate-card { padding: 22px 18px; }
   .preview-frame { height: 60dvh; }
+}
+
+/* Buchungsliste auf dem Telefon: Karten statt Spalten. Beschreibung und
+   Betrag oben, Datum, Kategorie und Status darunter – der Betrag ist so ohne
+   Querscrollen zu sehen. Sortieren und Filtern gehen über die Leiste darüber
+   („Sortieren“, „Filter“), deshalb darf der Tabellenkopf wegfallen. */
+@media (max-width: 640px) {
+  table.data.fixed.tx-list { display: block; min-width: 0; }
+  table.tx-list thead { display: none; }
+  table.tx-list tbody { display: block; }
+  table.tx-list tbody tr[data-row] {
+    display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: 10px; row-gap: 4px; align-items: center;
+    padding: 11px 14px; border-bottom: 1px solid var(--border);
+  }
+  table.tx-list tbody tr[data-row] > td { display: block; padding: 0; border: 0; min-width: 0; }
+  table.tx-list td.col-nr, table.tx-list td.col-kontakt, table.tx-list td.col-netto,
+  table.tx-list td.col-ust, table.tx-list td.col-beleg { display: none !important; }
+  table.tx-list td.col-text { grid-row: 1; grid-column: 1 / 3; font-weight: 560; }
+  table.tx-list td.col-brutto { grid-row: 1; grid-column: 3; }
+  table.tx-list td.col-datum { grid-row: 2; grid-column: 1; font-size: 12px; color: var(--muted); }
+  table.tx-list td.col-kat { grid-row: 2; grid-column: 2; font-size: 12px; }
+  table.tx-list td.col-status { grid-row: 2; grid-column: 3; justify-self: end; }
+  table.tx-list tr.empty-row, table.tx-list tr.empty-row > td { display: block; }
 }

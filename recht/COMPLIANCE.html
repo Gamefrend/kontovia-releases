@@ -7,7 +7,7 @@ pre{white-space:pre-wrap;word-wrap:break-word;font:inherit}
 @media (prefers-color-scheme:dark){body{background:#0e1116;color:#e7ecf2}}</style></head>
 <body><pre># Kontovia – rechtliche Einordnung
 
-Stand: September 2026, Programmversion 1.4.0
+Stand: September 2026, Programmversion 1.5.0
 
 Dieses Dokument hält fest, welche Regelwerke auf Kontovia anwendbar sind, wie
 die Bewertung zustande kommt und was offen bleibt. Es ist eine technische
@@ -339,9 +339,11 @@ Was noch fehlt, sobald Kontovia nicht mehr nur selbst genutzt wird:
 3. **Code-Signing-Zertifikat** – ohne Signatur warnt Windows SmartScreen bei
    jeder Installation. Ein Zertifikat für Organisationen liegt bei etwa
    200–400 € im Jahr.
-4. **Google-OAuth-Verifizierung** – nur bei der Drive-Variante nötig, weil
-   `drive.appdata` als sensibel gilt. Die Firebase-Variante kommt mit
-   `openid email profile` aus und ist nicht prüfpflichtig.
+4. **Google-OAuth-Verifizierung** – für den Cloud-Abgleich nicht nötig:
+   Firebase (`openid email profile`) und Drive (`drive.appdata`) nutzen
+   Bereiche, die Google als nicht sensibel führt (Stand September 2026). Nötig
+   ist nur, den Zustimmungsbildschirm auf *In Produktion* zu setzen. Anders
+   beim Google-Kalender-Abgleich, siehe oben.
 5. **Markenrecherche** – die Websuche zu „Kontovia" blieb ohne Treffer. Eine
    Recherche in den Registern von DPMA und EUIPO ersetzt das nicht und kostet
    bei anwaltlicher Begleitung etwa 300 €.

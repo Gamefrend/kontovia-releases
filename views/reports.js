@@ -3,7 +3,7 @@
 import {
   html, raw, esc, $, $$, money, fmtDate, fmtDateLong, todayISO, int, sum, ymLabel, pct,
 } from '../lib/util.js';
-import { icon, statCard, deltaBadge, rankBars, emptyState, ok, err, modal, chart, mountCharts, segToggle, wireSeg } from '../lib/ui.js';
+import { icon, statCard, deltaBadge, compareLabel, rankBars, emptyState, ok, err, modal, chart, mountCharts, segToggle, wireSeg } from '../lib/ui.js';
 import { store, sel } from '../lib/store.js';
 import {
   compareRanges, trend, euerReport, vatReturn, vatPeriods, balanceSheet,
@@ -98,7 +98,10 @@ function scopeWarning() {
 
 function guv(root, db) {
   const klein = isKleinunternehmer(db);
-  const { current, previous, prevFrom, prevTo } = compareRanges(db, period.from, period.to);
+  const cmp = compareRanges(db, period.from, period.to);
+  const { current, previous } = cmp;
+  // Im laufenden Zeitraum bis zum gleichen Stand wie der Vorzeitraum.
+  const delta = (key) => `${deltaBadge(trend(cmp.currentToDate[key], previous[key]), { invert: key === 'expenseForProfit' }).__raw} ${compareLabel(cmp)}`;
   const checks = healthChecks(db, period.from, period.to);
   const avg = averages(current);
   const perMonth = (v) => (avg.months ? Math.round(v / avg.months) : 0);
@@ -157,9 +160,9 @@ function guv(root, db) {
 
   root.innerHTML = html`
     <div class="grid c4 mb16">
-      ${statCard({ label: 'Betriebseinnahmen', value: `${esc(money(current.incomeForProfit))} €`, tone: 'pos', foot: `${deltaBadge(trend(current.incomeForProfit, previous.incomeForProfit)).__raw} <span>ggü. ${esc(fmtDate(prevFrom))}–${esc(fmtDate(prevTo))}</span>${avgFoot(avg.income)}` })}
-      ${statCard({ label: 'Betriebsausgaben', value: `${esc(money(current.expenseForProfit))} €`, tone: 'neg', foot: `${deltaBadge(trend(current.expenseForProfit, previous.expenseForProfit)).__raw} <span>ggü. Vorzeitraum</span>${avgFoot(avg.expense)}` })}
-      ${statCard({ label: current.profit >= 0 ? 'Gewinn' : 'Verlust', value: `${esc(money(current.profit))} €`, tone: current.profit >= 0 ? 'pos' : 'neg', foot: `${deltaBadge(trend(current.profit, previous.profit)).__raw} <span>ggü. Vorzeitraum</span>${avgFoot(avg.profit)}` })}
+      ${statCard({ label: 'Betriebseinnahmen', value: `${esc(money(current.incomeForProfit))} €`, tone: 'pos', foot: `${delta('incomeForProfit')}${avgFoot(avg.income)}` })}
+      ${statCard({ label: 'Betriebsausgaben', value: `${esc(money(current.expenseForProfit))} €`, tone: 'neg', foot: `${delta('expenseForProfit')}${avgFoot(avg.expense)}` })}
+      ${statCard({ label: current.profit >= 0 ? 'Gewinn' : 'Verlust', value: `${esc(money(current.profit))} €`, tone: current.profit >= 0 ? 'pos' : 'neg', foot: `${delta('profit')}${avgFoot(avg.profit)}` })}
       ${statCard({ label: 'Abschreibungen im Zeitraum', value: `${esc(money(current.depreciation))} €`, foot: `<span>${int((db.assets || []).length)} Wirtschaftsgüter</span>` })}
     </div>
 
@@ -230,7 +233,7 @@ function guv(root, db) {
               <tr><td class="muted">danach noch offene Zahllast des Zeitraums</td><td class="num muted">${esc(money(current.vatOutstanding))} €</td></tr>`) : ''}
           </tbody>
         </table>
-        ${current.margin !== null ? raw(`<p class="small muted mt16 mb0">Von jedem eingenommenen Euro bleiben ${esc((current.margin * 100).toFixed(1))} Cent als Gewinn übrig.</p>`) : ''}
+        ${current.margin !== null ? raw(`<p class="small muted mt16 mb0">Von jedem eingenommenen Euro bleiben ${esc((current.margin * 100).toFixed(1).replace('.', ','))} Cent als Gewinn übrig.</p>`) : ''}
       </div>
     </div>
 

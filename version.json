@@ -1,12 +1,12 @@
 {
-  "version": "1.4.0",
-  "released": "2026-09-25T15:18:14.991Z",
-  "notes": "Diese Fassung macht alle Listen sortierbar und bringt Suche und Filter dorthin,\nwo sie fehlten – überall mit derselben Bedienung.\n\n* Sortieren in jeder Liste. Jeder Spaltenkopf hat einen Sortierknopf: ein\n  Klick sortiert, ein zweiter kehrt die Richtung um, der farbige Pfeil zeigt,\n  wonach gerade sortiert ist. Das gilt für Buchungen, Kategorien, Kontakte,\n  Zahlungskonten, Anlagen, offene Posten, die Kategorien der Gewinn- und\n  Verlustrechnung, die Monatstabelle, das Änderungsjournal und die Konfliktliste.\n* Knopf „Sortieren“. Über größeren Listen steht die Sortierung in Worten –\n  etwa „Datum: neueste zuerst“ oder „Brutto: größte zuerst“ – und lässt sich dort\n  nach Spalte und Richtung wählen. Praktisch auf dem Telefon, wo nicht alle\n  Spalten ins Bild passen. Kontovia merkt sich die Sortierung jeder Liste.\n* Buchungen nach allen Spalten sortierbar, auch nach Beleg-Nummer, Status\n  (Überfälliges zuerst), Netto und Umsatzsteuer.\n* Stammdaten mit Suche und Filtern. Kategorien stehen in einer Liste mit\n  Filtern nach Art, Besonderheit und Verwendung; Kontakte lassen sich durchsuchen\n  und nach Kunden oder Lieferanten filtern. Ein Klick auf eine Zeile öffnet den\n  Eintrag zum Bearbeiten.\n* Offene Posten lassen sich durchsuchen und nach Kontakt oder „nur\n  überfällige“ filtern; ein Klick öffnet die Rechnung.\n* Auswertungen: Die Buchungen hinter einer Kategorie sind sortierbar, nach\n  Kontakt filterbar, und jede Zeile öffnet die Buchung selbst. Die Monatstabelle\n  im Verlauf sortiert auf Wunsch nach dem stärksten Monat.\n* Änderungsjournal mit Suche und Filter nach Vorgang.\n* Leere Werte stehen beim Sortieren immer am Ende, gleich in welcher Richtung.\n  Aufstellungen mit fester Reihenfolge – Anlage EÜR, Umsatzsteuer-Kennzahlen,\n  Kontenblätter mit laufendem Saldo – bleiben bewusst unsortiert.\n* Behoben: Die verworfene Fassung in der Konfliktliste des Cloud-Abgleichs wurde\n  doppelt maskiert angezeigt.",
+  "version": "1.5.0",
+  "released": "2026-09-25T15:54:06.870Z",
+  "notes": "Diese Fassung korrigiert den Vergleich mit dem Vorzeitraum, macht die Buchungsliste\r\nauf dem Telefon lesbar und schützt Eingaben in den Einstellungen.\r\n\r\n* Vergleich mit dem Vorzeitraum stimmt jetzt. Im laufenden Jahr stand bisher\r\n  Januar bis September gegen das ganze Vorjahr – das zeigte im Herbst einen\r\n  Rückgang, den es nicht gab. Jetzt zählen beide Seiten bis zum gleichen Tag\r\n  („ggü. Vorzeitraum bis 25.09.25“). Monate und Quartale werden kalendergenau\r\n  verglichen: März mit Februar, nicht mehr mit dem 29.01.–28.02.\r\n* Steigende Ausgaben sind rot. Die Veränderung bei den Ausgaben war bei einem\r\n  Anstieg grün gefärbt; die Farbe sagt jetzt, ob die Entwicklung gut ist.\r\n* Kasse im Minus wird gemeldet. Fällt der Bestand einer Kasse unter null,\r\n  steht unter „Ordnung und Vollständigkeit“ und in den Auswertungen, ab welchem\r\n  Tag – bei einer Betriebsprüfung ein typischer Anlass für Nachfragen.\r\n* Buchungsliste auf dem Telefon. Statt einer breiten Tabelle, in der der\r\n  Betrag erst nach seitlichem Wischen auftauchte, steht jede Buchung als Karte da:\r\n  Beschreibung und Betrag oben, Datum, Kategorie und Status darunter. Der neue\r\n  Knopf „Filter“ bündelt alle Filter der Liste.\r\n* Einstellungen gehen nicht mehr verloren. Geänderte Felder blieben bisher\r\n  ohne Hinweis liegen, wenn man die Seite verließ. Jetzt bleibt die Leiste mit\r\n  „Übernehmen“ unten im Bild, und beim Verlassen fragt Kontovia nach.\r\n* Einstellungen: Das Zahnrad-Symbol war schief und am Rand abgeschnitten.\r\n* iPhone und iPad: Wischen und Tippen zählen als Aktivität – wer nur liest\r\n  und scrollt, wird nicht mehr mitten im Lesen gesperrt. Auf Apple-Geräten\r\n  zeigen die Tastenkürzel ⌘ statt Strg.\r\n* Größenangaben mit Dezimalkomma (17,2 KB statt 17.2 KB), ebenso die Angabe „Cent\r\n  je eingenommenem Euro“.\r\n* Cloud-Hilfe aktualisiert: Google führt den Drive-Anwendungsordner inzwischen als\r\n  nicht sensiblen Bereich – auch die Ablage im eigenen Google Drive braucht keine\r\n  Überprüfung durch Google und hat kein Nutzerlimit.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "4f6ffebca7d120eb09cedd5c3095575812cac7dd93846317cf6920b83044e50b",
-      "size": 34451
+      "sha256": "6c08a8001c1860b873f20c9a54aa915193a72e7ce80d7966aa4662ee76de9131",
+      "size": 35070
     },
     {
       "path": "icons/apple-touch-icon.png",
@@ -35,8 +35,8 @@
     },
     {
       "path": "lib/calc.js",
-      "sha256": "126205c5dab53a7d6596c1bb68a30bb342804f037bd467d1e48b36c1f9adb571",
-      "size": 29770
+      "sha256": "889f73d7b9e9fb3b95630b30c375a2e146a8fc09d3301c2401435757e76dec2b",
+      "size": 32746
     },
     {
       "path": "lib/exports.js",
@@ -85,8 +85,8 @@
     },
     {
       "path": "lib/router.js",
-      "sha256": "913221aa2870f02794f00bc8092088a1c7ce0e44651148dfdbceb8eee5877d3a",
-      "size": 461
+      "sha256": "8601c3bb0d9b2b6a8e1a6c98254f0d48c66fb2b7cb979942c94c1e16477a7de1",
+      "size": 867
     },
     {
       "path": "lib/store.js",
@@ -100,13 +100,13 @@
     },
     {
       "path": "lib/table.js",
-      "sha256": "2d2f4773e940d8f6409089cb7452147fbf28720b3d02f9227552d4a2bb35a3cd",
-      "size": 18046
+      "sha256": "23315a26d8304e6c4b72e7caa00224034a4dbe8396b9f2d75444f9d34b2c58cb",
+      "size": 18945
     },
     {
       "path": "lib/ui.js",
-      "sha256": "d0a34cfc2fdfa5fd9ed871089bf6d0bf2afae4b83b196471098e720459cae94c",
-      "size": 39048
+      "sha256": "e01ef9abe4fa33234b9410dda9f47e26fb40023af74c601c53d1d6eb6c2aadcd",
+      "size": 40204
     },
     {
       "path": "lib/updates.js",
@@ -115,28 +115,28 @@
     },
     {
       "path": "lib/util.js",
-      "sha256": "5f44eab55067783e2c6e08961e6271514e991e8f9e1407084df69d93fc2fbd8c",
-      "size": 11470
+      "sha256": "7177d033e01cba78a81a5cf12e6ecbaa2ceada5ce1e91812d78559942bdd81fd",
+      "size": 11864
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "371c65fa7e1d4d19d431be11147ff800a133794437de969215a6660c70ed2bb8",
+      "sha256": "22d02a3d5121e2d2e441adf3f2725cc50b3798e0af9457cf93861a2096b5d36b",
       "size": 886
     },
     {
       "path": "recht/COMPLIANCE.html",
-      "sha256": "823022fe45b30c0195b8158ddd6424e1dc11930d62cf75930ed0c809ce7bea44",
-      "size": 23526
+      "sha256": "d9d2d03d67d86d387e7b9d56a7b8f38b2db8d94e4d9bd777c96cb13f866fc46d",
+      "size": 23669
     },
     {
       "path": "recht/DATENSCHUTZ.html",
-      "sha256": "f2efb320724bef349ddbd35ea08d89f8b4eac7ae79b50477bb7b39de9c1ac86c",
+      "sha256": "a65b83602047e09e860c4290964985cfcc2bd55c055f9c9db8b4f974ea79dad6",
       "size": 11082
     },
     {
       "path": "styles.css",
-      "sha256": "153f5039a4041ba0751aca6b1fcb9ca0df2054330f7b8d02462be0fb87cefef8",
-      "size": 42411
+      "sha256": "49981dd559f3bb839700a5057bf9417ef76556e5d7f1a41baef503b98498af8c",
+      "size": 43002
     },
     {
       "path": "views/calendar.js",
@@ -150,13 +150,13 @@
     },
     {
       "path": "views/cloudpanel.js",
-      "sha256": "f4f04bba802bd3cd973c442fc4f7fcf0281dffee1bb5b38f44314a35cc78b748",
-      "size": 33407
+      "sha256": "146bf055b41d8a2ea5498ccedc1f610983b0b20839c7621ce635fff4d9e68052",
+      "size": 33465
     },
     {
       "path": "views/dashboard.js",
-      "sha256": "3b3bd23abb37185a00872ae84eeb7e64a430603f87ea39ccc1458e17c7e5554a",
-      "size": 25563
+      "sha256": "d8f13f868eb14da1f28533dcdd7ecb409242f33b4861ed00bd79b9e931e99179",
+      "size": 25641
     },
     {
       "path": "views/export.js",
@@ -165,8 +165,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "2e42bfa2f9e3d34494fc6bb6befc945695a3873b0a3d6a892d61f4fe2ce53806",
-      "size": 36665
+      "sha256": "a385b41b75f28f14884e7258a3cbd7e5d2996d5aaaff1f2d53396d735f755d12",
+      "size": 36760
     },
     {
       "path": "views/master.js",
@@ -175,18 +175,18 @@
     },
     {
       "path": "views/reports.js",
-      "sha256": "a11f75766c154d26279e9ca8a2cfb774f1d7dd1a95e7782cd0752a48c7c84233",
-      "size": 42172
+      "sha256": "3a361c89d9f743b48e2cdedc404d520de5a21b62a5acf2b1fb6f59f08764e07d",
+      "size": 42156
     },
     {
       "path": "views/settings.js",
-      "sha256": "268583cff39972391ac0b7e6456d81ecb551b59e3c77dff097a948ad491a1509",
-      "size": 22465
+      "sha256": "79af578bfd29cc5b8da2512afe08afde272e6d3e24a0076afc01f6316942a00d",
+      "size": 26193
     },
     {
       "path": "views/transactions.js",
-      "sha256": "9928825ffe8bf0a68144a02721126c119dddb6528776c422f0bb8d5a61a85b61",
-      "size": 54904
+      "sha256": "f2347e4f32a53be1c16bf368e6a4fe5637bc72fc42029ca94a9deced3289fa09",
+      "size": 55088
     },
     {
       "path": "web/ablage.js",
@@ -195,7 +195,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "9a5d49c30ed8dd11ef3aded39aefe13473cafd9714794243aec25aa35bc33e8a",
+      "sha256": "d429782441027b52d8f863fdd799f7c4155ccf2b62f7d19be795bfeeeecc0428",
       "size": 6944
     },
     {
@@ -280,8 +280,8 @@
     },
     {
       "path": "web/web.css",
-      "sha256": "10324aee9b3d86df4e51ef023116f7ed518dcf4b8d7f291d039164813021b656",
-      "size": 5447
+      "sha256": "6c5c7c8595ab8ea51562ca8587e72be603bac4739689a9ff0fc9f5db9a574d47",
+      "size": 6962
     },
     {
       "path": "web/zip.js",

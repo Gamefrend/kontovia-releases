@@ -9,7 +9,7 @@
 import {
   html, raw, esc, $, $$, money, todayISO, int, ymLabel, addDays, relativeDays, sum, fmtDate, MONTHS_SHORT,
 } from '../lib/util.js';
-import { icon, statCard, deltaBadge, rankBars, donut, emptyState, chart, mountCharts, amountCell, ok } from '../lib/ui.js';
+import { icon, statCard, deltaBadge, compareLabel, rankBars, donut, emptyState, chart, mountCharts, amountCell, ok } from '../lib/ui.js';
 import { store, sel } from '../lib/store.js';
 import {
   compareRanges, trend, openItems, accountBalances, balanceSheet,
@@ -71,6 +71,9 @@ function context() {
     klein: isKleinunternehmer(db),
     current: () => cmp().current,
     previous: () => cmp().previous,
+    // Veränderung zum Vorzeitraum, im laufenden Zeitraum bis zum gleichen Stand.
+    delta: (key) => deltaBadge(trend(cmp().currentToDate[key], cmp().previous[key]), { invert: key === 'expenseForProfit' }).__raw
+      + ' ' + compareLabel(cmp()),
     avg: once(() => averages(cmp().current)),
     open: once(() => openItems(db, todayISO())),
     accounts: once(() => accountBalances(db, todayISO())),
@@ -101,7 +104,7 @@ const WIDGETS = {
     title: 'Einnahmen', size: 3,
     render: (c) => statCard({
       label: 'Einnahmen', icon: 'up', value: euro(c.current().incomeForProfit), tone: 'pos',
-      foot: `${deltaBadge(trend(c.current().incomeForProfit, c.previous().incomeForProfit)).__raw} <span>ggü. Vorzeitraum</span>`
+      foot: c.delta('incomeForProfit')
         + avgFoot(c.avg().income, c.avg()),
     }).__raw,
   },
@@ -109,7 +112,7 @@ const WIDGETS = {
     title: 'Ausgaben', size: 3,
     render: (c) => statCard({
       label: 'Ausgaben', icon: 'down', value: euro(c.current().expenseForProfit), tone: 'neg',
-      foot: `${deltaBadge(trend(c.current().expenseForProfit, c.previous().expenseForProfit)).__raw} <span>ggü. Vorzeitraum</span>`
+      foot: c.delta('expenseForProfit')
         + avgFoot(c.avg().expense, c.avg()),
     }).__raw,
   },

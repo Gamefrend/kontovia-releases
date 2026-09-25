@@ -5,7 +5,7 @@ import {
 } from '../lib/util.js';
 import { icon, modal, confirmDialog, askPassword, ok, err, warn, toast, emptyState } from '../lib/ui.js';
 import { store, sel, commit, saveNow, setDb, verifyAudit, lockedUntil } from '../lib/store.js';
-import { refresh, navigate } from '../lib/router.js';
+import { refresh, navigate, router } from '../lib/router.js';
 import { applyTheme, appInfo } from '../app.js';
 import { renderCloudCard, renderUpdateCard, openConflicts } from './cloudpanel.js';
 import { renderCalendarCard } from './calendarsync.js';
@@ -14,6 +14,25 @@ import { table, mountTables } from '../lib/table.js';
 const api = window.kontovia;
 /** Läuft Kontovia im Browser statt in Electron? (src/web/bridge.js) */
 const WEB = api.platform === 'web';
+
+/** Felder, die erst mit „Einstellungen übernehmen“ gelten (das Erscheinungsbild wirkt sofort). */
+const FELDER = [
+  'companyName', 'ownerName', 'street', 'zip', 'city', 'taxNumber', 'vatId', 'taxOffice', 'email', 'phone',
+  'taxMode', 'accountingBasis', 'defaultVatRate', 'vatPeriod', 'chartOfAccounts', 'fiscalYear',
+  'autoLockMinutes', 'startView',
+];
+
+/* Noch nicht übernommene Eingaben. Sie überstehen ein Neuzeichnen der Seite –
+   etwa nachdem der Kalender verbunden wurde –, und wer die Seite verlässt,
+   wird gefragt, statt sie still zu verlieren. */
+let offen = {};
+let seite = null;
+const verlassen = async () => {
+  const wahl = await askLeave();
+  if (wahl === 'apply') { await apply(seite, { neuZeichnen: false }); return true; }
+  if (wahl === 'discard') { offen = {}; return true; }
+  return false;
+};
 
 export async function render(root, params, { actions } = {}) {
   actions.innerHTML = html`<button class="btn" id="btnSaveNow">${icon('save', 16)} Jetzt sichern</button>`;
@@ -233,12 +252,15 @@ async function draw(root) {
       </div>
     </div>
 
-    <div class="row end mt16 mb16" style="gap:8px">
+    <div class="row end mt16 mb16 apply-bar" id="applyBar">
       <span class="muted small" id="saveHint">Firmendaten, Steuer, Sicherheit und Darstellung gelten erst nach dem Übernehmen.</span>
+      <button class="btn" id="btnDiscard" hidden>Verwerfen</button>
       <button class="btn primary lg" id="btnApply">Einstellungen übernehmen</button>
     </div>`;
 
+  seite = root;
   wire(root);
+  trackChanges(root);
   // Cloud und Updates laden ihre Karten selbst nach – beide fragen den
   // Hauptprozess und sollen die übrige Ansicht nicht aufhalten.
   renderCloudCard($('#cloudCard', root));
@@ -248,29 +270,96 @@ async function draw(root) {
 
 /* -------------------------------------------------------------------------- */
 
-function wire(root) {
-  $('#btnApply', root).addEventListener('click', async () => {
-    const val = (id) => $('#s_' + id, root)?.value ?? '';
-    await commit('einstellungen.aendern', (db) => {
-      Object.assign(db.settings, {
-        companyName: val('companyName'), ownerName: val('ownerName'), street: val('street'),
-        zip: val('zip'), city: val('city'), taxNumber: val('taxNumber'), vatId: val('vatId'),
-        taxOffice: val('taxOffice'), email: val('email'), phone: val('phone'),
-        taxMode: val('taxMode'), accountingBasis: val('accountingBasis'),
-        defaultVatRate: Number(val('defaultVatRate')), vatPeriod: val('vatPeriod'),
-        chartOfAccounts: val('chartOfAccounts'), fiscalYear: Number(val('fiscalYear')),
-        autoLockMinutes: Number(val('autoLockMinutes')),
-        theme: val('theme'), startView: val('startView'),
-        // Zeitstempel entscheidet beim Cloud-Abgleich, welche Fassung gilt.
-        updatedAt: new Date().toISOString(),
-      });
-    }, { entity: 'einstellungen', summary: 'Einstellungen geändert' });
-    await api.app.setAutoLock(store.db.settings.autoLockMinutes);
-    applyTheme();
-    await saveNow();
-    ok('Einstellungen übernommen');
-    refresh();
+/**
+ * Vergleicht die Felder mit dem Stand beim Zeichnen. Bei offenen Änderungen
+ * bleibt die Leiste mit „Übernehmen“ unten im Bild, und ein Wechsel der
+ * Ansicht fragt nach.
+ */
+function trackChanges(root) {
+  const start = Object.fromEntries(FELDER.map((id) => [id, $('#s_' + id, root)?.value ?? '']));
+  // Neu gezeichnet, während noch Eingaben offen waren: wieder einsetzen.
+  if (router.leaveGuard === verlassen) {
+    for (const [id, v] of Object.entries(offen)) { const el = $('#s_' + id, root); if (el) el.value = v; }
+  } else {
+    offen = {};
+  }
+  const bar = $('#applyBar', root);
+  const hint = $('#saveHint', root);
+  const update = () => {
+    offen = {};
+    for (const id of FELDER) {
+      const el = $('#s_' + id, root);
+      if (el && el.value !== start[id]) offen[id] = el.value;
+    }
+    const n = Object.keys(offen).length;
+    bar.classList.toggle('dirty', n > 0);
+    $('#btnDiscard', root).hidden = n === 0;
+    hint.textContent = n
+      ? `${n === 1 ? 'Eine Änderung ist' : `${n} Änderungen sind`} noch nicht übernommen.`
+      : 'Firmendaten, Steuer, Sicherheit und Darstellung gelten erst nach dem Übernehmen.';
+    router.leaveGuard = n ? verlassen : null;
+  };
+  for (const id of FELDER) {
+    const el = $('#s_' + id, root);
+    el?.addEventListener('input', update);
+    el?.addEventListener('change', update);
+  }
+  $('#btnDiscard', root).addEventListener('click', () => {
+    for (const id of FELDER) { const el = $('#s_' + id, root); if (el) el.value = start[id]; }
+    update();
   });
+  update();
+}
+
+/** Fragt beim Verlassen mit offenen Änderungen. @returns {Promise<'apply'|'discard'|null>} */
+function askLeave() {
+  return new Promise((resolve) => {
+    let entschieden = false;
+    const n = Object.keys(offen).length;
+    const m = modal({
+      title: 'Einstellungen übernehmen?',
+      size: 'slim',
+      body: html`<p class="mt0" style="line-height:1.6">${n === 1 ? 'Eine Änderung' : `${n} Änderungen`} in den Einstellungen
+        ${n === 1 ? 'ist' : 'sind'} noch nicht übernommen.</p>`,
+      foot: '<button class="btn left" data-stay>Weiter bearbeiten</button>'
+        + '<button class="btn danger" data-discard>Verwerfen</button>'
+        + '<button class="btn primary" data-apply>Übernehmen</button>',
+      onClose: () => { if (!entschieden) resolve(null); },
+    });
+    const wahl = (v) => { entschieden = true; m.close(); resolve(v); };
+    m.root.querySelector('[data-stay]').addEventListener('click', () => wahl(null));
+    m.root.querySelector('[data-discard]').addEventListener('click', () => wahl('discard'));
+    m.root.querySelector('[data-apply]').addEventListener('click', () => wahl('apply'));
+  });
+}
+
+async function apply(root, { neuZeichnen = true } = {}) {
+  const val = (id) => $('#s_' + id, root)?.value ?? '';
+  await commit('einstellungen.aendern', (db) => {
+    Object.assign(db.settings, {
+      companyName: val('companyName'), ownerName: val('ownerName'), street: val('street'),
+      zip: val('zip'), city: val('city'), taxNumber: val('taxNumber'), vatId: val('vatId'),
+      taxOffice: val('taxOffice'), email: val('email'), phone: val('phone'),
+      taxMode: val('taxMode'), accountingBasis: val('accountingBasis'),
+      defaultVatRate: Number(val('defaultVatRate')), vatPeriod: val('vatPeriod'),
+      chartOfAccounts: val('chartOfAccounts'), fiscalYear: Number(val('fiscalYear')),
+      autoLockMinutes: Number(val('autoLockMinutes')),
+      theme: val('theme'), startView: val('startView'),
+      // Zeitstempel entscheidet beim Cloud-Abgleich, welche Fassung gilt.
+      updatedAt: new Date().toISOString(),
+    });
+  }, { entity: 'einstellungen', summary: 'Einstellungen geändert' });
+  await api.app.setAutoLock(store.db.settings.autoLockMinutes);
+  applyTheme();
+  await saveNow();
+  offen = {};
+  router.leaveGuard = null;
+  ok('Einstellungen übernommen');
+  if (neuZeichnen) refresh();
+}
+
+function wire(root) {
+  $('#btnApply', root).addEventListener('click', () => apply(root));
 
   // Das Erscheinungsbild wirkt sofort – ausprobieren soll ohne „Übernehmen“ gehen.
   $('#s_theme', root).addEventListener('change', async (e) => {

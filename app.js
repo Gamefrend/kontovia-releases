@@ -3,7 +3,7 @@
  * Kümmert sich um Einrichtung, Entsperren, Rahmen und Navigation.
  */
 
-import { html, raw, esc, $, int, fmtDateTime, debounce } from './lib/util.js';
+import { html, raw, esc, $, int, fmtDateTime, debounce, MOD } from './lib/util.js';
 import { icon, toast, ok, err, warn, modal, passwordInput, wirePasswordToggles } from './lib/ui.js';
 import { store, setDb, subscribe, saveNow, sel, lockedUntil, setDevice, commit } from './lib/store.js';
 import { startAutoSync, syncState, onSync, syncNow } from './lib/sync.js';
@@ -229,7 +229,7 @@ function renderSetup() {
         <strong>Bitte notieren Sie das Passwort an einem sicheren Ort.</strong>
         Ein Passwortmanager oder ein Zettel im Safe – beides ist besser als Vertrauen
         aufs Gedächtnis. Legen Sie außerdem regelmäßig Vollsicherungen an
-        (Datei → Vollsicherung erstellen).
+        (Einstellungen → Sicherung und Speicherort${WEB ? '' : ' oder Datei → Vollsicherung erstellen'}).
       </div>
       <div class="field mt16">
         <label>Soll Kontovia nach neuen Programmversionen suchen?</label>
@@ -504,7 +504,7 @@ function navItem(key) {
   return html`
     <div class="nav-item ${router.view === key ? 'active' : ''}" data-view="${key}" role="button" tabindex="0" aria-current="${router.view === key ? 'page' : 'false'}">
       ${icon(v.icon, 18)}<span>${v.title}</span>
-      ${v.key ? raw(`<span class="kbd">Strg+${esc(v.key)}</span>`) : ''}
+      ${v.key ? raw(`<span class="kbd">${MOD}+${esc(v.key)}</span>`) : ''}
     </div>`;
 }
 
@@ -535,7 +535,7 @@ function renderShell() {
         <div class="sidebar-foot">
           <div id="updateSlot"></div>
           <div id="themeSlot"></div>
-          <button class="btn ghost block" id="lockBtn">${icon('lock', 16)} Sperren <span class="kbd" style="margin-left:auto;font-size:10px;color:var(--muted)">Strg+L</span></button>
+          <button class="btn ghost block" id="lockBtn">${icon('lock', 16)} Sperren <span class="kbd" style="margin-left:auto;font-size:10px;color:var(--muted)">${MOD}+L</span></button>
         </div>
       </aside>
       <main class="main">
@@ -648,6 +648,8 @@ onNavigate(async (view, params) => {
 
 api.on.locked(async ({ reason }) => {
   document.getElementById('overlays').innerHTML = '';
+  // Ungesicherte Eingaben einer Ansicht sind mit dem Sperren verworfen.
+  router.leaveGuard = null;
   closePopover();
   // Nach dem Entsperren gelten wieder die Zahlen ohne nicht gelistete Buchungen.
   scope.includeUnlisted = false;
@@ -748,14 +750,22 @@ document.addEventListener('keydown', (e) => {
   if (!inField && e.key === '?') { navigate('help'); }
 });
 
-/* Aktivität melden, damit die automatische Sperre nicht mitten im Tippen greift */
+/* Aktivität melden, damit die automatische Sperre nicht mitten im Tippen greift.
+   pointerdown und touchstart zählen auch Antippen und Wischen auf Telefon und
+   Tablet – dort gibt es kein wheel, und wer nur liest und scrollt, wurde sonst
+   mitten im Lesen gesperrt. */
 const ping = debounce(() => api.app.activity(), 800);
-for (const evt of ['mousedown', 'keydown', 'wheel']) {
+for (const evt of ['pointerdown', 'touchstart', 'keydown', 'wheel']) {
   document.addEventListener(evt, ping, { passive: true });
 }
 
 /* Ungespeicherte Änderungen beim Schließen noch wegschreiben */
-window.addEventListener('beforeunload', () => { if (store.dirty) saveNow(); });
+window.addEventListener('beforeunload', (e) => {
+  if (store.dirty) saveNow();
+  // Im Browser fragt die Seite vor dem Schließen, wenn Eingaben nicht übernommen
+  // sind. Nicht unter Electron: dort verhinderte das still das Beenden.
+  if (WEB && router.leaveGuard) { e.preventDefault(); e.returnValue = ''; }
+});
 document.addEventListener('visibilitychange', () => { if (document.hidden && store.dirty) saveNow(); });
 
 boot();

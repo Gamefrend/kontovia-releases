@@ -1,6 +1,6 @@
 /** Kontovia – Kurzanleitung, Cloud-Einrichtung und rechtliche Hinweise. */
 
-import { html, raw, esc, $, $$ } from '../lib/util.js';
+import { html, raw, esc, $, $$, MOD } from '../lib/util.js';
 import { icon, err } from '../lib/ui.js';
 import { store } from '../lib/store.js';
 import { navigate } from '../lib/router.js';
@@ -39,7 +39,7 @@ function anleitung(root) {
           <li><strong>Konto anlegen.</strong> Unter <a data-go="master">Stammdaten → Zahlungskonten</a> tragen Sie
               Ihr Geschäftskonto mit dem Anfangsbestand ein – dem Saldo an dem Tag, ab dem Sie
               mit Kontovia buchen. Sonst stimmen die Kontostände nicht.</li>
-          <li><strong>Erste Ausgabe erfassen.</strong> <kbd>Strg</kbd>+<kbd>N</kbd> öffnet den Dialog.
+          <li><strong>Erste Ausgabe erfassen.</strong> <kbd>${MOD}</kbd>+<kbd>N</kbd> öffnet den Dialog.
               Beschreibung, Datum, Kategorie, Betrag – fertig. Den Beleg ziehen Sie einfach
               per Maus ins Fenster.</li>
           <li><strong>Rechnungen stellen.</strong> Eine Einnahme mit gesetzter Fälligkeit und ohne
@@ -201,12 +201,12 @@ function anleitung(root) {
         <h3 class="mt0">Tastenkürzel</h3>
         <table class="data compact">
           <tbody>
-            <tr><td><kbd>Strg</kbd>+<kbd>N</kbd></td><td>Neue Buchung</td></tr>
-            <tr><td><kbd>Strg</kbd>+<kbd>Umschalt</kbd>+<kbd>N</kbd></td><td>Neuer Termin</td></tr>
-            <tr><td><kbd>Strg</kbd>+<kbd>S</kbd></td><td>Sofort speichern</td></tr>
-            <tr><td><kbd>Strg</kbd>+<kbd>F</kbd></td><td>In Buchungen suchen</td></tr>
-            <tr><td><kbd>Strg</kbd>+<kbd>L</kbd></td><td>Sperren</td></tr>
-            <tr><td><kbd>Strg</kbd>+<kbd>1</kbd> … <kbd>6</kbd></td><td>Zwischen den Ansichten wechseln</td></tr>
+            <tr><td><kbd>${MOD}</kbd>+<kbd>N</kbd></td><td>Neue Buchung</td></tr>
+            <tr><td><kbd>${MOD}</kbd>+<kbd>Umschalt</kbd>+<kbd>N</kbd></td><td>Neuer Termin</td></tr>
+            <tr><td><kbd>${MOD}</kbd>+<kbd>S</kbd></td><td>Sofort speichern</td></tr>
+            <tr><td><kbd>${MOD}</kbd>+<kbd>F</kbd></td><td>In Buchungen suchen</td></tr>
+            <tr><td><kbd>${MOD}</kbd>+<kbd>L</kbd></td><td>Sperren</td></tr>
+            <tr><td><kbd>${MOD}</kbd>+<kbd>1</kbd> … <kbd>6</kbd></td><td>Zwischen den Ansichten wechseln</td></tr>
           </tbody>
         </table>
       </div></div>
@@ -248,19 +248,19 @@ function cloud(root) {
           <thead><tr><th></th><th>Firebase</th><th>Google Drive</th></tr></thead>
           <tbody>
             <tr><td class="muted">Aufwand für Ihre Nutzer</td><td><strong>nur „mit Google anmelden“</strong></td><td>ebenfalls nur anmelden</td></tr>
-            <tr><td class="muted">Prüfung durch Google nötig</td><td><strong>nein</strong></td><td>ja, sonst Warnhinweis</td></tr>
-            <tr><td class="muted">Nutzerobergrenze</td><td><strong>keine</strong></td><td>100 ohne Prüfung</td></tr>
-            <tr><td class="muted">Wo die Daten liegen</td><td>in Ihrem Projekt</td><td><strong>beim Nutzer selbst</strong></td></tr>
+            <tr><td class="muted">Prüfung durch Google nötig</td><td><strong>nein</strong></td><td><strong>nein</strong></td></tr>
+            <tr><td class="muted">Nutzerobergrenze</td><td><strong>keine</strong></td><td><strong>keine</strong></td></tr>
+            <tr><td class="muted">Wo die Daten liegen</td><td>in Ihrem Projekt</td><td><strong>beim Nutzer selbst</strong>, in dessen Speicherplatz</td></tr>
             <tr><td class="muted">Kosten</td><td>Kreditkarte nötig, real unter einem Euro im Monat bei 100 Nutzern</td><td><strong>keine</strong></td></tr>
             <tr><td class="muted">Ihre Rolle im Datenschutz</td><td>Sie halten fremde (verschlüsselte) Daten</td><td><strong>Sie halten nichts</strong></td></tr>
           </tbody>
         </table>
-        <p class="small mt16 mb0"><strong>Für die Weitergabe an andere: Firebase.</strong>
-        Der Grund ist die Prüfpflicht. Google stuft den Zugriff auf den Drive-Anwendungsordner
-        als sensibel ein; ohne Überprüfung bleibt es bei 100 Nutzern und einem Warnhinweis im
-        Anmeldedialog. Firebase braucht nur Name und E-Mail-Adresse – das ist unbedenklich und
-        damit weder prüfpflichtig noch gedeckelt.
-        <strong>Nur für sich selbst: Drive.</strong> Kostet nichts und Sie halten keine
+        <p class="small mt16 mb0"><strong>Beide Wege taugen auch für die Weitergabe an andere.</strong>
+        Google führt beide Zugriffsbereiche als nicht sensibel – den Drive-Anwendungsordner ebenso
+        wie Name und E-Mail-Adresse bei Firebase. Es gibt also weder eine Prüfpflicht noch ein
+        Nutzerlimit, sobald der Zustimmungsbildschirm auf „In Produktion“ steht.
+        <strong>Firebase</strong> ist voreingestellt und fertig eingerichtet.
+        <strong>Drive</strong> ist die datensparsamere Wahl: kostenlos, und Sie halten keine
         fremden Daten.</p>
       </div></div>
 
@@ -361,9 +361,9 @@ function cloud(root) {
           <li>In <a data-go="settings">Einstellungen → Cloud-Abgleich</a> als Ablage
               <strong>Google Drive</strong> wählen und die beiden Werte eintragen.</li>
         </ol>
-        <p class="small">Beim ersten Verbinden erscheint „Google hat diese App nicht überprüft“.
-        Über <strong>Erweitert → Weiter zu Kontovia</strong> geht es weiter. Bis 100 Nutzer
-        ist das ohne Überprüfung möglich.</p>
+        <p class="small">Solange der Zustimmungsbildschirm im Status „Test“ steht, kommen nur
+        die dort eingetragenen Testnutzer hinein. Nach dem Veröffentlichen braucht der
+        Drive-Anwendungsordner keine Überprüfung durch Google.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">

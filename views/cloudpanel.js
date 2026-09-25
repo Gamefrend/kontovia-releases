@@ -123,8 +123,8 @@ function setupForm(status) {
         <option value="drive" ${firebase ? '' : 'selected'}>Google Drive – jeder Nutzer speichert im eigenen Drive</option>
       </select>
       <span class="hint">${firebase
-        ? 'Ihre Nutzer melden sich nur mit Google an, mehr ist von ihnen nicht zu tun. Der Zugriffsbereich gilt bei Google als unbedenklich, daher gibt es weder eine Prüfpflicht noch ein Nutzerlimit.'
-        : 'Kostet nichts und Sie halten keine fremden Daten. Google stuft den Zugriff auf den Anwendungsordner aber als sensibel ein: ohne Überprüfung durch Google zeigt der Anmeldedialog eine Warnung, und es sind höchstens 100 Nutzer möglich.'}</span>
+        ? 'Ihre Nutzer melden sich nur mit Google an, mehr ist von ihnen nicht zu tun. Google führt den Zugriffsbereich als nicht sensibel, daher gibt es weder eine Prüfpflicht noch ein Nutzerlimit.'
+        : 'Kostet nichts und Sie halten keine fremden Daten: Der Tresor liegt im Drive jedes Nutzers und zählt gegen dessen Speicherplatz. Google führt den Anwendungsordner als nicht sensibel – keine Prüfpflicht, kein Nutzerlimit. Im Google-Cloud-Projekt muss die Google Drive API eingeschaltet sein.'}</span>
     </div>
 
     <p class="small mb8" style="color:var(--text-2)">Die vollständige Anleitung mit allen

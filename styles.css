@@ -697,6 +697,18 @@ table.data th.num .th-sort { flex-direction: row-reverse; margin-left: 0; margin
 .dt-sort { max-width: 300px; }
 .dt-sort span { overflow: hidden; text-overflow: ellipsis; }
 .dt-sort .ico:last-child { color: var(--muted); }
+/* Alle Filter in einem Menü – nur auf schmalen Bildschirmen (web.css), wo die
+   Spaltenköpfe mit ihren Trichtern wegfallen. */
+.dt-filter-all { display: none; }
+
+/* Einstellungen: die Leiste mit „Übernehmen“ bleibt bei offenen Änderungen unten im Bild. */
+.apply-bar { gap: 8px; }
+.apply-bar.dirty {
+  position: sticky; bottom: 0; z-index: 5; padding: 10px 14px;
+  background: var(--surface); border: 1px solid var(--accent); border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+.apply-bar.dirty #saveHint { color: var(--text); font-weight: 560; margin-right: auto; }
 .dt-sum { display: flex; align-items: center; }
 .th-filter {
   flex: none; display: grid; place-items: center; width: 22px; height: 22px; padding: 0;
