@@ -79,13 +79,17 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
 
   /* Breite Tabellen scrollen in sich, statt die Seite zu sprengen. */
   .table-wrap, .table-wrap:has(> table.fixed) { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-  table.data.fixed { min-width: 680px; }
+  table.data.fixed { min-width: 780px; }
 
   .filters { padding: 10px 12px; }
   .filters .search { min-width: 0; max-width: none; flex: 1 1 100%; }
   .filters input[type="search"], .filters select, .filters input[type="date"] { min-width: 0; }
   .filter-chips { padding: 8px 12px; }
   .th-filter { width: 28px; height: 28px; opacity: .8; }
+  .th-sort { padding: 6px 4px; }
+  .th-sort .th-arrow { opacity: .6; }
+  .dt-sort { max-width: 100%; }
+  .dt-sum { flex-basis: 100%; order: 3; }
 
   /* Fenster kommen von unten, wie auf dem Telefon üblich. */
   .modal-backdrop { padding: 0; place-items: end stretch; }

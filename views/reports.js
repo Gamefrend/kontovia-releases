@@ -16,6 +16,7 @@ import {
 } from '../lib/prefs.js';
 import { defaultPeriod, periodControl, periodLabel, setPeriod } from '../lib/period.js';
 import * as R from '../lib/reports.js';
+import { table, mountTables } from '../lib/table.js';
 import { openTransactionDialog } from './transactions.js';
 
 const api = window.kontovia;
@@ -75,6 +76,7 @@ function draw(root) {
   const body = $('#tabBody', root);
   ({ guv, euer, ust, bilanz, opos, konten, anlagen }[tab] || guv)(body, db);
   mountCharts(body);
+  mountTables(body);
 }
 
 /**
@@ -103,19 +105,42 @@ function guv(root, db) {
   const anteilPct = (v, total) => (total ? (Math.abs(v) / total * 100).toFixed(1).replace('.', ',') : '0,0');
   const avgFoot = (v) => (avg.months > 1 ? `<span class="avg-foot">Ø ${esc(money(v))} € je Monat</span>` : '');
 
-  const catRow = (c, total) => `
-    <tr class="clickable" data-cat="${esc(c.categoryId)}">
-      <td>${esc(c.name)}</td>
-      <td class="num muted">${int(c.count)}</td>
-      ${klein ? '' : `<td class="num muted">${esc(money(c.vat))}</td>`}
-      <td class="num">${esc(money(c.amount))}</td>
-      <td class="num muted">${esc(money(perMonth(c.amount)))}</td>
-      <td class="num muted">${anteilPct(c.amount, total)} %</td>
-    </tr>`;
-
   const incomeCats = current.byCategory.filter((c) => c.kind === 'income');
   const expenseCats = current.byCategory.filter((c) => c.kind === 'expense');
-  const cols = klein ? 5 : 6;
+
+  /* Kategorien je Seite, sortierbar nach jeder Spalte. Ein Klick auf eine Zeile
+     zeigt die Buchungen dahinter; die Abschreibung hat keine eigenen Buchungen. */
+  const catTable = (kind, rows, total, count, vatSum, avgSum) => table({
+    id: `guv-${kind}`,
+    cls: 'data',
+    toolbar: false,
+    defaultSort: { key: 'amount', dir: -1 },
+    rows,
+    columns: [
+      { key: 'name', label: 'Kategorie', type: 'text', cell: (c) => esc(c.name) },
+      { key: 'count', label: 'Anz.', sortLabel: 'Anzahl', type: 'num', tdCls: 'muted', cell: (c) => (c.count === null ? '–' : int(c.count)) },
+      ...(klein ? [] : [{
+        key: 'vat', label: kind === 'income' ? 'USt' : 'Vorst.', sortLabel: kind === 'income' ? 'Umsatzsteuer' : 'Vorsteuer', type: 'num', tdCls: 'muted',
+        cell: (c) => (c.vat === null ? '–' : esc(money(c.vat))),
+      }]),
+      { key: 'amount', label: klein ? 'Betrag' : 'Netto', type: 'num', cell: (c) => esc(money(c.amount)) },
+      {
+        key: 'avg', label: 'Ø/Monat', sortLabel: 'Durchschnitt je Monat', type: 'num', tdCls: 'muted',
+        value: (c) => perMonth(c.amount), cell: (c) => esc(money(perMonth(c.amount))),
+      },
+      {
+        key: 'share', label: 'Anteil', type: 'num', tdCls: 'muted',
+        value: (c) => (total ? Math.abs(c.amount) / total : 0), cell: (c) => `${anteilPct(c.amount, total || 1)} %`,
+      },
+    ],
+    onRowClick: (c) => openCategory(db, c.categoryId),
+    rowClickable: (c) => !!c.categoryId,
+    emptyTitle: kind === 'income' ? 'Keine Einnahmen' : 'Keine Ausgaben',
+    foot: () => `<tr><td>Summe</td><td class="num">${int(count)}</td>${klein ? '' : `<td class="num">${esc(money(vatSum))}</td>`}<td class="num">${esc(money(total))}</td><td class="num">${esc(money(avgSum))}</td><td></td></tr>`,
+  });
+  const afa = current.depreciation
+    ? [{ categoryId: '', name: 'Abschreibungen (AfA)', count: null, vat: null, amount: current.depreciation }]
+    : [];
 
   // Aufteilung: Ausgaben einschließlich Abschreibung, damit die Summe zur Tabelle passt.
   const artAusgaben = prefs.anteilGuvArt !== 'income';
@@ -174,28 +199,12 @@ function guv(root, db) {
     <div class="grid c2">
       <div class="card">
         <div class="card-head"><h3>Betriebseinnahmen</h3><div class="spacer"></div><span class="badge pos">${esc(money(current.incomeForProfit))} €</span></div>
-        <div class="table-wrap">
-          <table class="data">
-            <thead><tr><th>Kategorie</th><th class="num">Anz.</th>${klein ? '' : raw('<th class="num">USt</th>')}<th class="num">${klein ? 'Betrag' : 'Netto'}</th><th class="num" title="Durchschnitt je Monat">Ø/Monat</th><th class="num">Anteil</th></tr></thead>
-            <tbody>${raw(incomeCats.map((c) => catRow(c, current.incomeForProfit)).join('') || `<tr><td colspan="${cols + 1}" class="muted center">Keine Einnahmen</td></tr>`)}</tbody>
-            <tfoot><tr><td>Summe</td><td class="num">${int(current.countIncome)}</td>${klein ? '' : raw(`<td class="num">${esc(money(current.incomeVat))}</td>`)}<td class="num">${money(current.incomeForProfit)}</td><td class="num">${money(avg.income)}</td><td></td></tr></tfoot>
-          </table>
-        </div>
+        ${catTable('income', incomeCats, current.incomeForProfit, current.countIncome, current.incomeVat, avg.income)}
       </div>
 
       <div class="card">
         <div class="card-head"><h3>Betriebsausgaben</h3><div class="spacer"></div><span class="badge neg">${esc(money(current.expenseForProfit))} €</span></div>
-        <div class="table-wrap">
-          <table class="data">
-            <thead><tr><th>Kategorie</th><th class="num">Anz.</th>${klein ? '' : raw('<th class="num">Vorst.</th>')}<th class="num">${klein ? 'Betrag' : 'Netto'}</th><th class="num" title="Durchschnitt je Monat">Ø/Monat</th><th class="num">Anteil</th></tr></thead>
-            <tbody>
-              ${raw(expenseCats.map((c) => catRow(c, current.expenseForProfit)).join(''))}
-              ${current.depreciation ? raw(`<tr><td>Abschreibungen (AfA)</td><td class="num muted">–</td>${klein ? '' : '<td class="num muted">–</td>'}<td class="num">${esc(money(current.depreciation))}</td><td class="num muted">${esc(money(perMonth(current.depreciation)))}</td><td class="num muted">${anteilPct(current.depreciation, current.expenseForProfit || 1)} %</td></tr>`) : ''}
-              ${!expenseCats.length && !current.depreciation ? raw(`<tr><td colspan="${cols + 1}" class="muted center">Keine Ausgaben</td></tr>`) : ''}
-            </tbody>
-            <tfoot><tr><td>Summe</td><td class="num">${int(current.countExpense)}</td>${klein ? '' : raw(`<td class="num">${esc(money(current.expenseVat))}</td>`)}<td class="num">${money(current.expenseForProfit)}</td><td class="num">${money(avg.expense)}</td><td></td></tr></tfoot>
-          </table>
-        </div>
+        ${catTable('expense', [...expenseCats, ...afa], current.expenseForProfit, current.countExpense, current.expenseVat, avg.expense)}
       </div>
     </div>
 
@@ -230,43 +239,67 @@ function guv(root, db) {
     </div></div>`) : ''}`;
 
   // Umschalten ändert nur die Darstellung – neu gezeichnet wird nur dieser Reiter.
-  const redraw = () => { guv(root, db); mountCharts(root); };
+  const redraw = () => { guv(root, db); mountCharts(root); mountTables(root); };
   wireVerlauf(root, redraw);
   wireAnteil(root, 'anteilGuv', redraw);
   wireSeg(root, 'anteilGuvArt', (v) => { setPref('anteilGuvArt', v); redraw(); });
-
-  $$('[data-cat]', root).forEach((tr) => tr.addEventListener('click', () => {
-    modal({
-      title: 'Buchungen der Kategorie',
-      size: 'wide',
-      body: categoryDetailHtml(db, tr.dataset.cat),
-      foot: '<button class="btn primary" data-x>Schließen</button>',
-    }).root.querySelector('[data-x]').addEventListener('click', (e) => e.target.closest('.modal-backdrop').remove());
-  }));
 }
 
-function categoryDetailHtml(db, categoryId) {
+/**
+ * Die Buchungen hinter einer Kategorie – sortierbar, nach Kontakt filterbar,
+ * und jede Zeile öffnet die Buchung selbst.
+ */
+function openCategory(db, categoryId) {
   const basis = basisOf(db);
   const rows = db.transactions.filter((t) => {
     if (t.voided || t.categoryId !== categoryId) return false;
     const d = basis === 'soll' ? t.date : t.paidDate;
     return d && d >= period.from && d <= period.to;
-  }).sort((a, b) => a.date.localeCompare(b.date));
-  return html`
-    <p class="mt0 muted small">${esc(sel.categoryName(categoryId))} · ${esc(periodLabel(period))}</p>
-    <table class="data compact">
-      <thead><tr><th>Datum</th><th>Beschreibung</th><th>Kontakt</th><th class="num">Netto</th><th class="num">Brutto</th></tr></thead>
-      <tbody>
-        ${raw(rows.map((t) => `<tr>
-          <td class="nowrap">${esc(fmtDate(t.date))}</td>
-          <td>${esc(t.description)}</td>
-          <td class="small muted">${esc(sel.contactName(t.contactId))}</td>
-          <td class="num">${esc(money(t.net))}</td>
-          <td class="num">${esc(money(t.gross))}</td>
-        </tr>`).join('') || '<tr><td colspan="5" class="muted center">Keine Buchungen</td></tr>')}
-      </tbody>
-      <tfoot><tr><td colspan="3">Summe (${int(rows.length)})</td><td class="num">${money(sum(rows, (t) => t.net))}</td><td class="num">${money(sum(rows, (t) => t.gross))}</td></tr></tfoot>
-    </table>`;
+  });
+  const viele = rows.length > 12;
+  const m = modal({
+    title: `Buchungen: ${sel.categoryName(categoryId)}`,
+    size: 'wide',
+    body: html`
+      <p class="mt0 muted small">${periodLabel(period)} · Ein Klick auf eine Zeile öffnet die Buchung.</p>
+      ${table({
+        id: 'kategorie-buchungen',
+        cls: 'data compact',
+        toolbar: viele,
+        search: viele ? { placeholder: 'In diesen Buchungen suchen …', text: (t) => [t.description, t.invoiceNumber, sel.contactName(t.contactId)].join(' ') } : null,
+        defaultSort: { key: 'date', dir: 1 },
+        rows,
+        unit: ['Buchung', 'Buchungen'],
+        columns: [
+          { key: 'date', label: 'Datum', type: 'date', tdCls: 'nowrap', cell: (t) => esc(fmtDate(t.date)) },
+          { key: 'description', label: 'Beschreibung', type: 'text', cell: (t) => esc(t.description) },
+          {
+            key: 'contact', label: 'Kontakt', type: 'text', tdCls: 'small muted',
+            value: (t) => (t.contactId ? sel.contactName(t.contactId) : ''), cell: (t) => esc(sel.contactName(t.contactId)),
+          },
+          { key: 'net', label: 'Netto', type: 'num', cell: (t) => esc(money(t.net)) },
+          { key: 'gross', label: 'Brutto', type: 'num', cell: (t) => esc(money(t.gross)) },
+        ],
+        filters: contactFilter(rows, 'contact'),
+        onRowClick: (t) => openTransactionDialog(t.id),
+        emptyTitle: 'Keine Buchungen',
+        foot: (sichtbar) => `<tr><td colspan="3">Summe (${int(sichtbar.length)})</td><td class="num">${esc(money(sum(sichtbar, (t) => t.net)))}</td><td class="num">${esc(money(sum(sichtbar, (t) => t.gross)))}</td></tr>`,
+      })}`,
+    foot: '<button class="btn primary" data-x>Schließen</button>',
+  });
+  mountTables(m.root);
+  m.root.querySelector('[data-x]').addEventListener('click', () => m.close());
+}
+
+/** Filter „Kontakt“ für Buchungslisten; nur Kontakte, die in den Zeilen vorkommen. */
+function contactFilter(rows, column) {
+  const ids = [...new Set(rows.map((t) => t.contactId).filter(Boolean))];
+  if (ids.length < 2) return [];
+  return [{
+    key: 'contactId', column, title: 'Kontakt', initial: '', search: ids.length > 8,
+    options: () => [['', 'Alle Kontakte', () => true],
+      ...ids.map((id) => [id, sel.contactName(id), (t) => t.contactId === id]).sort((a, b) => a[1].localeCompare(b[1], 'de'))],
+  }];
 }
 
 /* -------------------------------------------------------------------------- */
@@ -497,22 +530,49 @@ function bilanz(root, db) {
 
 function opos(root, db) {
   const o = openItems(db, todayISO());
-  const table = (items, title, tone) => `
+  /* Beide Listen lassen sich sortieren, durchsuchen und nach Kontakt und
+     Fälligkeit filtern; ein Klick öffnet die Buchung. */
+  const liste = (id, items, title, tone) => `
     <div class="card">
       <div class="card-head"><h3>${esc(title)}</h3><div class="spacer"></div>
         <span class="badge ${tone}">${esc(money(sum(items, (t) => t.gross)))} €</span></div>
-      <div class="table-wrap"><table class="data">
-        <thead><tr><th>Datum</th><th>Beschreibung</th><th>Kontakt</th><th>Fällig</th><th class="num">Betrag</th></tr></thead>
-        <tbody>
-          ${items.map((t) => `<tr class="clickable" data-tx="${esc(t.id)}">
-            <td class="nowrap">${esc(fmtDate(t.date))}</td>
-            <td class="truncate" style="max-width:240px">${esc(t.description)}</td>
-            <td class="small muted">${esc(sel.contactName(t.contactId))}</td>
-            <td>${t.overdue ? `<span class="badge neg">${t.overdueDays} Tage über</span>` : `<span class="badge">${esc(fmtDate(t.dueDate))}</span>`}</td>
-            <td class="num">${esc(money(t.gross))} €</td>
-          </tr>`).join('') || '<tr><td colspan="5" class="muted center">Nichts offen</td></tr>'}
-        </tbody>
-      </table></div>
+      ${table({
+        id,
+        cls: 'data',
+        defaultSort: { key: 'due', dir: 1 },
+        rows: items,
+        unit: ['Rechnung', 'Rechnungen'],
+        search: items.length > 8 ? {
+          placeholder: 'Suchen: Text, Rechnungsnummer, Kontakt …',
+          text: (t) => [t.description, t.invoiceNumber, sel.contactName(t.contactId), (t.gross / 100).toFixed(2)].join(' '),
+        } : null,
+        columns: [
+          { key: 'date', label: 'Datum', type: 'date', tdCls: 'nowrap', cell: (t) => esc(fmtDate(t.date)) },
+          { key: 'description', label: 'Beschreibung', type: 'text', tdCls: 'truncate', cell: (t) => `<span class="truncate" style="display:block;max-width:280px">${esc(t.description)}</span>` },
+          {
+            key: 'contact', label: 'Kontakt', type: 'text', tdCls: 'small muted',
+            value: (t) => (t.contactId ? sel.contactName(t.contactId) : ''), cell: (t) => esc(sel.contactName(t.contactId)),
+          },
+          {
+            key: 'due', label: 'Fällig', type: 'date', dir: 1, dirText: ['am längsten fällig zuerst', 'zuletzt fällig zuerst'],
+            value: (t) => t.dueDate || t.date,
+            cell: (t) => (t.overdue ? `<span class="badge neg">${t.overdueDays} Tage über</span>` : `<span class="badge">${esc(fmtDate(t.dueDate || t.date))}</span>`),
+          },
+          { key: 'amount', label: 'Betrag', type: 'num', value: (t) => t.gross, cell: (t) => `${esc(money(t.gross))} €` },
+        ],
+        filters: [
+          ...contactFilter(items, 'contact'),
+          {
+            key: 'faellig', column: 'due', title: 'Fälligkeit', initial: 'alle', chip: (v, label) => label,
+            options: () => [['alle', 'Alle offenen', () => true], ['ueber', 'Nur überfällige', (t) => t.overdue], ['ziel', 'Nur im Zahlungsziel', (t) => !t.overdue]],
+          },
+        ],
+        onRowClick: (t) => openTransactionDialog(t.id),
+        emptyTitle: 'Nichts offen',
+        foot: (sichtbar) => (sichtbar.length !== items.length
+          ? `<tr><td colspan="4">Summe der angezeigten (${int(sichtbar.length)})</td><td class="num">${esc(money(sum(sichtbar, (t) => t.gross)))} €</td></tr>`
+          : ''),
+      }).__raw}
     </div>`;
 
   const aging = (a, title) => {
@@ -530,10 +590,8 @@ function opos(root, db) {
       ${raw(aging(o.receivableAging, 'Altersstruktur Forderungen'))}
       ${raw(aging(o.payableAging, 'Altersstruktur Verbindlichkeiten'))}
     </div>
-    ${raw(table(o.receivables, 'Forderungen – Kunden schulden Ihnen Geld', 'pos'))}
-    <div class="mt16">${raw(table(o.payables, 'Verbindlichkeiten – Sie schulden noch Geld', 'neg'))}</div>`;
-
-  $$('[data-tx]', root).forEach((tr) => tr.addEventListener('click', () => openTransactionDialog(tr.dataset.tx)));
+    ${raw(liste('opos-forderungen', o.receivables, 'Forderungen – Kunden schulden Ihnen Geld', 'pos'))}
+    <div class="mt16">${raw(liste('opos-verbindlichkeiten', o.payables, 'Verbindlichkeiten – Sie schulden noch Geld', 'neg'))}</div>`;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -603,19 +661,24 @@ function anlagen(root, db) {
     </div>
     <div class="card">
       <div class="card-head"><h3>Anlagenverzeichnis</h3><span class="sub">§ 4 Abs. 3 Satz 5 EStG</span></div>
-      <div class="table-wrap">
-        ${assets.length ? raw(`<table class="data">
-          <thead><tr><th>Wirtschaftsgut</th><th class="num">Anschaffung</th><th class="num">Kosten</th><th class="num">Nutzungsdauer</th><th class="num">AfA im Zeitraum</th><th class="num">Restbuchwert</th></tr></thead>
-          <tbody>${assets.map((a) => `<tr>
-            <td>${esc(a.name)}</td>
-            <td class="num nowrap">${esc(fmtDate(a.purchaseDate))}</td>
-            <td class="num">${esc(money(a.cost))}</td>
-            <td class="num">${esc(a.usefulLifeYears)} Jahre</td>
-            <td class="num">${esc(money(depreciationInRange(a, period.from, period.to)))}</td>
-            <td class="num">${esc(money(bookValue(a, period.to)))}</td>
-          </tr>`).join('')}</tbody>
-        </table>`) : emptyState('Kein Anlagevermögen', 'Anschaffungen über 800 € netto tragen Sie beim Erfassen der Ausgabe als Anlagegut ein.')}
-      </div>
+      ${assets.length ? table({
+        id: 'anlagen-auswertung',
+        cls: 'data',
+        toolbar: false,
+        defaultSort: { key: 'purchaseDate', dir: 1 },
+        rows: assets,
+        columns: [
+          { key: 'name', label: 'Wirtschaftsgut', type: 'text', cell: (a) => esc(a.name) },
+          { key: 'purchaseDate', label: 'Anschaffung', type: 'date', tdCls: 'nowrap', cell: (a) => esc(fmtDate(a.purchaseDate)) },
+          { key: 'cost', label: 'Kosten', type: 'num', cell: (a) => esc(money(a.cost)) },
+          { key: 'usefulLifeYears', label: 'Nutzungsdauer', type: 'num', value: (a) => Number(a.usefulLifeYears), cell: (a) => `${esc(a.usefulLifeYears)} Jahre` },
+          {
+            key: 'afa', label: 'AfA im Zeitraum', type: 'num',
+            value: (a) => depreciationInRange(a, period.from, period.to), cell: (a) => esc(money(depreciationInRange(a, period.from, period.to))),
+          },
+          { key: 'book', label: 'Restbuchwert', type: 'num', value: (a) => bookValue(a, period.to), cell: (a) => esc(money(bookValue(a, period.to))) },
+        ],
+      }) : emptyState('Kein Anlagevermögen', 'Anschaffungen über 800 € netto tragen Sie beim Erfassen der Ausgabe als Anlagegut ein.')}
     </div>`;
 }
 

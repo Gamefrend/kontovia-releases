@@ -594,8 +594,9 @@ tr.unlisted td:not(:last-child) { color: var(--text-2); }
 /* Buchungsliste: Bei schmalem Fenster fallen zuerst die Spalten weg, die sich
    im Dialog nachlesen lassen – der Bruttobetrag rechts bleibt immer sichtbar,
    statt über den Kartenrand hinauszuragen. */
-@media (max-width: 1320px) { table.data .col-nr, table.data .col-ust { display: none; } }
-@media (max-width: 1140px) { table.data .col-kontakt { display: none; } }
+@media (max-width: 1440px) { table.data .col-nr, table.data .col-ust { display: none; } }
+@media (max-width: 1180px) { table.data .col-kontakt { display: none; } }
+table.data.fixed th, table.data.fixed td { padding-left: 10px; padding-right: 10px; }
 
 /* Aufklappfelder (popover.js): liegen genau unter ihrem Knopf, sind in der
    Höhe begrenzt und liegen immer über Diagrammen und Tabellenköpfen. */
@@ -683,6 +684,20 @@ table.data th.center .th { justify-content: center; }
 }
 .th-sort:hover { color: var(--text); background: var(--surface-2); }
 th[aria-sort] .th-sort { color: var(--text); }
+/* Sortierknopf: der Doppelpfeil zeigt, dass sich die Spalte sortieren lässt,
+   der farbige Pfeil, wonach und in welche Richtung gerade sortiert ist. Bei
+   Zahlenspalten steht er links, damit die Überschrift über den Zahlen bleibt. */
+.th-sort { display: inline-flex; align-items: center; gap: 4px; }
+.th-sort > span { overflow: hidden; text-overflow: ellipsis; }
+.th-sort .th-arrow { flex: none; width: 13px; height: 13px; opacity: .35; transition: opacity .12s; }
+.th-sort:hover .th-arrow, .th-sort:focus-visible .th-arrow { opacity: .85; }
+.th-sort.on .th-arrow { opacity: 1; color: var(--accent); }
+table.data th.num .th-sort { flex-direction: row-reverse; margin-left: 0; margin-right: -4px; }
+.th-label { overflow: hidden; text-overflow: ellipsis; }
+.dt-sort { max-width: 300px; }
+.dt-sort span { overflow: hidden; text-overflow: ellipsis; }
+.dt-sort .ico:last-child { color: var(--muted); }
+.dt-sum { display: flex; align-items: center; }
 .th-filter {
   flex: none; display: grid; place-items: center; width: 22px; height: 22px; padding: 0;
   border: 0; border-radius: 5px; background: transparent; color: var(--muted); cursor: pointer; opacity: .6;

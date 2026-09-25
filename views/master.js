@@ -3,10 +3,11 @@
 import {
   html, raw, esc, $, $$, money, moneyInput, parseMoney, fmtDate, todayISO, uid, int, sum, sortBy,
 } from '../lib/util.js';
-import { icon, modal, confirmDialog, ok, warn, err, emptyState } from '../lib/ui.js';
+import { icon, modal, confirmDialog, ok, warn, err } from '../lib/ui.js';
 import { store, sel, upsertEntity, deleteEntity } from '../lib/store.js';
 import { depreciationPlan, depreciationInRange, bookValue } from '../lib/calc.js';
 import { refresh } from '../lib/router.js';
+import { table, mountTable, mountTables } from '../lib/table.js';
 
 
 let tab = 'categories';
@@ -34,8 +35,27 @@ function draw(root) {
   ({ categories, contacts, accounts, assets }[tab])($('#body', root));
 }
 
-function usageCount(field, id) {
-  return sel.transactions().filter((t) => t[field] === id).length;
+/** Wie oft ein Stammdatum in Buchungen vorkommt – einmal gezählt statt je Zeile. */
+function usageMap(field) {
+  const m = new Map();
+  for (const t of sel.transactions()) if (t[field]) m.set(t[field], (m.get(t[field]) || 0) + 1);
+  return m;
+}
+
+/** Bearbeiten- und Löschen-Knöpfe am Zeilenende. */
+function rowButtons(id, extra = '') {
+  return `${extra}
+    <button class="btn sm ghost" data-edit="${esc(id)}" title="Bearbeiten" aria-label="Bearbeiten">${icon('edit', 14).__raw}</button>
+    <button class="btn sm ghost" data-del="${esc(id)}" title="Löschen" aria-label="Löschen">${icon('trash', 14).__raw}</button>`;
+}
+
+/** Filter „Verwendung“: mit oder ohne Buchungen. */
+function usageFilter(column, uses) {
+  return {
+    key: 'verwendung', column, title: 'Verwendung', initial: 'alle', chip: (v, label) => label,
+    options: () => [['alle', 'Mit und ohne Buchungen', () => true],
+      ['ja', 'Mit Buchungen', (x) => (uses.get(x.id) || 0) > 0], ['nein', 'Ohne Buchungen', (x) => !uses.get(x.id)]],
+  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -43,47 +63,68 @@ function usageCount(field, id) {
 /* -------------------------------------------------------------------------- */
 
 function categories(root) {
-  const rows = sel.categories();
-  const group = (kind, title) => {
-    const list = sortBy(rows.filter((c) => c.kind === kind), 'name');
-    return `
-      <div class="card mb16">
-        <div class="card-head"><h3>${esc(title)}</h3><div class="spacer"></div><span class="badge">${list.length}</span></div>
-        <div class="table-wrap"><table class="data">
-          <thead><tr>
-            <th>Name</th><th class="num">EÜR-Zeile</th><th class="num">SKR03</th><th class="num">SKR04</th>
-            <th class="num">USt</th><th class="num">Buchungen</th><th>Besonderheit</th><th style="width:80px"></th>
-          </tr></thead>
-          <tbody>
-            ${list.map((c) => `<tr class="${c.active === false ? 'void' : ''}">
-              <td class="strong">${esc(c.name)}</td>
-              <td class="num">${c.euerLine ?? '<span class="muted">–</span>'}</td>
-              <td class="num muted">${esc(c.skr03 || '')}</td>
-              <td class="num muted">${esc(c.skr04 || '')}</td>
-              <td class="num">${c.vatRate ?? 0} %</td>
-              <td class="num muted">${int(usageCount('categoryId', c.id))}</td>
-              <td class="small">${flags(c)}</td>
-              <td class="right nowrap">
-                <button class="btn sm ghost" data-edit="${esc(c.id)}" title="Bearbeiten" aria-label="Bearbeiten">${icon('edit', 14).__raw}</button>
-                <button class="btn sm ghost" data-del="${esc(c.id)}" title="Löschen" aria-label="Löschen">${icon('trash', 14).__raw}</button>
-              </td>
-            </tr>`).join('')}
-          </tbody>
-        </table></div>
-      </div>`;
-  };
-
+  const uses = usageMap('categoryId');
   root.innerHTML = html`
     <div class="notice mb16">
       Die Kategorie einer Buchung entscheidet, in welche Zeile der Anlage EÜR und auf welches
       Konto im DATEV-Export sie fließt. Die mitgelieferte Zuordnung folgt der Anlage EÜR
-      2024/2025 und dem ${esc(store.db.settings.chartOfAccounts || 'SKR03')} – prüfen Sie sie einmal mit Ihrer Steuerberatung
+      2024/2025 und dem ${store.db.settings.chartOfAccounts || 'SKR03'} – prüfen Sie sie einmal mit Ihrer Steuerberatung
       und passen Sie sie hier an, wenn sich das Formular ändert.
     </div>
-    ${raw(group('income', 'Einnahmen'))}
-    ${raw(group('expense', 'Ausgaben'))}`;
+    <div class="card" id="catCard"></div>`;
 
-  wireRowButtons(root, 'categories', 'categoryId', 'kategorie');
+  // Einnahmen und Ausgaben stehen in einer Liste; die Spalte „Art“ und ihr
+  // Filter ersetzen die früheren zwei Tabellen.
+  mountTable($('#catCard', root), {
+    id: 'stamm-kategorien',
+    cls: 'data',
+    defaultSort: { key: 'kind', dir: 1 },
+    rows: sortBy(sel.categories(), (c) => (c.kind === 'income' ? '0' : '1') + c.name.toLowerCase()),
+    unit: ['Kategorie', 'Kategorien'],
+    search: {
+      placeholder: 'Name, Konto oder EÜR-Zeile suchen …',
+      text: (c) => [c.name, c.skr03, c.skr04, c.euerLine ? `Zeile ${c.euerLine}` : ''].join(' '),
+    },
+    columns: [
+      { key: 'name', label: 'Name', type: 'text', tdCls: 'strong', cell: (c) => esc(c.name) },
+      {
+        key: 'kind', label: 'Art', type: 'num', align: 'left', dir: 1, dirText: ['Einnahmen zuerst', 'Ausgaben zuerst'],
+        value: (c) => (c.kind === 'income' ? 0 : 1),
+        cell: (c) => (c.kind === 'income' ? '<span class="badge pos">Einnahme</span>' : '<span class="badge neg">Ausgabe</span>'),
+      },
+      { key: 'euerLine', label: 'EÜR-Zeile', type: 'num', dir: 1, value: (c) => c.euerLine ?? '', cell: (c) => (c.euerLine ?? '<span class="muted">–</span>') },
+      { key: 'skr03', label: 'SKR03', type: 'text', tdCls: 'muted', cls: 'num' },
+      { key: 'skr04', label: 'SKR04', type: 'text', tdCls: 'muted', cls: 'num' },
+      { key: 'vatRate', label: 'USt', sortLabel: 'Steuersatz', type: 'num', value: (c) => c.vatRate ?? 0, cell: (c) => `${esc(c.vatRate ?? 0)} %` },
+      { key: 'usage', label: 'Buchungen', type: 'num', tdCls: 'muted', value: (c) => uses.get(c.id) || 0, cell: (c) => int(uses.get(c.id) || 0) },
+      { key: 'flags', label: 'Besonderheit', type: 'none', tdCls: 'small', cell: flags },
+      { key: 'actions', label: '', type: 'none', width: '84px', cls: 'right', tdCls: 'nowrap', cell: (c) => rowButtons(c.id) },
+    ],
+    filters: [
+      {
+        key: 'art', column: 'kind', title: 'Art', initial: 'alle', chip: (v, label) => label,
+        options: () => [['alle', 'Einnahmen und Ausgaben', () => true],
+          ['income', 'Nur Einnahmen', (c) => c.kind === 'income'], ['expense', 'Nur Ausgaben', (c) => c.kind === 'expense']],
+      },
+      {
+        key: 'besonderheit', column: 'flags', title: 'Besonderheit', initial: 'alle', chip: (v, label) => label,
+        options: () => [
+          ['alle', 'Alle Kategorien', () => true],
+          ['keine', 'Ohne Besonderheit', (c) => !flags(c)],
+          ['privat', 'Privatvorgang', (c) => !!c.private],
+          ['afa', 'Abschreibung', (c) => !!c.depreciation],
+          ['teil', 'Nur teilweise abziehbar', (c) => !!c.deductibleRate && c.deductibleRate < 1],
+          ['finanzamt', 'Finanzamt-Verrechnung', (c) => !!c.vatNeutral],
+          ['ausland', 'Innergemeinschaftlich oder Reverse Charge', (c) => !!(c.intraEu || c.reverseCharge)],
+          ['aus', 'Ausgeblendet', (c) => c.active === false],
+        ],
+      },
+      usageFilter('usage', uses),
+    ],
+    rowClass: (c) => (c.active === false ? 'void' : ''),
+    onRowClick: (c) => openDialog('categories', c.id),
+    onRender: (el) => wireRowButtons(el, 'categories', 'categoryId', 'kategorie'),
+  });
 }
 
 function flags(c) {
@@ -102,44 +143,60 @@ function flags(c) {
 /* Kontakte                                                                    */
 /* -------------------------------------------------------------------------- */
 
+const KIND = { customer: 'Kunde', supplier: 'Lieferant', both: 'Kunde & Lieferant' };
+
 function contacts(root) {
-  const rows = sortBy(sel.contacts(), 'name');
-  root.innerHTML = html`
-    <div class="card">
-      <div class="card-head"><h3>Kunden und Lieferanten</h3><div class="spacer"></div><span class="badge">${rows.length}</span></div>
-      <div class="table-wrap">
-        ${rows.length ? raw(`<table class="data">
-          <thead><tr><th>Name</th><th>Art</th><th>Kontakt</th><th>Steuernummer / USt-IdNr.</th><th class="num">Buchungen</th><th class="num">Umsatz</th><th style="width:80px"></th></tr></thead>
-          <tbody>
-            ${rows.map((c) => {
-              const txs = sel.liveTransactions().filter((t) => t.contactId === c.id);
-              const vol = sum(txs, (t) => t.gross);
-              return `<tr>
-                <td class="strong">${esc(c.name)}</td>
-                <td><span class="badge">${esc({ customer: 'Kunde', supplier: 'Lieferant', both: 'Kunde & Lieferant' }[c.kind] || c.kind)}</span></td>
-                <td class="small muted">${esc(c.email || '')}${c.phone ? ' · ' + esc(c.phone) : ''}</td>
-                <td class="small muted">${esc(c.taxId || '')}</td>
-                <td class="num">${int(txs.length)}</td>
-                <td class="num">${esc(money(vol))} €</td>
-                <td class="right nowrap">
-                  <button class="btn sm ghost" data-edit="${esc(c.id)}" title="Bearbeiten" aria-label="Bearbeiten">${icon('edit', 14).__raw}</button>
-                  <button class="btn sm ghost" data-del="${esc(c.id)}" title="Löschen" aria-label="Löschen">${icon('trash', 14).__raw}</button>
-                </td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>`) : emptyState('Noch keine Kontakte', 'Kontakte helfen beim Auswerten: Wer bringt Umsatz, wo geben Sie am meisten aus.')}
-      </div>
-    </div>`;
-  wireRowButtons(root, 'contacts', 'contactId', 'kontakt');
+  const uses = usageMap('contactId');
+  const umsatz = new Map();
+  for (const t of sel.liveTransactions()) if (t.contactId) umsatz.set(t.contactId, (umsatz.get(t.contactId) || 0) + t.gross);
+  root.innerHTML = '<div class="card" id="conCard"></div>';
+  mountTable($('#conCard', root), {
+    id: 'stamm-kontakte',
+    cls: 'data',
+    defaultSort: { key: 'name', dir: 1 },
+    rows: sel.contacts(),
+    unit: ['Kontakt', 'Kontakte'],
+    search: {
+      placeholder: 'Name, E-Mail, Telefon oder Steuernummer suchen …',
+      text: (c) => [c.name, c.email, c.phone, c.taxId, c.address, c.notes].join(' '),
+    },
+    columns: [
+      { key: 'name', label: 'Name', type: 'text', tdCls: 'strong', cell: (c) => esc(c.name) },
+      { key: 'kind', label: 'Art', type: 'text', value: (c) => KIND[c.kind] || c.kind, cell: (c) => `<span class="badge">${esc(KIND[c.kind] || c.kind)}</span>` },
+      {
+        key: 'contact', label: 'Kontakt', type: 'text', tdCls: 'small muted', value: (c) => c.email || c.phone || '',
+        cell: (c) => `${esc(c.email || '')}${c.phone ? ' · ' + esc(c.phone) : ''}`,
+      },
+      { key: 'taxId', label: 'Steuernummer / USt-IdNr.', sortLabel: 'Steuernummer', type: 'text', tdCls: 'small muted' },
+      { key: 'usage', label: 'Buchungen', type: 'num', value: (c) => uses.get(c.id) || 0, cell: (c) => int(uses.get(c.id) || 0) },
+      { key: 'volume', label: 'Umsatz', type: 'num', value: (c) => umsatz.get(c.id) || 0, cell: (c) => `${esc(money(umsatz.get(c.id) || 0))} €` },
+      { key: 'actions', label: '', type: 'none', width: '84px', cls: 'right', tdCls: 'nowrap', cell: (c) => rowButtons(c.id) },
+    ],
+    filters: [
+      {
+        key: 'art', column: 'kind', title: 'Art', initial: 'alle', chip: (v, label) => label,
+        options: () => [['alle', 'Alle Kontakte', () => true],
+          ['customer', 'Kunden', (c) => c.kind === 'customer' || c.kind === 'both'],
+          ['supplier', 'Lieferanten', (c) => c.kind === 'supplier' || c.kind === 'both']],
+      },
+      usageFilter('usage', uses),
+    ],
+    emptyTitle: 'Noch keine Kontakte',
+    emptyText: 'Kontakte helfen beim Auswerten: Wer bringt Umsatz, wo geben Sie am meisten aus.',
+    onRowClick: (c) => openDialog('contacts', c.id),
+    onRender: (el) => wireRowButtons(el, 'contacts', 'contactId', 'kontakt'),
+  });
 }
 
 /* -------------------------------------------------------------------------- */
 /* Konten                                                                      */
 /* -------------------------------------------------------------------------- */
 
+const ACCOUNT_KIND = { bank: 'Bankkonto', cash: 'Kasse', other: 'Sonstiges' };
+
 function accounts(root) {
   const rows = sel.accounts();
+  const uses = usageMap('accountId');
   // Die Kontospalte zeigt den Kontenrahmen, der auch im DATEV-Export verwendet wird.
   const skr = store.db.settings.chartOfAccounts === 'SKR04' ? 'skr04' : 'skr03';
   root.innerHTML = html`
@@ -150,28 +207,29 @@ function accounts(root) {
     </div>
     <div class="card">
       <div class="card-head"><h3>Zahlungskonten</h3><div class="spacer"></div><span class="badge">${rows.length}</span></div>
-      <div class="table-wrap">
-        ${rows.length ? raw(`<table class="data">
-          <thead><tr><th>Name</th><th>Art</th><th>IBAN</th><th class="num">Anfangsbestand</th><th class="num">Gültig ab</th><th class="num">Konto ${esc(skr.toUpperCase())}</th><th class="num">Buchungen</th><th style="width:80px"></th></tr></thead>
-          <tbody>
-            ${rows.map((a) => `<tr>
-              <td class="strong">${esc(a.name)}</td>
-              <td>${esc(a.kind === 'bank' ? 'Bankkonto' : a.kind === 'cash' ? 'Kasse' : 'Sonstiges')}</td>
-              <td class="small muted">${esc(a.iban || '')}</td>
-              <td class="num">${esc(money(a.openingBalance))} €</td>
-              <td class="num small muted">${esc(fmtDate(a.openingDate))}</td>
-              <td class="num muted">${esc(a[skr] || '')}</td>
-              <td class="num">${int(usageCount('accountId', a.id))}</td>
-              <td class="right nowrap">
-                <button class="btn sm ghost" data-edit="${esc(a.id)}" title="Bearbeiten" aria-label="Bearbeiten">${icon('edit', 14).__raw}</button>
-                <button class="btn sm ghost" data-del="${esc(a.id)}" title="Löschen" aria-label="Löschen">${icon('trash', 14).__raw}</button>
-              </td>
-            </tr>`).join('')}
-          </tbody>
-        </table>`) : emptyState('Keine Konten', 'Legen Sie mindestens ein Bankkonto an.')}
-      </div>
+      ${table({
+        id: 'stamm-konten',
+        cls: 'data',
+        toolbar: false,
+        defaultSort: { key: 'name', dir: 1 },
+        rows,
+        columns: [
+          { key: 'name', label: 'Name', type: 'text', tdCls: 'strong', cell: (a) => esc(a.name) },
+          { key: 'kind', label: 'Art', type: 'text', value: (a) => ACCOUNT_KIND[a.kind] || 'Sonstiges' },
+          { key: 'iban', label: 'IBAN', type: 'text', tdCls: 'small muted' },
+          { key: 'openingBalance', label: 'Anfangsbestand', type: 'num', cell: (a) => `${esc(money(a.openingBalance))} €` },
+          { key: 'openingDate', label: 'Gültig ab', type: 'date', cls: 'num', tdCls: 'small muted', cell: (a) => esc(fmtDate(a.openingDate)) },
+          { key: skr, label: `Konto ${skr.toUpperCase()}`, type: 'text', cls: 'num', tdCls: 'muted' },
+          { key: 'usage', label: 'Buchungen', type: 'num', value: (a) => uses.get(a.id) || 0, cell: (a) => int(uses.get(a.id) || 0) },
+          { key: 'actions', label: '', type: 'none', width: '84px', cls: 'right', tdCls: 'nowrap', cell: (a) => rowButtons(a.id) },
+        ],
+        emptyTitle: 'Keine Konten',
+        emptyText: 'Legen Sie mindestens ein Bankkonto an.',
+        onRowClick: (a) => openDialog('accounts', a.id),
+        onRender: (el) => wireRowButtons(el, 'accounts', 'accountId', 'konto'),
+      })}
     </div>`;
-  wireRowButtons(root, 'accounts', 'accountId', 'konto');
+  mountTables(root);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -179,8 +237,9 @@ function accounts(root) {
 /* -------------------------------------------------------------------------- */
 
 function assets(root) {
-  const rows = sortBy(sel.assets(), 'purchaseDate', -1);
+  const rows = sel.assets();
   const year = new Date().getFullYear();
+  const afa = (a) => depreciationInRange(a, `${year}-01-01`, `${year}-12-31`);
   root.innerHTML = html`
     <div class="notice mb16">
       Wirtschaftsgüter über 800 € netto werden nicht sofort abgezogen, sondern über
@@ -190,31 +249,35 @@ function assets(root) {
     </div>
     <div class="card">
       <div class="card-head"><h3>Anlagenverzeichnis</h3><div class="spacer"></div>
-        <span class="badge">Restbuchwert ${esc(money(sum(rows, (a) => bookValue(a, todayISO()))))} €</span></div>
-      <div class="table-wrap">
-        ${rows.length ? raw(`<table class="data">
-          <thead><tr><th>Wirtschaftsgut</th><th class="num">Anschaffung</th><th class="num">Kosten</th><th class="num">Nutzungsdauer</th><th class="num">AfA ${year}</th><th class="num">Restbuchwert heute</th><th style="width:80px"></th></tr></thead>
-          <tbody>
-            ${rows.map((a) => `<tr>
-              <td class="strong">${esc(a.name)}</td>
-              <td class="num nowrap">${esc(fmtDate(a.purchaseDate))}</td>
-              <td class="num">${esc(money(a.cost))} €</td>
-              <td class="num">${esc(a.usefulLifeYears)} Jahre</td>
-              <td class="num">${esc(money(depreciationInRange(a, `${year}-01-01`, `${year}-12-31`)))} €</td>
-              <td class="num">${esc(money(bookValue(a, todayISO())))} €</td>
-              <td class="right nowrap">
-                <button class="btn sm ghost" data-plan="${esc(a.id)}" title="Abschreibungsplan">${icon('chart', 14).__raw}</button>
-                <button class="btn sm ghost" data-edit="${esc(a.id)}" title="Bearbeiten" aria-label="Bearbeiten">${icon('edit', 14).__raw}</button>
-                <button class="btn sm ghost" data-del="${esc(a.id)}" title="Löschen" aria-label="Löschen">${icon('trash', 14).__raw}</button>
-              </td>
-            </tr>`).join('')}
-          </tbody>
-        </table>`) : emptyState('Kein Anlagevermögen', 'Beim Erfassen einer Ausgabe können Sie „Als Anlagegut abschreiben“ wählen.')}
-      </div>
+        <span class="badge">Restbuchwert ${money(sum(rows, (a) => bookValue(a, todayISO())))} €</span></div>
+      ${table({
+        id: 'stamm-anlagen',
+        cls: 'data',
+        toolbar: false,
+        defaultSort: { key: 'purchaseDate', dir: -1 },
+        rows,
+        columns: [
+          { key: 'name', label: 'Wirtschaftsgut', type: 'text', tdCls: 'strong', cell: (a) => esc(a.name) },
+          { key: 'purchaseDate', label: 'Anschaffung', type: 'date', cls: 'num', tdCls: 'nowrap', cell: (a) => esc(fmtDate(a.purchaseDate)) },
+          { key: 'cost', label: 'Kosten', type: 'num', cell: (a) => `${esc(money(a.cost))} €` },
+          { key: 'usefulLifeYears', label: 'Nutzungsdauer', type: 'num', value: (a) => Number(a.usefulLifeYears), cell: (a) => `${esc(a.usefulLifeYears)} Jahre` },
+          { key: 'afa', label: `AfA ${year}`, type: 'num', value: afa, cell: (a) => `${esc(money(afa(a)))} €` },
+          { key: 'book', label: 'Restbuchwert heute', type: 'num', value: (a) => bookValue(a, todayISO()), cell: (a) => `${esc(money(bookValue(a, todayISO())))} €` },
+          {
+            key: 'actions', label: '', type: 'none', width: '118px', cls: 'right', tdCls: 'nowrap',
+            cell: (a) => rowButtons(a.id, `<button class="btn sm ghost" data-plan="${esc(a.id)}" title="Abschreibungsplan" aria-label="Abschreibungsplan">${icon('chart', 14).__raw}</button>`),
+          },
+        ],
+        emptyTitle: 'Kein Anlagevermögen',
+        emptyText: 'Beim Erfassen einer Ausgabe können Sie „Als Anlagegut abschreiben“ wählen.',
+        onRowClick: (a) => openDialog('assets', a.id),
+        onRender: (el) => {
+          $$('[data-plan]', el).forEach((b) => b.addEventListener('click', () => showPlan(b.dataset.plan)));
+          wireRowButtons(el, 'assets', 'assetId', 'anlage');
+        },
+      })}
     </div>`;
-
-  $$('[data-plan]', root).forEach((b) => b.addEventListener('click', () => showPlan(b.dataset.plan)));
-  wireRowButtons(root, 'assets', 'assetId', 'anlage');
+  mountTables(root);
 }
 
 function showPlan(id) {

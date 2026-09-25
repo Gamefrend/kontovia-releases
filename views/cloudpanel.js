@@ -7,6 +7,7 @@ import { syncNow, syncState, onSync, startAutoSync } from '../lib/sync.js';
 import { checkUpdates, markNotified } from '../lib/updates.js';
 import { refresh } from '../lib/router.js';
 import { appInfo } from '../app.js';
+import { table, mountTables } from '../lib/table.js';
 
 const api = window.kontovia;
 /** Läuft Kontovia im Browser statt in Electron? (src/web/bridge.js) */
@@ -423,7 +424,8 @@ function paintSyncStatus(root) {
 /* -------------------------------------------------------------------------- */
 
 export function openConflicts() {
-  const list = [...(store.db.syncConflicts || [])].reverse();
+  const list = [...(store.db.syncConflicts || [])].reverse().map((c, i) => ({ ...c, nr: i }));
+  const arten = [...new Set(list.map((c) => c.label))];
   const m = modal({
     title: 'Konflikte beim Abgleich',
     size: 'wide',
@@ -431,22 +433,42 @@ export function openConflicts() {
       <p class="mt0 small muted">Ein Konflikt entsteht, wenn derselbe Datensatz auf zwei
       Geräten unterschiedlich geändert wurde. Kontovia behält die zuletzt bearbeitete
       Fassung und legt die andere hier ab – verloren geht nichts.</p>
-      ${list.length ? raw(`
-      <div style="max-height:56vh;overflow-y:auto">
-        <table class="data compact">
-          <thead><tr><th>Zeitpunkt</th><th>Art</th><th>Datensatz</th><th>Behalten</th><th style="width:130px"></th></tr></thead>
-          <tbody>
-            ${list.map((c, i) => `<tr>
-              <td class="nowrap small">${esc(fmtDateTime(c.at))}</td>
-              <td><span class="badge">${esc(c.label)}</span></td>
-              <td class="truncate" style="max-width:280px">${esc(c.text || c.id)}
-                ${c.note ? `<div class="tiny muted">${esc(c.note)}</div>` : ''}</td>
-              <td>${c.kept === 'lokal' ? '<span class="badge info">dieses Gerät</span>' : '<span class="badge">Cloud</span>'}</td>
-              <td class="right">${c.discarded ? `<button class="btn sm" data-show="${i}">Verworfene Fassung</button>` : ''}</td>
-            </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>`) : emptyState('Keine Konflikte', 'Bisher gab es beim Abgleich nichts zu entscheiden.')}`,
+      ${list.length ? table({
+        id: 'konflikte',
+        cls: 'data compact',
+        maxHeight: '56vh',
+        toolbar: list.length > 8,
+        defaultSort: { key: 'at', dir: -1 },
+        rows: list,
+        unit: ['Konflikt', 'Konflikte'],
+        columns: [
+          { key: 'at', label: 'Zeitpunkt', type: 'date', tdCls: 'nowrap small', cell: (c) => esc(fmtDateTime(c.at)) },
+          { key: 'label', label: 'Art', type: 'text', cell: (c) => `<span class="badge">${esc(c.label)}</span>` },
+          {
+            key: 'text', label: 'Datensatz', type: 'text', value: (c) => c.text || c.id,
+            cell: (c) => `<span class="truncate" style="display:block;max-width:280px">${esc(c.text || c.id)}</span>${c.note ? `<div class="tiny muted">${esc(c.note)}</div>` : ''}`,
+          },
+          {
+            key: 'kept', label: 'Behalten', type: 'text', value: (c) => (c.kept === 'lokal' ? 'dieses Gerät' : 'Cloud'),
+            cell: (c) => (c.kept === 'lokal' ? '<span class="badge info">dieses Gerät</span>' : '<span class="badge">Cloud</span>'),
+          },
+          {
+            key: 'actions', label: '', type: 'none', width: '150px', cls: 'right',
+            cell: (c) => (c.discarded ? `<button class="btn sm" data-show="${c.nr}">Verworfene Fassung</button>` : ''),
+          },
+        ],
+        filters: [
+          ...(arten.length > 1 ? [{
+            key: 'art', column: 'label', title: 'Art', initial: '',
+            options: () => [['', 'Alle Arten', () => true], ...arten.map((a) => [a, a, (c) => c.label === a])],
+          }] : []),
+          {
+            key: 'behalten', column: 'kept', title: 'Behalten', initial: 'alle', chip: (v, label) => `Behalten: ${label}`,
+            options: () => [['alle', 'Beide', () => true], ['lokal', 'dieses Gerät', (c) => c.kept === 'lokal'], ['cloud', 'Cloud', (c) => c.kept !== 'lokal']],
+          },
+        ],
+        onRender: (el) => el.querySelectorAll('[data-show]').forEach((b) => b.addEventListener('click', () => zeigeVerworfen(list[Number(b.dataset.show)]))),
+      }) : emptyState('Keine Konflikte', 'Bisher gab es beim Abgleich nichts zu entscheiden.')}`,
     foot: `${list.length ? '<button class="btn left" data-clear>Liste leeren</button>' : ''}
            <button class="btn primary" data-x>Schließen</button>`,
   });
@@ -459,16 +481,18 @@ export function openConflicts() {
     ok('Liste geleert');
     refresh();
   });
-  m.root.querySelectorAll('[data-show]').forEach((b) => b.addEventListener('click', () => {
-    const c = list[Number(b.dataset.show)];
-    modal({
-      title: 'Verworfene Fassung',
-      body: html`<p class="mt0 small muted">Diese Fassung wurde beim Abgleich zurückgestellt.
-        Sie können die Werte von Hand übernehmen, wenn sie die richtigen waren.</p>
-        <pre style="background:var(--surface-2);padding:14px;border-radius:8px;overflow-x:auto;font-size:12px;user-select:text">${esc(JSON.stringify(c.discarded, null, 2))}</pre>`,
-      foot: '<button class="btn primary" data-y>Schließen</button>',
-    }).root.querySelector('[data-y]').addEventListener('click', (e) => e.target.closest('.modal-backdrop').remove());
-  }));
+  mountTables(m.root);
+}
+
+function zeigeVerworfen(c) {
+  const f = modal({
+    title: 'Verworfene Fassung',
+    body: html`<p class="mt0 small muted">Diese Fassung wurde beim Abgleich zurückgestellt.
+      Sie können die Werte von Hand übernehmen, wenn sie die richtigen waren.</p>
+      <pre style="background:var(--surface-2);padding:14px;border-radius:8px;overflow-x:auto;font-size:12px;user-select:text">${JSON.stringify(c.discarded, null, 2)}</pre>`,
+    foot: '<button class="btn primary" data-y>Schließen</button>',
+  });
+  f.root.querySelector('[data-y]').addEventListener('click', () => f.close());
 }
 
 /* -------------------------------------------------------------------------- */

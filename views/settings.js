@@ -9,6 +9,7 @@ import { refresh, navigate } from '../lib/router.js';
 import { applyTheme, appInfo } from '../app.js';
 import { renderCloudCard, renderUpdateCard, openConflicts } from './cloudpanel.js';
 import { renderCalendarCard } from './calendarsync.js';
+import { table, mountTables } from '../lib/table.js';
 
 const api = window.kontovia;
 /** Läuft Kontovia im Browser statt in Electron? (src/web/bridge.js) */
@@ -392,26 +393,35 @@ export async function runBackup() {
 
 function showJournal() {
   const log = [...(store.db.auditLog || [])].reverse().slice(0, 800);
-  modal({
+  const vorgaenge = [...new Set(log.map((e) => e.action))].sort((a, b) => a.localeCompare(b, 'de'));
+  const m = modal({
     title: 'Änderungsjournal',
     size: 'wide',
     body: html`
       <p class="mt0 small muted">Die letzten ${int(log.length)} von ${int((store.db.auditLog || []).length)} Einträgen.
       Jeder Eintrag enthält die Prüfsumme des vorherigen – dadurch lässt sich nachträgliches Verändern erkennen.</p>
-      <div style="max-height:60vh;overflow-y:auto">
-        <table class="data compact">
-          <thead><tr><th class="num">Nr.</th><th>Zeitpunkt</th><th>Vorgang</th><th>Beschreibung</th><th>Prüfsumme</th></tr></thead>
-          <tbody>
-            ${raw(log.map((e) => `<tr>
-              <td class="num muted">${e.seq}</td>
-              <td class="nowrap small">${esc(fmtDateTime(e.ts))}</td>
-              <td class="small"><span class="badge">${esc(e.action)}</span></td>
-              <td class="small truncate" style="max-width:340px">${esc(e.summary || '')}</td>
-              <td class="tiny muted" style="font-family:var(--mono)">${esc((e.hash || '').slice(0, 12))}…</td>
-            </tr>`).join('') || '<tr><td colspan="5" class="muted center">Noch keine Einträge</td></tr>')}
-          </tbody>
-        </table>
-      </div>`,
+      ${table({
+        id: 'journal',
+        cls: 'data compact',
+        maxHeight: '56vh',
+        defaultSort: { key: 'seq', dir: -1 },
+        rows: log,
+        search: { placeholder: 'Vorgang oder Beschreibung suchen …', text: (e) => [e.action, e.summary, e.seq].join(' ') },
+        columns: [
+          { key: 'seq', label: 'Nr.', type: 'num', tdCls: 'muted' },
+          { key: 'ts', label: 'Zeitpunkt', type: 'date', tdCls: 'nowrap small', cell: (e) => esc(fmtDateTime(e.ts)) },
+          { key: 'action', label: 'Vorgang', type: 'text', tdCls: 'small', cell: (e) => `<span class="badge">${esc(e.action)}</span>` },
+          { key: 'summary', label: 'Beschreibung', type: 'text', tdCls: 'small', cell: (e) => `<span class="truncate" style="display:block;max-width:340px">${esc(e.summary || '')}</span>` },
+          { key: 'hash', label: 'Prüfsumme', type: 'none', tdCls: 'tiny muted', cell: (e) => `<span style="font-family:var(--mono)">${esc((e.hash || '').slice(0, 12))}…</span>` },
+        ],
+        filters: vorgaenge.length > 1 ? [{
+          key: 'vorgang', column: 'action', title: 'Vorgang', initial: '', search: vorgaenge.length > 8,
+          options: () => [['', 'Alle Vorgänge', () => true], ...vorgaenge.map((v) => [v, v, (e) => e.action === v])],
+        }] : [],
+        emptyTitle: 'Noch keine Einträge',
+      })}`,
     foot: '<button class="btn primary" data-x>Schließen</button>',
-  }).root.querySelector('[data-x]').addEventListener('click', (e) => e.target.closest('.modal-backdrop').remove());
+  });
+  mountTables(m.root);
+  m.root.querySelector('[data-x]').addEventListener('click', () => m.close());
 }

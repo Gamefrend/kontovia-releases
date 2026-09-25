@@ -1,7 +1,7 @@
 {
-  "version": "1.3.0",
-  "released": "2026-09-25T12:25:03.558Z",
-  "notes": "Diese Fassung räumt die Filterleisten auf und macht die Übersicht anpassbar.\nWeniger Knöpfe auf einmal, jeder Filter dort, wo die Werte stehen – ohne dass\neine Funktion wegfällt.\n\n* Die Übersicht gehört Ihnen. Über „Anpassen“ ziehen Sie die Module an einen\n  anderen Platz (oder verschieben sie mit den Pfeilen), wählen ihre Breite von\n  einem Viertel bis zur ganzen Zeile und blenden aus, was Sie nicht brauchen.\n  Neu zum Einblenden: Letzte Buchungen, Durchschnittswerte und Kontostände\n  heute. „Voreinstellung“ stellt die ursprüngliche Anordnung wieder her; die\n  Anordnung gilt für das jeweilige Gerät.\n* Zeitraum mit einem Knopf. Statt Auswahlliste und zwei meist gesperrter\n  Datumsfelder steht oben rechts nur noch der Zeitraum selbst, etwa „Jahr 2026“\n  oder „3. Quartal 2026“. Die Pfeile daneben blättern um genau diese Länge weiter.\n  Ein Klick öffnet Schnellwahl, ein Raster zum Anklicken von Jahr, Quartal oder\n  Monat und einen frei wählbaren Zeitraum – ein bestimmter Monat ist jetzt zwei\n  Klicks entfernt. Gilt in Übersicht, Buchungen, Auswertungen und Export.\n* Filter in den Spaltenköpfen. Die Buchungsliste hatte bis zu elf Felder in\n  der Filterleiste. Jetzt filtern Sie über den Trichter im Kopf der Spalte:\n  Kategorie, Kontakt (neu), Status samt stornierten und nicht gelisteten\n  Buchungen, Einnahmen oder Ausgaben bei „Brutto“, Beleg und Ort. Neben jeder\n  Möglichkeit steht, wie viele Buchungen sie ergibt; lange Listen lassen sich\n  durchsuchen und zeigen nur, was im Zeitraum vorkommt.\n* Sichtbar, was gefiltert ist. Gesetzte Filter stehen als Chips über der\n  Liste und lassen sich einzeln per Kreuz oder alle zusammen aufheben. Findet\n  nichts mehr, bleiben die Spaltenköpfe stehen, damit Sie den Filter gleich dort\n  lockern können.\n* Kalender aufgeräumt. Die drei Häkchen über dem Monat stecken jetzt im Menü\n  „Anzeige“; ein kurzer Hinweis sagt, was gerade ausgeblendet ist.\n* Nicht gelistete Buchungen schalten Sie in Übersicht und Auswertungen über\n  einen kleinen Schalter im Seitenkopf ein – die bisherige Leiste über die ganze\n  Breite entfällt, die Einzelheiten stehen im Hinweis beim Darüberfahren.\n* Alle Aufklappfelder lassen sich mit Tastatur, Maus und Finger gleich bedienen\n  und schließen mit Escape.",
+  "version": "1.4.0",
+  "released": "2026-09-25T12:59:24.420Z",
+  "notes": "Diese Fassung macht alle Listen sortierbar und bringt Suche und Filter dorthin,\nwo sie fehlten – überall mit derselben Bedienung.\n\n* Sortieren in jeder Liste. Jeder Spaltenkopf hat einen Sortierknopf: ein\n  Klick sortiert, ein zweiter kehrt die Richtung um, der farbige Pfeil zeigt,\n  wonach gerade sortiert ist. Das gilt für Buchungen, Kategorien, Kontakte,\n  Zahlungskonten, Anlagen, offene Posten, die Kategorien der Gewinn- und\n  Verlustrechnung, die Monatstabelle, das Änderungsjournal und die Konfliktliste.\n* Knopf „Sortieren“. Über größeren Listen steht die Sortierung in Worten –\n  etwa „Datum: neueste zuerst“ oder „Brutto: größte zuerst“ – und lässt sich dort\n  nach Spalte und Richtung wählen. Praktisch auf dem Telefon, wo nicht alle\n  Spalten ins Bild passen. Kontovia merkt sich die Sortierung jeder Liste.\n* Buchungen nach allen Spalten sortierbar, auch nach Beleg-Nummer, Status\n  (Überfälliges zuerst), Netto und Umsatzsteuer.\n* Stammdaten mit Suche und Filtern. Kategorien stehen in einer Liste mit\n  Filtern nach Art, Besonderheit und Verwendung; Kontakte lassen sich durchsuchen\n  und nach Kunden oder Lieferanten filtern. Ein Klick auf eine Zeile öffnet den\n  Eintrag zum Bearbeiten.\n* Offene Posten lassen sich durchsuchen und nach Kontakt oder „nur\n  überfällige“ filtern; ein Klick öffnet die Rechnung.\n* Auswertungen: Die Buchungen hinter einer Kategorie sind sortierbar, nach\n  Kontakt filterbar, und jede Zeile öffnet die Buchung selbst. Die Monatstabelle\n  im Verlauf sortiert auf Wunsch nach dem stärksten Monat.\n* Änderungsjournal mit Suche und Filter nach Vorgang.\n* Leere Werte stehen beim Sortieren immer am Ende, gleich in welcher Richtung.\n  Aufstellungen mit fester Reihenfolge – Anlage EÜR, Umsatzsteuer-Kennzahlen,\n  Kontenblätter mit laufendem Saldo – bleiben bewusst unsortiert.\n* Behoben: Die verworfene Fassung in der Konfliktliste des Cloud-Abgleichs wurde\n  doppelt maskiert angezeigt.",
   "files": [
     {
       "path": "app.js",
@@ -75,8 +75,8 @@
     },
     {
       "path": "lib/prefs.js",
-      "sha256": "153a9e2890c3cc7d94fb6f97c35665485da3cf877f09dd89ef962f4476850abd",
-      "size": 6465
+      "sha256": "c2393758fb61b2e84908cf945e1d264f04f7f1e99feb402f2ea4a90b779ef6e5",
+      "size": 8169
     },
     {
       "path": "lib/reports.js",
@@ -99,9 +99,14 @@
       "size": 6254
     },
     {
+      "path": "lib/table.js",
+      "sha256": "2d2f4773e940d8f6409089cb7452147fbf28720b3d02f9227552d4a2bb35a3cd",
+      "size": 18046
+    },
+    {
       "path": "lib/ui.js",
-      "sha256": "6ff3083562d1f42ee52da9f0d4a8d61d0a1746b8c6ddd277403e4affe08e90a4",
-      "size": 40080
+      "sha256": "d0a34cfc2fdfa5fd9ed871089bf6d0bf2afae4b83b196471098e720459cae94c",
+      "size": 39048
     },
     {
       "path": "lib/updates.js",
@@ -115,23 +120,23 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "c33a17538bd1917bd1e82482d450d79b28c469078b01cac5b4d051a2cae7eacf",
+      "sha256": "371c65fa7e1d4d19d431be11147ff800a133794437de969215a6660c70ed2bb8",
       "size": 886
     },
     {
       "path": "recht/COMPLIANCE.html",
-      "sha256": "6ba9e1ea72d3f780341b873c8720eead7b45322a5844eaf27f03ac82c3ffcca3",
+      "sha256": "823022fe45b30c0195b8158ddd6424e1dc11930d62cf75930ed0c809ce7bea44",
       "size": 23526
     },
     {
       "path": "recht/DATENSCHUTZ.html",
-      "sha256": "9c42a84282825c6b97adf21f73b37ae7bc28cb75e6936ad226ed63f892f805cc",
+      "sha256": "f2efb320724bef349ddbd35ea08d89f8b4eac7ae79b50477bb7b39de9c1ac86c",
       "size": 11082
     },
     {
       "path": "styles.css",
-      "sha256": "b38034a3eddcb344e3e430c18aec107d081f669ae9223494b1163f4fdd38bb3a",
-      "size": 41374
+      "sha256": "153f5039a4041ba0751aca6b1fcb9ca0df2054330f7b8d02462be0fb87cefef8",
+      "size": 42411
     },
     {
       "path": "views/calendar.js",
@@ -145,13 +150,13 @@
     },
     {
       "path": "views/cloudpanel.js",
-      "sha256": "eda5e63a32815a9fe10197bd6f9735bb8a423e38bcb02d1ec735b6361f87577e",
-      "size": 32277
+      "sha256": "f4f04bba802bd3cd973c442fc4f7fcf0281dffee1bb5b38f44314a35cc78b748",
+      "size": 33407
     },
     {
       "path": "views/dashboard.js",
-      "sha256": "3b27e07f08b55ae43395a6e35dcca0e3c91d77c0dda24bab9dfba23d8b8c355d",
-      "size": 25495
+      "sha256": "3b3bd23abb37185a00872ae84eeb7e64a430603f87ea39ccc1458e17c7e5554a",
+      "size": 25563
     },
     {
       "path": "views/export.js",
@@ -160,28 +165,28 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "b109efc717deef1dd3ec08576fa55c77607cb3eb370713a73f670feeef261c65",
-      "size": 35753
+      "sha256": "2e42bfa2f9e3d34494fc6bb6befc945695a3873b0a3d6a892d61f4fe2ce53806",
+      "size": 36665
     },
     {
       "path": "views/master.js",
-      "sha256": "5b93781d5e860919d06ed51ecf9e6ee7e927e145f72614db9fbb5b45c24a8d42",
-      "size": 24337
+      "sha256": "6470e7ce42269f8a5d3e504963c4e92e42fe2a51049e17d4b34c3d5adb0429fd",
+      "size": 27475
     },
     {
       "path": "views/reports.js",
-      "sha256": "f18d591c3d469d06295d97cc38b843c5701facf0a162ba77275dbf2aa080bee0",
-      "size": 39678
+      "sha256": "a11f75766c154d26279e9ca8a2cfb774f1d7dd1a95e7782cd0752a48c7c84233",
+      "size": 42172
     },
     {
       "path": "views/settings.js",
-      "sha256": "7f16816cc6949e37bf8854431a3e918684f6503fc37c54db5762813620014609",
-      "size": 21799
+      "sha256": "268583cff39972391ac0b7e6456d81ecb551b59e3c77dff097a948ad491a1509",
+      "size": 22465
     },
     {
       "path": "views/transactions.js",
-      "sha256": "3c7c2133f1bbc17b3f44c0838266e970f8f869f9f0fb2e12f83de375d5bd5e13",
-      "size": 63468
+      "sha256": "9928825ffe8bf0a68144a02721126c119dddb6528776c422f0bb8d5a61a85b61",
+      "size": 54904
     },
     {
       "path": "web/ablage.js",
@@ -190,7 +195,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "7a9df655a6f009945fcd07c8f5f755d67e235343d026828a9711cd16e649aa2f",
+      "sha256": "9a5d49c30ed8dd11ef3aded39aefe13473cafd9714794243aec25aa35bc33e8a",
       "size": 6944
     },
     {
@@ -275,8 +280,8 @@
     },
     {
       "path": "web/web.css",
-      "sha256": "523ed55eab19cc92a22d33d768268337b8a9ff7348d0b7f54d5eff8bcc43b4ba",
-      "size": 5302
+      "sha256": "10324aee9b3d86df4e51ef023116f7ed518dcf4b8d7f291d039164813021b656",
+      "size": 5447
     },
     {
       "path": "web/zip.js",

@@ -130,6 +130,16 @@ function anleitung(root) {
         <p>Was gerade gefiltert ist, steht als Chip über der Liste; das Kreuz im Chip hebt den
         Filter auf, „Alle Filter zurücksetzen“ alle zusammen. Ein gesetzter Filter färbt außerdem
         seinen Trichter ein.</p>
+        <p><strong>Sortieren.</strong> Alle Listen – Buchungen, Kategorien, Kontakte, Konten,
+        Anlagen, offene Posten, die Kategorien der Gewinn- und Verlustrechnung, die Monatstabelle
+        und das Änderungsjournal – lassen sich nach jeder Spalte sortieren: ein Klick auf den
+        Spaltennamen mit dem Doppelpfeil sortiert, ein zweiter kehrt die Richtung um; der farbige
+        Pfeil zeigt, wonach gerade sortiert ist. Über größeren Listen nennt der Knopf
+        <em>Sortieren</em> die Sortierung in Worten („Datum: neueste zuerst“) und bietet Spalte und
+        Richtung zur Wahl – praktisch auf dem Telefon, wo nicht alle Spalten ins Bild passen.
+        Kontovia merkt sich die Sortierung jeder Liste auf diesem Gerät. Aufstellungen mit fester
+        Reihenfolge wie die Zeilen der Anlage EÜR oder die Kontenblätter mit laufendem Saldo
+        bleiben bewusst unsortiert.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">

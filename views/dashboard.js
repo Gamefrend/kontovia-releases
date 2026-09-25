@@ -20,6 +20,7 @@ import {
   anteilControls, wireAnteil, loadDashLayout, saveDashLayout,
 } from '../lib/prefs.js';
 import { defaultPeriod, periodControl } from '../lib/period.js';
+import { mountTables } from '../lib/table.js';
 import { navigate } from '../lib/router.js';
 import { openTransactionDialog } from './transactions.js';
 import { openAppointmentDialog } from './calendar.js';
@@ -391,6 +392,7 @@ function draw(root) {
     ${sichtbar.length ? '' : raw(`<div class="card">${emptyState('Alle Module sind ausgeblendet', 'Über „Anpassen“ holen Sie sie zurück.').__raw}</div>`)}`;
 
   mountCharts(root);
+  mountTables(root);
   const redraw = () => draw(root);
   if (editing) wireEditing(root, lay, redraw);
   else wireContent(root, redraw);
