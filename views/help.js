@@ -53,10 +53,14 @@ function anleitung(root) {
 
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Die zwei Weichen, die alles bestimmen</h3>
-        <p><strong>Zahlungsfluss oder Rechnungsdatum.</strong> Bei der Einnahmen-Überschuss-Rechnung
+        <p><strong>Zahlungsfluss oder Rechnungsdatum.</strong> In der Einnahmen-Überschuss-Rechnung
         zählt eine Buchung erst dann, wenn das Geld tatsächlich geflossen ist (§ 11 EStG).
-        Eine im Dezember gestellte, im Januar bezahlte Rechnung gehört also ins neue Jahr.
-        Bei Ihnen ist eingestellt: <strong>${esc(s.accountingBasis === 'ist' ? 'nach Zahlungsfluss' : 'nach Rechnungsdatum')}</strong>.</p>
+        Eine im Dezember gestellte, im Januar bezahlte Rechnung gehört also ins neue Jahr – das gilt
+        für die Anlage EÜR immer. Bei der Umsatzsteuer gibt es die Wahl: Nach dem Gesetz entsteht sie
+        mit der Leistung, also zum Rechnungsdatum (Soll-Versteuerung); auf Antrag nach § 20 UStG erst
+        mit dem Zahlungseingang (Ist-Versteuerung). Was für Sie gilt, steht im Fragebogen zur
+        steuerlichen Erfassung oder im Bescheid.
+        Bei Ihnen ist eingestellt: <strong>${esc(s.taxMode === 'kleinunternehmer' ? 'nach Zahlungsfluss' : s.accountingBasis === 'ist' ? 'Umsatzsteuer nach Zahlungseingang (Ist-Versteuerung)' : 'Umsatzsteuer nach Rechnungsdatum (Soll-Versteuerung)')}</strong>.</p>
         <p><strong>Regelbesteuerung oder Kleinunternehmer.</strong> Als Kleinunternehmer nach § 19 UStG
         rechnen Sie durchgehend brutto, weisen keine Umsatzsteuer aus und ziehen keine Vorsteuer.
         Bei Ihnen ist eingestellt: <strong>${esc(s.taxMode === 'kleinunternehmer' ? 'Kleinunternehmer § 19 UStG' : 'Regelbesteuerung')}</strong>.</p>
@@ -76,7 +80,7 @@ function anleitung(root) {
         <p>Ein Notebook für 1.500 € ist im Jahr des Kaufs nicht in voller Höhe abziehbar, sondern
         wird über die Nutzungsdauer verteilt – bei Computern drei Jahre. Beim Erfassen der
         Ausgabe wählen Sie „Als Anlagegut abschreiben". Kontovia rechnet die Abschreibung dann
-        monatsgenau aus, führt das Anlagenverzeichnis und trägt den Betrag in Zeile 31 der
+        monatsgenau aus, führt das Anlagenverzeichnis und trägt den Betrag in Zeile 33 der
         Anlage EÜR ein.</p>
       </div></div>
 

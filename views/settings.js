@@ -81,11 +81,13 @@ async function draw(root) {
             <span class="hint">Ein Wechsel ändert nur die Darstellung und die Auswertungen. Bereits erfasste Steuerbeträge bleiben in den Buchungen gespeichert.</span>
           </div>
           <div class="field">
-            <label>Gewinnermittlung</label>
+            <label>Umsatzsteuer berechnen nach</label>
             <select id="s_accountingBasis">
-              <option value="ist" ${s.accountingBasis === 'ist' ? 'selected' : ''}>Nach Zahlungsfluss (§ 11 EStG)</option>
-              <option value="soll" ${s.accountingBasis === 'soll' ? 'selected' : ''}>Nach Rechnungsdatum</option>
+              <option value="ist" ${s.accountingBasis === 'ist' ? 'selected' : ''}>Zahlungseingang – Ist-Versteuerung (§ 20 UStG)</option>
+              <option value="soll" ${s.accountingBasis === 'soll' ? 'selected' : ''}>Rechnungsdatum – Soll-Versteuerung</option>
             </select>
+            <span class="hint">Gilt für die Voranmeldung und die Sicht von Übersicht und Gewinn &amp; Verlust.
+            Die Anlage EÜR rechnet immer nach Zahlungsfluss (§ 11 EStG).</span>
           </div>
           <div class="form-grid">
             <div class="field">

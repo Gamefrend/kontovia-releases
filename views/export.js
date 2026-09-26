@@ -95,10 +95,10 @@ function draw(root) {
 
       ${raw(card({
         title: 'Steuerkanzlei (DATEV)', sub: 'EXTF-Format 700',
-        body: `Buchungsstapel im DATEV-Importformat, kodiert in ISO-8859-1.
-          Verwendet die Sachkonten des ${esc(db.settings.chartOfAccounts || 'SKR03')} aus Ihren Kategorien.
-          Steuerschlüssel werden bewusst nicht gesetzt – so entscheidet die Kanzlei,
-          statt dass eine falsche Automatik durchläuft.`,
+        body: `Buchungsstapel im DATEV-Importformat, je Wirtschaftsjahr eine Datei.
+          Verwendet die Sachkonten des ${esc(db.settings.chartOfAccounts || 'SKR03')} aus Ihren Kategorien und bucht
+          ${basisOf(db) === 'soll' && !klein ? 'Rechnungen über Sammeldebitor und -kreditor, Zahlungen aufs Geldkonto' : 'nach Zahlungsdatum gegen das Geldkonto'}.
+          Steuerschlüssel für Konten ohne Automatik lassen sich auf Wunsch mitgeben.`,
         button: `<button class="btn primary" id="btnDatev">${icon('file', 16).__raw} Buchungsstapel</button>`,
       }))}
 
@@ -170,15 +170,19 @@ function wire(root, db, rows) {
   recht.addEventListener('click', () => navigate('help', { tab: 'recht', anker: 'export' }));
 
   $('#btnPackCsv', root).addEventListener('click', (e) => busy(e.target, async () => {
+    const datev = await datevOptions(db);
+    if (!datev) return;
     const res = await api.file.saveMany({
       folderLabel: 'Zielordner für die Finanzamt-Unterlagen',
-      files: X.taxOfficePack(db, period, appInfo.version),
+      files: X.taxOfficePack(db, period, appInfo.version, datev),
     });
     if (res) ok('Unterlagen gespeichert', `${res.written.length} Dateien in ${res.dir}`);
   }));
 
   $('#btnPackAll', root).addEventListener('click', (e) => busy(e.target, async () => {
-    const files = X.taxOfficePack(db, period, appInfo.version);
+    const datev = await datevOptions(db);
+    if (!datev) return;
+    const files = X.taxOfficePack(db, period, appInfo.version, datev);
     const y = period.from.slice(0, 4);
     const pdfs = [
       [R.guvReport(db, period), `Gewinn-und-Verlust_${y}.pdf`],
@@ -212,16 +216,22 @@ function wire(root, db, rows) {
   }));
 
   $('#btnDatev', root).addEventListener('click', (e) => busy(e.target, async () => {
-    const nums = await datevNumbersDialog(db);
-    if (!nums) return;
-    const text = X.datevBuchungsstapel(db, period, nums);
-    const p = await api.file.save({
-      defaultName: `EXTF_Buchungsstapel_${period.from.replace(/-/g, '')}_${period.to.replace(/-/g, '')}.csv`,
-      filters: [{ name: 'DATEV-Buchungsstapel', extensions: ['csv'] }],
-      text,
-      encoding: 'latin1',
-    });
-    if (p) ok('Buchungsstapel gespeichert', p);
+    const opts = await datevNumbersDialog(db, true);
+    if (!opts) return;
+    const stapel = X.datevFiles(db, period, opts);
+    if (stapel.length === 1) {
+      const p = await api.file.save({
+        defaultName: stapel[0].name,
+        filters: [{ name: 'DATEV-Buchungsstapel', extensions: ['csv'] }],
+        text: stapel[0].text,
+        encoding: 'latin1',
+      });
+      if (p) ok('Buchungsstapel gespeichert', p);
+      return;
+    }
+    // Ein Stapel darf kein Wirtschaftsjahr überschreiten – je Jahr eine Datei.
+    const res = await api.file.saveMany({ folderLabel: 'Zielordner für die DATEV-Stapel', files: stapel });
+    if (res) ok(`${stapel.length} Buchungsstapel gespeichert`, `je Wirtschaftsjahr eine Datei in ${res.dir}`);
   }));
 
   $('#btnGobd', root).addEventListener('click', (e) => busy(e.target, async () => {
@@ -241,13 +251,17 @@ function wire(root, db, rows) {
     if (!yes) return;
     const files = [];
     const index = [];
+    const vergeben = new Set();
     for (const t of rows) {
       for (const id of t.attachments || []) {
         const meta = sel.attachment(id);
         if (!meta) continue;
-        const ext = (meta.fileName.split('.').pop() || 'bin').toLowerCase();
+        const ext = fileExtension(meta);
         const base = `${t.date}_${(t.invoiceNumber || t.id.slice(-6))}_${t.description}`.replace(/[^A-Za-z0-9äöüÄÖÜß _-]/g, '').slice(0, 90).trim();
-        const name = `${base}.${ext}`;
+        // Mehrere Belege an einer Buchung hießen sonst gleich und überschrieben sich.
+        let name = `${base}.${ext}`;
+        for (let n = 2; vergeben.has(name.toLowerCase()); n++) name = `${base}_${n}.${ext}`;
+        vergeben.add(name.toLowerCase());
         files.push({ name, dataBase64: await api.attach.read(id) });
         index.push([t.date, t.invoiceNumber || '', t.description, money(t.gross), name, meta.sha256]);
       }
@@ -303,31 +317,76 @@ function wire(root, db, rows) {
 
 /* -------------------------------------------------------------------------- */
 
-function datevNumbersDialog(db) {
+/** Endung für einen ausgeleiteten Beleg – aus dem Dateinamen, sonst aus dem Typ. */
+function fileExtension(meta) {
+  const m = /\.([A-Za-z0-9]{1,6})$/.exec(meta.fileName || '');
+  if (m) return m[1].toLowerCase();
+  return {
+    'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/heic': 'heic', 'image/webp': 'webp',
+    'application/xml': 'xml', 'text/xml': 'xml',
+  }[meta.mime] || 'bin';
+}
+
+/**
+ * DATEV-Angaben für die Pakete: Sind Berater- und Mandantennummer gespeichert
+ * und gültig, geht es ohne Rückfrage weiter, sonst fragt derselbe Dialog wie
+ * beim einzelnen Stapel.
+ */
+async function datevOptions(db) {
+  const s = db.settings;
+  if (X.datevNumbersValid(s.datevBerater, s.datevMandant)) {
+    return { beraterNr: s.datevBerater, mandantNr: s.datevMandant, steuerschluessel: !!s.datevSteuerschluessel };
+  }
+  return datevNumbersDialog(db, false);
+}
+
+function datevNumbersDialog(db, einzeln) {
   return new Promise((resolve) => {
     let settled = false;
+    const klein = isKleinunternehmer(db);
     const m = modal({
       title: 'Angaben für DATEV',
       size: 'slim',
       body: html`
         <p class="mt0 small muted">Ihre Steuerkanzlei nennt Ihnen Berater- und Mandantennummer.
-        Ohne die richtigen Nummern lässt sich der Stapel dort nicht dem Mandat zuordnen.</p>
-        <div class="field"><label>Beraternummer</label><input id="d_berater" value="${esc(db.settings.datevBerater || '')}" placeholder="z. B. 12345"></div>
-        <div class="field"><label>Mandantennummer</label><input id="d_mandant" value="${esc(db.settings.datevMandant || '')}" placeholder="z. B. 6789"></div>
-        <label class="check"><input type="checkbox" id="d_save" checked> Nummern für das nächste Mal merken</label>`,
-      foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Stapel erzeugen</button>',
+        Ohne die richtigen Nummern weist DATEV den Stapel ab oder ordnet ihn keinem Mandat zu.</p>
+        <div class="field"><label>Beraternummer</label><input id="d_berater" inputmode="numeric" value="${esc(db.settings.datevBerater || '')}" placeholder="1001 bis 9999999"></div>
+        <div class="field"><label>Mandantennummer</label><input id="d_mandant" inputmode="numeric" value="${esc(db.settings.datevMandant || '')}" placeholder="1 bis 99999"></div>
+        ${klein ? '' : raw(`<label class="check"><input type="checkbox" id="d_bu" ${db.settings.datevSteuerschluessel ? 'checked' : ''}>
+          Steuerschlüssel mitgeben (9/8 Vorsteuer, 3/2 Umsatzsteuer) – nur für Konten ohne Automatik; vorher mit der Kanzlei abstimmen</label>`)}
+        <label class="check"><input type="checkbox" id="d_save" checked> Angaben für das nächste Mal merken</label>
+        <div class="err small mt8" id="d_err" role="alert"></div>`,
+      foot: `<button class="btn" data-no>Abbrechen</button>
+        ${einzeln ? '' : '<button class="btn" data-skip>Ohne Nummern weiter</button>'}
+        <button class="btn primary" data-yes>${einzeln ? 'Stapel erzeugen' : 'Weiter'}</button>`,
       onClose: () => { if (!settled) resolve(null); },
     });
+    const wert = (id) => m.root.querySelector(id)?.value.trim() || '';
     m.root.querySelector('[data-yes]').addEventListener('click', async () => {
-      const beraterNr = m.root.querySelector('#d_berater').value.trim() || '1';
-      const mandantNr = m.root.querySelector('#d_mandant').value.trim() || '1';
+      const beraterNr = wert('#d_berater');
+      const mandantNr = wert('#d_mandant');
+      const steuerschluessel = !!m.root.querySelector('#d_bu')?.checked;
+      if (!X.datevNumbersValid(beraterNr, mandantNr)) {
+        m.root.querySelector('#d_err').textContent = 'Beraternummer 1001 bis 9999999, Mandantennummer 1 bis 99999 – nur Ziffern.';
+        return;
+      }
       if (m.root.querySelector('#d_save').checked) {
         const { commit } = await import('../lib/store.js');
-        await commit('einstellung.datev', (d) => { d.settings.datevBerater = beraterNr; d.settings.datevMandant = mandantNr; }, { silent: true });
+        await commit('einstellung.datev', (d) => {
+          d.settings.datevBerater = beraterNr;
+          d.settings.datevMandant = mandantNr;
+          d.settings.datevSteuerschluessel = steuerschluessel;
+        }, { silent: true });
       }
       settled = true;
       m.close();
-      resolve({ beraterNr, mandantNr });
+      resolve({ beraterNr, mandantNr, steuerschluessel });
+    });
+    m.root.querySelector('[data-skip]')?.addEventListener('click', () => {
+      // Das Paket entsteht trotzdem; LIESMICH.txt weist auf die Platzhalter hin.
+      settled = true;
+      m.close();
+      resolve({ steuerschluessel: false });
     });
     m.root.querySelector('[data-no]').addEventListener('click', () => { settled = true; m.close(); resolve(null); });
   });

@@ -5,7 +5,7 @@ import {
 } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, err } from '../lib/ui.js';
 import { store, sel, upsertEntity, deleteEntity } from '../lib/store.js';
-import { depreciationPlan, depreciationInRange, bookValue } from '../lib/calc.js';
+import { depreciationPlan, depreciationInRange, bookValue, EUER, EUER_ZEILEN, formLine, formYear } from '../lib/calc.js';
 import { refresh } from '../lib/router.js';
 import { table, mountTable, mountTables } from '../lib/table.js';
 
@@ -245,7 +245,7 @@ function assets(root) {
       Wirtschaftsgüter über 800 € netto werden nicht sofort abgezogen, sondern über
       ihre Nutzungsdauer verteilt (lineare AfA, § 7 EStG). Kontovia rechnet monatsgenau
       ab dem Anschaffungsmonat und übernimmt den Betrag automatisch in Ihre
-      Betriebsausgaben und in Zeile 31 der Anlage EÜR.
+      Betriebsausgaben und in Zeile 33 der Anlage EÜR.
     </div>
     <div class="card">
       <div class="card-head"><h3>Anlagenverzeichnis</h3><div class="spacer"></div>
@@ -355,8 +355,14 @@ function baseDialog({ title, body, onSave, wide = false }) {
 function categoryForm(c) {
   const isNew = !c;
   c = c || { id: uid('cat'), kind: 'expense', name: '', euerLine: null, skr03: '', skr04: '', vatRate: 19, active: true };
-  const lineOptions = Object.entries(store.db.euerLines || {})
-    .map(([k, v]) => `<option value="${k}" ${String(c.euerLine) === k ? 'selected' : ''}>${esc(k)} – ${esc(v)}</option>`).join('');
+  // Zeilen des aktuellen Formulars; eine abweichende eigene Zuordnung bleibt wählbar.
+  const zeilen = { ...EUER_ZEILEN };
+  delete zeilen[EUER.summeEinnahmen]; delete zeilen[EUER.summeAusgaben]; delete zeilen[EUER.gewinn];
+  if (c.euerLine !== null && c.euerLine !== undefined && c.euerLine !== '' && !zeilen[c.euerLine]) zeilen[c.euerLine] = '(keine Eingabezeile im Formular 2025 – bitte ändern)';
+  // Angezeigt wird die Nummer im Vordruck des laufenden Jahres; gespeichert bleibt die Zuordnung nach 2025.
+  const jahr = new Date().getFullYear();
+  const lineOptions = Object.entries(zeilen)
+    .map(([k, v]) => `<option value="${k}" ${String(c.euerLine) === k ? 'selected' : ''}>${esc(formLine(k, jahr))} – ${esc(v)}</option>`).join('');
 
   baseDialog({
     title: isNew ? 'Neue Kategorie' : 'Kategorie bearbeiten',
@@ -385,7 +391,7 @@ function categoryForm(c) {
             <option value="">– keine Zuordnung (nicht steuerwirksam) –</option>
             ${raw(lineOptions)}
           </select>
-          <span class="hint">Bestimmt, wo der Betrag in der EÜR-Auswertung erscheint.</span>
+          <span class="hint">Bestimmt, wo der Betrag in der EÜR-Auswertung erscheint. Nummern nach dem Vordruck ${formYear(jahr)}; für andere Jahre rechnet Kontovia um.</span>
         </div>
         <div class="field"><label>Konto SKR03</label><input id="f_skr03" value="${esc(c.skr03 || '')}"></div>
         <div class="field"><label>Konto SKR04</label><input id="f_skr04" value="${esc(c.skr04 || '')}"></div>

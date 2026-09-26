@@ -12,7 +12,7 @@ import {
 import { defaultPeriod, periodControl } from '../lib/period.js';
 import { mountTable, tableState } from '../lib/table.js';
 import { navigate, refresh } from '../lib/router.js';
-import { vatTreatment, depositInfo } from '../lib/calc.js';
+import { vatTreatment, depositInfo, isVoidPart, formLine } from '../lib/calc.js';
 
 const api = window.kontovia;
 /** Läuft Kontovia im Browser statt in Electron? (src/web/bridge.js) */
@@ -74,9 +74,9 @@ export function knownLocations() {
   return [...set].sort((a, b) => a.localeCompare(b, 'de'));
 }
 
-const overdue = (t) => !t.paidDate && (t.dueDate || t.date) < todayISO();
+const overdue = (t) => !t.paidDate && !isVoidPart(t) && (t.dueDate || t.date) < todayISO();
 /** Reihenfolge beim Sortieren nach Status: was Aufmerksamkeit braucht, zuerst. */
-const statusRank = (t) => (t.voided ? 3 : overdue(t) ? 0 : !t.paidDate ? 1 : 2);
+const statusRank = (t) => (isVoidPart(t) ? 3 : overdue(t) ? 0 : !t.paidDate ? 1 : 2);
 
 /** Spalten, Filter und Suche der Buchungsliste. */
 function listSpec() {
@@ -165,9 +165,10 @@ function listSpec() {
       ],
     }] : []),
     {
+      // Original und Gegenbuchung eines Stornos heben sich auf; ausgeblendet werden beide.
       key: 'showVoided', column: 'status', title: 'Stornierte Buchungen', initial: 'nein',
-      chip: () => 'Mit stornierten',
-      options: () => [['nein', 'Ausblenden', (t) => !t.voided], ['ja', 'Einblenden', alle]],
+      chip: () => 'Mit Stornos',
+      options: () => [['nein', 'Ausblenden', (t) => !isVoidPart(t)], ['ja', 'Einblenden (mit Gegenbuchung)', alle]],
     },
     {
       key: 'type', column: 'amount', title: 'Art der Buchung', initial: 'alle', chip: (v, label) => label,
@@ -193,6 +194,8 @@ function listSpec() {
       id: 'txSearch',
       placeholder: 'Suchen: Text, Rechnungsnummer, Betrag …',
       label: 'Buchungen durchsuchen',
+      // Der Suchtext enthält Kategorie- und Kontaktnamen; ändert sich der Bestand, wird er neu gebildet.
+      version: () => store.revision,
       text: (t) => [t.description, t.invoiceNumber, t.reference, t.notes, t.location,
         sel.categoryName(t.categoryId), sel.contactName(t.contactId), (t.gross / 100).toFixed(2)].join(' '),
     },
@@ -213,8 +216,8 @@ function listSpec() {
 function summaryHtml(rows) {
   const sumIncome = sum(rows.filter((t) => t.type === 'income'), (t) => t.gross);
   const sumExpense = sum(rows.filter((t) => t.type === 'expense'), (t) => t.gross);
-  const openCount = rows.filter((t) => !t.paidDate && !t.voided).length;
-  const unlistedCount = rows.filter((t) => t.unlisted && !t.voided).length;
+  const openCount = rows.filter((t) => !t.paidDate && !isVoidPart(t)).length;
+  const unlistedCount = rows.filter((t) => t.unlisted && !isVoidPart(t)).length;
   return html`<div class="tx-sum">
     <span><strong>${int(rows.length)}</strong> <span class="muted">${rows.length === 1 ? 'Buchung' : 'Buchungen'}</span></span>
     <span><span class="muted">Einnahmen</span> <strong class="amount pos">${money(sumIncome)} €</strong></span>
@@ -237,6 +240,8 @@ function descriptionCell(t) {
 }
 
 function statusCell(t) {
+  if (t.voided) return '<span class="badge" title="Durch eine Gegenbuchung aufgehoben">storniert</span>';
+  if (t.isReversal) return '<span class="badge" title="Hebt eine stornierte Buchung auf">Gegenbuchung</span>';
   const status = t.paidDate
     ? `<span class="badge pos">bezahlt ${esc(fmtDateShort(t.paidDate))}</span>`
     : overdue(t)
@@ -307,6 +312,9 @@ export function openTransactionDialog(id, type = 'expense') {
   type = tx.type;
   const klein = store.db.settings.taxMode === 'kleinunternehmer';
   const locked = existing && isLockedDate(existing.date);
+  // Original und Gegenbuchung eines Stornos bleiben, wie sie sind – sonst höben
+  // sie sich nicht mehr auf.
+  const stornoTeil = !!existing && isVoidPart(existing);
 
   /* Belege, die in diesem Dialog neu hinzugekommen sind – bei Abbruch wieder weg. */
   const addedAttachments = [];
@@ -322,12 +330,12 @@ export function openTransactionDialog(id, type = 'expense') {
     body: '<div id="txForm"></div>',
     foot: `
       <div class="left row" style="gap:8px">
-        ${!isNew ? `<button class="btn danger sm" id="btnDelete">${icon('trash', 14).__raw} Löschen</button>` : ''}
-        ${!isNew && !tx.voided ? `<button class="btn sm" id="btnVoid">Stornieren</button>` : ''}
+        ${!isNew && !stornoTeil ? `<button class="btn danger sm" id="btnDelete">${icon('trash', 14).__raw} Löschen</button>` : ''}
+        ${!isNew && !stornoTeil ? `<button class="btn sm" id="btnVoid">Stornieren</button>` : ''}
         ${!isNew ? `<button class="btn sm" id="btnDuplicate">${icon('copy', 14).__raw} Duplizieren</button>` : ''}
       </div>
       <button class="btn" id="btnCancel">Abbrechen</button>
-      <button class="btn primary" id="btnSave">${isNew ? 'Buchung anlegen' : 'Änderungen speichern'}</button>`,
+      ${stornoTeil ? '' : `<button class="btn primary" id="btnSave">${isNew ? 'Buchung anlegen' : 'Änderungen speichern'}</button>`}`,
     onClose: () => cleanupUnsaved(),
     confirmDismiss: () => {
       if (ausgangslage === null || saved) return false;
@@ -354,7 +362,9 @@ export function openTransactionDialog(id, type = 'expense') {
 
     form.innerHTML = html`
       ${locked ? raw(`<div class="notice warn mb16">Diese Buchung liegt im festgeschriebenen Zeitraum (bis ${esc(store.db.locks.at(-1)?.until || '')}). Sie kann nicht mehr geändert, sondern nur noch storniert werden.</div>`) : ''}
-      ${tx.voided ? raw('<div class="notice danger mb16">Diese Buchung wurde storniert und wirkt sich nicht mehr auf Auswertungen aus.</div>') : ''}
+      ${tx.voided ? raw(`<div class="notice danger mb16">Diese Buchung wurde${tx.voidedAt ? ` am ${esc(fmtDate(tx.voidedAt.slice(0, 10)))}` : ''} storniert${tx.voidReason ? ` (${esc(tx.voidReason)})` : ''}.
+        Eine Gegenbuchung hebt sie auf; beide bleiben unverändert erhalten und lassen sich weder bearbeiten noch löschen.</div>`) : ''}
+      ${tx.isReversal ? raw('<div class="notice mb16">Das ist die Gegenbuchung zu einem Storno. Sie hebt die stornierte Buchung auf und lässt sich weder bearbeiten noch löschen.</div>') : ''}
 
       <div class="seg mb16">
         <button data-type="expense" class="expense ${tx.type === 'expense' ? 'active' : ''}">Ausgabe</button>
@@ -375,7 +385,7 @@ export function openTransactionDialog(id, type = 'expense') {
           <label>Kategorie *</label>
           <select id="i_categoryId">
             <option value="">– bitte wählen –</option>
-            ${raw(cats.map((c) => `<option value="${esc(c.id)}" ${tx.categoryId === c.id ? 'selected' : ''}>${esc(c.name)}${c.euerLine ? ` · EÜR ${c.euerLine}` : ''}</option>`).join(''))}
+            ${raw(cats.map((c) => `<option value="${esc(c.id)}" ${tx.categoryId === c.id ? 'selected' : ''}>${esc(c.name)}${c.euerLine ? ` · EÜR ${formLine(c.euerLine, new Date().getFullYear())}` : ''}</option>`).join(''))}
           </select>
         </div>
 
@@ -475,9 +485,9 @@ export function openTransactionDialog(id, type = 'expense') {
             <label class="check"><input type="checkbox" id="i_isPaid" ${tx.paidDate ? 'checked' : ''}> bezahlt am</label>
             <input type="date" id="i_paidDate" value="${tx.paidDate || todayISO()}" ${tx.paidDate ? '' : 'disabled'} style="flex:1">
           </div>
-          <span class="hint">${store.db.settings.accountingBasis === 'ist'
-            ? 'Bei der Einnahmen-Überschuss-Rechnung zählt dieses Datum für den Gewinn.'
-            : 'Sie rechnen nach Rechnungsdatum – dieses Feld dient der Liquiditätsübersicht.'}</span>
+          <span class="hint">${store.db.settings.accountingBasis === 'soll' && !klein
+            ? 'Dieses Datum zählt für die Anlage EÜR; die Umsatzsteuer richtet sich bei Ihnen nach dem Rechnungsdatum.'
+            : 'Dieses Datum zählt für die Anlage EÜR und die Umsatzsteuer.'}</span>
         </div>
         <div class="field">
           <label>Fällig am</label>
@@ -817,6 +827,7 @@ export function openTransactionDialog(id, type = 'expense') {
       fieldError(form.querySelector('#i_depositPercent'), 'Bitte einen Wert zwischen 1 und 100 Prozent eintragen.');
       return false;
     }
+    if (stornoTeil) { err('Teil eines Stornos', 'Stornierte Buchungen und Gegenbuchungen bleiben unverändert. Duplizieren Sie die Buchung, um sie neu zu erfassen.'); return false; }
     if (locked) { err('Zeitraum ist festgeschrieben', 'Bitte stornieren Sie die Buchung statt sie zu ändern.'); return false; }
     // Auch in die andere Richtung sperren: eine Buchung nachträglich in einen
     // abgeschlossenen Zeitraum zurückzudatieren, würde eine festgeschriebene
@@ -835,7 +846,7 @@ export function openTransactionDialog(id, type = 'expense') {
 
   /* Fußzeile */
   m.root.querySelector('#btnCancel').addEventListener('click', () => m.dismiss());
-  m.root.querySelector('#btnSave').addEventListener('click', async () => {
+  m.root.querySelector('#btnSave')?.addEventListener('click', async () => {
     const b = m.root.querySelector('#btnSave');
     if (b.disabled) return;
     b.disabled = true;
@@ -882,6 +893,10 @@ export function openTransactionDialog(id, type = 'expense') {
     saved = true;
     m.close();
     const copy = { ...structuredClone(tx), id: uid('tx'), date: todayISO(), paidDate: '', invoiceNumber: '', attachments: [], voided: false, isReversal: false, createdAt: new Date().toISOString() };
+    // Die Kopie ist eine neue, eigenständige Buchung – ohne Storno-Verweise und Termine.
+    for (const k of ['reversalOf', 'reversedBy', 'voidedAt', 'voidReason', 'updatedAt', 'assetId']) delete copy[k];
+    copy.appointmentIds = [];
+    if (copy.isReversal === false && tx.isReversal) { copy.gross = -copy.gross; copy.net = -copy.net; copy.vat = -copy.vat; copy.description = copy.description.replace(/^Storno: /, ''); }
     setTimeout(() => openTransactionDialog(copy), 60);
   });
 

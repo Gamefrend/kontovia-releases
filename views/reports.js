@@ -8,7 +8,7 @@ import { store, sel } from '../lib/store.js';
 import {
   compareRanges, trend, euerReport, vatReturn, vatPeriods, balanceSheet,
   openItems, accountBalances, isKleinunternehmer, basisOf, depreciationInRange, bookValue,
-  totalDepreciation, healthChecks, scopeDb, unlistedStats, averages,
+  totalDepreciation, healthChecks, scopeDb, unlistedStats, averages, isEffective,
 } from '../lib/calc.js';
 import {
   prefs, setPref, scope, scopeToggleHtml, wireScopeToggle, verlaufControls, wireVerlauf, verlaufBody,
@@ -255,7 +255,7 @@ function guv(root, db) {
 function openCategory(db, categoryId) {
   const basis = basisOf(db);
   const rows = db.transactions.filter((t) => {
-    if (t.voided || t.categoryId !== categoryId) return false;
+    if (!isEffective(t) || t.categoryId !== categoryId) return false;
     const d = basis === 'soll' ? t.date : t.paidDate;
     return d && d >= period.from && d <= period.to;
   });
@@ -311,16 +311,20 @@ function contactFilter(rows, column) {
 
 function euer(root, db) {
   const e = euerReport(db, period.from, period.to);
-  const line = (r) => `<tr><td class="num strong" style="width:70px">${r.line}</td><td>${esc(r.label)}</td><td class="num">${esc(money(r.amount))} €</td></tr>`;
+  const F = e.form;
+  const jahr = Number(period.to.slice(0, 4));
+  const line = (r) => `<tr><td class="num strong" style="width:70px">${r.line}</td><td>${esc(r.label)}${r.nonDeductible
+    ? `<div class="tiny muted">abziehbarer Teil · nicht abziehbar ${esc(money(r.nonDeductible))} € (im Formular linke Spalte)</div>` : ''}</td><td class="num">${esc(money(r.amount))} €</td></tr>`;
 
   root.innerHTML = html`
     ${raw(scopeWarning())}
+    ${jahr > F.jahr ? raw(`<div class="notice warn mb16">Für ${jahr} ist in dieser Fassung noch kein eigener Vordruck hinterlegt. Die Zeilennummern folgen dem Vordruck ${F.jahr} – bitte gegen das Formular ${jahr} prüfen.</div>`) : ''}
     <div class="notice mb16">
       <strong>Was Sie hier sehen.</strong> Ihre Buchungen, zusammengefasst nach den Zeilen der
-      amtlichen Anlage EÜR. Sie können die Beträge direkt in „Mein ELSTER“ übertragen.
-      Die Zeilennummern des Formulars ändern sich gelegentlich – bitte einmal gegen
-      das Formular des jeweiligen Jahres prüfen. Die Zuordnung jeder Kategorie
-      lässt sich unter Stammdaten anpassen.
+      amtlichen Anlage EÜR (Vordruck ${F.jahr}), immer nach Zahlungsfluss (§ 11 EStG). Sie können die
+      Beträge direkt in „Mein ELSTER“ übertragen. Die Zeilennummern des Formulars ändern sich fast
+      jährlich – bitte einmal gegen das Formular des jeweiligen Jahres prüfen. Die Zuordnung jeder
+      Kategorie lässt sich unter Stammdaten anpassen.
     </div>
 
     <div class="grid c2">
@@ -328,14 +332,14 @@ function euer(root, db) {
         <div class="card-head"><h3>Betriebseinnahmen</h3></div>
         <div class="table-wrap"><table class="data">
           <tbody>${raw(e.income.map(line).join('') || '<tr><td colspan="3" class="muted center">Keine Einnahmen</td></tr>')}</tbody>
-          <tfoot><tr><td class="num">22</td><td>Summe Betriebseinnahmen</td><td class="num">${money(e.incomeTotal)} €</td></tr></tfoot>
+          <tfoot><tr><td class="num">${F.summeEinnahmen}</td><td>Summe Betriebseinnahmen</td><td class="num">${money(e.incomeTotal)} €</td></tr></tfoot>
         </table></div>
       </div>
       <div class="card">
         <div class="card-head"><h3>Betriebsausgaben</h3></div>
         <div class="table-wrap"><table class="data">
           <tbody>${raw(e.expense.map(line).join('') || '<tr><td colspan="3" class="muted center">Keine Ausgaben</td></tr>')}</tbody>
-          <tfoot><tr><td class="num">71</td><td>Summe Betriebsausgaben</td><td class="num">${money(e.expenseTotal)} €</td></tr></tfoot>
+          <tfoot><tr><td class="num">${F.summeAusgaben}</td><td>Summe Betriebsausgaben</td><td class="num">${money(e.expenseTotal)} €</td></tr></tfoot>
         </table></div>
       </div>
     </div>
@@ -351,11 +355,11 @@ function euer(root, db) {
         <table class="data">
           <tbody>
             <tr><td>Ergebnis ohne Umsatzsteuer (wie in der Gewinn- und Verlustrechnung)</td><td class="num">${esc(money(e.reconciliation.netResult))} €</td></tr>
-            <tr><td class="muted">+ vereinnahmte Umsatzsteuer (Zeile 16)</td><td class="num muted">${esc(money(e.reconciliation.vatCollected))} €</td></tr>
-            ${e.reconciliation.vatRefunded ? `<tr><td class="muted">+ Erstattung vom Finanzamt (Zeile 17)</td><td class="num muted">${esc(money(e.reconciliation.vatRefunded))} €</td></tr>` : ''}
-            <tr><td class="muted">− gezahlte Vorsteuer (Zeile 55)</td><td class="num muted">− ${esc(money(e.reconciliation.vatDeducted))} €</td></tr>
-            <tr><td class="muted">− an das Finanzamt gezahlte Umsatzsteuer (Zeile 56)</td><td class="num muted">− ${esc(money(e.reconciliation.vatRemitted))} €</td></tr>
-            <tr style="border-top:2px solid var(--border-strong)"><td><strong>Gewinn laut Anlage EÜR (Zeile 72)</strong></td><td class="num"><strong>${esc(money(e.profit))} €</strong></td></tr>
+            <tr><td class="muted">+ vereinnahmte Umsatzsteuer (Zeile ${F.ustVereinnahmt})</td><td class="num muted">${esc(money(e.reconciliation.vatCollected))} €</td></tr>
+            ${e.reconciliation.vatRefunded ? `<tr><td class="muted">+ Erstattung vom Finanzamt (Zeile ${F.ustErstattet})</td><td class="num muted">${esc(money(e.reconciliation.vatRefunded))} €</td></tr>` : ''}
+            <tr><td class="muted">− gezahlte Vorsteuer (Zeile ${F.vorsteuer})</td><td class="num muted">− ${esc(money(e.reconciliation.vatDeducted))} €</td></tr>
+            <tr><td class="muted">− an das Finanzamt gezahlte Umsatzsteuer (Zeile ${F.ustGezahlt})</td><td class="num muted">− ${esc(money(e.reconciliation.vatRemitted))} €</td></tr>
+            <tr style="border-top:2px solid var(--border-strong)"><td><strong>Gewinn laut Anlage EÜR (Zeile ${F.gewinn})</strong></td><td class="num"><strong>${esc(money(e.profit))} €</strong></td></tr>
           </tbody>
         </table>
         ${!e.reconciliation.vatRemitted ? `<div class="notice warn mt16">Sie haben im Zeitraum noch keine
@@ -368,13 +372,13 @@ function euer(root, db) {
       <div class="card-body">
         <div class="row between">
           <div>
-            <div class="muted small">Zeile 72 · ${e.profit >= 0 ? 'Steuerpflichtiger Gewinn' : 'Verlust'}</div>
+            <div class="muted small">Zeile ${F.gewinn} · ${e.profit >= 0 ? 'Gewinn' : 'Verlust'} vor Korrekturen (Zeilen ${F.summeAusgaben + 3} bis ${F.gewinn - 1})</div>
             <div style="font-size:28px;font-weight:660;letter-spacing:-.6px" class="num ${e.profit >= 0 ? 'amount pos' : 'amount neg'}">${money(e.profit)} €</div>
           </div>
           <div class="right small muted">
             ${esc(periodLabel(period))}<br>
             ${e.kleinunternehmer ? 'Kleinunternehmer § 19 UStG' : 'Regelbesteuerung'}<br>
-            ${e.basis === 'ist' ? 'Zuflussprinzip § 11 EStG' : 'Rechnungsdatum'}
+            Zuflussprinzip § 11 EStG
           </div>
         </div>
       </div>
@@ -619,11 +623,11 @@ function konten(root, db) {
 
 function accountSheet(db, acc) {
   const rows = db.transactions
-    .filter((t) => !t.voided && t.accountId === acc.id && t.paidDate && t.paidDate >= period.from && t.paidDate <= period.to)
+    .filter((t) => isEffective(t) && t.accountId === acc.id && t.paidDate && t.paidDate >= period.from && t.paidDate <= period.to)
     .sort((a, b) => a.paidDate.localeCompare(b.paidDate));
   let running = Number(acc.openingBalance) || 0;
   for (const t of db.transactions) {
-    if (t.voided || t.accountId !== acc.id || !t.paidDate || t.paidDate >= period.from) continue;
+    if (!isEffective(t) || t.accountId !== acc.id || !t.paidDate || t.paidDate >= period.from) continue;
     running += t.type === 'income' ? t.gross : -t.gross;
   }
   const opening = running;

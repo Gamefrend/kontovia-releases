@@ -382,7 +382,7 @@ function draw(root) {
     <div class="page-head">
       <div>
         <h2>${esc(s.companyName || s.ownerName || 'Ihre Buchhaltung')}</h2>
-        <p>Gewinnermittlung ${c.db.settings.accountingBasis === 'ist' ? 'nach Zahlungsfluss' : 'nach Rechnungsdatum'}${c.klein ? ' · Kleinunternehmer § 19 UStG' : ''}</p>
+        <p>${c.klein ? 'Nach Zahlungsfluss · Kleinunternehmer § 19 UStG' : c.db.settings.accountingBasis === 'ist' ? 'Nach Zahlungsfluss · Ist-Versteuerung' : 'Nach Rechnungsdatum · Soll-Versteuerung'}</p>
       </div>
       <div class="spacer"></div>
       ${scopeToggleHtml(store.db, period.from, period.to).__raw}

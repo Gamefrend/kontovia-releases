@@ -6,7 +6,7 @@ import {
 } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, emptyState } from '../lib/ui.js';
 import { store, sel, upsertAppointment, deleteAppointment, commit } from '../lib/store.js';
-import { depositInfo } from '../lib/calc.js';
+import { depositInfo, isVoidPart } from '../lib/calc.js';
 import { navigate, refresh } from '../lib/router.js';
 import { openTransactionDialog } from './transactions.js';
 import { openCalendarSyncDialog, statusText } from './calendarsync.js';
@@ -53,7 +53,7 @@ export function expandAppointments(appts, from, to) {
 /** Zahlungstermine (Fälligkeiten offener Rechnungen) als Kalendereinträge. */
 function dueEntries(from, to) {
   return sel.transactions()
-    .filter((t) => !t.voided && !t.paidDate && (t.dueDate || t.date) >= from && (t.dueDate || t.date) <= to)
+    .filter((t) => !isVoidPart(t) && !t.paidDate && (t.dueDate || t.date) >= from && (t.dueDate || t.date) <= to)
     .map((t) => ({
       id: 'due_' + t.id,
       isDue: true,
@@ -74,7 +74,7 @@ function dueEntries(from, to) {
 function eventEntries(from, to) {
   const out = [];
   for (const t of sel.transactions()) {
-    if (t.voided) continue;
+    if (isVoidPart(t)) continue;
     const dep = depositInfo(t);
     if (!dep?.eventDate || dep.eventDate < from || dep.eventDate > to) continue;
     out.push({

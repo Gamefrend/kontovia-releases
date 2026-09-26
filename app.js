@@ -164,9 +164,9 @@ function renderSetup() {
 
     () => html`
       <h2>Steuerliche Einstellungen</h2>
-      <p class="lead">Diese beiden Weichen bestimmen, wie Kontovia rechnet. Wenn Sie
+      <p class="lead">Diese Weichen bestimmen, wie Kontovia rechnet. Wenn Sie
       unsicher sind: Die Voreinstellung passt für die meisten Selbstständigen und
-      kleinen Betriebe.</p>
+      kleinen Betriebe. Die Anlage EÜR folgt immer dem Zahlungsfluss.</p>
       <div class="field">
         <label>Umsatzsteuer</label>
         <select id="f_taxMode">
@@ -175,36 +175,34 @@ function renderSetup() {
         </select>
         <span class="hint">Als Kleinunternehmer rechnet Kontovia durchgehend mit Bruttobeträgen und blendet alle Umsatzsteuerfelder aus.</span>
       </div>
-      <div class="field">
-        <label>Gewinnermittlung</label>
+      <div class="field" id="f_vatBlock" ${data.taxMode === 'kleinunternehmer' ? 'hidden' : ''}>
+        <label>Umsatzsteuer berechnen nach</label>
         <select id="f_accountingBasis">
-          <option value="ist" ${data.accountingBasis === 'ist' ? 'selected' : ''}>Nach Zahlungsfluss (Einnahmen-Überschuss-Rechnung, § 11 EStG)</option>
-          <option value="soll" ${data.accountingBasis === 'soll' ? 'selected' : ''}>Nach Rechnungsdatum (Sollversteuerung)</option>
+          <option value="ist" ${data.accountingBasis === 'ist' ? 'selected' : ''}>Zahlungseingang – Ist-Versteuerung (§ 20 UStG, auf Antrag)</option>
+          <option value="soll" ${data.accountingBasis === 'soll' ? 'selected' : ''}>Rechnungsdatum – Soll-Versteuerung (gesetzlicher Regelfall)</option>
         </select>
-        <span class="hint">Beim Zahlungsfluss zählt eine Buchung erst, wenn das Geld tatsächlich geflossen ist. Das ist der Regelfall der EÜR.</span>
+        <span class="hint">Steht in Ihrem Steuerbescheid oder im Fragebogen zur steuerlichen Erfassung.
+        Selbstständige und Betriebe bis 800.000 € Umsatz bekommen die Ist-Versteuerung meist auf Antrag.
+        Die Anlage EÜR rechnet in beiden Fällen nach Zahlungsfluss (§ 11 EStG).</span>
       </div>
       <div class="form-grid">
-        <div class="field">
+        <div class="field" ${data.taxMode === 'kleinunternehmer' ? 'hidden' : ''} data-vat-only>
           <label>Voreingestellter Steuersatz</label>
           <select id="f_defaultVatRate">
-            <option value="19" ${data.defaultVatRate === 19 ? 'selected' : ''}>19 %</option>
-            <option value="7" ${data.defaultVatRate === 7 ? 'selected' : ''}>7 %</option>
-            <option value="0">0 %</option>
+            ${raw(['19', '7', '0'].map((v) => `<option value="${v}" ${String(data.defaultVatRate) === v ? 'selected' : ''}>${v} %</option>`).join(''))}
           </select>
         </div>
-        <div class="field">
+        <div class="field" ${data.taxMode === 'kleinunternehmer' ? 'hidden' : ''} data-vat-only>
           <label>Voranmeldungszeitraum</label>
           <select id="f_vatPeriod">
-            <option value="monatlich">monatlich</option>
-            <option value="vierteljährlich" selected>vierteljährlich</option>
-            <option value="jährlich">jährlich</option>
+            ${raw(['monatlich', 'vierteljährlich', 'jährlich'].map((v) => `<option value="${v}" ${data.vatPeriod === v ? 'selected' : ''}>${v}</option>`).join(''))}
           </select>
         </div>
         <div class="field full">
           <label>Kontenrahmen für den DATEV-Export</label>
           <select id="f_chartOfAccounts">
-            <option value="SKR03" selected>SKR03 (Prozessgliederung – am weitesten verbreitet)</option>
-            <option value="SKR04">SKR04 (Abschlussgliederung)</option>
+            <option value="SKR03" ${data.chartOfAccounts !== 'SKR04' ? 'selected' : ''}>SKR03 (Prozessgliederung – am weitesten verbreitet)</option>
+            <option value="SKR04" ${data.chartOfAccounts === 'SKR04' ? 'selected' : ''}>SKR04 (Abschlussgliederung)</option>
           </select>
         </div>
       </div>`,
@@ -259,6 +257,11 @@ function renderSetup() {
           </div>
         </div>
       </div>`;
+
+    $('#f_taxMode')?.addEventListener('change', (e) => {
+      const klein = e.target.value === 'kleinunternehmer';
+      app.querySelectorAll('#f_vatBlock, [data-vat-only]').forEach((n) => { n.hidden = klein; });
+    });
 
     if (step === 2) {
       wirePasswordToggles(app);
@@ -375,8 +378,23 @@ function renderUnlock(message = '') {
 }
 
 
+/**
+ * Sagt einmal an, was die Schemapflege beim Laden umgestellt hat, und
+ * vermerkt es im Änderungsjournal – eine Umdatierung von Buchungen soll dort
+ * nachvollziehbar stehen wie jede andere Änderung.
+ */
+async function announceMigrations() {
+  const hinweise = store.hinweise || [];
+  store.hinweise = [];
+  for (const h of hinweise) {
+    toast(h.art === 'storno' ? 'Stornos korrigiert' : 'EÜR-Zeilen umgestellt', h.text, 'warn', 20000);
+    await commit(h.art === 'storno' ? 'korrektur.storno' : 'korrektur.euer', () => null, { entity: 'bestand', summary: h.text });
+  }
+}
+
 /** Läuft nach jedem erfolgreichen Entsperren. */
 async function afterUnlock() {
+  announceMigrations().catch((e) => console.error('Hinweise der Schemapflege:', e));
   try { await startAutoSync(); } catch (e) { console.error("Cloud-Automatik:", e); }
   onSync(updateStatus);
   // Der Kalenderabgleich läuft nur, wenn auf diesem Gerät ein Google-Konto verbunden ist.

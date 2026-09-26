@@ -1,12 +1,12 @@
 {
-  "version": "1.5.0",
-  "released": "2026-09-25T15:54:06.870Z",
-  "notes": "Diese Fassung korrigiert den Vergleich mit dem Vorzeitraum, macht die Buchungsliste\r\nauf dem Telefon lesbar und schützt Eingaben in den Einstellungen.\r\n\r\n* Vergleich mit dem Vorzeitraum stimmt jetzt. Im laufenden Jahr stand bisher\r\n  Januar bis September gegen das ganze Vorjahr – das zeigte im Herbst einen\r\n  Rückgang, den es nicht gab. Jetzt zählen beide Seiten bis zum gleichen Tag\r\n  („ggü. Vorzeitraum bis 25.09.25“). Monate und Quartale werden kalendergenau\r\n  verglichen: März mit Februar, nicht mehr mit dem 29.01.–28.02.\r\n* Steigende Ausgaben sind rot. Die Veränderung bei den Ausgaben war bei einem\r\n  Anstieg grün gefärbt; die Farbe sagt jetzt, ob die Entwicklung gut ist.\r\n* Kasse im Minus wird gemeldet. Fällt der Bestand einer Kasse unter null,\r\n  steht unter „Ordnung und Vollständigkeit“ und in den Auswertungen, ab welchem\r\n  Tag – bei einer Betriebsprüfung ein typischer Anlass für Nachfragen.\r\n* Buchungsliste auf dem Telefon. Statt einer breiten Tabelle, in der der\r\n  Betrag erst nach seitlichem Wischen auftauchte, steht jede Buchung als Karte da:\r\n  Beschreibung und Betrag oben, Datum, Kategorie und Status darunter. Der neue\r\n  Knopf „Filter“ bündelt alle Filter der Liste.\r\n* Einstellungen gehen nicht mehr verloren. Geänderte Felder blieben bisher\r\n  ohne Hinweis liegen, wenn man die Seite verließ. Jetzt bleibt die Leiste mit\r\n  „Übernehmen“ unten im Bild, und beim Verlassen fragt Kontovia nach.\r\n* Einstellungen: Das Zahnrad-Symbol war schief und am Rand abgeschnitten.\r\n* iPhone und iPad: Wischen und Tippen zählen als Aktivität – wer nur liest\r\n  und scrollt, wird nicht mehr mitten im Lesen gesperrt. Auf Apple-Geräten\r\n  zeigen die Tastenkürzel ⌘ statt Strg.\r\n* Größenangaben mit Dezimalkomma (17,2 KB statt 17.2 KB), ebenso die Angabe „Cent\r\n  je eingenommenem Euro“.\r\n* Cloud-Hilfe aktualisiert: Google führt den Drive-Anwendungsordner inzwischen als\r\n  nicht sensiblen Bereich – auch die Ablage im eigenen Google Drive braucht keine\r\n  Überprüfung durch Google und hat kein Nutzerlimit.",
+  "version": "1.6.0",
+  "released": "2026-09-26T21:39:48.655Z",
+  "notes": "Diese Fassung korrigiert Stornos, stellt die Anlage EÜR auf die Vordrucke 2025 und\n2026 um und macht DATEV-Stapel und Prüfungsexport so, dass die Gegenseite sie\neinlesen kann.\n\n* Stornos zählen nicht mehr doppelt. Wer eine Buchung über 119 € stornierte,\n  sah danach −119 € statt null: Das Original fiel heraus, die Gegenbuchung zählte.\n  Jetzt heben sich beide auf. Liegt das Original in einem festgeschriebenen\n  Zeitraum, wirkt die Korrektur im offenen Zeitraum, und der erklärte bleibt, wie er\n  war. Bestehende Stornos werden beim ersten Öffnen umdatiert und im\n  Änderungsjournal vermerkt. Stornierte Buchungen und Gegenbuchungen lassen sich\n  nicht mehr bearbeiten oder löschen.\n* Anlage EÜR nach den Vordrucken 2025 und 2026. Die Zeilennummern passten zu\n  keinem Jahrgang (Summe der Einnahmen in Zeile 22 statt 23, Vorsteuer in 55 statt\n  57, Reisekosten als beschränkt abziehbar). Jetzt gilt für jedes Jahr sein\n  Vordruck: 2026 rücken die Ausgaben ab Waren um eine Zeile nach hinten (Summe in\n  Zeile 76). Die Startkategorien werden automatisch umgestellt; selbst gesetzte\n  Zuordnungen bleiben und werden zur Prüfung genannt. Bei Bewirtungen steht jetzt\n  auch der nicht abziehbare Teil dabei.\n* Die EÜR folgt immer dem Zahlungsfluss. Wer die Umsatzsteuer nach\n  Rechnungsdatum versteuert (Soll), bekam bisher auch eine EÜR nach\n  Rechnungsdatum – die gibt es nicht. Die Einstellung heißt jetzt „Umsatzsteuer\n  berechnen nach“ und wirkt auf Voranmeldung, Übersicht und GuV.\n* DATEV-Stapel, den DATEV annimmt. Kontenrahmen im Kopf als „03“/„04“,\n  Berater- und Mandantennummer werden geprüft, je Wirtschaftsjahr eine Datei, keine\n  Nullbeträge. Nach Zahlungsfluss wird zum Zahlungsdatum gebucht – offene\n  Rechnungen standen bisher als Geldeingang auf der Bank. Bei Soll-Versteuerung\n  laufen Rechnungen über Sammeldebitor und -kreditor. Auf Wunsch mit\n  Steuerschlüsseln für Konten ohne Automatik.\n* Prüfungsexport nach GDPdU-Standard. Die index.xml beschreibt jetzt jede\n  Spalte mit Datentyp und Schlüssel, nennt Kodierung und Kopfzeile, und die DTD\n  liegt bei – ohne das lehnt das Prüfprogramm der Finanzverwaltung den Import ab.\n  Das Änderungsjournal enthält alle Felder, mit denen sich die Prüfsummen\n  nachrechnen lassen.\n* Kleinunternehmergrenzen seit 2025. Liegen die Umsätze über 25.000 € im\n  Vorjahr oder 100.000 € im laufenden Jahr, weist „Ordnung und Vollständigkeit“\n  darauf hin.\n* Schneller bei großen Beständen. Die Suche in der Buchungsliste antwortet bei\n  20.000 Buchungen in unter 0,1 statt über 2 Sekunden; lange Listen erscheinen in\n  Etappen zu 300 Zeilen.\n* Sicherheit: Laufzeitumgebung Electron 44 statt 38, für die es keine\n  Sicherheitsupdates mehr gab. Das Leeren der Zwischenablage nach dem Kopieren\n  funktioniert auch damit.\n* Mehrere Belege an einer Buchung überschreiben sich beim Ausleiten nicht mehr.\n* Die Einrichtung behält beim Zurückblättern die gewählten Steuereinstellungen.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "6c08a8001c1860b873f20c9a54aa915193a72e7ce80d7966aa4662ee76de9131",
-      "size": 35070
+      "sha256": "6e7a4e54f5cd464ce6dc4418b5103e08a1b0bdcc7482afead166adf990a3bc82",
+      "size": 36392
     },
     {
       "path": "icons/apple-touch-icon.png",
@@ -35,18 +35,23 @@
     },
     {
       "path": "lib/calc.js",
-      "sha256": "889f73d7b9e9fb3b95630b30c375a2e146a8fc09d3301c2401435757e76dec2b",
-      "size": 32746
+      "sha256": "e22843e6cc742d1ad08e2e4ba1f7a5b8da879be1853e0aa8863ff746e6d97047",
+      "size": 39267
+    },
+    {
+      "path": "lib/euer.js",
+      "sha256": "7f289e86c285b82b88c515a34bcc189ee8ddf7087a0103007b225f311cf99ede",
+      "size": 7526
     },
     {
       "path": "lib/exports.js",
-      "sha256": "3f1f77e39f72e9023b8759a3aa5040b8211e973a9c1045f9b6eacc24593b4b62",
-      "size": 23989
+      "sha256": "babd613c7a65ccd20c58a3ef8139da6d75b216f57272db77b369f7da39ac6676",
+      "size": 37340
     },
     {
       "path": "lib/gcal.js",
-      "sha256": "04efdced2aebffc679e8b9fe8a0fc7b86f040e1118abb87a04d7b689f4baa772",
-      "size": 17794
+      "sha256": "10bb0dcde5a12ebfd4bd872ac90fd33f2033e71794f06f91db4f543495ec6dd1",
+      "size": 17811
     },
     {
       "path": "lib/gcalsync.js",
@@ -80,8 +85,8 @@
     },
     {
       "path": "lib/reports.js",
-      "sha256": "4512ad9d17a280dc48082ab181ef12819caf5979b0872048a73c5a5b4ba47c79",
-      "size": 32375
+      "sha256": "0de334fed128e640c6ffac77059378788522207f82ac55c5c20f2fd6b271c091",
+      "size": 32937
     },
     {
       "path": "lib/router.js",
@@ -90,8 +95,8 @@
     },
     {
       "path": "lib/store.js",
-      "sha256": "977fb892f75cdd3a05d67771e1967eb12c0093e9f84055a51bd772baecd875a8",
-      "size": 19800
+      "sha256": "a41e202ada7cab3ddb1fc3690d35e4446050acd78f5603ed5a57eef1da084ca4",
+      "size": 23647
     },
     {
       "path": "lib/sync.js",
@@ -100,8 +105,8 @@
     },
     {
       "path": "lib/table.js",
-      "sha256": "23315a26d8304e6c4b72e7caa00224034a4dbe8396b9f2d75444f9d34b2c58cb",
-      "size": 18945
+      "sha256": "b2221e694ff819f000ed18fca445056c13ef7a1e1a93df296b0af75a0eab688d",
+      "size": 21204
     },
     {
       "path": "lib/ui.js",
@@ -120,17 +125,17 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "22d02a3d5121e2d2e441adf3f2725cc50b3798e0af9457cf93861a2096b5d36b",
+      "sha256": "4977bcf7a95995ab25193d7a6c1808302a61a068076c4766e2a586acba39304c",
       "size": 886
     },
     {
       "path": "recht/COMPLIANCE.html",
-      "sha256": "d9d2d03d67d86d387e7b9d56a7b8f38b2db8d94e4d9bd777c96cb13f866fc46d",
-      "size": 23669
+      "sha256": "a6e97682b93d66165134c8ae64cb2fe36d322b5e1194c316ce289da94d328ddc",
+      "size": 29096
     },
     {
       "path": "recht/DATENSCHUTZ.html",
-      "sha256": "a65b83602047e09e860c4290964985cfcc2bd55c055f9c9db8b4f974ea79dad6",
+      "sha256": "3f5192a5e1a6f39b3cf6807315d7bc0fff5c5d29246cddff43414d41e3f7ea38",
       "size": 11082
     },
     {
@@ -140,8 +145,8 @@
     },
     {
       "path": "views/calendar.js",
-      "sha256": "b2a440343bb6c3824689d31e5e8cf720b3b3f5a2a40010e59286442aa6a2ff1d",
-      "size": 26715
+      "sha256": "0a188801a84d0713fa0135c852374fbaf47431a89f4bb7dec7a5ada23364ca05",
+      "size": 26737
     },
     {
       "path": "views/calendarsync.js",
@@ -155,38 +160,38 @@
     },
     {
       "path": "views/dashboard.js",
-      "sha256": "d8f13f868eb14da1f28533dcdd7ecb409242f33b4861ed00bd79b9e931e99179",
-      "size": 25641
+      "sha256": "9dfba4be73574d35ca5ef94b9b0853bb08bec9698c48aafdf78b99c6affeeb71",
+      "size": 25678
     },
     {
       "path": "views/export.js",
-      "sha256": "a6322dba8d387e57db7e0dc55f905e0819c96bfc80493800bd8082bb5e41eb73",
-      "size": 17387
+      "sha256": "c937e97cf3ea958ec71dd06288f613231860fd4fbdbfa27f1cc053aafec18dfe",
+      "size": 20298
     },
     {
       "path": "views/help.js",
-      "sha256": "a385b41b75f28f14884e7258a3cbd7e5d2996d5aaaff1f2d53396d735f755d12",
-      "size": 36760
+      "sha256": "e760a122f105726992390450f2845c768abdaff2c7ebea1a7c5149819cd5b164",
+      "size": 37247
     },
     {
       "path": "views/master.js",
-      "sha256": "6470e7ce42269f8a5d3e504963c4e92e42fe2a51049e17d4b34c3d5adb0429fd",
-      "size": 27475
+      "sha256": "c99d57253db9c2a0c3106417503d6eaea2b29c876aea8d140ca65eba065d0370",
+      "size": 28151
     },
     {
       "path": "views/reports.js",
-      "sha256": "3a361c89d9f743b48e2cdedc404d520de5a21b62a5acf2b1fb6f59f08764e07d",
-      "size": 42156
+      "sha256": "ea3036ba93272fb79c3d9baa756a98b404b5a6a4b8afe56ac744bd59a28f800a",
+      "size": 42828
     },
     {
       "path": "views/settings.js",
-      "sha256": "79af578bfd29cc5b8da2512afe08afde272e6d3e24a0076afc01f6316942a00d",
-      "size": 26193
+      "sha256": "68950fdebc339e1c6832d938ee6fccf072bfd360d5eea8eb696fe088d964fbc1",
+      "size": 26434
     },
     {
       "path": "views/transactions.js",
-      "sha256": "f2347e4f32a53be1c16bf368e6a4fe5637bc72fc42029ca94a9deced3289fa09",
-      "size": 55088
+      "sha256": "8358fd5531e7046181729a814852a8e71c2cbf49023ca32952ca8f4b44323d2e",
+      "size": 56887
     },
     {
       "path": "web/ablage.js",
@@ -195,7 +200,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "d429782441027b52d8f863fdd799f7c4155ccf2b62f7d19be795bfeeeecc0428",
+      "sha256": "4c27ff47d73b384443b09fbce786bf2a858786fe3619e7d739844c694f083a75",
       "size": 6944
     },
     {
@@ -265,8 +270,8 @@
     },
     {
       "path": "web/seed.js",
-      "sha256": "fd373951b926f4d1d15ab91d73796160a91bd2c0ad1481477954e4cc562cffe7",
-      "size": 7151
+      "sha256": "154fe4c692f1732a16e6982e8056238c3237d7f5a69483fea1049286598323fb",
+      "size": 5753
     },
     {
       "path": "web/tresor.js",

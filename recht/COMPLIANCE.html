@@ -7,7 +7,7 @@ pre{white-space:pre-wrap;word-wrap:break-word;font:inherit}
 @media (prefers-color-scheme:dark){body{background:#0e1116;color:#e7ecf2}}</style></head>
 <body><pre># Kontovia – rechtliche Einordnung
 
-Stand: September 2026, Programmversion 1.5.0
+Stand: September 2026, Programmversion 1.6.0
 
 Dieses Dokument hält fest, welche Regelwerke auf Kontovia anwendbar sind, wie
 die Bewertung zustande kommt und was offen bleibt. Es ist eine technische
@@ -26,6 +26,9 @@ der Abschnitt „Vor der Weitergabe an Dritte" anwaltlich geprüft.
 | Verwendung der Exporte beim Finanzamt | Ja, als Arbeitshilfe; **kein KI-Hinweis nötig** | Bewertung in Abschnitt 7 |
 | Urheberrecht Dritter | Ja | Nur Electron/Chromium/Node; Lizenztexte liegen bei |
 | Markenrecht Dritter | Ja | DATEV, ELSTER, Google, Microsoft nur beschreibend genannt |
+| E-Rechnung (§ 14 UStG, seit 2025) | Ja, Empfang | Belege bleiben im Originalformat (auch XML) mit Prüfsumme; Anzeige und Auslesen fehlen noch |
+| Cyber Resilience Act (EU) 2024/2847 | Erst bei Vertrieb | Meldepflichten seit 11.09.2026, übrige Pflichten ab 11.12.2027, Abschnitt 6 |
+| Produkthaftung, Richtlinie (EU) 2024/2853 | Erst bei Vertrieb | Software ist Produkt für alles, was ab 09.12.2026 in Verkehr kommt, Abschnitt 6 |
 
 ---
 
@@ -213,8 +216,8 @@ Stand eines zweiten Geräts entfernt.
 
 Betroffene können nach Art. 17 Löschung verlangen. Buchungsbelege unterliegen
 zugleich der Aufbewahrungspflicht nach § 147 AO (acht Jahre für Buchungsbelege,
-zehn Jahre für Bücher und Jahresabschlüsse, seit dem Wachstumschancengesetz
-verkürzt). Die steuerliche Aufbewahrung geht vor (Art. 17 Abs. 3 lit. b DSGVO).
+zehn Jahre für Bücher und Jahresabschlüsse; die Frist für Belege hat das Vierte
+Bürokratieentlastungsgesetz ab 2025 von zehn auf acht Jahre verkürzt). Die steuerliche Aufbewahrung geht vor (Art. 17 Abs. 3 lit. b DSGVO).
 Praktisch heißt das: Kontaktdaten dürfen bereinigt werden, die Buchung selbst
 nicht. Kontovia bildet das ab, indem Kontakte unabhängig von Buchungen
 gelöscht werden können.
@@ -234,10 +237,35 @@ Umgesetzt:
   herausnehmen noch nachträglich in einen solchen hineindatieren, und auch das
   Zahlungsdatum – bei der Ist-Besteuerung das periodenbestimmende Datum – kann
   dort nicht mehr nachgetragen werden.
-* **Storno statt Löschung** – Original und Gegenbuchung bleiben beide erhalten.
+* **Storno statt Löschung** – Original und Gegenbuchung bleiben beide erhalten und
+  zählen beide, jede an ihrem Datum; zusammen ergeben sie null. Liegt das Original
+  in einem festgeschriebenen Zeitraum, trägt die Gegenbuchung das Datum des
+  Stornos, damit der erklärte Zeitraum unverändert bleibt. Beide lassen sich weder
+  bearbeiten noch löschen. (Bis Fassung 1.5 zählte nur die Gegenbuchung – ein
+  Storno ergab den negativen Betrag statt null; 1.6 korrigiert bestehende Stornos
+  beim Öffnen und vermerkt das im Journal.)
 * **Belegsicherung** – jeder Beleg wird mit SHA-256-Prüfsumme abgelegt.
 * **Datenträgerüberlassung** – Export im Format Z3 mit beschreibender
-  `index.xml` nach dem GDPdU-Beschreibungsstandard.
+  `index.xml` nach dem GDPdU-Beschreibungsstandard (Version 1.1): jede Spalte mit
+  Datentyp, Primärschlüssel je Tabelle, Kodierung UTF-8, Kopfzeile übersprungen,
+  DTD im selben Ordner. Das Änderungsjournal enthält alle Felder, aus denen die
+  Prüfsummen gebildet werden, und die Anleitung, sie nachzurechnen.
+* **Anlage EÜR** – Zeilen nach dem Vordruck des jeweiligen Jahres: 2025
+  (BMF-Schreiben vom 29.08.2025) und 2026 (BMF-Schreiben vom 01.09.2026; dort
+  rücken die Ausgaben ab „Waren“ um eine Zeile, Summe in Zeile 76). Gespeichert
+  wird die Zuordnung nach 2025, umgerechnet beim Bericht (`lib/euer.js`). Immer
+  nach Zahlungsfluss (§ 4 Abs. 3, § 11 EStG), unabhängig davon, ob die
+  Umsatzsteuer nach vereinbarten oder vereinnahmten Entgelten berechnet wird.
+  Jeder neue Jahrgang muss dort nachgetragen werden; bis dahin weist der Bericht
+  darauf hin.
+* **E-Rechnungen** – Seit 01.01.2025 muss jedes Unternehmen E-Rechnungen
+  (XRechnung, ZUGFeRD) empfangen können. Nach der zweiten Änderung der GoBD
+  (BMF-Schreiben vom 14.07.2025) genügt es, den strukturierten Teil (XML)
+  aufzubewahren; der Beleg muss dabei unverändert bleiben. Kontovia speichert jede
+  Datei byte-genau mit SHA-256-Prüfsumme. Was fehlt: eine lesbare Anzeige einer
+  XML-Rechnung und das Übernehmen ihrer Werte in die Buchung. Ab 2027 bzw. 2028
+  kommt für Umsätze an Unternehmen die Pflicht hinzu, E-Rechnungen auszustellen –
+  Kontovia stellt keine Rechnungen aus.
 
 ### Nicht gelistete Buchungen
 
@@ -254,6 +282,13 @@ Betriebliche Einnahmen und Ausgaben müssen vollständig, richtig und zeitgerech
 erfasst und erklärt werden (§ 146 Abs. 1 AO); das Weglassen betrieblicher
 Vorgänge wäre eine unrichtige Erklärung. Die Anwendung sagt das im Buchungsdialog
 und in der Hilfe.
+
+**Risiko bei einem Vertrieb.** Eine Funktion, deren erkennbarer Zweck es ist,
+Buchungen aus allen Unterlagen für das Finanzamt herauszuhalten, kann nach außen
+als Werkzeug zum Verschleiern wirken – auch wenn sie für private Vorgänge gedacht
+ist. Vor einem Verkauf sollte sie deshalb eindeutig als „privat, nicht
+betrieblich“ gefasst werden (Bezeichnung, verpflichtende Begründung, kein
+Einsatz bei Erlöskategorien) und anwaltlich bewertet werden.
 
 Das **Änderungsjournal bleibt vollständig**, auch im Z3-Export: Es verzeichnet
 Anlegen und Ändern nicht gelisteter Buchungen (mit dem Vermerk „nicht gelistet“).
@@ -347,6 +382,31 @@ Was noch fehlt, sobald Kontovia nicht mehr nur selbst genutzt wird:
 5. **Markenrecherche** – die Websuche zu „Kontovia" blieb ohne Treffer. Eine
    Recherche in den Registern von DPMA und EUIPO ersetzt das nicht und kostet
    bei anwaltlicher Begleitung etwa 300 €.
+6. **Cyber Resilience Act.** Sobald Kontovia im Rahmen einer Geschäftstätigkeit
+   bereitgestellt wird – auch kostenlos mit bezahlter Zusatzfunktion –, ist es ein
+   Produkt mit digitalen Elementen. Seit 11.09.2026 gilt die Pflicht, aktiv
+   ausgenutzte Schwachstellen und schwere Sicherheitsvorfälle binnen 24 Stunden
+   über die Meldeplattform der ENISA zu melden; ab 11.12.2027 kommen
+   Konformitätsbewertung, CE-Kennzeichnung, Schwachstellenmanagement mit
+   Sicherheitsupdates über den Unterstützungszeitraum und eine
+   Stückliste der Bestandteile (SBOM) hinzu. Die bisherige Gestaltung – keine
+   Laufzeitabhängigkeiten, geprüfte Updates, verschlüsselte Ablage – kommt dem
+   entgegen; die Prozesse (Meldeweg, Sicherheitskontakt, Update-Zusage) fehlen noch.
+7. **Produkthaftung.** Das neue Produkthaftungsrecht (Richtlinie (EU) 2024/2853,
+   Umsetzung zum 09.12.2026) behandelt Software als Produkt – auch Updates und
+   fehlende Sicherheitsupdates können einen Fehler begründen. Die Haftung lässt
+   sich vertraglich nicht ausschließen; eine Haftungsbegrenzung in den
+   Nutzungsbedingungen greift nur für die vertragliche Haftung. Eine
+   Berufshaftpflicht- bzw. Produkthaftpflichtversicherung gehört zum Vertrieb dazu.
+8. **Impressum** (§ 5 DDG) auf Download-Seite und Web-Fassung, sobald das Angebot
+   geschäftsmäßig ist, sowie Widerrufsbelehrung und Preisangaben beim Verkauf an
+   Verbraucher. Richtet sich das Angebot auch an Verbraucher, ist das
+   Barrierefreiheitsstärkungsgesetz (seit 28.06.2025) für den Online-Verkauf zu
+   prüfen; Kleinstunternehmen sind bei Dienstleistungen ausgenommen.
+9. **Direkte Abgabe über ELSTER.** Wer die Umsatzsteuer-Voranmeldung aus
+   Kontovia heraus übermitteln will, braucht die Registrierung als
+   Softwarehersteller bei ELSTER (kostenlos) und die Bibliothek ERiC; die
+   Übermittlung erfolgt dann mit dem ELSTER-Zertifikat des Betriebs.
 
 ---
 
@@ -453,4 +513,9 @@ Haftungsbegrenzung aus Abschnitt 6 – anwaltlich bzw. steuerberatend geprüft.
 | Nicht gelistete Buchungen | fehlen in EÜR, UStVA, DATEV, Z3, Journal, Belegexport und Finanzamt-Paket (in `scripts/check.js` geprüft); Änderungsjournal bleibt vollständig |
 | Google Kalender | nur nach Verbinden; Bereich `calendar.app.created`; ohne Beträge, Kontakte, Belege; Trennen widerruft |
 | Herkunftsvermerk in Berichten | vorhanden, freiwillig; kein KI-Hinweis nötig (Abschnitt 7) |
+| Storno | Original und Gegenbuchung heben sich auf (in `scripts/check.js` geprüft, auch im festgeschriebenen Zeitraum und für Bestände aus 1.5) |
+| Anlage EÜR | Zeilen nach Vordruck 2025 bzw. 2026 je Berichtsjahr, immer nach Zahlungsfluss; Bewirtung mit nicht abziehbarem Teil |
+| DATEV-Stapel | Kopf nach EXTF 700 (Sachkontenrahmen 03/04), gültige Berater-/Mandantennummer, ein Wirtschaftsjahr je Datei |
+| Datenträgerüberlassung | index.xml mit Spalten, Schlüsseln, UTF-8 und DTD; von einem XML-Parser als wohlgeformt gelesen |
+| Laufzeitumgebung | Electron 44 (unterstützte Hauptversion; 38 erhielt keine Sicherheitsupdates mehr) |
 </pre></body></html>
