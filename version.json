@@ -1,7 +1,7 @@
 {
-  "version": "1.6.0",
-  "released": "2026-09-26T21:39:48.655Z",
-  "notes": "Diese Fassung korrigiert Stornos, stellt die Anlage EÜR auf die Vordrucke 2025 und\n2026 um und macht DATEV-Stapel und Prüfungsexport so, dass die Gegenseite sie\neinlesen kann.\n\n* Stornos zählen nicht mehr doppelt. Wer eine Buchung über 119 € stornierte,\n  sah danach −119 € statt null: Das Original fiel heraus, die Gegenbuchung zählte.\n  Jetzt heben sich beide auf. Liegt das Original in einem festgeschriebenen\n  Zeitraum, wirkt die Korrektur im offenen Zeitraum, und der erklärte bleibt, wie er\n  war. Bestehende Stornos werden beim ersten Öffnen umdatiert und im\n  Änderungsjournal vermerkt. Stornierte Buchungen und Gegenbuchungen lassen sich\n  nicht mehr bearbeiten oder löschen.\n* Anlage EÜR nach den Vordrucken 2025 und 2026. Die Zeilennummern passten zu\n  keinem Jahrgang (Summe der Einnahmen in Zeile 22 statt 23, Vorsteuer in 55 statt\n  57, Reisekosten als beschränkt abziehbar). Jetzt gilt für jedes Jahr sein\n  Vordruck: 2026 rücken die Ausgaben ab Waren um eine Zeile nach hinten (Summe in\n  Zeile 76). Die Startkategorien werden automatisch umgestellt; selbst gesetzte\n  Zuordnungen bleiben und werden zur Prüfung genannt. Bei Bewirtungen steht jetzt\n  auch der nicht abziehbare Teil dabei.\n* Die EÜR folgt immer dem Zahlungsfluss. Wer die Umsatzsteuer nach\n  Rechnungsdatum versteuert (Soll), bekam bisher auch eine EÜR nach\n  Rechnungsdatum – die gibt es nicht. Die Einstellung heißt jetzt „Umsatzsteuer\n  berechnen nach“ und wirkt auf Voranmeldung, Übersicht und GuV.\n* DATEV-Stapel, den DATEV annimmt. Kontenrahmen im Kopf als „03“/„04“,\n  Berater- und Mandantennummer werden geprüft, je Wirtschaftsjahr eine Datei, keine\n  Nullbeträge. Nach Zahlungsfluss wird zum Zahlungsdatum gebucht – offene\n  Rechnungen standen bisher als Geldeingang auf der Bank. Bei Soll-Versteuerung\n  laufen Rechnungen über Sammeldebitor und -kreditor. Auf Wunsch mit\n  Steuerschlüsseln für Konten ohne Automatik.\n* Prüfungsexport nach GDPdU-Standard. Die index.xml beschreibt jetzt jede\n  Spalte mit Datentyp und Schlüssel, nennt Kodierung und Kopfzeile, und die DTD\n  liegt bei – ohne das lehnt das Prüfprogramm der Finanzverwaltung den Import ab.\n  Das Änderungsjournal enthält alle Felder, mit denen sich die Prüfsummen\n  nachrechnen lassen.\n* Kleinunternehmergrenzen seit 2025. Liegen die Umsätze über 25.000 € im\n  Vorjahr oder 100.000 € im laufenden Jahr, weist „Ordnung und Vollständigkeit“\n  darauf hin.\n* Schneller bei großen Beständen. Die Suche in der Buchungsliste antwortet bei\n  20.000 Buchungen in unter 0,1 statt über 2 Sekunden; lange Listen erscheinen in\n  Etappen zu 300 Zeilen.\n* Sicherheit: Laufzeitumgebung Electron 44 statt 38, für die es keine\n  Sicherheitsupdates mehr gab. Das Leeren der Zwischenablage nach dem Kopieren\n  funktioniert auch damit.\n* Mehrere Belege an einer Buchung überschreiben sich beim Ausleiten nicht mehr.\n* Die Einrichtung behält beim Zurückblättern die gewählten Steuereinstellungen.",
+  "version": "1.6.1",
+  "released": "2026-09-28T10:27:03.554Z",
+  "notes": "Dringende Korrektur: Unter Windows blieb das Fenster von 1.6.0 schwarz. Die neue\nLaufzeitumgebung hat das Laden der Oberfläche blockiert. Ihre Daten sind nicht\nbetroffen – 1.6.0 hat den Tresor gar nicht erst geöffnet. Wer 1.6.0 installiert hat,\nlädt 1.6.1 bitte einmal von Hand herunter und installiert es über die bestehende\nFassung: Die eingebaute Aktualisierung sitzt in der Oberfläche, die nicht startete.\nKünftig startet jeder Build die fertige Anwendung zur Probe, bevor er veröffentlicht\nwird.\n\nAußerdem enthalten, falls Sie von 1.5 kommen: Stornos werden korrigiert, die Anlage\nEÜR folgt den Vordrucken 2025 und 2026, und DATEV-Stapel und Prüfungsexport lassen\nsich von der Gegenseite einlesen.\n\n* Stornos zählen nicht mehr doppelt. Wer eine Buchung über 119 € stornierte,\n  sah danach −119 € statt null: Das Original fiel heraus, die Gegenbuchung zählte.\n  Jetzt heben sich beide auf. Liegt das Original in einem festgeschriebenen\n  Zeitraum, wirkt die Korrektur im offenen Zeitraum, und der erklärte bleibt, wie er\n  war. Bestehende Stornos werden beim ersten Öffnen umdatiert und im\n  Änderungsjournal vermerkt. Stornierte Buchungen und Gegenbuchungen lassen sich\n  nicht mehr bearbeiten oder löschen.\n* Anlage EÜR nach den Vordrucken 2025 und 2026. Die Zeilennummern passten zu\n  keinem Jahrgang (Summe der Einnahmen in Zeile 22 statt 23, Vorsteuer in 55 statt\n  57, Reisekosten als beschränkt abziehbar). Jetzt gilt für jedes Jahr sein\n  Vordruck: 2026 rücken die Ausgaben ab Waren um eine Zeile nach hinten (Summe in\n  Zeile 76). Die Startkategorien werden automatisch umgestellt; selbst gesetzte\n  Zuordnungen bleiben und werden zur Prüfung genannt. Bei Bewirtungen steht jetzt\n  auch der nicht abziehbare Teil dabei.\n* Die EÜR folgt immer dem Zahlungsfluss. Wer die Umsatzsteuer nach\n  Rechnungsdatum versteuert (Soll), bekam bisher auch eine EÜR nach\n  Rechnungsdatum – die gibt es nicht. Die Einstellung heißt jetzt „Umsatzsteuer\n  berechnen nach“ und wirkt auf Voranmeldung, Übersicht und GuV.\n* DATEV-Stapel, den DATEV annimmt. Kontenrahmen im Kopf als „03“/„04“,\n  Berater- und Mandantennummer werden geprüft, je Wirtschaftsjahr eine Datei, keine\n  Nullbeträge. Nach Zahlungsfluss wird zum Zahlungsdatum gebucht – offene\n  Rechnungen standen bisher als Geldeingang auf der Bank. Bei Soll-Versteuerung\n  laufen Rechnungen über Sammeldebitor und -kreditor. Auf Wunsch mit\n  Steuerschlüsseln für Konten ohne Automatik.\n* Prüfungsexport nach GDPdU-Standard. Die index.xml beschreibt jetzt jede\n  Spalte mit Datentyp und Schlüssel, nennt Kodierung und Kopfzeile, und die DTD\n  liegt bei – ohne das lehnt das Prüfprogramm der Finanzverwaltung den Import ab.\n  Das Änderungsjournal enthält alle Felder, mit denen sich die Prüfsummen\n  nachrechnen lassen.\n* Kleinunternehmergrenzen seit 2025. Liegen die Umsätze über 25.000 € im\n  Vorjahr oder 100.000 € im laufenden Jahr, weist „Ordnung und Vollständigkeit“\n  darauf hin.\n* Schneller bei großen Beständen. Die Suche in der Buchungsliste antwortet bei\n  20.000 Buchungen in unter 0,1 statt über 2 Sekunden; lange Listen erscheinen in\n  Etappen zu 300 Zeilen.\n* Sicherheit: Laufzeitumgebung Electron 44 statt 38, für die es keine\n  Sicherheitsupdates mehr gab. Das Leeren der Zwischenablage nach dem Kopieren\n  funktioniert auch damit.\n* Mehrere Belege an einer Buchung überschreiben sich beim Ausleiten nicht mehr.\n* Die Einrichtung behält beim Zurückblättern die gewählten Steuereinstellungen.",
   "files": [
     {
       "path": "app.js",
@@ -125,17 +125,17 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "4977bcf7a95995ab25193d7a6c1808302a61a068076c4766e2a586acba39304c",
+      "sha256": "b9ff6f93c38e1b4a97ee1a0024e61b2261125fd6f0c16a7adc8916a9e0184cc4",
       "size": 886
     },
     {
       "path": "recht/COMPLIANCE.html",
-      "sha256": "a6e97682b93d66165134c8ae64cb2fe36d322b5e1194c316ce289da94d328ddc",
+      "sha256": "45527de5d05880515d59decb88c498a27926dbddbce7ddaf97821ae487ff2308",
       "size": 29096
     },
     {
       "path": "recht/DATENSCHUTZ.html",
-      "sha256": "3f5192a5e1a6f39b3cf6807315d7bc0fff5c5d29246cddff43414d41e3f7ea38",
+      "sha256": "c26d479e395e5a281fff7cc9406bcd8b12f8ccc95ddcd7e14408f7d1e932be26",
       "size": 11082
     },
     {
@@ -200,7 +200,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "4c27ff47d73b384443b09fbce786bf2a858786fe3619e7d739844c694f083a75",
+      "sha256": "d4efb14f5334fa23c0cb7d47cd2678393350c162fd5edf35197bed2d19f386db",
       "size": 6944
     },
     {
