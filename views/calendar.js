@@ -5,7 +5,7 @@ import {
   addMonths, addDays, monthStart, monthEnd, MONTHS, WEEKDAYS, isoWeek, relativeDays, sortBy, int,
 } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, emptyState } from '../lib/ui.js';
-import { store, sel, upsertAppointment, deleteAppointment, commit } from '../lib/store.js';
+import { store, sel, upsertAppointment, deleteAppointment, commit, applyTodoChanges, newTodoDraft } from '../lib/store.js';
 import { depositInfo, isVoidPart } from '../lib/calc.js';
 import { navigate, refresh } from '../lib/router.js';
 import { openTransactionDialog } from './transactions.js';
@@ -202,7 +202,7 @@ function drawMonth(root) {
     </div>
 
     <div class="card mt16">
-      <div class="card-head"><h3>Termine im ${esc(monthName)}</h3><div class="spacer"></div><span class="badge">${int(monthEvents.length)}</span></div>
+      <div class="card-head"><h3>Termine im ${monthName}</h3><div class="spacer"></div><span class="badge">${int(monthEvents.length)}</span></div>
       <div class="card-body ${monthEvents.length ? 'tight' : ''}">
         ${monthEvents.length
           ? raw('<div style="padding:0 16px">' + sortBy(monthEvents, (e) => e.occurrence + (e.startTime || '')).map(agendaRow).join('') + '</div>')
@@ -248,6 +248,14 @@ function cellHtml(date, monthRef, items) {
   </div>`;
 }
 
+/** „✓ 1/3“ – wie viele Aufgaben am Termin schon erledigt sind. */
+function todoBadge(apptId) {
+  const todos = sel.todosOf(apptId);
+  if (!todos.length) return '';
+  const fertig = todos.filter((t) => t.done).length;
+  return `<span class="badge ${fertig === todos.length ? 'pos' : ''}" title="${fertig} von ${todos.length} Aufgaben erledigt">${icon('todo', 12).__raw} ${fertig}/${todos.length}</span>`;
+}
+
 function agendaRow(e) {
   const linked = (e.transactionIds || []).length;
   // Veranstaltungen stammen aus einer Buchung und führen auch dorthin zurück.
@@ -266,6 +274,7 @@ function agendaRow(e) {
         · KW ${isoWeek(e.occurrence)}
       </div>
     </div>
+    ${e.isEvent ? '' : todoBadge(e.id)}
     ${linked ? `<span class="badge info">${icon('link', 12).__raw} ${linked} Buchung${linked > 1 ? 'en' : ''}</span>` : ''}
   </div>`;
 }
@@ -364,12 +373,66 @@ export function openAppointmentDialog(id, preset = {}) {
   });
   const form = m.root.querySelector('#apptForm');
 
+  /* Aufgaben zum Termin: bearbeitet wird eine Arbeitskopie, geschrieben erst
+     zusammen mit dem Termin – „Abbrechen“ verwirft auch hier alles. */
+  const todosVorher = new Map(sel.todosOf(a.id).map((t) => [t.id, t]));
+  let todos = [...todosVorher.values()].map((t) => structuredClone(t));
+  const geloest = [];
+
+  function todoSection() {
+    // Offene Aufgaben ohne Termin – und die hier gerade gelösten, falls man es sich anders überlegt.
+    const frei = sel.todos().filter((t) => !t.done && (!t.appointmentId || geloest.some((x) => x.id === t.id))
+      && !todos.some((x) => x.id === t.id));
+    return `
+      <hr class="sep">
+      <div class="row between mb8">
+        <strong style="font-size:13px">Aufgaben zu diesem Termin</strong>
+        ${frei.length ? `<select id="t_todoPick" class="sm" aria-label="Vorhandene Aufgabe verknüpfen" style="max-width:260px">
+          <option value="">Vorhandene Aufgabe verknüpfen …</option>
+          ${frei.map((t) => `<option value="${esc(t.id)}">${esc(t.title)}</option>`).join('')}
+        </select>` : ''}
+      </div>
+      ${todos.length ? `<div class="todo-mini">${todos.map((t) => `
+        <div class="todo-item compact${t.done ? ' done' : ''}">
+          <input type="checkbox" class="todo-check" data-appt-todo="${esc(t.id)}" ${t.done ? 'checked' : ''} aria-label="${esc(t.title)} erledigt">
+          <span class="todo-title truncate">${esc(t.title)}</span>
+          ${t.dueDate ? `<span class="badge tiny">bis ${esc(fmtDate(t.dueDate))}</span>` : ''}
+          <button type="button" class="icon-btn" data-appt-todo-drop="${esc(t.id)}"
+            title="${todosVorher.has(t.id) ? 'Vom Termin lösen (die Aufgabe bleibt bestehen)' : 'Wieder entfernen'}"
+            aria-label="${esc(t.title)} ${todosVorher.has(t.id) ? 'vom Termin lösen' : 'entfernen'}">${icon('x', 14).__raw}</button>
+        </div>`).join('')}</div>` : '<p class="muted small mt0">Was bis zum Termin zu erledigen ist, lässt sich hier abhaken.</p>'}
+      <div class="todo-add compact">
+        <input id="t_todoNew" placeholder="Aufgabe hinzufügen, z. B. Vertrag ausdrucken" aria-label="Neue Aufgabe zum Termin">
+        <button type="button" class="btn sm" id="btnTodoAdd">${icon('plus', 14).__raw} Hinzufügen</button>
+      </div>`;
+  }
+
+  /** Übernimmt einen eingetippten, aber noch nicht hinzugefügten Titel. */
+  function addPendingTodo() {
+    const feld = form.querySelector('#t_todoNew');
+    const title = feld?.value.trim();
+    if (!title) return false;
+    todos.push(newTodoDraft({ title, appointmentId: a.id }));
+    feld.value = '';
+    return true;
+  }
+
+  async function saveTodos() {
+    addPendingTodo();
+    const upserts = todos.filter((t) => {
+      const vorher = todosVorher.get(t.id);
+      return !vorher || JSON.stringify(vorher) !== JSON.stringify(t);
+    });
+    for (const t of geloest) upserts.push({ ...t, appointmentId: '' });
+    await applyTodoChanges({ upserts, removals: [] });
+  }
+
   function draw() {
     const linked = (a.transactionIds || []).map(sel.transaction).filter(Boolean);
     form.innerHTML = html`
       <div class="field">
         <label>Titel *</label>
-        <input id="t_title" value="${esc(a.title)}" placeholder="z. B. Steuerberater-Termin, Montage Kunde Meier">
+        <input id="t_title" value="${a.title}" placeholder="z. B. Steuerberater-Termin, Montage Kunde Meier">
       </div>
       <div class="form-grid">
         <div class="field">
@@ -386,7 +449,7 @@ export function openAppointmentDialog(id, preset = {}) {
         </div>
         <div class="field">
           <label>Ort</label>
-          <input id="t_location" value="${esc(a.location || '')}">
+          <input id="t_location" value="${a.location || ''}">
         </div>
         <div class="field">
           <label>Kontakt</label>
@@ -412,9 +475,11 @@ export function openAppointmentDialog(id, preset = {}) {
           eigene Wiederholung wählen.</div>`) : ''}
         <div class="field full">
           <label>Notiz</label>
-          <textarea id="t_notes" placeholder="Was ist zu tun, was wird gebraucht …">${esc(a.notes || '')}</textarea>
+          <textarea id="t_notes" placeholder="Was ist zu tun, was wird gebraucht …">${a.notes || ''}</textarea>
         </div>
       </div>
+
+      ${raw(todoSection())}
 
       <hr class="sep">
       <div class="row between mb8">
@@ -455,6 +520,7 @@ export function openAppointmentDialog(id, preset = {}) {
       // Den Termin sofort sichern – sonst wäre die Eingabe verloren, falls die
       // anschließende Buchung abgebrochen wird.
       await upsertAppointment(a);
+      await saveTodos();
       m.close();
       openTransactionDialog(null, 'income');
 
@@ -481,6 +547,41 @@ export function openAppointmentDialog(id, preset = {}) {
     form.querySelectorAll('[data-open-tx]').forEach((b) => b.addEventListener('click', () => {
       openTransactionDialog(b.dataset.openTx);
     }));
+
+    const neu = form.querySelector('#t_todoNew');
+    const hinzufuegen = () => {
+      collect();
+      if (!addPendingTodo()) { neu.focus(); return; }
+      draw();
+      form.querySelector('#t_todoNew')?.focus();
+    };
+    form.querySelector('#btnTodoAdd').addEventListener('click', hinzufuegen);
+    neu.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); hinzufuegen(); }
+    });
+    form.querySelector('#t_todoPick')?.addEventListener('change', (e) => {
+      const t = sel.todo(e.target.value);
+      if (!t) return;
+      collect();
+      const zurueck = geloest.findIndex((x) => x.id === t.id);
+      if (zurueck >= 0) geloest.splice(zurueck, 1);
+      todos.push({ ...structuredClone(t), appointmentId: a.id });
+      draw();
+    });
+    form.querySelectorAll('[data-appt-todo]').forEach((c) => c.addEventListener('change', () => {
+      const t = todos.find((x) => x.id === c.dataset.apptTodo);
+      if (!t) return;
+      t.done = c.checked;
+      t.doneAt = c.checked ? new Date().toISOString() : '';
+      c.closest('.todo-item')?.classList.toggle('done', c.checked);
+    }));
+    form.querySelectorAll('[data-appt-todo-drop]').forEach((b) => b.addEventListener('click', () => {
+      collect();
+      const t = todos.find((x) => x.id === b.dataset.apptTodoDrop);
+      todos = todos.filter((x) => x !== t);
+      if (t && todosVorher.has(t.id)) geloest.push(todosVorher.get(t.id));
+      draw();
+    }));
   }
 
   function collect() {
@@ -505,12 +606,13 @@ export function openAppointmentDialog(id, preset = {}) {
     collect();
     if (!a.title) { warn('Bitte einen Titel eintragen'); return; }
     await upsertAppointment(a);
+    await saveTodos();
     m.close();
     ok(isNew ? 'Termin angelegt' : 'Termin gespeichert', `${fmtDateLong(a.date)}`);
     refresh();
   });
   m.root.querySelector('#btnDel')?.addEventListener('click', async () => {
-    if (!await confirmDialog({ title: 'Termin löschen?', text: 'Der Termin wird entfernt. Verknüpfte Buchungen bleiben erhalten.', confirmLabel: 'Löschen', danger: true })) return;
+    if (!await confirmDialog({ title: 'Termin löschen?', text: `Der Termin wird entfernt. Verknüpfte Buchungen${todosVorher.size ? ' und Aufgaben' : ''} bleiben erhalten.`, confirmLabel: 'Löschen', danger: true })) return;
     await deleteAppointment(a.id);
     m.close();
     ok('Termin gelöscht');
@@ -520,6 +622,7 @@ export function openAppointmentDialog(id, preset = {}) {
     collect();
     a.done = !a.done;
     await upsertAppointment(a);
+    await saveTodos();
     m.close();
     ok(a.done ? 'Als erledigt markiert' : 'Wieder als offen markiert');
     refresh();

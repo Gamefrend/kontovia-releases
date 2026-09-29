@@ -369,7 +369,7 @@ function categoryForm(c) {
     wide: true,
     body: html`
       <div class="form-grid">
-        <div class="field full"><label>Name *</label><input id="f_name" value="${esc(c.name)}"></div>
+        <div class="field full"><label>Name *</label><input id="f_name" value="${c.name}"></div>
         <div class="field">
           <label>Art</label>
           <select id="f_kind">
@@ -393,8 +393,8 @@ function categoryForm(c) {
           </select>
           <span class="hint">Bestimmt, wo der Betrag in der EÜR-Auswertung erscheint. Nummern nach dem Vordruck ${formYear(jahr)}; für andere Jahre rechnet Kontovia um.</span>
         </div>
-        <div class="field"><label>Konto SKR03</label><input id="f_skr03" value="${esc(c.skr03 || '')}"></div>
-        <div class="field"><label>Konto SKR04</label><input id="f_skr04" value="${esc(c.skr04 || '')}"></div>
+        <div class="field"><label>Konto SKR03</label><input id="f_skr03" value="${c.skr03 || ''}"></div>
+        <div class="field"><label>Konto SKR04</label><input id="f_skr04" value="${c.skr04 || ''}"></div>
         <div class="field full">
           <label>Abziehbarer Anteil</label>
           <select id="f_deductibleRate">
@@ -437,7 +437,7 @@ function contactForm(c) {
   baseDialog({
     title: isNew ? 'Neuer Kontakt' : 'Kontakt bearbeiten',
     body: html`
-      <div class="field"><label>Name *</label><input id="f_name" value="${esc(c.name)}"></div>
+      <div class="field"><label>Name *</label><input id="f_name" value="${c.name}"></div>
       <div class="field"><label>Art</label>
         <select id="f_kind">
           <option value="customer" ${c.kind === 'customer' ? 'selected' : ''}>Kunde</option>
@@ -445,11 +445,11 @@ function contactForm(c) {
           <option value="both" ${c.kind === 'both' ? 'selected' : ''}>Kunde und Lieferant</option>
         </select>
       </div>
-      <div class="field"><label>E-Mail</label><input id="f_email" value="${esc(c.email || '')}"></div>
-      <div class="field"><label>Telefon</label><input id="f_phone" value="${esc(c.phone || '')}"></div>
-      <div class="field"><label>Anschrift</label><textarea id="f_address">${esc(c.address || '')}</textarea></div>
-      <div class="field"><label>Steuernummer / USt-IdNr.</label><input id="f_taxId" value="${esc(c.taxId || '')}"></div>
-      <div class="field"><label>Notiz</label><textarea id="f_notes">${esc(c.notes || '')}</textarea></div>`,
+      <div class="field"><label>E-Mail</label><input id="f_email" value="${c.email || ''}"></div>
+      <div class="field"><label>Telefon</label><input id="f_phone" value="${c.phone || ''}"></div>
+      <div class="field"><label>Anschrift</label><textarea id="f_address">${c.address || ''}</textarea></div>
+      <div class="field"><label>Steuernummer / USt-IdNr.</label><input id="f_taxId" value="${c.taxId || ''}"></div>
+      <div class="field"><label>Notiz</label><textarea id="f_notes">${c.notes || ''}</textarea></div>`,
     onSave: async (rootEl) => {
       const g = (k) => rootEl.querySelector('#f_' + k).value.trim();
       if (!g('name')) { warn('Bitte einen Namen eintragen'); return false; }
@@ -468,7 +468,7 @@ function accountForm(a) {
   baseDialog({
     title: isNew ? 'Neues Zahlungskonto' : 'Konto bearbeiten',
     body: html`
-      <div class="field"><label>Name *</label><input id="f_name" value="${esc(a.name)}" placeholder="z. B. Geschäftskonto Sparkasse"></div>
+      <div class="field"><label>Name *</label><input id="f_name" value="${a.name}" placeholder="z. B. Geschäftskonto Sparkasse"></div>
       <div class="field"><label>Art</label>
         <select id="f_kind">
           <option value="bank" ${a.kind === 'bank' ? 'selected' : ''}>Bankkonto</option>
@@ -476,12 +476,12 @@ function accountForm(a) {
           <option value="other" ${a.kind === 'other' ? 'selected' : ''}>Sonstiges (PayPal, Kreditkarte …)</option>
         </select>
       </div>
-      <div class="field"><label>IBAN</label><input id="f_iban" value="${esc(a.iban || '')}"></div>
+      <div class="field"><label>IBAN</label><input id="f_iban" value="${a.iban || ''}"></div>
       <div class="form-grid">
         <div class="field"><label>Anfangsbestand</label><input class="money-input" id="f_openingBalance" value="${moneyInput(a.openingBalance)}"></div>
         <div class="field"><label>Gültig ab</label><input type="date" id="f_openingDate" value="${a.openingDate || ''}"></div>
-        <div class="field"><label>Konto SKR03</label><input id="f_skr03" value="${esc(a.skr03 || '')}"></div>
-        <div class="field"><label>Konto SKR04</label><input id="f_skr04" value="${esc(a.skr04 || '')}"></div>
+        <div class="field"><label>Konto SKR03</label><input id="f_skr03" value="${a.skr03 || ''}"></div>
+        <div class="field"><label>Konto SKR04</label><input id="f_skr04" value="${a.skr04 || ''}"></div>
       </div>`,
     onSave: async (rootEl) => {
       const g = (k) => rootEl.querySelector('#f_' + k);
@@ -502,7 +502,7 @@ function assetForm(a) {
   baseDialog({
     title: isNew ? 'Neues Anlagegut' : 'Anlagegut bearbeiten',
     body: html`
-      <div class="field"><label>Bezeichnung *</label><input id="f_name" value="${esc(a.name)}"></div>
+      <div class="field"><label>Bezeichnung *</label><input id="f_name" value="${a.name}"></div>
       <div class="field"><label>Anschaffungskosten (netto)</label><input class="money-input" id="f_cost" value="${moneyInput(a.cost)}"></div>
       <div class="field"><label>Anschaffungsdatum</label><input type="date" id="f_purchaseDate" value="${a.purchaseDate}"></div>
       <div class="field"><label>Nutzungsdauer in Jahren</label>

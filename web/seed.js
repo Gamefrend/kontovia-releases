@@ -124,6 +124,7 @@ function makeSeed(settings = {}) {
     transactions: [],
     attachments: [],
     appointments: [],
+    todos: [],
     assets: [],
     auditLog: [],
     counters: { invoice: 1 },

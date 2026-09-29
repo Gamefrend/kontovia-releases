@@ -24,6 +24,7 @@ import { mountTables } from '../lib/table.js';
 import { navigate } from '../lib/router.js';
 import { openTransactionDialog } from './transactions.js';
 import { openAppointmentDialog } from './calendar.js';
+import { openTodosSorted, todoRow, wireTodoRows } from './todos.js';
 
 const period = defaultPeriod();
 /** Ist die Übersicht gerade im Anpassen-Modus? Gilt nur bis zum Verlassen der Ansicht. */
@@ -56,6 +57,32 @@ function avgFoot(value, avg) {
 }
 
 const euro = (v) => `${esc(money(v))} <span class="muted" style="font-size:15px">€</span>`;
+
+/**
+ * Was hinter einer Einnahmen- oder Ausgabenzahl steckt: Zahlungen zu Buchungen
+ * aus anderen Zeiträumen sind darin enthalten, noch offene Rechnungen des
+ * Zeitraums nicht. Beides führt in die passend gefilterte Buchungsliste.
+ */
+function paymentFoot(cur, kind) {
+  const income = kind === 'income';
+  const fremd = cur.otherPeriod[kind];
+  const fremdN = cur.otherPeriod[kind + 'Count'];
+  const offen = cur.unpaid[kind];
+  const offenN = cur.unpaid[kind + 'Count'];
+  const [eins, viele] = income ? ['einer Rechnung', 'Rechnungen'] : ['einem Beleg', 'Belegen'];
+  let out = '';
+  if (fremdN) {
+    out += `<button type="button" class="stat-link" data-tx-list="${kind}:fremd"
+      title="Im Zeitraum bezahlt, aber mit einem Datum davor oder danach gebucht – etwa eine Restzahlung vor dem Veranstaltungstag. Zählt am Zahlungstag, also hier.">
+      inkl. ${esc(money(fremd))} € aus ${fremdN === 1 ? `${eins} eines anderen Zeitraums` : `${fremdN} ${viele} anderer Zeiträume`}</button>`;
+  }
+  if (offenN) {
+    out += `<button type="button" class="stat-link warn" data-tx-list="${kind}:offen"
+      title="${income ? 'Rechnungen' : 'Belege'} mit Datum im Zeitraum, die noch nicht bezahlt sind. Sie zählen erst an ihrem Zahlungstag.">
+      noch offen: ${esc(money(offen))} € aus ${offenN === 1 ? eins : `${offenN} ${viele}`}</button>`;
+  }
+  return out;
+}
 
 /**
  * Alles, was die Module brauchen – jeweils erst berechnet, wenn ein
@@ -105,7 +132,8 @@ const WIDGETS = {
     render: (c) => statCard({
       label: 'Einnahmen', icon: 'up', value: euro(c.current().incomeForProfit), tone: 'pos',
       foot: c.delta('incomeForProfit')
-        + avgFoot(c.avg().income, c.avg()),
+        + avgFoot(c.avg().income, c.avg())
+        + paymentFoot(c.current(), 'income'),
     }).__raw,
   },
   ausgaben: {
@@ -113,7 +141,8 @@ const WIDGETS = {
     render: (c) => statCard({
       label: 'Ausgaben', icon: 'down', value: euro(c.current().expenseForProfit), tone: 'neg',
       foot: c.delta('expenseForProfit')
-        + avgFoot(c.avg().expense, c.avg()),
+        + avgFoot(c.avg().expense, c.avg())
+        + paymentFoot(c.current(), 'expense'),
     }).__raw,
   },
   ergebnis: {
@@ -131,10 +160,12 @@ const WIDGETS = {
     title: 'Umsatzsteuer', size: 3, available: (c) => !c.klein,
     render: (c) => {
       const cur = c.current();
+      const soll = cur.vatBasis === 'soll';
       return statCard({
         label: cur.vatPayable >= 0 ? 'Umsatzsteuer-Zahllast' : 'Vorsteuer-Erstattung', icon: 'euro',
         value: euro(Math.abs(cur.vatPayable)), tone: cur.vatPayable > 0 ? 'neg' : 'pos',
-        foot: `<span>vereinnahmt ${esc(money(cur.incomeVat))} € · Vorsteuer ${esc(money(cur.expenseVat))} €</span>`,
+        foot: `<span>${soll ? 'Umsatzsteuer' : 'vereinnahmt'} ${esc(money(cur.vatIncome))} € · Vorsteuer ${esc(money(cur.vatExpense))} €</span>`
+          + `<span class="avg-foot">${soll ? 'nach Rechnungsdatum (Soll-Versteuerung)' : 'nach Zahlungseingang (Ist-Versteuerung)'}</span>`,
       }).__raw;
     },
   },
@@ -239,6 +270,20 @@ const WIDGETS = {
       return card('Anstehende Termine', body, {
         tight: upcoming.length > 0,
         head: `<button class="btn sm ghost" data-goto="calendar">Kalender ${icon('right', 13).__raw}</button>`,
+      });
+    },
+  },
+  aufgaben: {
+    title: 'Offene Aufgaben', size: 4,
+    render: () => {
+      const offen = openTodosSorted();
+      const body = offen.length
+        ? `<div class="todo-mini">${offen.slice(0, 6).map((t) => todoRow(t, { compact: true })).join('')}</div>`
+          + (offen.length > 6 ? `<p class="tiny muted mb0 mt8">und ${offen.length - 6} weitere</p>` : '')
+        : emptyState('Nichts offen', 'Alle Aufgaben sind erledigt.').__raw;
+      return card('Offene Aufgaben', body, {
+        sub: offen.length ? String(offen.length) : '',
+        head: `<button class="btn sm ghost" data-goto="todos">Alle ${icon('right', 13).__raw}</button>`,
       });
     },
   },
@@ -382,7 +427,7 @@ function draw(root) {
     <div class="page-head">
       <div>
         <h2>${esc(s.companyName || s.ownerName || 'Ihre Buchhaltung')}</h2>
-        <p>${c.klein ? 'Nach Zahlungsfluss · Kleinunternehmer § 19 UStG' : c.db.settings.accountingBasis === 'ist' ? 'Nach Zahlungsfluss · Ist-Versteuerung' : 'Nach Rechnungsdatum · Soll-Versteuerung'}</p>
+        <p title="Einnahmen, Ausgaben und Gewinn zählen am Tag der Zahlung – wie in der Anlage EÜR. Eine im Zeitraum bezahlte Rechnung zählt also auch dann, wenn ihr Datum außerhalb liegt.">Einnahmen und Ausgaben nach Zahlungsdatum · ${c.klein ? 'Kleinunternehmer § 19 UStG' : c.db.settings.accountingBasis === 'soll' ? 'Umsatzsteuer nach Rechnungsdatum (Soll)' : 'Umsatzsteuer nach Zahlungseingang (Ist)'}</p>
       </div>
       <div class="spacer"></div>
       ${scopeToggleHtml(store.db, period.from, period.to).__raw}
@@ -419,6 +464,17 @@ function wireContent(root, redraw) {
   });
   oeffnen('[data-tx]', (n) => openTransactionDialog(n.dataset.tx));
   oeffnen('[data-appt]', (n) => openAppointmentDialog(n.dataset.appt));
+  wireTodoRows(root, redraw);
+  // „inkl. … aus anderen Zeiträumen“ und „noch offen …“: dieselbe Auswahl als Buchungsliste.
+  $$('[data-tx-list]', root).forEach((b) => b.addEventListener('click', () => {
+    const [type, was] = b.dataset.txList.split(':');
+    navigate('transactions', {
+      period: { preset: period.preset, from: period.from, to: period.to },
+      type,
+      datum: was === 'fremd' ? 'fremd' : 'buchung',
+      status: was === 'offen' ? 'offen' : 'alle',
+    });
+  }));
   $('#showMissing', root)?.addEventListener('click', () => navigate('transactions', { receipt: 'ohne' }));
 }
 

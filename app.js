@@ -16,6 +16,7 @@ import { startCalendarSync, stopCalendarSync } from './lib/gcalsync.js';
 import * as viewDashboard from './views/dashboard.js';
 import * as viewTransactions from './views/transactions.js';
 import * as viewCalendar from './views/calendar.js';
+import * as viewTodos from './views/todos.js';
 import * as viewReports from './views/reports.js';
 import * as viewExport from './views/export.js';
 import * as viewMaster from './views/master.js';
@@ -33,6 +34,7 @@ const VIEWS = {
   dashboard: { title: 'Übersicht', icon: 'dashboard', mod: viewDashboard, key: '1' },
   transactions: { title: 'Buchungen', icon: 'book', mod: viewTransactions, key: '2' },
   calendar: { title: 'Kalender', icon: 'calendar', mod: viewCalendar, key: '3' },
+  todos: { title: 'Aufgaben', icon: 'todo', mod: viewTodos, key: '7' },
   reports: { title: 'Auswertungen', icon: 'chart', mod: viewReports, key: '4' },
   export: { title: 'Export & Finanzamt', icon: 'export', mod: viewExport, key: '5' },
   master: { title: 'Stammdaten', icon: 'master', mod: viewMaster, key: '6' },
@@ -386,9 +388,15 @@ function renderUnlock(message = '') {
 async function announceMigrations() {
   const hinweise = store.hinweise || [];
   store.hinweise = [];
+  const ART = {
+    storno: ['Stornos korrigiert', 'korrektur.storno'],
+    euer: ['EÜR-Zeilen umgestellt', 'korrektur.euer'],
+    sonderzeichen: ['Sonderzeichen wiederhergestellt', 'korrektur.sonderzeichen'],
+  };
   for (const h of hinweise) {
-    toast(h.art === 'storno' ? 'Stornos korrigiert' : 'EÜR-Zeilen umgestellt', h.text, 'warn', 20000);
-    await commit(h.art === 'storno' ? 'korrektur.storno' : 'korrektur.euer', () => null, { entity: 'bestand', summary: h.text });
+    const [titel, aktion] = ART[h.art] || ART.euer;
+    toast(titel, h.text, 'warn', 20000);
+    await commit(aktion, () => null, { entity: 'bestand', summary: h.text });
   }
 }
 
@@ -509,7 +517,7 @@ export function renderUpdateButton() {
   slot.innerHTML = html`
     <button class="btn block mb8" id="updateBtn"
       style="border-color:var(--warn);color:var(--warn);justify-content:flex-start">
-      ${icon('refresh', 16)} Version ${esc(info.version)} verfügbar
+      ${icon('refresh', 16)} Version ${info.version} verfügbar
     </button>`;
   slot.querySelector('#updateBtn').addEventListener('click', openUpdate);
 }
@@ -539,7 +547,7 @@ function renderShell() {
         </div>
         <nav class="nav" id="nav">
           <div class="nav-group">
-            ${raw(['dashboard', 'transactions', 'calendar'].map(navItem).join(''))}
+            ${raw(['dashboard', 'transactions', 'calendar', 'todos'].map(navItem).join(''))}
           </div>
           <div class="nav-group">
             <div class="nav-group-title">Auswerten</div>
@@ -572,7 +580,7 @@ function renderShell() {
           <span class="sep"></span>
           <span id="statSync" style="cursor:pointer" title="Cloud-Abgleich"></span>
           <span class="spacer"></span>
-          <span>Kontovia ${esc(appInfo.version || '')}</span>
+          <span>Kontovia ${appInfo.version || ''}</span>
         </div>
       </main>
     </div>`;
@@ -615,7 +623,9 @@ function updateStatus() {
 
   const s = sel.settings();
   $('#brandSub').textContent = s.companyName || s.ownerName || 'Buchhaltung';
-  $('#statCounts').textContent = `${int(sel.transactions().length)} Buchungen · ${int(sel.appointments().length)} Termine`;
+  const offeneAufgaben = sel.todos().filter((t) => !t.done).length;
+  $('#statCounts').textContent = `${int(sel.transactions().length)} Buchungen · ${int(sel.appointments().length)} Termine`
+    + (offeneAufgaben ? ` · ${int(offeneAufgaben)} ${offeneAufgaben === 1 ? 'offene Aufgabe' : 'offene Aufgaben'}` : '');
   const until = lockedUntil();
   $('#statLock').textContent = until ? `festgeschrieben bis ${until.split('-').reverse().join('.')}` : 'keine Festschreibung';
 
@@ -697,6 +707,11 @@ api.on.menu(async (payload) => {
     case 'new-appointment': {
       const m = await import('./views/calendar.js');
       m.openAppointmentDialog(null);
+      break;
+    }
+    case 'new-todo': {
+      const m = await import('./views/todos.js');
+      m.openTodoDialog(null);
       break;
     }
     case 'save':

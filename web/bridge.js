@@ -180,7 +180,7 @@ document.addEventListener('keydown', (e) => {
   const mod = e.ctrlKey || e.metaKey;
   if (!mod || e.altKey) return;
   const k = e.key.toLowerCase();
-  const views = { 1: 'dashboard', 2: 'transactions', 3: 'calendar', 4: 'reports', 5: 'export', 6: 'master', ',': 'settings' };
+  const views = { 1: 'dashboard', 2: 'transactions', 3: 'calendar', 4: 'reports', 5: 'export', 6: 'master', 7: 'todos', ',': 'settings' };
   let action = null;
   if (k === 'l') { if (!vault.isLocked) { e.preventDefault(); doLock('manuell'); } return; }
   if (views[k] && !e.shiftKey) action = { action: 'view', view: views[k] };

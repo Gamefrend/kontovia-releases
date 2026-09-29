@@ -1,12 +1,12 @@
 {
-  "version": "1.6.1",
-  "released": "2026-09-28T10:27:03.554Z",
-  "notes": "Dringende Korrektur: Unter Windows blieb das Fenster von 1.6.0 schwarz. Die neue\nLaufzeitumgebung hat das Laden der Oberfläche blockiert. Ihre Daten sind nicht\nbetroffen – 1.6.0 hat den Tresor gar nicht erst geöffnet. Wer 1.6.0 installiert hat,\nlädt 1.6.1 bitte einmal von Hand herunter und installiert es über die bestehende\nFassung: Die eingebaute Aktualisierung sitzt in der Oberfläche, die nicht startete.\nKünftig startet jeder Build die fertige Anwendung zur Probe, bevor er veröffentlicht\nwird.\n\nAußerdem enthalten, falls Sie von 1.5 kommen: Stornos werden korrigiert, die Anlage\nEÜR folgt den Vordrucken 2025 und 2026, und DATEV-Stapel und Prüfungsexport lassen\nsich von der Gegenseite einlesen.\n\n* Stornos zählen nicht mehr doppelt. Wer eine Buchung über 119 € stornierte,\n  sah danach −119 € statt null: Das Original fiel heraus, die Gegenbuchung zählte.\n  Jetzt heben sich beide auf. Liegt das Original in einem festgeschriebenen\n  Zeitraum, wirkt die Korrektur im offenen Zeitraum, und der erklärte bleibt, wie er\n  war. Bestehende Stornos werden beim ersten Öffnen umdatiert und im\n  Änderungsjournal vermerkt. Stornierte Buchungen und Gegenbuchungen lassen sich\n  nicht mehr bearbeiten oder löschen.\n* Anlage EÜR nach den Vordrucken 2025 und 2026. Die Zeilennummern passten zu\n  keinem Jahrgang (Summe der Einnahmen in Zeile 22 statt 23, Vorsteuer in 55 statt\n  57, Reisekosten als beschränkt abziehbar). Jetzt gilt für jedes Jahr sein\n  Vordruck: 2026 rücken die Ausgaben ab Waren um eine Zeile nach hinten (Summe in\n  Zeile 76). Die Startkategorien werden automatisch umgestellt; selbst gesetzte\n  Zuordnungen bleiben und werden zur Prüfung genannt. Bei Bewirtungen steht jetzt\n  auch der nicht abziehbare Teil dabei.\n* Die EÜR folgt immer dem Zahlungsfluss. Wer die Umsatzsteuer nach\n  Rechnungsdatum versteuert (Soll), bekam bisher auch eine EÜR nach\n  Rechnungsdatum – die gibt es nicht. Die Einstellung heißt jetzt „Umsatzsteuer\n  berechnen nach“ und wirkt auf Voranmeldung, Übersicht und GuV.\n* DATEV-Stapel, den DATEV annimmt. Kontenrahmen im Kopf als „03“/„04“,\n  Berater- und Mandantennummer werden geprüft, je Wirtschaftsjahr eine Datei, keine\n  Nullbeträge. Nach Zahlungsfluss wird zum Zahlungsdatum gebucht – offene\n  Rechnungen standen bisher als Geldeingang auf der Bank. Bei Soll-Versteuerung\n  laufen Rechnungen über Sammeldebitor und -kreditor. Auf Wunsch mit\n  Steuerschlüsseln für Konten ohne Automatik.\n* Prüfungsexport nach GDPdU-Standard. Die index.xml beschreibt jetzt jede\n  Spalte mit Datentyp und Schlüssel, nennt Kodierung und Kopfzeile, und die DTD\n  liegt bei – ohne das lehnt das Prüfprogramm der Finanzverwaltung den Import ab.\n  Das Änderungsjournal enthält alle Felder, mit denen sich die Prüfsummen\n  nachrechnen lassen.\n* Kleinunternehmergrenzen seit 2025. Liegen die Umsätze über 25.000 € im\n  Vorjahr oder 100.000 € im laufenden Jahr, weist „Ordnung und Vollständigkeit“\n  darauf hin.\n* Schneller bei großen Beständen. Die Suche in der Buchungsliste antwortet bei\n  20.000 Buchungen in unter 0,1 statt über 2 Sekunden; lange Listen erscheinen in\n  Etappen zu 300 Zeilen.\n* Sicherheit: Laufzeitumgebung Electron 44 statt 38, für die es keine\n  Sicherheitsupdates mehr gab. Das Leeren der Zwischenablage nach dem Kopieren\n  funktioniert auch damit.\n* Mehrere Belege an einer Buchung überschreiben sich beim Ausleiten nicht mehr.\n* Die Einrichtung behält beim Zurückblättern die gewählten Steuereinstellungen.",
+  "version": "1.7.0",
+  "released": "2026-09-29T12:19:10.599Z",
+  "notes": "* Neu: Aufgaben. Eine eigene Liste zum Abhaken (Strg+7), sortiert nach überfällig,\n  heute, nächste sieben Tage, später und ohne Datum. Eine Aufgabe kann zu einem Termin\n  gehören, muss aber nicht – ohne eigenes Datum gilt dann der Termin als Frist, bei\n  Serien das nächste Vorkommen. Im Termin stehen seine Aufgaben zum Abhaken und\n  Ergänzen, im Kalender zeigt „✓ 1/3“, wie weit sie sind. Auf Wunsch auch als Modul\n  „Offene Aufgaben“ in der Übersicht (über „Anpassen“ einblenden).\n* Zahlungen zählen in dem Monat, in dem das Geld fließt. Übersicht, Verlauf und\n  Gewinn & Verlust zählen Einnahmen und Ausgaben jetzt immer am Zahlungstag – wie die\n  Anlage EÜR. Bisher fehlte bei Soll-Versteuerung etwa im September die Zahlung auf\n  eine August-Rechnung. Nur die Umsatzsteuer folgt weiter Ihrer Einstellung. Unter den\n  Zahlen steht, was darin steckt: „inkl. … aus Rechnungen anderer Zeiträume“ und\n  „noch offen: …“ – ein Klick zeigt die Buchungen dazu.\n* Buchungsliste nach Buchungs- oder Zahlungsdatum. Die Liste zeigt jetzt auch\n  Buchungen, die im Zeitraum bezahlt wurden, obwohl ihr Datum davor oder danach liegt –\n  etwa eine Restzahlung, die vor dem Veranstaltungstag eingeht. Solche Zeilen tragen\n  den Hinweis „Zahlung …“. Über den Filter am Datum lässt sich die Sicht umstellen. Die\n  Summen trennen, was bezahlt ist, von dem, was noch offen ist.\n* Sonderzeichen bleiben, wie Sie sie eingeben. In vielen Formularen wurden ' & \" < >\n  beim Speichern umgeschrieben, mit jedem Speichern eine Stufe mehr (aus „Kunde's“\n  wurde `Kunde&amp;amp;#39;s`). Das ist behoben, und bereits veränderte Texte werden beim\n  Öffnen automatisch wiederhergestellt und im Änderungsjournal vermerkt.\n  Festgeschriebene und stornierte Buchungen bleiben unverändert.\n* Bitte alle Geräte, die denselben Cloud-Abgleich nutzen, auf 1.7 bringen: Ältere\n  Fassungen kennen die Aufgaben nicht und zeigen sie nicht an (gelöscht werden sie\n  dadurch nicht).",
   "files": [
     {
       "path": "app.js",
-      "sha256": "6e7a4e54f5cd464ce6dc4418b5103e08a1b0bdcc7482afead166adf990a3bc82",
-      "size": 36392
+      "sha256": "46b43d8bd2a8bada651d7be771e288ff79db43b8ce6e40272ffa0a7d97a08094",
+      "size": 36975
     },
     {
       "path": "icons/apple-touch-icon.png",
@@ -35,8 +35,8 @@
     },
     {
       "path": "lib/calc.js",
-      "sha256": "e22843e6cc742d1ad08e2e4ba1f7a5b8da879be1853e0aa8863ff746e6d97047",
-      "size": 39267
+      "sha256": "94f136dc6ea19b37a984de0b41193b4aab857d7deda45e5df00cf60907d5d368",
+      "size": 41472
     },
     {
       "path": "lib/euer.js",
@@ -65,8 +65,8 @@
     },
     {
       "path": "lib/merge.js",
-      "sha256": "46f8ecca4fbc5167864f1c8058ed28f77729b8d1d81cddf7aedc0c199ebc3873",
-      "size": 11029
+      "sha256": "9d7cda2421f699f0320497aef8d527986d016365de792733709bccd557211f77",
+      "size": 12335
     },
     {
       "path": "lib/period.js",
@@ -85,8 +85,8 @@
     },
     {
       "path": "lib/reports.js",
-      "sha256": "0de334fed128e640c6ffac77059378788522207f82ac55c5c20f2fd6b271c091",
-      "size": 32937
+      "sha256": "dc6d2b2462e1bf4a70abab43dd700224e0007c3cee1162636734265c1de62de1",
+      "size": 33051
     },
     {
       "path": "lib/router.js",
@@ -95,8 +95,8 @@
     },
     {
       "path": "lib/store.js",
-      "sha256": "a41e202ada7cab3ddb1fc3690d35e4446050acd78f5603ed5a57eef1da084ca4",
-      "size": 23647
+      "sha256": "ee63f6db194dae874259728eb1f8c055c18a6ead258c3b429c09ad7517c34d6c",
+      "size": 30600
     },
     {
       "path": "lib/sync.js",
@@ -110,8 +110,8 @@
     },
     {
       "path": "lib/ui.js",
-      "sha256": "e01ef9abe4fa33234b9410dda9f47e26fb40023af74c601c53d1d6eb6c2aadcd",
-      "size": 40204
+      "sha256": "ef06a869de9c9e9c16617facb6261e417fedcee3cf648bda0de8e788f2253b15",
+      "size": 40363
     },
     {
       "path": "lib/updates.js",
@@ -125,7 +125,7 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "b9ff6f93c38e1b4a97ee1a0024e61b2261125fd6f0c16a7adc8916a9e0184cc4",
+      "sha256": "acf0b4679afccb69a615db3333d238f8f36fbc02b4407f75519b0ffc3f085f18",
       "size": 886
     },
     {
@@ -140,13 +140,13 @@
     },
     {
       "path": "styles.css",
-      "sha256": "49981dd559f3bb839700a5057bf9417ef76556e5d7f1a41baef503b98498af8c",
-      "size": 43002
+      "sha256": "09cc3ae35d82202c4030fce875593b3828f6b7f653fff55c2e1d44c70d62c8d4",
+      "size": 45565
     },
     {
       "path": "views/calendar.js",
-      "sha256": "0a188801a84d0713fa0135c852374fbaf47431a89f4bb7dec7a5ada23364ca05",
-      "size": 26737
+      "sha256": "b2c750e62a00cda3c8d85493bc7eab02b06c9030615f97e74898c52757141587",
+      "size": 31809
     },
     {
       "path": "views/calendarsync.js",
@@ -155,43 +155,48 @@
     },
     {
       "path": "views/cloudpanel.js",
-      "sha256": "146bf055b41d8a2ea5498ccedc1f610983b0b20839c7621ce635fff4d9e68052",
-      "size": 33465
+      "sha256": "84657135bad98db90c39474af505ff57269f8c64482cc09c39f2e39f13b6124f",
+      "size": 33440
     },
     {
       "path": "views/dashboard.js",
-      "sha256": "9dfba4be73574d35ca5ef94b9b0853bb08bec9698c48aafdf78b99c6affeeb71",
-      "size": 25678
+      "sha256": "74bf4ecfbdf6c67b2f102793ac8510290f8d72f351b031547e09d51b5120713d",
+      "size": 28806
     },
     {
       "path": "views/export.js",
-      "sha256": "c937e97cf3ea958ec71dd06288f613231860fd4fbdbfa27f1cc053aafec18dfe",
-      "size": 20298
+      "sha256": "2e510dd510e1626531d28b1309f3ce3b0b673e0b7a1ec0b49fb3c5c2c90596cf",
+      "size": 20278
     },
     {
       "path": "views/help.js",
-      "sha256": "e760a122f105726992390450f2845c768abdaff2c7ebea1a7c5149819cd5b164",
-      "size": 37247
+      "sha256": "e66c43866c07dece9ede7322a203911ef39f50deb2ddd3090f75b28fead980fd",
+      "size": 37714
     },
     {
       "path": "views/master.js",
-      "sha256": "c99d57253db9c2a0c3106417503d6eaea2b29c876aea8d140ca65eba065d0370",
-      "size": 28151
+      "sha256": "5db4b3df45676d4d8af90e796ad05dece29741bef244781a864372da3940729f",
+      "size": 28081
     },
     {
       "path": "views/reports.js",
-      "sha256": "ea3036ba93272fb79c3d9baa756a98b404b5a6a4b8afe56ac744bd59a28f800a",
-      "size": 42828
+      "sha256": "713359ce85b572a2d3cc5d5cb2872a0d899aae6a1bf905bb4da21d41ec474277",
+      "size": 42783
     },
     {
       "path": "views/settings.js",
-      "sha256": "68950fdebc339e1c6832d938ee6fccf072bfd360d5eea8eb696fe088d964fbc1",
-      "size": 26434
+      "sha256": "3ac14711d47e8e4a50c7b6ba182fa8b3992634a91a773b300e74bb7dfc60e870",
+      "size": 26512
+    },
+    {
+      "path": "views/todos.js",
+      "sha256": "cb773255f688e806aae8887aacb7353efedaffcaf13fa6bcdf06b2b745599357",
+      "size": 14593
     },
     {
       "path": "views/transactions.js",
-      "sha256": "8358fd5531e7046181729a814852a8e71c2cbf49023ca32952ca8f4b44323d2e",
-      "size": 56887
+      "sha256": "8a59ef149d7a650b12e2186e35b355c8a8e1f318135478200d07be4e57abd52d",
+      "size": 59086
     },
     {
       "path": "web/ablage.js",
@@ -200,7 +205,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "d4efb14f5334fa23c0cb7d47cd2678393350c162fd5edf35197bed2d19f386db",
+      "sha256": "ed5ccf5d17962f262287c39e5a8c7d15aeed0eccd80ee70891bb38a1a101c8ae",
       "size": 6944
     },
     {
@@ -210,8 +215,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "b58ae23f906522364ab8b3adf455ac0cf78a7f921f77440dcdad1bcce8ba7168",
-      "size": 25845
+      "sha256": "4d38776f192e31d124b4410ce4351f989de9751e947ad884d8d778698f49faae",
+      "size": 25857
     },
     {
       "path": "web/cloud.js",
@@ -270,8 +275,8 @@
     },
     {
       "path": "web/seed.js",
-      "sha256": "154fe4c692f1732a16e6982e8056238c3237d7f5a69483fea1049286598323fb",
-      "size": 5753
+      "sha256": "483ec74874c17763186cc23743aa866c11c9cf08df48a232cc1f91cb36250cf2",
+      "size": 5768
     },
     {
       "path": "web/tresor.js",

@@ -51,6 +51,9 @@ export async function render(root, params = {}, { actions } = {}) {
   if (params.receipt) st.filters.hasReceipt = params.receipt;
   if (params.status) st.filters.status = params.status;
   if (params.categoryId) st.filters.categoryId = params.categoryId;
+  if (params.type) st.filters.type = params.type;
+  if (params.datum) st.filters.datum = params.datum;
+  if (params.period) Object.assign(period, params.period);
   // Wurde der letzte Beleg zu einem Ort geändert, fällt der Ort aus der Liste –
   // ein Filter darauf würde sonst unsichtbar weiterwirken.
   if (st.filters.location && !knownLocations().includes(st.filters.location)) delete st.filters.location;
@@ -75,6 +78,13 @@ export function knownLocations() {
 }
 
 const overdue = (t) => !t.paidDate && !isVoidPart(t) && (t.dueDate || t.date) < todayISO();
+
+/* Eine Buchung gehört in den Zeitraum, wenn ihr Datum oder ihre Zahlung darin
+   liegt. Sonst fehlte etwa im September die Zahlung auf eine August-Rechnung,
+   obwohl sie in Übersicht und EÜR im September zählt. */
+const imZeitraum = (d) => !!d && d >= period.from && d <= period.to;
+const gebuchtIm = (t) => imZeitraum(t.date);
+const bezahltIm = (t) => imZeitraum(t.paidDate);
 /** Reihenfolge beim Sortieren nach Status: was Aufmerksamkeit braucht, zuerst. */
 const statusRank = (t) => (isVoidPart(t) ? 3 : overdue(t) ? 0 : !t.paidDate ? 1 : 2);
 
@@ -83,7 +93,7 @@ function listSpec() {
   const klein = store.db.settings.taxMode === 'kleinunternehmer';
   const alle = () => true;
   const columns = [
-    { key: 'date', label: 'Datum', type: 'date', width: '92px', cls: 'col-datum', tdCls: 'nowrap', cell: (t) => esc(fmtDate(t.date)) },
+    { key: 'date', label: 'Datum', type: 'date', width: '108px', cls: 'col-datum', tdCls: 'nowrap', cell: dateCell },
     {
       key: 'nr', label: 'Nr.', sortLabel: 'Beleg-Nr.', type: 'text', width: '84px', cls: 'col-nr', tdCls: 'tiny muted nowrap',
       value: (t) => t.invoiceNumber || '', cell: (t) => esc(t.invoiceNumber || ''),
@@ -125,6 +135,16 @@ function listSpec() {
   ];
 
   const filters = [
+    {
+      key: 'datum', column: 'date', title: 'Im Zeitraum liegt', initial: 'alle',
+      chip: (v, label) => label,
+      options: () => [
+        ['alle', 'Buchungs- oder Zahlungsdatum', alle],
+        ['zahlung', 'Zahlungen im Zeitraum', bezahltIm],
+        ['buchung', 'Buchungsdatum im Zeitraum', gebuchtIm],
+        ['fremd', 'Zahlungen zu Buchungen anderer Zeiträume', (t) => bezahltIm(t) && !gebuchtIm(t)],
+      ],
+    },
     {
       key: 'location', column: 'description', title: 'Ort der Leistung', initial: '', hideEmpty: true,
       chip: (v) => `Ort: ${v}`,
@@ -189,7 +209,7 @@ function listSpec() {
     defaultSort: { key: 'date', dir: -1 },
     columns,
     filters,
-    rows: () => sel.transactions().filter((t) => t.date >= period.from && t.date <= period.to),
+    rows: () => sel.transactions().filter((t) => gebuchtIm(t) || bezahltIm(t)),
     search: {
       id: 'txSearch',
       placeholder: 'Suchen: Text, Rechnungsnummer, Betrag …',
@@ -212,20 +232,38 @@ function listSpec() {
   };
 }
 
-/** Anzahl und Summen der sichtbaren Buchungen. */
+/**
+ * Anzahl und Summen der sichtbaren Buchungen. Eingänge und Ausgänge sind,
+ * was im Zeitraum tatsächlich bezahlt wurde – dasselbe, was die Übersicht
+ * zählt (hier brutto). Offene Rechnungen stehen getrennt daneben.
+ */
 function summaryHtml(rows) {
-  const sumIncome = sum(rows.filter((t) => t.type === 'income'), (t) => t.gross);
-  const sumExpense = sum(rows.filter((t) => t.type === 'expense'), (t) => t.gross);
-  const openCount = rows.filter((t) => !t.paidDate && !isVoidPart(t)).length;
+  const bezahlt = rows.filter(bezahltIm);
+  const sumIncome = sum(bezahlt.filter((t) => t.type === 'income'), (t) => t.gross);
+  const sumExpense = sum(bezahlt.filter((t) => t.type === 'expense'), (t) => t.gross);
+  const offen = rows.filter((t) => !t.paidDate && !isVoidPart(t));
+  const openIncome = sum(offen.filter((t) => t.type === 'income'), (t) => t.gross);
+  const openExpense = sum(offen.filter((t) => t.type === 'expense'), (t) => t.gross);
   const unlistedCount = rows.filter((t) => t.unlisted && !isVoidPart(t)).length;
-  return html`<div class="tx-sum">
+  const offenText = [openIncome ? `${money(openIncome)} € zu erhalten` : '', openExpense ? `${money(openExpense)} € zu zahlen` : ''].filter(Boolean).join(' · ');
+  return html`<div class="tx-sum" title="Eingänge und Ausgänge: im Zeitraum bezahlt, nach Zahlungsdatum, brutto">
     <span><strong>${int(rows.length)}</strong> <span class="muted">${rows.length === 1 ? 'Buchung' : 'Buchungen'}</span></span>
-    <span><span class="muted">Einnahmen</span> <strong class="amount pos">${money(sumIncome)} €</strong></span>
-    <span><span class="muted">Ausgaben</span> <strong class="amount neg">${money(sumExpense)} €</strong></span>
+    <span><span class="muted">Eingänge</span> <strong class="amount pos">${money(sumIncome)} €</strong></span>
+    <span><span class="muted">Ausgänge</span> <strong class="amount neg">${money(sumExpense)} €</strong></span>
     <span><span class="muted">Saldo</span> <strong class="amount ${sumIncome - sumExpense >= 0 ? 'pos' : 'neg'}">${money(sumIncome - sumExpense)} €</strong></span>
-    ${openCount ? raw(`<span class="badge warn">${openCount} offen</span>`) : ''}
+    ${offen.length ? raw(`<span class="badge warn" title="Noch nicht bezahlt – zählt erst am Zahlungstag">${offen.length} offen${offenText ? ': ' + esc(offenText) : ''}</span>`) : ''}
     ${unlistedCount ? raw(`<span class="badge unlisted" title="In den Summen enthalten, in Finanzamt-Unterlagen nicht">${unlistedCount} nicht gelistet</span>`) : ''}
   </div>`;
+}
+
+/**
+ * Datum der Buchung. Liegt es außerhalb des Zeitraums, steht die Buchung nur
+ * wegen ihrer Zahlung in der Liste – das wird angezeigt statt verschwiegen.
+ */
+function dateCell(t) {
+  if (gebuchtIm(t) || !bezahltIm(t)) return esc(fmtDate(t.date));
+  return `<span class="muted" title="Gebucht am ${esc(fmtDate(t.date))}, bezahlt am ${esc(fmtDate(t.paidDate))} – zählt im gewählten Zeitraum">${esc(fmtDate(t.date))}</span>
+    <div class="tiny" style="color:var(--accent)">Zahlung ${esc(fmtDateShort(t.paidDate))}</div>`;
 }
 
 function descriptionCell(t) {
@@ -374,7 +412,7 @@ export function openTransactionDialog(id, type = 'expense') {
       <div class="form-grid">
         <div class="field full">
           <label>Beschreibung *</label>
-          <input id="i_description" value="${esc(tx.description)}" placeholder="${tx.type === 'income' ? 'z. B. Rechnung 2025-0042, Website-Relaunch' : 'z. B. Bürostühle, Bahnfahrt Berlin'}">
+          <input id="i_description" value="${tx.description}" placeholder="${tx.type === 'income' ? 'z. B. Rechnung 2025-0042, Website-Relaunch' : 'z. B. Bürostühle, Bahnfahrt Berlin'}">
         </div>
 
         <div class="field">
@@ -440,7 +478,7 @@ export function openTransactionDialog(id, type = 'expense') {
             <div class="field">
               <label>Rechnungs-/Belegnummer</label>
               <div class="row" style="gap:6px">
-                <input id="i_invoiceNumber" value="${esc(tx.invoiceNumber || '')}" style="flex:1">
+                <input id="i_invoiceNumber" value="${tx.invoiceNumber || ''}" style="flex:1">
                 ${tx.type === 'income' ? raw('<button class="btn sm" id="btnNextNo" title="Nächste freie Nummer">#</button>') : ''}
               </div>
             </div>
@@ -518,7 +556,7 @@ export function openTransactionDialog(id, type = 'expense') {
         <div class="form-grid mt8">
           <div class="field">
             <label>Referenz / Verwendungszweck</label>
-            <input id="i_reference" value="${esc(tx.reference || '')}">
+            <input id="i_reference" value="${tx.reference || ''}">
           </div>
           ${klein ? '' : raw(`
           <div class="field">
@@ -530,7 +568,7 @@ export function openTransactionDialog(id, type = 'expense') {
           </div>`)}
           <div class="field full">
             <label>Notiz</label>
-            <textarea id="i_notes" placeholder="Interne Bemerkung, betrieblicher Anlass bei Bewirtung, …">${esc(tx.notes || '')}</textarea>
+            <textarea id="i_notes" placeholder="Interne Bemerkung, betrieblicher Anlass bei Bewirtung, …">${tx.notes || ''}</textarea>
           </div>
         </div>
 
@@ -994,7 +1032,7 @@ export function assetDialog(preset = {}) {
         <p class="mt0 small muted">Anschaffungen über 800 € netto werden nicht sofort abgezogen,
         sondern über die betriebsgewöhnliche Nutzungsdauer verteilt (AfA, § 7 EStG).
         Kontovia rechnet linear und monatsgenau ab dem Anschaffungsmonat.</p>
-        <div class="field"><label>Bezeichnung *</label><input id="a_name" value="${esc(preset.name || '')}"></div>
+        <div class="field"><label>Bezeichnung *</label><input id="a_name" value="${preset.name || ''}"></div>
         <div class="field"><label>Anschaffungskosten (netto)</label><input class="money-input" id="a_cost" value="${moneyInput(preset.cost || 0)}"></div>
         <div class="field"><label>Anschaffungsdatum</label><input type="date" id="a_date" value="${preset.purchaseDate || todayISO()}"></div>
         <div class="field"><label>Nutzungsdauer</label>

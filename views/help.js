@@ -56,14 +56,15 @@ function anleitung(root) {
         <p><strong>Zahlungsfluss oder Rechnungsdatum.</strong> In der Einnahmen-Überschuss-Rechnung
         zählt eine Buchung erst dann, wenn das Geld tatsächlich geflossen ist (§ 11 EStG).
         Eine im Dezember gestellte, im Januar bezahlte Rechnung gehört also ins neue Jahr – das gilt
-        für die Anlage EÜR immer. Bei der Umsatzsteuer gibt es die Wahl: Nach dem Gesetz entsteht sie
+        für die Anlage EÜR immer, und genauso zählen Übersicht, Buchungsliste und Gewinn &amp; Verlust:
+        Eine im Zeitraum bezahlte Rechnung steht dort auch dann, wenn ihr Datum außerhalb liegt. Bei der Umsatzsteuer gibt es die Wahl: Nach dem Gesetz entsteht sie
         mit der Leistung, also zum Rechnungsdatum (Soll-Versteuerung); auf Antrag nach § 20 UStG erst
         mit dem Zahlungseingang (Ist-Versteuerung). Was für Sie gilt, steht im Fragebogen zur
         steuerlichen Erfassung oder im Bescheid.
-        Bei Ihnen ist eingestellt: <strong>${esc(s.taxMode === 'kleinunternehmer' ? 'nach Zahlungsfluss' : s.accountingBasis === 'ist' ? 'Umsatzsteuer nach Zahlungseingang (Ist-Versteuerung)' : 'Umsatzsteuer nach Rechnungsdatum (Soll-Versteuerung)')}</strong>.</p>
+        Bei Ihnen ist eingestellt: <strong>${s.taxMode === 'kleinunternehmer' ? 'nach Zahlungsfluss' : s.accountingBasis === 'ist' ? 'Umsatzsteuer nach Zahlungseingang (Ist-Versteuerung)' : 'Umsatzsteuer nach Rechnungsdatum (Soll-Versteuerung)'}</strong>.</p>
         <p><strong>Regelbesteuerung oder Kleinunternehmer.</strong> Als Kleinunternehmer nach § 19 UStG
         rechnen Sie durchgehend brutto, weisen keine Umsatzsteuer aus und ziehen keine Vorsteuer.
-        Bei Ihnen ist eingestellt: <strong>${esc(s.taxMode === 'kleinunternehmer' ? 'Kleinunternehmer § 19 UStG' : 'Regelbesteuerung')}</strong>.</p>
+        Bei Ihnen ist eingestellt: <strong>${s.taxMode === 'kleinunternehmer' ? 'Kleinunternehmer § 19 UStG' : 'Regelbesteuerung'}</strong>.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -105,6 +106,10 @@ function anleitung(root) {
         <p>Im <a data-go="calendar">Kalender</a> verknüpfen Sie einen Termin mit einer oder mehreren
         Buchungen – etwa den Montagetermin mit der Rechnung dazu. Zusätzlich blendet der
         Kalender die Fälligkeiten offener Rechnungen ein.</p>
+        <p><strong>Aufgaben:</strong> Unter <a data-go="todos">Aufgaben</a> notieren Sie, was zu tun ist,
+        und haken es ab. Eine Aufgabe kann zu einem Termin gehören, muss aber nicht – ohne eigenes
+        Datum gilt dann der Termin als Frist. Im Termin selbst stehen seine Aufgaben zum Abhaken
+        und Ergänzen.</p>
         ${WEB ? raw(`<p><strong>Mit anderen Kalendern abgleichen:</strong> Über <em>Abgleich</em> oben im
         Kalender exportieren Sie alle Termine als Kalenderdatei (.ics) für Google, Apple oder Outlook
         und holen Termine von dort herein. Den laufenden Abgleich mit Google Kalender gibt es nur in
@@ -119,7 +124,7 @@ function anleitung(root) {
 
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Zeitraum wählen und filtern</h3>
-        <p><strong>Zeitraum.</strong> Oben rechts steht der gewählte Zeitraum, etwa „Jahr ${esc(String(new Date().getFullYear()))}“.
+        <p><strong>Zeitraum.</strong> Oben rechts steht der gewählte Zeitraum, etwa „Jahr ${String(new Date().getFullYear())}“.
         Die Pfeile daneben blättern um genau diese Länge weiter – vom März zum April, vom
         2. zum 3. Quartal, von einem Jahr ins nächste. Ein Klick auf den Zeitraum öffnet die
         Schnellwahl (dieser Monat, letztes Quartal …), ein Raster zum direkten Anklicken von
@@ -430,10 +435,10 @@ function recht(root) {
         <h3 class="mt0">Über dieses Programm</h3>
         <table class="data compact">
           <tbody>
-            <tr><td class="muted">Programm</td><td>Kontovia ${esc(appInfo.version || '')}</td></tr>
-            <tr><td class="muted">Datenordner</td><td class="tiny">${esc(appInfo.dataDir || '')}</td></tr>
+            <tr><td class="muted">Programm</td><td>Kontovia ${appInfo.version || ''}</td></tr>
+            <tr><td class="muted">Datenordner</td><td class="tiny">${appInfo.dataDir || ''}</td></tr>
             <tr><td class="muted">Verschlüsselung</td><td>AES-256-GCM, Schlüsselableitung mit scrypt</td></tr>
-            <tr><td class="muted">Laufzeitumgebung</td><td>Electron ${esc(appInfo.electron || '')}, Chromium ${esc(appInfo.chrome || '')}</td></tr>
+            <tr><td class="muted">Laufzeitumgebung</td><td>Electron ${appInfo.electron || ''}, Chromium ${appInfo.chrome || ''}</td></tr>
             <tr><td class="muted">Fremder Programmcode</td><td>keiner – null Laufzeitabhängigkeiten</td></tr>
           </tbody>
         </table>

@@ -7,7 +7,7 @@ import { icon, statCard, deltaBadge, compareLabel, rankBars, emptyState, ok, err
 import { store, sel } from '../lib/store.js';
 import {
   compareRanges, trend, euerReport, vatReturn, vatPeriods, balanceSheet,
-  openItems, accountBalances, isKleinunternehmer, basisOf, depreciationInRange, bookValue,
+  openItems, accountBalances, isKleinunternehmer, depreciationInRange, bookValue,
   totalDepreciation, healthChecks, scopeDb, unlistedStats, averages, isEffective,
 } from '../lib/calc.js';
 import {
@@ -167,7 +167,7 @@ function guv(root, db) {
     </div>
 
     <div class="card mb16">
-      <div class="card-head"><h3>Verlauf</h3><span class="sub">${esc(periodLabel(period))}</span><div class="spacer"></div>${verlaufControls()}</div>
+      <div class="card-head"><h3>Verlauf</h3><span class="sub">${periodLabel(period)}</span><div class="spacer"></div>${verlaufControls()}</div>
       <div class="card-body">${verlaufBody(current.months, avg, (s) => ymLabel(s.ym))}</div>
     </div>
 
@@ -201,12 +201,12 @@ function guv(root, db) {
 
     <div class="grid c2">
       <div class="card">
-        <div class="card-head"><h3>Betriebseinnahmen</h3><div class="spacer"></div><span class="badge pos">${esc(money(current.incomeForProfit))} €</span></div>
+        <div class="card-head"><h3>Betriebseinnahmen</h3><div class="spacer"></div><span class="badge pos">${money(current.incomeForProfit)} €</span></div>
         ${catTable('income', incomeCats, current.incomeForProfit, current.countIncome, current.incomeVat, avg.income)}
       </div>
 
       <div class="card">
-        <div class="card-head"><h3>Betriebsausgaben</h3><div class="spacer"></div><span class="badge neg">${esc(money(current.expenseForProfit))} €</span></div>
+        <div class="card-head"><h3>Betriebsausgaben</h3><div class="spacer"></div><span class="badge neg">${money(current.expenseForProfit)} €</span></div>
         ${catTable('expense', [...expenseCats, ...afa], current.expenseForProfit, current.countExpense, current.expenseVat, avg.expense)}
       </div>
     </div>
@@ -253,10 +253,10 @@ function guv(root, db) {
  * und jede Zeile öffnet die Buchung selbst.
  */
 function openCategory(db, categoryId) {
-  const basis = basisOf(db);
+  // Dieselben Buchungen wie in der Summe: nach Zahlungstag.
   const rows = db.transactions.filter((t) => {
     if (!isEffective(t) || t.categoryId !== categoryId) return false;
-    const d = basis === 'soll' ? t.date : t.paidDate;
+    const d = t.paidDate;
     return d && d >= period.from && d <= period.to;
   });
   const viele = rows.length > 12;
@@ -376,7 +376,7 @@ function euer(root, db) {
             <div style="font-size:28px;font-weight:660;letter-spacing:-.6px" class="num ${e.profit >= 0 ? 'amount pos' : 'amount neg'}">${money(e.profit)} €</div>
           </div>
           <div class="right small muted">
-            ${esc(periodLabel(period))}<br>
+            ${periodLabel(period)}<br>
             ${e.kleinunternehmer ? 'Kleinunternehmer § 19 UStG' : 'Regelbesteuerung'}<br>
             Zuflussprinzip § 11 EStG
           </div>
@@ -415,7 +415,7 @@ function ust(root, db) {
 
     <div class="grid c2">
       <div class="card">
-        <div class="card-head"><h3>Kennzahlen der Voranmeldung</h3><span class="sub">${esc(periodLabel(period))}</span></div>
+        <div class="card-head"><h3>Kennzahlen der Voranmeldung</h3><span class="sub">${periodLabel(period)}</span></div>
         <div class="table-wrap"><table class="data">
           <tbody>
             ${raw(kz(81, 'Umsätze 19 % (Bemessungsgrundlage)', v.kz81net))}
@@ -437,7 +437,7 @@ function ust(root, db) {
       </div>
 
       <div class="card">
-        <div class="card-head"><h3>Voranmeldungszeiträume ${year}</h3><span class="sub">${esc(db.settings.vatPeriod)}</span></div>
+        <div class="card-head"><h3>Voranmeldungszeiträume ${year}</h3><span class="sub">${db.settings.vatPeriod}</span></div>
         <div class="table-wrap"><table class="data">
           <thead><tr><th>Zeitraum</th><th class="num">Umsatzsteuer</th><th class="num">Vorsteuer</th><th class="num">Zahllast</th></tr></thead>
           <tbody>
@@ -487,7 +487,7 @@ function bilanz(root, db) {
 
     <div class="grid c2">
       <div class="card">
-        <div class="card-head"><h3>Vermögen</h3><div class="spacer"></div><span class="badge pos">${esc(money(b.activa.total))} €</span></div>
+        <div class="card-head"><h3>Vermögen</h3><div class="spacer"></div><span class="badge pos">${money(b.activa.total)} €</span></div>
         <div class="table-wrap"><table class="data">
           <tbody>
             <tr class="group"><td colspan="2" class="muted small strong">Anlagevermögen</td></tr>
@@ -502,7 +502,7 @@ function bilanz(root, db) {
       </div>
 
       <div class="card">
-        <div class="card-head"><h3>Schulden und Reinvermögen</h3><div class="spacer"></div><span class="badge">${esc(money(b.passiva.total))} €</span></div>
+        <div class="card-head"><h3>Schulden und Reinvermögen</h3><div class="spacer"></div><span class="badge">${money(b.passiva.total)} €</span></div>
         <div class="table-wrap"><table class="data">
           <tbody>
             ${raw(line('Verbindlichkeiten aus Lieferungen und Leistungen', b.passiva.payables))}

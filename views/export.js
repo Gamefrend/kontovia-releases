@@ -50,8 +50,8 @@ function draw(root) {
   root.innerHTML = html`
     <div class="page-head">
       <div>
-        <h2>Export für ${esc(periodLabel(period))}</h2>
-        <p>${int(rows.length)} Buchungen · ${int(attCount)} Belege · ${e.profit >= 0 ? 'EÜR-Gewinn' : 'EÜR-Verlust'} ${esc(money(e.profit))} €${klein ? '' : ` · Umsatzsteuer-Zahllast ${esc(money(v.kz83))} €`}</p>
+        <h2>Export für ${periodLabel(period)}</h2>
+        <p>${int(rows.length)} Buchungen · ${int(attCount)} Belege · ${e.profit >= 0 ? 'EÜR-Gewinn' : 'EÜR-Verlust'} ${money(e.profit)} €${klein ? '' : ` · Umsatzsteuer-Zahllast ${esc(money(v.kz83))} €`}</p>
       </div>
     </div>
 
@@ -350,8 +350,8 @@ function datevNumbersDialog(db, einzeln) {
       body: html`
         <p class="mt0 small muted">Ihre Steuerkanzlei nennt Ihnen Berater- und Mandantennummer.
         Ohne die richtigen Nummern weist DATEV den Stapel ab oder ordnet ihn keinem Mandat zu.</p>
-        <div class="field"><label>Beraternummer</label><input id="d_berater" inputmode="numeric" value="${esc(db.settings.datevBerater || '')}" placeholder="1001 bis 9999999"></div>
-        <div class="field"><label>Mandantennummer</label><input id="d_mandant" inputmode="numeric" value="${esc(db.settings.datevMandant || '')}" placeholder="1 bis 99999"></div>
+        <div class="field"><label>Beraternummer</label><input id="d_berater" inputmode="numeric" value="${db.settings.datevBerater || ''}" placeholder="1001 bis 9999999"></div>
+        <div class="field"><label>Mandantennummer</label><input id="d_mandant" inputmode="numeric" value="${db.settings.datevMandant || ''}" placeholder="1 bis 99999"></div>
         ${klein ? '' : raw(`<label class="check"><input type="checkbox" id="d_bu" ${db.settings.datevSteuerschluessel ? 'checked' : ''}>
           Steuerschlüssel mitgeben (9/8 Vorsteuer, 3/2 Umsatzsteuer) – nur für Konten ohne Automatik; vorher mit der Kanzlei abstimmen</label>`)}
         <label class="check"><input type="checkbox" id="d_save" checked> Angaben für das nächste Mal merken</label>

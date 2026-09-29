@@ -329,8 +329,8 @@ async function decideForeign(root, begin) {
         dieses Geräts nicht öffnen lässt. Das ist der normale Fall, wenn Sie Kontovia
         vorher auf einem anderen Rechner eingerichtet haben.
       </div>
-      <p class="small">Cloud-Stand: ${esc(bytes(begin.size || 0))}, zuletzt geändert
-      ${esc(fmtDateTime(begin.modifiedTime))}.</p>
+      <p class="small">Cloud-Stand: ${bytes(begin.size || 0)}, zuletzt geändert
+      ${fmtDateTime(begin.modifiedTime)}.</p>
       <p class="small">Auf diesem Gerät: ${int(store.db.transactions.length)} Buchungen,
       ${int(store.db.appointments.length)} Termine.</p>
       <h4 style="margin:20px 0 6px;font-size:14px">Wie möchten Sie weitermachen?</h4>
@@ -512,7 +512,7 @@ export async function renderUpdateCard(root) {
       <div class="card-head">
         <h3>${icon('refresh', 16)} Programmaktualisierung</h3>
         <div class="spacer"></div>
-        <span class="badge">Version ${esc(appInfo.version || '')}</span>
+        <span class="badge">Version ${appInfo.version || ''}</span>
       </div>
       <div class="card-body">
         ${WEB ? raw(`<p class="small mt0" style="color:var(--text-2);line-height:1.6">Die Web-Fassung
@@ -583,7 +583,7 @@ export function openUpdateDialog(info) {
     title: `Version ${info.version} ist verfügbar`,
     size: 'slim',
     body: html`
-      <p class="mt0">Sie verwenden Version ${esc(info.current)}.
+      <p class="mt0">Sie verwenden Version ${info.current}.
       ${info.released ? raw(`Die neue Fassung wurde am ${esc(fmtDate(String(info.released).slice(0, 10)))} veröffentlicht.`) : ''}</p>
       ${info.notes ? raw(`<div class="notice mt16" style="white-space:pre-wrap">${esc(info.notes)}</div>`) : ''}
       <p class="small muted mt16">${WEB
@@ -635,7 +635,7 @@ export async function checkForUpdate(box, { silent = false } = {}) {
         ${info.notes ? raw(`<div class="mt8" style="white-space:pre-wrap">${esc(info.notes)}</div>`) : ''}
         <div class="row mt16" style="gap:8px">
           <button class="btn primary" id="uGo">${icon('export', 15)} ${WEB ? 'Aktualisieren' : 'Herunterladen und installieren'}</button>
-          <span class="muted small">${esc(bytes(info.size))}</span>
+          <span class="muted small">${bytes(info.size)}</span>
         </div>
         <div id="uProgress" class="mt8"></div>
       </div>`;

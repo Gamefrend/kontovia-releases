@@ -55,16 +55,16 @@ async function draw(root) {
         <div class="card-head"><h3>${icon('building', 16)} Firmendaten</h3><span class="sub">erscheinen im Kopf jedes Berichts</span></div>
         <div class="card-body">
           <div class="form-grid">
-            <div class="field full"><label>Firma</label><input id="s_companyName" value="${esc(s.companyName || '')}"></div>
-            <div class="field full"><label>Inhaber / Ansprechpartner</label><input id="s_ownerName" value="${esc(s.ownerName || '')}"></div>
-            <div class="field full"><label>Straße und Hausnummer</label><input id="s_street" value="${esc(s.street || '')}"></div>
-            <div class="field"><label>PLZ</label><input id="s_zip" value="${esc(s.zip || '')}"></div>
-            <div class="field"><label>Ort</label><input id="s_city" value="${esc(s.city || '')}"></div>
-            <div class="field"><label>Steuernummer</label><input id="s_taxNumber" value="${esc(s.taxNumber || '')}"></div>
-            <div class="field"><label>USt-IdNr.</label><input id="s_vatId" value="${esc(s.vatId || '')}"></div>
-            <div class="field full"><label>Zuständiges Finanzamt</label><input id="s_taxOffice" value="${esc(s.taxOffice || '')}"></div>
-            <div class="field"><label>E-Mail</label><input id="s_email" value="${esc(s.email || '')}"></div>
-            <div class="field"><label>Telefon</label><input id="s_phone" value="${esc(s.phone || '')}"></div>
+            <div class="field full"><label>Firma</label><input id="s_companyName" value="${s.companyName || ''}"></div>
+            <div class="field full"><label>Inhaber / Ansprechpartner</label><input id="s_ownerName" value="${s.ownerName || ''}"></div>
+            <div class="field full"><label>Straße und Hausnummer</label><input id="s_street" value="${s.street || ''}"></div>
+            <div class="field"><label>PLZ</label><input id="s_zip" value="${s.zip || ''}"></div>
+            <div class="field"><label>Ort</label><input id="s_city" value="${s.city || ''}"></div>
+            <div class="field"><label>Steuernummer</label><input id="s_taxNumber" value="${s.taxNumber || ''}"></div>
+            <div class="field"><label>USt-IdNr.</label><input id="s_vatId" value="${s.vatId || ''}"></div>
+            <div class="field full"><label>Zuständiges Finanzamt</label><input id="s_taxOffice" value="${s.taxOffice || ''}"></div>
+            <div class="field"><label>E-Mail</label><input id="s_email" value="${s.email || ''}"></div>
+            <div class="field"><label>Telefon</label><input id="s_phone" value="${s.phone || ''}"></div>
           </div>
         </div>
       </div>
@@ -86,8 +86,8 @@ async function draw(root) {
               <option value="ist" ${s.accountingBasis === 'ist' ? 'selected' : ''}>Zahlungseingang – Ist-Versteuerung (§ 20 UStG)</option>
               <option value="soll" ${s.accountingBasis === 'soll' ? 'selected' : ''}>Rechnungsdatum – Soll-Versteuerung</option>
             </select>
-            <span class="hint">Gilt für die Voranmeldung und die Sicht von Übersicht und Gewinn &amp; Verlust.
-            Die Anlage EÜR rechnet immer nach Zahlungsfluss (§ 11 EStG).</span>
+            <span class="hint">Gilt für die Voranmeldung und die Umsatzsteuer-Angaben in der Übersicht.
+            Einnahmen, Ausgaben und Gewinn zählen überall am Zahlungstag – wie in der Anlage EÜR (§ 11 EStG).</span>
           </div>
           <div class="form-grid">
             <div class="field">
@@ -115,7 +115,7 @@ async function draw(root) {
             </div>
             <div class="field">
               <label>Erstes Buchungsjahr</label>
-              <input id="s_fiscalYear" type="number" min="2000" max="2100" value="${esc(s.fiscalYear || new Date().getFullYear())}">
+              <input id="s_fiscalYear" type="number" min="2000" max="2100" value="${s.fiscalYear || new Date().getFullYear()}">
               <span class="hint">Nur zur Orientierung – die Auswertungen richten sich nach dem jeweils gewählten Zeitraum.</span>
             </div>
           </div>
@@ -248,6 +248,7 @@ async function draw(root) {
               <option value="dashboard" ${s.startView === 'dashboard' ? 'selected' : ''}>Übersicht</option>
               <option value="transactions" ${s.startView === 'transactions' ? 'selected' : ''}>Buchungen</option>
               <option value="calendar" ${s.startView === 'calendar' ? 'selected' : ''}>Kalender</option>
+              <option value="todos" ${s.startView === 'todos' ? 'selected' : ''}>Aufgaben</option>
             </select>
           </div>
         </div>
