@@ -6,7 +6,7 @@ import {
 import { icon, modal, confirmDialog, askPassword, ok, err, warn, toast, emptyState } from '../lib/ui.js';
 import { store, sel, commit, saveNow, setDb, verifyAudit, lockedUntil } from '../lib/store.js';
 import { refresh, navigate, router } from '../lib/router.js';
-import { applyTheme, appInfo } from '../app.js';
+import { applyTheme, appInfo, lockNow } from '../app.js';
 import { renderCloudCard, renderUpdateCard, openConflicts } from './cloudpanel.js';
 import { renderCalendarCard } from './calendarsync.js';
 import { table, mountTables } from '../lib/table.js';
@@ -204,12 +204,13 @@ async function draw(root) {
             <div class="field">
               <label>Buchungen festschreiben bis einschließlich</label>
               <div class="row" style="gap:8px">
-                <input type="date" id="lockDate" value="${until || ''}" style="flex:1">
+                <input type="date" id="lockDate" value="${until || ''}" max="${todayISO()}" style="flex:1">
                 <button class="btn" id="btnLockPeriod">Festschreiben</button>
               </div>
               <span class="hint">Festgeschriebene Buchungen lassen sich nicht mehr ändern oder löschen,
               sondern nur noch stornieren. Das ist der übliche Umgang mit einem abgeschlossenen
-              und ans Finanzamt gemeldeten Zeitraum.</span>
+              und ans Finanzamt gemeldeten Zeitraum. Noch offene Rechnungen daraus lassen sich
+              weiterhin als bezahlt vermerken.</span>
             </div>
             ${until ? raw(`<div class="notice ok">Festgeschrieben bis <strong>${esc(fmtDate(until))}</strong>.</div>`) : raw('<div class="notice">Bisher ist nichts festgeschrieben.</div>')}
           </div>
@@ -374,7 +375,7 @@ function wire(root) {
     saveNow();
   });
 
-  $('#btnLock', root).addEventListener('click', () => api.vault.lock());
+  $('#btnLock', root).addEventListener('click', () => lockNow());
   $('#btnFolder', root)?.addEventListener('click', () => api.app.openDataFolder());
 
   $('#btnPw', root).addEventListener('click', async () => {
@@ -439,11 +440,16 @@ function wire(root) {
 
   $('#btnLockPeriod', root).addEventListener('click', async () => {
     const date = $('#lockDate', root).value;
+    const bisher = lockedUntil();
     if (!date) { warn('Bitte ein Datum wählen'); return; }
-    const affected = sel.transactions().filter((t) => t.date <= date).length;
+    // Festgeschrieben wird Abgeschlossenes. Ein Datum in der Zukunft sperrte
+    // Zeiträume, in denen noch gebucht werden muss – und das für immer.
+    if (date > todayISO()) { warn('Datum liegt in der Zukunft', 'Festschreiben lässt sich nur ein Zeitraum, der schon vorbei ist – höchstens bis heute.'); return; }
+    if (bisher && date <= bisher) { warn('Schon festgeschrieben', `Bis zum ${fmtDate(bisher)} ist bereits festgeschrieben. Wählen Sie ein späteres Datum.`); return; }
+    const affected = sel.transactions().filter((t) => t.date <= date && (!bisher || t.date > bisher)).length;
     const yes = await confirmDialog({
       title: 'Zeitraum festschreiben?',
-      text: `${affected} Buchungen bis zum ${fmtDate(date)} lassen sich danach nicht mehr ändern oder löschen – nur noch stornieren. Das lässt sich nicht zurücknehmen.`,
+      text: `${affected} ${bisher ? 'weitere ' : ''}Buchungen bis zum ${fmtDate(date)} lassen sich danach nicht mehr ändern oder löschen – nur noch stornieren. Offene Rechnungen lassen sich weiterhin als bezahlt vermerken. Das Festschreiben lässt sich nicht zurücknehmen.`,
       confirmLabel: 'Festschreiben', danger: true,
     });
     if (!yes) return;

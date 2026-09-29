@@ -7,6 +7,7 @@ import {
 import { icon, modal, confirmDialog, ok, warn, emptyState } from '../lib/ui.js';
 import { store, sel, upsertAppointment, deleteAppointment, commit, applyTodoChanges, newTodoDraft } from '../lib/store.js';
 import { depositInfo, isVoidPart } from '../lib/calc.js';
+import { expandAppointments } from '../lib/termine.js';
 import { navigate, refresh } from '../lib/router.js';
 import { openTransactionDialog } from './transactions.js';
 import { openCalendarSyncDialog, statusText } from './calendarsync.js';
@@ -22,33 +23,6 @@ const state = {
 };
 
 const FREQ = { none: 'einmalig', weekly: 'wöchentlich', biweekly: 'alle zwei Wochen', monthly: 'monatlich', yearly: 'jährlich' };
-
-/* -------------------------------------------------------------------------- */
-/* Wiederholungen auflösen                                                     */
-/* -------------------------------------------------------------------------- */
-
-export function expandAppointments(appts, from, to) {
-  const out = [];
-  for (const a of appts) {
-    const freq = a.recurrence?.freq || 'none';
-    if (freq === 'none') {
-      if (a.date >= from && a.date <= to) out.push({ ...a, occurrence: a.date });
-      continue;
-    }
-    const until = a.recurrence?.until || to;
-    let d = a.date;
-    let guard = 0;
-    while (d <= to && d <= until && guard++ < 1200) {
-      if (d >= from) out.push({ ...a, occurrence: d, isRepeat: d !== a.date });
-      if (freq === 'weekly') d = addDays(d, 7);
-      else if (freq === 'biweekly') d = addDays(d, 14);
-      else if (freq === 'monthly') d = addMonths(d, 1);
-      else if (freq === 'yearly') d = addMonths(d, 12);
-      else break;
-    }
-  }
-  return out;
-}
 
 /** Zahlungstermine (Fälligkeiten offener Rechnungen) als Kalendereinträge. */
 function dueEntries(from, to) {
@@ -359,9 +333,14 @@ export function openAppointmentDialog(id, preset = {}) {
     createdAt: new Date().toISOString(),
   };
   const isNew = !existing;
+  /* Stand nach dem ersten Zeichnen; weicht die Eingabe davon ab, fragt das
+     Fenster vor dem Wegklicken nach – wie beim Erfassen einer Buchung. */
+  let ausgangslage = null;
+  let fertig = false;
 
   const m = modal({
     title: isNew ? 'Neuer Termin' : 'Termin bearbeiten',
+    confirmDismiss: () => ausgangslage !== null && !fertig && stand() !== ausgangslage,
     body: '<div id="apptForm"></div>',
     foot: `
       <div class="left row" style="gap:8px">
@@ -601,10 +580,17 @@ export function openAppointmentDialog(id, preset = {}) {
     a.recurrence = { freq, until: g('until').value, ...google };
   }
 
-  m.root.querySelector('#btnCancel').addEventListener('click', () => m.close());
+  /** Alles, was „Abbrechen“ verwerfen würde – Termin, Aufgaben und ein angefangener Aufgabentitel. */
+  function stand() {
+    collect();
+    return JSON.stringify([a, todos, geloest.map((t) => t.id), form.querySelector('#t_todoNew')?.value.trim() || '']);
+  }
+
+  m.root.querySelector('#btnCancel').addEventListener('click', () => m.dismiss());
   m.root.querySelector('#btnSave').addEventListener('click', async () => {
     collect();
     if (!a.title) { warn('Bitte einen Titel eintragen'); return; }
+    fertig = true;
     await upsertAppointment(a);
     await saveTodos();
     m.close();
@@ -613,6 +599,7 @@ export function openAppointmentDialog(id, preset = {}) {
   });
   m.root.querySelector('#btnDel')?.addEventListener('click', async () => {
     if (!await confirmDialog({ title: 'Termin löschen?', text: `Der Termin wird entfernt. Verknüpfte Buchungen${todosVorher.size ? ' und Aufgaben' : ''} bleiben erhalten.`, confirmLabel: 'Löschen', danger: true })) return;
+    fertig = true;
     await deleteAppointment(a.id);
     m.close();
     ok('Termin gelöscht');
@@ -621,6 +608,7 @@ export function openAppointmentDialog(id, preset = {}) {
   m.root.querySelector('#btnDone')?.addEventListener('click', async () => {
     collect();
     a.done = !a.done;
+    fertig = true;
     await upsertAppointment(a);
     await saveTodos();
     m.close();
@@ -629,6 +617,7 @@ export function openAppointmentDialog(id, preset = {}) {
   });
 
   draw();
+  ausgangslage = stand();
 }
 
 /** Auswahlliste, um bestehende Buchungen mit einem Termin zu verbinden. */

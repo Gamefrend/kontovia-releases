@@ -6,12 +6,12 @@ import {
 } from '../lib/util.js';
 import { icon, ok, err, warn, modal, confirmDialog, amountCell, emptyState } from '../lib/ui.js';
 import {
-  store, sel, upsertTransaction, deleteTransaction, voidTransaction, isLockedDate,
+  store, sel, upsertTransaction, deleteTransaction, voidTransaction, isLockedDate, lockedUntil,
   newTransactionDraft, commit, nextInvoiceNumber, upsertEntity, removeAttachmentRecord,
 } from '../lib/store.js';
 import { defaultPeriod, periodControl } from '../lib/period.js';
 import { mountTable, tableState } from '../lib/table.js';
-import { navigate, refresh } from '../lib/router.js';
+import { router, refresh } from '../lib/router.js';
 import { vatTreatment, depositInfo, isVoidPart, formLine } from '../lib/calc.js';
 
 const api = window.kontovia;
@@ -54,6 +54,10 @@ export async function render(root, params = {}, { actions } = {}) {
   if (params.type) st.filters.type = params.type;
   if (params.datum) st.filters.datum = params.datum;
   if (params.period) Object.assign(period, params.period);
+  // Die Vorgaben gelten einmal, beim Hinspringen. Sonst setzte jedes Neuzeichnen
+  // nach dem Speichern einer Buchung (refresh) Filter und Zeitraum zurück, die
+  // man inzwischen geändert hatte.
+  if (router.params === params) router.params = {};
   // Wurde der letzte Beleg zu einem Ort geändert, fällt der Ort aus der Liste –
   // ein Filter darauf würde sonst unsichtbar weiterwirken.
   if (st.filters.location && !knownLocations().includes(st.filters.location)) delete st.filters.location;
@@ -302,9 +306,11 @@ function wireRows(el) {
     e.stopPropagation();
     const tx = sel.transaction(b.dataset.pay);
     // Das Zahlungsdatum bestimmt bei der Ist-Besteuerung, in welchen Zeitraum
-    // die Buchung fällt. Es nachträglich in einem festgeschriebenen Zeitraum
-    // zu setzen, würde eine bereits abgeschlossene Periode verändern.
-    if (isLockedDate(tx.date) || isLockedDate(todayISO())) {
+    // die Buchung fällt. In einem festgeschriebenen Zeitraum darf es nicht
+    // liegen. Eine festgeschriebene, aber noch offene Rechnung lässt sich
+    // dagegen weiter als bezahlt vermerken: Die Zahlung heute ändert am
+    // abgeschlossenen Zeitraum nichts (siehe nurZahlungNachgetragen).
+    if (isLockedDate(todayISO())) {
       err('Zeitraum ist festgeschrieben', 'Das Zahlungsdatum lässt sich hier nicht mehr nachtragen.');
       return;
     }
@@ -349,7 +355,12 @@ export function openTransactionDialog(id, type = 'expense') {
   const isNew = !existing;
   type = tx.type;
   const klein = store.db.settings.taxMode === 'kleinunternehmer';
-  const locked = existing && isLockedDate(existing.date);
+  // Festgeschrieben ist eine Buchung, deren Datum oder Zahlung im
+  // festgeschriebenen Zeitraum liegt – auch eine Vorauszahlung auf eine
+  // spätere Rechnung gehört zum Zeitraum, in dem sie floss.
+  const locked = !!existing && (isLockedDate(existing.date) || (!!existing.paidDate && isLockedDate(existing.paidDate)));
+  // Offen und festgeschrieben: Die Zahlung darf noch eingetragen werden.
+  const zahlungOffen = locked && !existing.paidDate;
   // Original und Gegenbuchung eines Stornos bleiben, wie sie sind – sonst höben
   // sie sich nicht mehr auf.
   const stornoTeil = !!existing && isVoidPart(existing);
@@ -399,7 +410,8 @@ export function openTransactionDialog(id, type = 'expense') {
     const asset = tx.assetId ? sel.assets().find((a) => a.id === tx.assetId) : null;
 
     form.innerHTML = html`
-      ${locked ? raw(`<div class="notice warn mb16">Diese Buchung liegt im festgeschriebenen Zeitraum (bis ${esc(store.db.locks.at(-1)?.until || '')}). Sie kann nicht mehr geändert, sondern nur noch storniert werden.</div>`) : ''}
+      ${locked ? raw(`<div class="notice warn mb16">Diese Buchung liegt im festgeschriebenen Zeitraum (bis ${esc(fmtDate(lockedUntil()))}). Sie kann nicht mehr geändert, sondern nur noch storniert werden.${zahlungOffen
+        ? ' Die Zahlung lässt sich weiterhin eintragen – mit einem Datum nach der Festschreibung, zusammen mit dem Zahlungskonto.' : ''}</div>`) : ''}
       ${tx.voided ? raw(`<div class="notice danger mb16">Diese Buchung wurde${tx.voidedAt ? ` am ${esc(fmtDate(tx.voidedAt.slice(0, 10)))}` : ''} storniert${tx.voidReason ? ` (${esc(tx.voidReason)})` : ''}.
         Eine Gegenbuchung hebt sie auf; beide bleiben unverändert erhalten und lassen sich weder bearbeiten noch löschen.</div>`) : ''}
       ${tx.isReversal ? raw('<div class="notice mb16">Das ist die Gegenbuchung zu einem Storno. Sie hebt die stornierte Buchung auf und lässt sich weder bearbeiten noch löschen.</div>') : ''}
@@ -855,6 +867,19 @@ export function openTransactionDialog(id, type = 'expense') {
     });
   }
 
+  /**
+   * Bei einer festgeschriebenen, noch offenen Buchung: Wurde nur die Zahlung
+   * eingetragen – mit einem Datum nach der Festschreibung, samt Zahlungskonto –
+   * und sonst nichts verändert? Das ist ein neuer Vorgang im offenen Zeitraum
+   * und lässt den abgeschlossenen, wie er erklärt wurde. Ohne diese Ausnahme
+   * blieb jede zum Stichtag offene Rechnung für immer offen.
+   */
+  function nurZahlungNachgetragen() {
+    if (!zahlungOffen || !tx.paidDate || isLockedDate(tx.paidDate) || ausgangslage === null) return false;
+    const ohneZahlung = ({ paidDate, accountId, ...rest }) => JSON.stringify(rest);
+    return ohneZahlung(tx) === ohneZahlung(JSON.parse(ausgangslage));
+  }
+
   /** Prüft die Eingaben und schreibt die Buchung. Gibt zurück, ob gespeichert wurde. */
   async function saveTransaction() {
     collect();
@@ -866,13 +891,19 @@ export function openTransactionDialog(id, type = 'expense') {
       return false;
     }
     if (stornoTeil) { err('Teil eines Stornos', 'Stornierte Buchungen und Gegenbuchungen bleiben unverändert. Duplizieren Sie die Buchung, um sie neu zu erfassen.'); return false; }
-    if (locked) { err('Zeitraum ist festgeschrieben', 'Bitte stornieren Sie die Buchung statt sie zu ändern.'); return false; }
-    // Auch in die andere Richtung sperren: eine Buchung nachträglich in einen
-    // abgeschlossenen Zeitraum zurückzudatieren, würde eine festgeschriebene
-    // Periode verändern – gleich, ob die Buchung neu ist oder nur umdatiert
-    // wird. Dasselbe gilt für das Zahlungsdatum, das bei der Ist-Besteuerung
-    // über die Periodenzuordnung entscheidet.
-    if (isLockedDate(tx.date) || (tx.paidDate && isLockedDate(tx.paidDate))) {
+    if (locked) {
+      if (!nurZahlungNachgetragen()) {
+        err('Zeitraum ist festgeschrieben', zahlungOffen
+          ? 'Eintragen lässt sich nur noch die Zahlung (Datum nach der Festschreibung, Zahlungskonto). Alles andere bitte stornieren und neu erfassen.'
+          : 'Bitte stornieren Sie die Buchung statt sie zu ändern.');
+        return false;
+      }
+    } else if (isLockedDate(tx.date) || (tx.paidDate && isLockedDate(tx.paidDate))) {
+      // Auch in die andere Richtung sperren: eine Buchung nachträglich in einen
+      // abgeschlossenen Zeitraum zurückzudatieren, würde eine festgeschriebene
+      // Periode verändern – gleich, ob die Buchung neu ist oder nur umdatiert
+      // wird. Dasselbe gilt für das Zahlungsdatum, das bei der Ist-Besteuerung
+      // über die Periodenzuordnung entscheidet.
       err('Zeitraum ist festgeschrieben',
         'Für diesen Zeitraum sind keine neuen Buchungen mehr möglich. Wählen Sie ein Datum nach der Festschreibung.');
       return false;
@@ -896,7 +927,7 @@ export function openTransactionDialog(id, type = 'expense') {
     refresh();
   });
   m.root.querySelector('#btnDelete')?.addEventListener('click', async () => {
-    if (isLockedDate(tx.date)) { err('Festgeschriebene Buchungen dürfen nicht gelöscht werden', 'Nutzen Sie stattdessen „Stornieren“.'); return; }
+    if (locked) { err('Festgeschriebene Buchungen dürfen nicht gelöscht werden', 'Nutzen Sie stattdessen „Stornieren“.'); return; }
     const yes = await confirmDialog({
       title: 'Buchung löschen?',
       text: 'Die Buchung wird endgültig entfernt. Der Vorgang wird im Änderungsjournal vermerkt.',

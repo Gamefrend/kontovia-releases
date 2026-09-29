@@ -1,12 +1,12 @@
 {
-  "version": "1.7.0",
-  "released": "2026-09-29T12:19:10.599Z",
-  "notes": "* Neu: Aufgaben. Eine eigene Liste zum Abhaken (Strg+7), sortiert nach überfällig,\n  heute, nächste sieben Tage, später und ohne Datum. Eine Aufgabe kann zu einem Termin\n  gehören, muss aber nicht – ohne eigenes Datum gilt dann der Termin als Frist, bei\n  Serien das nächste Vorkommen. Im Termin stehen seine Aufgaben zum Abhaken und\n  Ergänzen, im Kalender zeigt „✓ 1/3“, wie weit sie sind. Auf Wunsch auch als Modul\n  „Offene Aufgaben“ in der Übersicht (über „Anpassen“ einblenden).\n* Zahlungen zählen in dem Monat, in dem das Geld fließt. Übersicht, Verlauf und\n  Gewinn & Verlust zählen Einnahmen und Ausgaben jetzt immer am Zahlungstag – wie die\n  Anlage EÜR. Bisher fehlte bei Soll-Versteuerung etwa im September die Zahlung auf\n  eine August-Rechnung. Nur die Umsatzsteuer folgt weiter Ihrer Einstellung. Unter den\n  Zahlen steht, was darin steckt: „inkl. … aus Rechnungen anderer Zeiträume“ und\n  „noch offen: …“ – ein Klick zeigt die Buchungen dazu.\n* Buchungsliste nach Buchungs- oder Zahlungsdatum. Die Liste zeigt jetzt auch\n  Buchungen, die im Zeitraum bezahlt wurden, obwohl ihr Datum davor oder danach liegt –\n  etwa eine Restzahlung, die vor dem Veranstaltungstag eingeht. Solche Zeilen tragen\n  den Hinweis „Zahlung …“. Über den Filter am Datum lässt sich die Sicht umstellen. Die\n  Summen trennen, was bezahlt ist, von dem, was noch offen ist.\n* Sonderzeichen bleiben, wie Sie sie eingeben. In vielen Formularen wurden ' & \" < >\n  beim Speichern umgeschrieben, mit jedem Speichern eine Stufe mehr (aus „Kunde's“\n  wurde `Kunde&amp;amp;#39;s`). Das ist behoben, und bereits veränderte Texte werden beim\n  Öffnen automatisch wiederhergestellt und im Änderungsjournal vermerkt.\n  Festgeschriebene und stornierte Buchungen bleiben unverändert.\n* Bitte alle Geräte, die denselben Cloud-Abgleich nutzen, auf 1.7 bringen: Ältere\n  Fassungen kennen die Aufgaben nicht und zeigen sie nicht an (gelöscht werden sie\n  dadurch nicht).",
+  "version": "1.7.1",
+  "released": "2026-09-29T12:48:17.369Z",
+  "notes": "Korrekturen nach einer Durchsicht der ganzen Anwendung. Falls Sie von 1.6 kommen, ist\nauch alles aus 1.7.0 enthalten: die Aufgabenliste (Strg+7), Zahlungen im Monat des\nZahlungseingangs und Sonderzeichen, die beim Speichern nicht mehr umgeschrieben werden.\n\n* Festgeschriebene Rechnungen lassen sich noch als bezahlt vermerken. Bisher blieb\n  jede Rechnung, die beim Festschreiben offen war, für immer offen – auch wenn das Geld\n  später kam. Jetzt lässt sich die Zahlung eintragen, mit einem Datum nach der\n  Festschreibung; alles andere an der Buchung bleibt gesperrt. Festschreiben geht\n  außerdem nur noch bis heute, nicht versehentlich in die Zukunft.\n* Beträge mit Tausenderpunkt. „1.500“ wurde zu 1,50 €, „1.234.567“ sogar zu 0 €.\n  Jetzt ergibt das 1.500,00 € bzw. 1.234.567,00 €.\n* Monatliche Termine am 31. rutschten ab Februar für immer auf den 28. Jetzt\n  stehen sie in jedem Monat am richtigen Tag, in kürzeren Monaten am Monatsende.\n* Tab-Taste. Nach dem Schließen eines Abschreibungsplans oder nach einer\n  automatischen Sperre mit offenem Fenster reagierte die Tab-Taste bis zum Neustart\n  nicht mehr.\n* Sperren. Unter Windows ließ sich über das Menü (etwa Strg+N) über dem\n  Sperrbildschirm ein Fenster mit Kategorien, Kontakten und Konten öffnen. Beim\n  Sperren verlässt der entschlüsselte Bestand jetzt auch die Oberfläche, und was Sie\n  gerade eben geändert haben, wird vor dem Sperren noch gespeichert.\n* Filter bleiben, wie Sie sie setzen. Wer aus der Übersicht in die Buchungsliste\n  sprang, bekam nach jedem Speichern einer Buchung die alten Filter und den alten\n  Zeitraum zurück.\n* Termine und Aufgaben fragen vor dem Schließen nach, wenn Eingaben noch nicht\n  gespeichert sind – wie schon beim Erfassen einer Buchung.\n* Kleinere Korrekturen: Kontenblätter zählen Bewegungen vor dem Stichtag des\n  Anfangsbestands nicht mehr doppelt; der Umsatz je Kontakt wird durch Stornos nicht\n  mehr negativ; Hinweise nennen die EÜR-Zeilen des jeweiligen Vordrucks; ein Backslash\n  in Kalenderdateien bleibt erhalten; eine Aufgabe zu einer ausgelaufenen Terminserie\n  gilt bis zu deren letztem Termin; das Update lädt nur, was die geprüfte\n  Versionsdatei nennt.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "46b43d8bd2a8bada651d7be771e288ff79db43b8ce6e40272ffa0a7d97a08094",
-      "size": 36975
+      "sha256": "322b899c74cfb726c1e44f4d497f7f6a9e5238acc5f213b534b9ec925dff0c60",
+      "size": 37359
     },
     {
       "path": "icons/apple-touch-icon.png",
@@ -35,8 +35,8 @@
     },
     {
       "path": "lib/calc.js",
-      "sha256": "94f136dc6ea19b37a984de0b41193b4aab857d7deda45e5df00cf60907d5d368",
-      "size": 41472
+      "sha256": "ffe2ede4316eec2620f3abdc2a7fd6e0cae14b4b3442257c1308808ce1ab5105",
+      "size": 42654
     },
     {
       "path": "lib/euer.js",
@@ -60,8 +60,8 @@
     },
     {
       "path": "lib/ics.js",
-      "sha256": "f608e6271bacd053b9a1cdb4b4975511ff8e944fa9302752a8c2472ff600d404",
-      "size": 8426
+      "sha256": "df336d658d11c69404c2189b9f61c7422966ffa90482b2ff4d960862ba2c1b9e",
+      "size": 8609
     },
     {
       "path": "lib/merge.js",
@@ -85,8 +85,8 @@
     },
     {
       "path": "lib/reports.js",
-      "sha256": "dc6d2b2462e1bf4a70abab43dd700224e0007c3cee1162636734265c1de62de1",
-      "size": 33051
+      "sha256": "133e46175b9c6543aa6082f771d9696678a46aca92ee3c52a89cc202eba4c4fd",
+      "size": 32646
     },
     {
       "path": "lib/router.js",
@@ -95,13 +95,13 @@
     },
     {
       "path": "lib/store.js",
-      "sha256": "ee63f6db194dae874259728eb1f8c055c18a6ead258c3b429c09ad7517c34d6c",
-      "size": 30600
+      "sha256": "02964ba6059a9be042305adbf8e0ba036e12a35037fa1cd6d14335bdba204bfb",
+      "size": 31035
     },
     {
       "path": "lib/sync.js",
-      "sha256": "265bbea4b29b0188deb86143c2cedd168d45a9e386bfded22c11d72053380f59",
-      "size": 6254
+      "sha256": "5d808cef2cd44e9136355f9f019eb5c7c46361373652a4582f60aa4f69ba57ed",
+      "size": 6531
     },
     {
       "path": "lib/table.js",
@@ -109,9 +109,14 @@
       "size": 21204
     },
     {
+      "path": "lib/termine.js",
+      "sha256": "f021905b4285dcda1368974e35b754033eb6aed4ef82e748e49fdc6176fa30f2",
+      "size": 1523
+    },
+    {
       "path": "lib/ui.js",
-      "sha256": "ef06a869de9c9e9c16617facb6261e417fedcee3cf648bda0de8e788f2253b15",
-      "size": 40363
+      "sha256": "82896586a9ab60ad58fc0a501c3bffc062cd4e42d233368b10d86c7e1cd50880",
+      "size": 40741
     },
     {
       "path": "lib/updates.js",
@@ -120,12 +125,12 @@
     },
     {
       "path": "lib/util.js",
-      "sha256": "7177d033e01cba78a81a5cf12e6ecbaa2ceada5ce1e91812d78559942bdd81fd",
-      "size": 11864
+      "sha256": "d3c629ee1c29a7addecc093b4202d1405599a63570f656831e3b4f0a78154d43",
+      "size": 12101
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "acf0b4679afccb69a615db3333d238f8f36fbc02b4407f75519b0ffc3f085f18",
+      "sha256": "cd02764b5ef92f8dd5f293b5cad3d99b4f98b25f068058a4144a3550ba184e09",
       "size": 886
     },
     {
@@ -145,8 +150,8 @@
     },
     {
       "path": "views/calendar.js",
-      "sha256": "b2c750e62a00cda3c8d85493bc7eab02b06c9030615f97e74898c52757141587",
-      "size": 31809
+      "sha256": "e19455a332057b950a70f64f239534882ca299d41dde505cb9b4498b36fe6a20",
+      "size": 31508
     },
     {
       "path": "views/calendarsync.js",
@@ -165,8 +170,8 @@
     },
     {
       "path": "views/export.js",
-      "sha256": "2e510dd510e1626531d28b1309f3ce3b0b673e0b7a1ec0b49fb3c5c2c90596cf",
-      "size": 20278
+      "sha256": "68f97901c55b22d5cb1356058d6b02aa2afcb0de46f81bd102e38d7e75c44def",
+      "size": 20348
     },
     {
       "path": "views/help.js",
@@ -175,28 +180,28 @@
     },
     {
       "path": "views/master.js",
-      "sha256": "5db4b3df45676d4d8af90e796ad05dece29741bef244781a864372da3940729f",
-      "size": 28081
+      "sha256": "1aa03b1a62bfbabc29e95e359ded699b8662ec3b366c36816d335391e5d97644",
+      "size": 28335
     },
     {
       "path": "views/reports.js",
-      "sha256": "713359ce85b572a2d3cc5d5cb2872a0d899aae6a1bf905bb4da21d41ec474277",
-      "size": 42783
+      "sha256": "b78d9f36d167af889d5fdf5f887b7b127f76128ce041a0c67b34a564ae03b1f4",
+      "size": 42301
     },
     {
       "path": "views/settings.js",
-      "sha256": "3ac14711d47e8e4a50c7b6ba182fa8b3992634a91a773b300e74bb7dfc60e870",
-      "size": 26512
+      "sha256": "f6ba26e9723e305f56f5fa7efcc2eae8f726d3d95f860033fbdeba1fab36728f",
+      "size": 27286
     },
     {
       "path": "views/todos.js",
-      "sha256": "cb773255f688e806aae8887aacb7353efedaffcaf13fa6bcdf06b2b745599357",
-      "size": 14593
+      "sha256": "e00dfe8599830664af3d2ba885be2c28a63a3999cd9e5f96e43656a893bee2a5",
+      "size": 15348
     },
     {
       "path": "views/transactions.js",
-      "sha256": "8a59ef149d7a650b12e2186e35b355c8a8e1f318135478200d07be4e57abd52d",
-      "size": 59086
+      "sha256": "8f58df43a64e840bf15485318a06dd84477d2ab6c6e2c7e121657b61d99b6751",
+      "size": 60950
     },
     {
       "path": "web/ablage.js",
@@ -205,7 +210,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "ed5ccf5d17962f262287c39e5a8c7d15aeed0eccd80ee70891bb38a1a101c8ae",
+      "sha256": "373b0a7f7e9164ea40642f4f6c4c5edce7769b738ae5b419d2ac6378e8050e2d",
       "size": 6944
     },
     {
@@ -215,8 +220,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "4d38776f192e31d124b4410ce4351f989de9751e947ad884d8d778698f49faae",
-      "size": 25857
+      "sha256": "6077faf0afc2a772d248c293d9fdf61429cd0f064dad28514fbcb158c32055d2",
+      "size": 26027
     },
     {
       "path": "web/cloud.js",

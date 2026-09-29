@@ -182,7 +182,13 @@ document.addEventListener('keydown', (e) => {
   const k = e.key.toLowerCase();
   const views = { 1: 'dashboard', 2: 'transactions', 3: 'calendar', 4: 'reports', 5: 'export', 6: 'master', 7: 'todos', ',': 'settings' };
   let action = null;
-  if (k === 'l') { if (!vault.isLocked) { e.preventDefault(); doLock('manuell'); } return; }
+  if (k === 'l') {
+    if (vault.isLocked) return;
+    e.preventDefault();
+    // Die Oberfläche schreibt zuerst ihre letzten Änderungen und sperrt dann selbst.
+    if (hoerer.menu.size) send('menu', { action: 'lock' }); else doLock('manuell');
+    return;
+  }
   if (views[k] && !e.shiftKey) action = { action: 'view', view: views[k] };
   else if (k === 's' && !e.shiftKey) action = { action: 'save' };
   else if (k === 'f' && !e.shiftKey) action = { action: 'search' };

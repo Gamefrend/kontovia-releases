@@ -5,7 +5,7 @@ import {
 } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, err } from '../lib/ui.js';
 import { store, sel, upsertEntity, deleteEntity } from '../lib/store.js';
-import { depreciationPlan, depreciationInRange, bookValue, EUER, EUER_ZEILEN, formLine, formYear } from '../lib/calc.js';
+import { depreciationPlan, depreciationInRange, bookValue, EUER, EUER_ZEILEN, formLine, formYear, isVoidPart } from '../lib/calc.js';
 import { refresh } from '../lib/router.js';
 import { table, mountTable, mountTables } from '../lib/table.js';
 
@@ -68,7 +68,7 @@ function categories(root) {
     <div class="notice mb16">
       Die Kategorie einer Buchung entscheidet, in welche Zeile der Anlage EÜR und auf welches
       Konto im DATEV-Export sie fließt. Die mitgelieferte Zuordnung folgt der Anlage EÜR
-      2024/2025 und dem ${store.db.settings.chartOfAccounts || 'SKR03'} – prüfen Sie sie einmal mit Ihrer Steuerberatung
+      (Vordruck ${formYear(new Date().getFullYear())}) und dem ${store.db.settings.chartOfAccounts || 'SKR03'} – prüfen Sie sie einmal mit Ihrer Steuerberatung
       und passen Sie sie hier an, wenn sich das Formular ändert.
     </div>
     <div class="card" id="catCard"></div>`;
@@ -147,8 +147,10 @@ const KIND = { customer: 'Kunde', supplier: 'Lieferant', both: 'Kunde & Lieferan
 
 function contacts(root) {
   const uses = usageMap('contactId');
+  // Stornierte Buchungen und ihre Gegenbuchungen heben sich auf und zählen
+  // beide nicht – nur die Gegenbuchung zu zählen, machte den Umsatz negativ.
   const umsatz = new Map();
-  for (const t of sel.liveTransactions()) if (t.contactId) umsatz.set(t.contactId, (umsatz.get(t.contactId) || 0) + t.gross);
+  for (const t of sel.transactions()) if (t.contactId && !isVoidPart(t)) umsatz.set(t.contactId, (umsatz.get(t.contactId) || 0) + t.gross);
   root.innerHTML = '<div class="card" id="conCard"></div>';
   mountTable($('#conCard', root), {
     id: 'stamm-kontakte',
@@ -245,7 +247,7 @@ function assets(root) {
       Wirtschaftsgüter über 800 € netto werden nicht sofort abgezogen, sondern über
       ihre Nutzungsdauer verteilt (lineare AfA, § 7 EStG). Kontovia rechnet monatsgenau
       ab dem Anschaffungsmonat und übernimmt den Betrag automatisch in Ihre
-      Betriebsausgaben und in Zeile 33 der Anlage EÜR.
+      Betriebsausgaben und in Zeile ${formLine(EUER.afaBeweglich, year)} der Anlage EÜR ${formYear(year)}.
     </div>
     <div class="card">
       <div class="card-head"><h3>Anlagenverzeichnis</h3><div class="spacer"></div>
@@ -289,7 +291,7 @@ function showPlan(id) {
     byYear.set(y, (byYear.get(y) || 0) + e.amount);
   }
   let rest = a.cost;
-  modal({
+  const m = modal({
     title: `Abschreibungsplan – ${a.name}`,
     body: html`
       <p class="mt0 small muted">Anschaffungskosten ${money(a.cost)} € · ${a.usefulLifeYears} Jahre linear ·
@@ -303,7 +305,8 @@ function showPlan(id) {
         <tfoot><tr><td>Summe</td><td class="num">${money(a.cost)} €</td><td></td></tr></tfoot>
       </table>`,
     foot: '<button class="btn primary" data-x>Schließen</button>',
-  }).root.querySelector('[data-x]').addEventListener('click', (e) => e.target.closest('.modal-backdrop').remove());
+  });
+  m.root.querySelector('[data-x]').addEventListener('click', () => m.close());
 }
 
 /* -------------------------------------------------------------------------- */

@@ -5,7 +5,7 @@
 
 import { html, raw, esc, $, int, fmtDateTime, debounce, MOD } from './lib/util.js';
 import { icon, toast, ok, err, warn, modal, passwordInput, wirePasswordToggles } from './lib/ui.js';
-import { store, setDb, subscribe, saveNow, sel, lockedUntil, setDevice, commit } from './lib/store.js';
+import { store, setDb, clearDb, subscribe, saveNow, sel, lockedUntil, setDevice, commit } from './lib/store.js';
 import { startAutoSync, syncState, onSync, syncNow } from './lib/sync.js';
 import { updateState, onUpdate, startUpdateWatch, markNotified } from './lib/updates.js';
 import { router, onNavigate, navigate, refresh } from './lib/router.js';
@@ -595,7 +595,7 @@ function renderShell() {
     const item = e.target.closest('[data-view]');
     if (item) { e.preventDefault(); navigate(item.dataset.view); }
   });
-  $('#lockBtn').addEventListener('click', () => api.vault.lock());
+  $('#lockBtn').addEventListener('click', () => lockNow());
   // Die Hülle wird beim Entsperren neu aufgebaut – ein bereits bekannter Fund
   // muss danach wieder sichtbar sein.
   renderUpdateButton();
@@ -674,6 +674,16 @@ onNavigate(async (view, params) => {
 /* Sperre, Menü, Tastatur                                                      */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Sperren auf Knopfdruck. Änderungen der letzten Augenblicke stehen womöglich
+ * noch zum Schreiben an (gespeichert wird leicht verzögert gebündelt) – nach
+ * dem Sperren ginge das nicht mehr, sie wären verloren.
+ */
+export async function lockNow() {
+  if (store.dirty) await saveNow();
+  await api.vault.lock();
+}
+
 api.on.locked(async ({ reason }) => {
   document.getElementById('overlays').innerHTML = '';
   // Ungesicherte Eingaben einer Ansicht sind mit dem Sperren verworfen.
@@ -682,6 +692,7 @@ api.on.locked(async ({ reason }) => {
   // Nach dem Entsperren gelten wieder die Zahlen ohne nicht gelistete Buchungen.
   scope.includeUnlisted = false;
   stopCalendarSync();
+  clearDb();
   const texts = {
     inaktiv: 'Kontovia wurde wegen Inaktivität gesperrt.',
     standby: 'Der Rechner ging in den Ruhezustand – Kontovia wurde gesperrt.',
@@ -697,6 +708,7 @@ api.on.locked(async ({ reason }) => {
 api.on.menu(async (payload) => {
   if (!store.db) return;
   switch (payload.action) {
+    case 'lock': await lockNow(); break;
     case 'view': navigate(payload.view, payload.params || {}); break;
     case 'check-update': await checkUpdateFromMenu(); break;
     case 'new-transaction': {

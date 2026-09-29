@@ -169,7 +169,7 @@ function wire(root, db, rows) {
   recht.setAttribute('tabindex', '0');
   recht.addEventListener('click', () => navigate('help', { tab: 'recht', anker: 'export' }));
 
-  $('#btnPackCsv', root).addEventListener('click', (e) => busy(e.target, async () => {
+  $('#btnPackCsv', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const datev = await datevOptions(db);
     if (!datev) return;
     const res = await api.file.saveMany({
@@ -179,7 +179,7 @@ function wire(root, db, rows) {
     if (res) ok('Unterlagen gespeichert', `${res.written.length} Dateien in ${res.dir}`);
   }));
 
-  $('#btnPackAll', root).addEventListener('click', (e) => busy(e.target, async () => {
+  $('#btnPackAll', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const datev = await datevOptions(db);
     if (!datev) return;
     const files = X.taxOfficePack(db, period, appInfo.version, datev);
@@ -203,7 +203,7 @@ function wire(root, db, rows) {
     }
   }));
 
-  $('#btnPackPdf', root).addEventListener('click', (e) => busy(e.target, async () => {
+  $('#btnPackPdf', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const res = await api.pdf.create({
       html: R.yearPackPdf(db, period),
       defaultName: `Jahresunterlagen_${period.from.slice(0, 4)}.pdf`,
@@ -211,11 +211,11 @@ function wire(root, db, rows) {
     if (res?.path) ok('PDF erstellt', res.path);
   }));
 
-  $('#btnPackPdfPreview', root).addEventListener('click', (e) => busy(e.target, async () => {
+  $('#btnPackPdfPreview', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
     await api.pdf.create({ html: R.yearPackPdf(db, period), defaultName: 'Jahresunterlagen.pdf', preview: true });
   }));
 
-  $('#btnDatev', root).addEventListener('click', (e) => busy(e.target, async () => {
+  $('#btnDatev', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const opts = await datevNumbersDialog(db, true);
     if (!opts) return;
     const stapel = X.datevFiles(db, period, opts);
@@ -234,7 +234,7 @@ function wire(root, db, rows) {
     if (res) ok(`${stapel.length} Buchungsstapel gespeichert`, `je Wirtschaftsjahr eine Datei in ${res.dir}`);
   }));
 
-  $('#btnGobd', root).addEventListener('click', (e) => busy(e.target, async () => {
+  $('#btnGobd', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const res = await api.file.saveMany({
       folderLabel: 'Zielordner für die Datenträgerüberlassung',
       files: X.gobdExport(db, period),
@@ -242,7 +242,7 @@ function wire(root, db, rows) {
     if (res) ok('Prüfungsordner erstellt', `${res.written.length} Dateien in ${res.dir}`);
   }));
 
-  $('#btnAttach', root).addEventListener('click', (e) => busy(e.target, async () => {
+  $('#btnAttach', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const yes = await confirmDialog({
       title: 'Belege unverschlüsselt ausleiten?',
       text: 'Die Dateien werden im Zielordner im Klartext abgelegt. Wählen Sie einen Ort, der ausreichend geschützt ist – kein ungesicherter Cloud-Ordner und kein USB-Stick, der herumliegt.',
@@ -272,7 +272,7 @@ function wire(root, db, rows) {
     if (res) ok('Belege exportiert', `${res.written.length} Dateien in ${res.dir}`);
   }));
 
-  $('#btnCsvTx', root).addEventListener('click', (e) => busy(e.target, async () => {
+  $('#btnCsvTx', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const p = await api.file.save({
       defaultName: `Buchungen_${period.from}_${period.to}.csv`,
       filters: [{ name: 'CSV-Tabelle', extensions: ['csv'] }],
@@ -281,12 +281,12 @@ function wire(root, db, rows) {
     if (p) ok('Tabelle gespeichert', p);
   }));
 
-  $('#btnCsvContacts', root).addEventListener('click', (e) => busy(e.target, async () => {
+  $('#btnCsvContacts', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const p = await api.file.save({ defaultName: 'Kontakte.csv', filters: [{ name: 'CSV-Tabelle', extensions: ['csv'] }], text: X.contactsCsv(db) });
     if (p) ok('Tabelle gespeichert', p);
   }));
 
-  $('#btnJson', root).addEventListener('click', (e) => busy(e.target, async () => {
+  $('#btnJson', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const yes = await confirmDialog({
       title: 'Unverschlüsselten Gesamtexport erstellen?',
       text: 'Die JSON-Datei enthält Ihre komplette Buchhaltung im Klartext – ohne Belege, aber mit allen Beträgen, Kontakten und Notizen. Für eine Sicherung nehmen Sie besser die verschlüsselte Vollsicherung unter Einstellungen.',

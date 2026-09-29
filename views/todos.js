@@ -11,7 +11,8 @@ import { html, raw, esc, $, $$, fmtDate, fmtDateShort, todayISO, addDays, relati
 import { icon, modal, confirmDialog, ok, warn, emptyState } from '../lib/ui.js';
 import { sel, upsertTodo, setTodoDone, deleteTodo, newTodoDraft } from '../lib/store.js';
 import { refresh } from '../lib/router.js';
-import { openAppointmentDialog, expandAppointments } from './calendar.js';
+import { openAppointmentDialog } from './calendar.js';
+import { expandAppointments } from '../lib/termine.js';
 
 const state = {
   show: 'open', // open | done | all
@@ -22,11 +23,16 @@ const state = {
 /* Fälligkeit                                                                  */
 /* -------------------------------------------------------------------------- */
 
-/** Der nächste Tag eines Termins ab heute – bei Serien das nächste Vorkommen. */
+/**
+ * Der nächste Tag eines Termins ab heute – bei Serien das nächste Vorkommen.
+ * Ist eine Serie schon ausgelaufen, gilt ihr letztes Vorkommen, nicht das erste.
+ */
 export function nextOccurrence(appt, today = todayISO()) {
   if (!appt) return '';
   const next = expandAppointments([appt], today, addDays(today, 800))[0];
-  return next ? next.occurrence : appt.date;
+  if (next) return next.occurrence;
+  if (appt.date >= today) return appt.date;
+  return expandAppointments([appt], appt.date, addDays(today, -1)).at(-1)?.occurrence || appt.date;
 }
 
 /**
@@ -239,9 +245,17 @@ export function openTodoDialog(id, preset = {}) {
   const existing = id ? sel.todo(id) : null;
   const t = existing ? structuredClone(existing) : newTodoDraft(preset);
   const isNew = !existing;
+  let ausgangslage = null;
+  let fertig = false;
+  const stand = () => JSON.stringify(['title', 'due', 'appt', 'notes', 'done'].map((k) => {
+    const el = m.root.querySelector('#d_' + k);
+    return el ? (el.type === 'checkbox' ? el.checked : el.value.trim()) : null;
+  }));
 
   const m = modal({
     title: isNew ? 'Neue Aufgabe' : 'Aufgabe bearbeiten',
+    // Vor dem Wegklicken nachfragen, wenn etwas eingetragen wurde.
+    confirmDismiss: () => ausgangslage !== null && !fertig && stand() !== ausgangslage,
     body: html`
       <div class="field">
         <label for="d_title">Aufgabe *</label>
@@ -273,10 +287,12 @@ export function openTodoDialog(id, preset = {}) {
   });
   const g = (k) => m.root.querySelector('#d_' + k);
 
-  m.root.querySelector('#btnCancel').addEventListener('click', () => m.close());
+  ausgangslage = stand();
+  m.root.querySelector('#btnCancel').addEventListener('click', () => m.dismiss());
   m.root.querySelector('#btnSave').addEventListener('click', async () => {
     t.title = g('title').value.trim();
     if (!t.title) { warn('Bitte die Aufgabe benennen'); g('title').focus(); return; }
+    fertig = true;
     t.dueDate = g('due').value || '';
     t.appointmentId = g('appt').value || '';
     t.notes = g('notes').value.trim();
@@ -290,6 +306,7 @@ export function openTodoDialog(id, preset = {}) {
   });
   m.root.querySelector('#btnDel')?.addEventListener('click', async () => {
     if (!await confirmDialog({ title: 'Aufgabe löschen?', text: `„${t.title}“ wird entfernt.`, confirmLabel: 'Löschen', danger: true })) return;
+    fertig = true;
     await deleteTodo(t.id);
     m.close();
     ok('Aufgabe gelöscht');

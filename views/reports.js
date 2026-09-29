@@ -8,7 +8,7 @@ import { store, sel } from '../lib/store.js';
 import {
   compareRanges, trend, euerReport, vatReturn, vatPeriods, balanceSheet,
   openItems, accountBalances, isKleinunternehmer, depreciationInRange, bookValue,
-  totalDepreciation, healthChecks, scopeDb, unlistedStats, averages, isEffective,
+  totalDepreciation, healthChecks, scopeDb, unlistedStats, averages, isEffective, accountLedger,
 } from '../lib/calc.js';
 import {
   prefs, setPref, scope, scopeToggleHtml, wireScopeToggle, verlaufControls, wireVerlauf, verlaufBody,
@@ -622,15 +622,7 @@ function konten(root, db) {
 }
 
 function accountSheet(db, acc) {
-  const rows = db.transactions
-    .filter((t) => isEffective(t) && t.accountId === acc.id && t.paidDate && t.paidDate >= period.from && t.paidDate <= period.to)
-    .sort((a, b) => a.paidDate.localeCompare(b.paidDate));
-  let running = Number(acc.openingBalance) || 0;
-  for (const t of db.transactions) {
-    if (!isEffective(t) || t.accountId !== acc.id || !t.paidDate || t.paidDate >= period.from) continue;
-    running += t.type === 'income' ? t.gross : -t.gross;
-  }
-  const opening = running;
+  const { opening, rows, closing } = accountLedger(db, acc, period.from, period.to);
   return `
     <div class="card mb16">
       <div class="card-head"><h3>${esc(acc.name)}</h3><span class="sub">${esc(acc.kind === 'bank' ? 'Bankkonto' : 'Kasse')}${acc.iban ? ' · ' + esc(acc.iban) : ''}</span></div>
@@ -638,18 +630,15 @@ function accountSheet(db, acc) {
         <thead><tr><th>Datum</th><th>Vorgang</th><th class="num">Eingang</th><th class="num">Ausgang</th><th class="num">Saldo</th></tr></thead>
         <tbody>
           <tr><td colspan="4" class="muted">Anfangsbestand am ${esc(fmtDate(period.from))}</td><td class="num">${esc(money(opening))}</td></tr>
-          ${rows.map((t) => {
-            running += t.type === 'income' ? t.gross : -t.gross;
-            return `<tr class="clickable" data-tx="${esc(t.id)}">
+          ${rows.map(({ tx: t, balance }) => `<tr class="clickable" data-tx="${esc(t.id)}">
               <td class="nowrap">${esc(fmtDate(t.paidDate))}</td>
               <td class="truncate" style="max-width:340px">${esc(t.description)}</td>
               <td class="num amount pos">${t.type === 'income' ? esc(money(t.gross)) : ''}</td>
               <td class="num amount neg">${t.type === 'expense' ? esc(money(t.gross)) : ''}</td>
-              <td class="num">${esc(money(running))}</td>
-            </tr>`;
-          }).join('')}
+              <td class="num">${esc(money(balance))}</td>
+            </tr>`).join('')}
         </tbody>
-        <tfoot><tr><td colspan="4">Endbestand am ${esc(fmtDate(period.to))}</td><td class="num">${esc(money(running))}</td></tr></tfoot>
+        <tfoot><tr><td colspan="4">Endbestand am ${esc(fmtDate(period.to))}</td><td class="num">${esc(money(closing))}</td></tr></tfoot>
       </table></div>
     </div>`;
 }
