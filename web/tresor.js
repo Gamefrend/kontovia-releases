@@ -6,6 +6,7 @@
 
 import * as K from './kern.js';
 import * as A from './ablage.js';
+import { fuerSicherung, cloudNachEinspielen } from './zugang.js';
 
 export const MAX_ATTACHMENT_BYTES = 40 * 1024 * 1024; // 40 MB pro Beleg
 const BACKUP_KEEP = 25;
@@ -240,7 +241,8 @@ export class Vault {
       kind: 'kontovia-vollsicherung',
       version: 1,
       exportedAt: new Date().toISOString(),
-      db: this.db,
+      // Ohne Anmeldemerkmale, wie in der Windows-Fassung (src/main/zugang.js).
+      db: fuerSicherung(this.db),
       attachments,
     };
     const { buffer, dek } = await K.createContainer(password, payload, { app: 'Kontovia-Sicherung' });
@@ -256,6 +258,8 @@ export class Vault {
       throw new Error('Die Datei ist keine Kontovia-Vollsicherung.');
     }
     this.assertUnlocked();
+    // Die Verbindungen dieses Geräts bleiben, wie sie sind.
+    if (data.db && typeof data.db === 'object') data.db.cloud = cloudNachEinspielen(this.db?.cloud, data.db.cloud);
     // Belege zuerst, danach der Bestand – bei einem Abbruch bleibt nie ein
     // Datensatz ohne zugehörige Datei zurück.
     const eintraege = [];

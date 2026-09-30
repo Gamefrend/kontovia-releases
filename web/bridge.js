@@ -21,6 +21,7 @@ import * as D from './dateien.js';
 import { drucken } from './druck.js';
 import * as U from './aktualisierung.js';
 import { makeSeed } from './seed.js';
+import { fuerOberflaeche } from './zugang.js';
 import { modal, toast } from '../lib/ui.js';
 import './mobil.js';
 
@@ -349,7 +350,7 @@ const api = {
       autoLockMinutes = db.settings.autoLockMinutes;
       resetLockTimer();
       A.dauerhaftAnfordern();
-      return kopie(db);
+      return kopie(fuerOberflaeche(db));
     }, { needsUnlock: false }),
     unlock: handle(async (password) => {
       if (anderesFenster) throw new Error('Kontovia ist in einem anderen Fenster geöffnet. Bitte dort weiterarbeiten oder dieses Fenster neu laden.');
@@ -364,14 +365,15 @@ const api = {
         resetLockTimer();
         restartAutoSync();
         A.dauerhaftAnfordern();
-        return kopie(db);
+        // Die Anmeldemerkmale bleiben in der Web-Schicht (zugang.js).
+        return kopie(fuerOberflaeche(db));
       } catch (err) {
         failedUnlocks++;
         throw err;
       }
     }, { needsUnlock: false }),
     lock: handle(async () => { doLock('manuell'); return true; }, { needsUnlock: false }),
-    read: handle(async () => kopie(vault.db)),
+    read: handle(async () => kopie(fuerOberflaeche(vault.db))),
     write: handle(async (db) => {
       if (!db || typeof db !== 'object' || !Array.isArray(db.transactions)) {
         throw new Error('Ungültiger Datenbestand – Speichern abgebrochen.');
@@ -478,7 +480,12 @@ const api = {
       restartAutoSync();
       return res;
     }),
-    begin: handle(async (opts = {}) => kopie(await cloud.begin({ force: !!opts.force, dirty: opts.dirty !== false }))),
+    begin: handle(async (opts = {}) => {
+      const res = kopie(await cloud.begin({ force: !!opts.force, dirty: opts.dirty !== false }));
+      if (res.remote) res.remote = fuerOberflaeche(res.remote);
+      if (res.base) res.base = fuerOberflaeche(res.base);
+      return res;
+    }),
     commit: handle(async (db) => {
       if (!db || typeof db !== 'object' || !Array.isArray(db.transactions)) {
         throw new Error('Ungültiger Datenbestand – Abgleich abgebrochen.');

@@ -4,6 +4,7 @@ import { html, raw, esc, $, $$, MOD } from '../lib/util.js';
 import { icon, err } from '../lib/ui.js';
 import { store } from '../lib/store.js';
 import { navigate } from '../lib/router.js';
+import { EUER, formLine } from '../lib/calc.js';
 import { appInfo } from '../app.js';
 
 const api = window.kontovia;
@@ -16,7 +17,7 @@ const TABS = { anleitung: 'Kurzanleitung', cloud: 'Cloud einrichten', recht: 'Re
 export async function render(root, params = {}) {
   if (params.tab) tab = params.tab;
   root.innerHTML = html`
-    <div class="seg mb16" id="helpTabs">
+    <div class="seg tabs mb16" id="helpTabs" role="group" aria-label="Hilfe">
       ${raw(Object.entries(TABS).map(([k, v]) => `<button data-tab="${k}" class="${tab === k ? 'active' : ''}">${esc(v)}</button>`).join(''))}
     </div>
     <div id="helpBody" class="help"></div>`;
@@ -78,11 +79,46 @@ function anleitung(root) {
 
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Anschaffungen über 800 €</h3>
-        <p>Ein Notebook für 1.500 € ist im Jahr des Kaufs nicht in voller Höhe abziehbar, sondern
-        wird über die Nutzungsdauer verteilt – bei Computern drei Jahre. Beim Erfassen der
-        Ausgabe wählen Sie „Als Anlagegut abschreiben". Kontovia rechnet die Abschreibung dann
-        monatsgenau aus, führt das Anlagenverzeichnis und trägt den Betrag in Zeile 33 der
-        Anlage EÜR ein.</p>
+        <p>Eine Maschine für 5.000 € ist im Jahr des Kaufs nicht in voller Höhe abziehbar, sondern
+        wird über die Nutzungsdauer verteilt. Beim Erfassen der Ausgabe wählen Sie
+        „Als Anlagegut abschreiben“. Kontovia rechnet die Abschreibung monatsgenau aus, führt das
+        Anlagenverzeichnis und trägt den Betrag in Zeile ${formLine(EUER.afaBeweglich, new Date().getFullYear())}
+        der Anlage EÜR ein.</p>
+        <ul>
+          <li><strong>Computer, Notebooks, Tablets, Drucker und Software</strong> dürfen mit einem Jahr
+              Nutzungsdauer voll im Jahr der Anschaffung abgezogen werden (BMF-Schreiben vom 22.02.2022) –
+              Abschreibung „1 Jahr“.</li>
+          <li><strong>Degressiv</strong> geht für bewegliche Wirtschaftsgüter, die vom 01.07.2025 bis
+              31.12.2027 angeschafft werden: höchstens das Dreifache der linearen Rate und höchstens 30 %
+              vom Restwert (§ 7 Abs. 2 EStG). Das bringt in den ersten Jahren mehr Abzug; Kontovia wechselt
+              von selbst zur linearen Rate, sobald sie höher ist.</li>
+          <li>Bis 800 € netto ist ein Wirtschaftsgut geringwertig und sofort voll abziehbar – dafür genügt
+              eine gewöhnliche Ausgabe.</li>
+        </ul>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
+        <h3 class="mt0">E-Rechnungen (XRechnung, ZUGFeRD)</h3>
+        <p>Seit 2025 muss jedes Unternehmen E-Rechnungen annehmen können. Ziehen Sie die XML-Datei oder
+        das ZUGFeRD-PDF einfach als Beleg in die Buchung: Kontovia erkennt die Rechnung und bietet an,
+        <strong>Rechnungsnummer, Datum, Fälligkeit, Betrag, Steuersatz und Kontakt zu übernehmen</strong>.
+        In der Belegvorschau erscheint die Rechnung lesbar – mit Positionen, Steuer und Bankverbindung –
+        statt als XML-Text.</p>
+        <p class="small">Aufbewahrt wird die Originaldatei, unverändert und mit Prüfsumme. Bei Rechnungen mit
+        mehreren Steuersätzen legen Sie je Satz eine Buchung an.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
+        <h3 class="mt0">Wiederkehrende Buchungen und Steuertermine</h3>
+        <p><strong>Miete, Telefon, Abos:</strong> Beim Erfassen unter <em>Weitere Angaben → Wiederholen</em>
+        einen Turnus wählen. Sobald die nächste Buchung fällig ist, bietet Kontovia sie nach dem Entsperren
+        zum Anlegen an – jede wird eine gewöhnliche Buchung, an die Sie den Beleg hängen. Verwalten unter
+        <a data-go="master">Stammdaten → Wiederkehrend</a>.</p>
+        <p><strong>Steuertermine:</strong> Übersicht und Kalender zeigen, wann die nächste
+        Umsatzsteuer-Voranmeldung fällig ist (samt der Zahllast nach heutigem Stand) und bis wann die
+        Jahreserklärungen abzugeben sind – auf den nächsten Werktag verschoben, wenn die Frist auf ein
+        Wochenende oder einen Feiertag fällt. Die Dauerfristverlängerung stellen Sie unter
+        <a data-go="settings">Einstellungen</a> ein.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -215,7 +251,13 @@ function anleitung(root) {
             <tr><td><kbd>${MOD}</kbd>+<kbd>S</kbd></td><td>Sofort speichern</td></tr>
             <tr><td><kbd>${MOD}</kbd>+<kbd>F</kbd></td><td>In Buchungen suchen</td></tr>
             <tr><td><kbd>${MOD}</kbd>+<kbd>L</kbd></td><td>Sperren</td></tr>
-            <tr><td><kbd>${MOD}</kbd>+<kbd>1</kbd> … <kbd>6</kbd></td><td>Zwischen den Ansichten wechseln</td></tr>
+            <tr><td><kbd>${MOD}</kbd>+<kbd>1</kbd> … <kbd>7</kbd></td><td>Übersicht, Buchungen, Kalender, Auswertungen, Export, Stammdaten, Aufgaben</td></tr>
+            <tr><td><kbd>${MOD}</kbd>+<kbd>,</kbd></td><td>Einstellungen</td></tr>
+            <tr><td><kbd>F1</kbd> oder <kbd>?</kbd></td><td>Diese Hilfe</td></tr>
+            <tr><td><kbd>Esc</kbd></td><td>Fenster schließen (fragt nach, wenn Eingaben offen sind)</td></tr>
+            <tr><td><kbd>${MOD}</kbd>+<kbd>Enter</kbd></td><td>Im Fenster speichern</td></tr>
+            ${WEB ? raw(`<tr><td colspan="2" class="small muted">Im Browser sind einzelne Kürzel wie ${esc(MOD)}+N vom Browser selbst belegt;
+              dann helfen die Knöpfe oben rechts.</td></tr>`) : ''}
           </tbody>
         </table>
       </div></div>

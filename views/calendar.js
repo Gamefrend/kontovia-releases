@@ -1,18 +1,20 @@
 /** Kontovia – Terminkalender, verknüpfbar mit Buchungen und Rechnungen. */
 
 import {
-  html, raw, esc, $, $$, money, fmtDate, fmtDateLong, todayISO, toISO, fromISO, uid,
-  addMonths, addDays, monthStart, monthEnd, MONTHS, WEEKDAYS, isoWeek, relativeDays, sortBy, int,
+  html, raw, esc, $, $$, money, fmtDate, fmtDateLong, todayISO, fromISO, uid,
+  addMonths, addDays, monthStart, monthEnd, MONTHS, MONTHS_SHORT, WEEKDAYS, isoWeek, sortBy, int,
 } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, emptyState } from '../lib/ui.js';
-import { store, sel, upsertAppointment, deleteAppointment, commit, applyTodoChanges, newTodoDraft } from '../lib/store.js';
+import { sel, upsertAppointment, deleteAppointment, applyTodoChanges, newTodoDraft, newTransactionDraft } from '../lib/store.js';
 import { depositInfo, isVoidPart } from '../lib/calc.js';
 import { expandAppointments } from '../lib/termine.js';
-import { navigate, refresh } from '../lib/router.js';
+import { refresh } from '../lib/router.js';
 import { openTransactionDialog } from './transactions.js';
 import { openCalendarSyncDialog, statusText } from './calendarsync.js';
 import { calState, onCalendarSync, refreshCalendarStatus, syncCalendar } from '../lib/gcalsync.js';
 import { openMenu } from '../lib/popover.js';
+import { steuertermine } from '../lib/fristen.js';
+import { oeffneFrist } from './spruenge.js';
 
 const state = {
   cursor: monthStart(todayISO()),
@@ -20,6 +22,7 @@ const state = {
   showDue: true,
   showEvents: true,
   showDone: true,
+  showTax: true,
 };
 
 const FREQ = { none: 'einmalig', weekly: 'wöchentlich', biweekly: 'alle zwei Wochen', monthly: 'monatlich', yearly: 'jährlich' };
@@ -64,6 +67,21 @@ function eventEntries(from, to) {
   return out;
 }
 
+/** Steuertermine (Voranmeldung, Jahreserklärungen) als Kalendereinträge. */
+function taxEntries(from, to) {
+  return steuertermine(sel.settings(), from, to).map((t, i) => ({
+    ...t,
+    id: `tax_${t.datum}_${i}`,
+    isTax: true,
+    occurrence: t.datum,
+    title: t.titel,
+    allDay: true,
+  }));
+}
+
+/** Kennzeichnet einen Steuertermin im HTML, damit ein Klick zu seinen Zahlen führt. */
+const taxAttrs = (e) => `data-tax="1" data-tax-from="${esc(e.zeitraum?.from || '')}" data-tax-to="${esc(e.zeitraum?.to || '')}" data-tax-jahr="${esc(e.jahr || '')}"`;
+
 /* -------------------------------------------------------------------------- */
 /* Ansicht                                                                     */
 /* -------------------------------------------------------------------------- */
@@ -92,6 +110,7 @@ export async function render(root, params, { actions } = {}) {
       options: [
         state.mode === 'month' && { value: 'showDue', label: 'Zahlungstermine offener Rechnungen', on: state.showDue },
         { value: 'showEvents', label: 'Veranstaltungen aus Anzahlungen', on: state.showEvents },
+        { value: 'showTax', label: 'Steuertermine (Voranmeldung, Erklärungen)', on: state.showTax },
         { value: 'showDone', label: 'Erledigte Termine', on: state.showDone },
       ].filter(Boolean),
     }],
@@ -149,8 +168,9 @@ function drawMonth(root) {
     .filter((e) => state.showDone || !e.done);
   const dues = state.showDue ? dueEntries(gridStart, gridEnd) : [];
   const veranstaltungen = state.showEvents ? eventEntries(gridStart, gridEnd) : [];
+  const fristen = state.showTax ? taxEntries(gridStart, gridEnd) : [];
   const byDay = new Map();
-  for (const e of [...events, ...dues, ...veranstaltungen]) {
+  for (const e of [...fristen, ...events, ...dues, ...veranstaltungen]) {
     if (!byDay.has(e.occurrence)) byDay.set(e.occurrence, []);
     byDay.get(e.occurrence).push(e);
   }
@@ -200,6 +220,7 @@ function hiddenHint() {
   const weg = [
     state.mode === 'month' && !state.showDue && 'Zahlungstermine',
     !state.showEvents && 'Veranstaltungen',
+    !state.showTax && 'Steuertermine',
     !state.showDone && 'Erledigte',
   ].filter(Boolean);
   return weg.length ? `<span class="small muted" title="Über „Anzeige“ oben rechts wieder einblenden">${icon('hide', 13).__raw} ausgeblendet: ${esc(weg.join(', '))}</span>` : '';
@@ -213,7 +234,9 @@ function cellHtml(date, monthRef, items) {
   const more = items.length - shown.length;
   return `<div class="${cls}" data-day="${date}" tabindex="0" role="button" aria-label="${esc(fmtDate(date))}, neuer Termin">
     <div class="cal-day">${Number(date.slice(8, 10))}</div>
-    ${shown.map((e) => e.isDue
+    ${shown.map((e) => e.isTax
+      ? `<div class="cal-ev cal-tax" ${taxAttrs(e)} title="${esc(`${e.title} – ${e.hinweis}`)}">§ ${esc(e.title)}</div>`
+      : e.isDue
       ? `<div class="cal-ev" style="background:var(--warn-soft);color:var(--warn);border-left-color:var(--warn)" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(money(e.amount))} € ${esc(e.type === 'income' ? '↓' : '↑')}</div>`
       : e.isEvent
       ? `<div class="cal-ev" style="background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent)" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(e.title)}</div>`
@@ -232,23 +255,24 @@ function todoBadge(apptId) {
 
 function agendaRow(e) {
   const linked = (e.transactionIds || []).length;
-  // Veranstaltungen stammen aus einer Buchung und führen auch dorthin zurück.
-  const anchor = e.isEvent ? `data-tx="${esc(e.txId)}"` : `data-appt="${esc(e.id)}"`;
+  // Veranstaltungen stammen aus einer Buchung und führen auch dorthin zurück,
+  // Steuertermine zu den Zahlen, die dafür gebraucht werden.
+  const anchor = e.isTax ? taxAttrs(e) : e.isEvent ? `data-tx="${esc(e.txId)}"` : `data-appt="${esc(e.id)}"`;
   return `<div class="agenda-item" ${anchor}>
     <div class="agenda-date">
       <div class="d">${esc(e.occurrence.slice(8, 10))}</div>
-      <div class="m">${esc(['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'][Number(e.occurrence.slice(5, 7)) - 1])}</div>
+      <div class="m">${esc(MONTHS_SHORT[Number(e.occurrence.slice(5, 7)) - 1])}</div>
     </div>
     <div style="flex:1;min-width:0">
-      <div class="strong truncate">${e.done ? '✓ ' : ''}${esc(e.title)}${e.isRepeat ? ' <span class="badge tiny">Wiederholung</span>' : ''}${e.isEvent ? ' <span class="badge info tiny">Veranstaltung</span>' : ''}</div>
+      <div class="strong truncate">${e.done ? '✓ ' : ''}${esc(e.title)}${e.isRepeat ? ' <span class="badge tiny">Wiederholung</span>' : ''}${e.isEvent ? ' <span class="badge info tiny">Veranstaltung</span>' : ''}${e.isTax ? ' <span class="badge warn tiny">Steuertermin</span>' : ''}</div>
       <div class="tiny muted">
-        ${e.allDay ? 'ganztägig' : esc((e.startTime || '') + (e.endTime ? ' – ' + e.endTime : ''))}
+        ${e.isTax ? esc(e.hinweis) : e.allDay ? 'ganztägig' : esc((e.startTime || '') + (e.endTime ? ' – ' + e.endTime : ''))}
         ${e.location ? ' · ' + esc(e.location) : ''}
         ${e.contactId ? ' · ' + esc(sel.contactName(e.contactId)) : ''}
         · KW ${isoWeek(e.occurrence)}
       </div>
     </div>
-    ${e.isEvent ? '' : todoBadge(e.id)}
+    ${e.isEvent || e.isTax ? '' : todoBadge(e.id)}
     ${linked ? `<span class="badge info">${icon('link', 12).__raw} ${linked} Buchung${linked > 1 ? 'en' : ''}</span>` : ''}
   </div>`;
 }
@@ -263,6 +287,7 @@ function drawAgenda(root) {
   const events = sortBy([
     ...expandAppointments(sel.appointments(), from, to).filter((e) => state.showDone || !e.done),
     ...(state.showEvents ? eventEntries(from, to) : []),
+    ...(state.showTax ? taxEntries(from, to) : []),
   ], (e) => e.occurrence + (e.startTime || ''));
 
   root.innerHTML = html`
@@ -300,6 +325,11 @@ function wireEvents(root) {
   $$('[data-tx]', root).forEach((n) => n.addEventListener('click', (e) => {
     e.stopPropagation();
     openTransactionDialog(n.dataset.tx);
+  }));
+  $$('[data-tax]', root).forEach((n) => n.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const { taxFrom: from, taxTo: to, taxJahr: jahr } = n.dataset;
+    oeffneFrist({ zeitraum: from && to ? { from, to } : null, jahr: jahr ? Number(jahr) : null });
   }));
   $$('[data-day]', root).forEach((n) => {
     n.addEventListener('click', () => openAppointmentDialog(null, { date: n.dataset.day }));
@@ -501,22 +531,26 @@ export function openAppointmentDialog(id, preset = {}) {
       await upsertAppointment(a);
       await saveTodos();
       m.close();
-      openTransactionDialog(null, 'income');
-
-      // Sobald eine neue Buchung entsteht, wird sie mit dem Termin verbunden.
-      const before = new Set(sel.transactions().map((t) => t.id));
-      const check = setInterval(async () => {
-        const fresh = sel.transactions().find((t) => !before.has(t.id));
-        if (!fresh) return;
-        clearInterval(check);
-        const aktuell = sel.appointment(a.id) || a;
-        aktuell.transactionIds = [...(aktuell.transactionIds || []), fresh.id];
-        await upsertAppointment(aktuell);
-        ok('Termin und Buchung verknüpft', fresh.description);
-        refresh();
-      }, 400);
-      // Nicht endlos warten: wer die Buchung abbricht, soll keinen Zombie-Timer hinterlassen.
-      setTimeout(() => clearInterval(check), 120000);
+      // Vorbelegt mit dem, was der Termin schon weiß. Verknüpft wird genau die
+      // Buchung aus diesem Dialog – bis Fassung 1.7 lauerte hier zwei Minuten
+      // lang ein Zeitgeber und hängte jede neue Buchung an, auch eine, die
+      // gerade per Cloud-Abgleich von einem anderen Gerät kam.
+      const entwurf = {
+        ...newTransactionDraft('income'),
+        description: a.title,
+        contactId: a.contactId || '',
+        location: a.location || '',
+        date: a.date <= todayISO() ? a.date : todayISO(),
+        paidDate: '',
+      };
+      openTransactionDialog(entwurf, 'income', {
+        onSaved: async (tx) => {
+          const aktuell = sel.appointment(a.id) || a;
+          if ((aktuell.transactionIds || []).includes(tx.id)) return;
+          await upsertAppointment({ ...aktuell, transactionIds: [...(aktuell.transactionIds || []), tx.id] });
+          ok('Termin und Buchung verknüpft', tx.description);
+        },
+      });
     });
     form.querySelectorAll('[data-unlink]').forEach((b) => b.addEventListener('click', () => {
       collect();
@@ -590,6 +624,15 @@ export function openAppointmentDialog(id, preset = {}) {
   m.root.querySelector('#btnSave').addEventListener('click', async () => {
     collect();
     if (!a.title) { warn('Bitte einen Titel eintragen'); return; }
+    if (!a.allDay && a.startTime && a.endTime && a.endTime < a.startTime) {
+      warn('Ende liegt vor dem Beginn', 'Bitte die Uhrzeiten prüfen – ein Termin über Mitternacht lässt sich als ganztägig eintragen.');
+      form.querySelector('#t_end')?.focus();
+      return;
+    }
+    if (a.recurrence?.freq !== 'none' && a.recurrence?.until && a.recurrence.until < a.date) {
+      warn('Wiederholung endet vor dem ersten Termin', 'Bitte „Wiederholen bis“ prüfen.');
+      return;
+    }
     fertig = true;
     await upsertAppointment(a);
     await saveTodos();

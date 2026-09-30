@@ -1,7 +1,7 @@
 /** Kontovia – Auswertungen: GuV, EÜR, Umsatzsteuer, Vermögen, offene Posten. */
 
 import {
-  html, raw, esc, $, $$, money, fmtDate, fmtDateLong, todayISO, int, sum, ymLabel, pct,
+  html, raw, esc, $, $$, money, fmtDate, todayISO, int, sum, ymLabel,
 } from '../lib/util.js';
 import { icon, statCard, deltaBadge, compareLabel, rankBars, emptyState, ok, err, modal, chart, mountCharts, segToggle, wireSeg } from '../lib/ui.js';
 import { store, sel } from '../lib/store.js';
@@ -18,6 +18,7 @@ import { defaultPeriod, periodControl, periodLabel, setPeriod } from '../lib/per
 import * as R from '../lib/reports.js';
 import { table, mountTables } from '../lib/table.js';
 import { openTransactionDialog } from './transactions.js';
+import { checkNotice, wireCheckLinks } from './spruenge.js';
 
 const api = window.kontovia;
 const period = defaultPeriod();
@@ -37,6 +38,7 @@ const TABS = {
 
 export async function render(root, params, { actions } = {}) {
   if (params?.tab) tab = params.tab;
+  if (params?.period?.from && params?.period?.to) setPeriod(period, params.period.from, params.period.to);
   actions.innerHTML = html`
     <div id="rpPeriod"></div>
     <button class="btn" id="btnPreview">${icon('eye', 16)} Vorschau</button>
@@ -238,8 +240,9 @@ function guv(root, db) {
     </div>
 
     ${checks.length ? raw(`<div class="card mt16"><div class="card-head"><h3>Hinweise zur Datenqualität</h3></div><div class="card-body">
-      ${checks.map((c) => `<div class="notice ${c.level === 'error' ? 'danger' : c.level === 'warn' ? 'warn' : ''} mb8">${esc(c.text)}</div>`).join('')}
+      ${checks.map(checkNotice).join('')}
     </div></div>`) : ''}`;
+  wireCheckLinks(root, checks, period);
 
   // Umschalten ändert nur die Darstellung – neu gezeichnet wird nur dieser Reiter.
   const redraw = () => { guv(root, db); mountCharts(root); mountTables(root); };
@@ -427,6 +430,7 @@ function ust(root, db) {
             ${v.kz21 ? raw(kz(21, 'Nicht steuerbare sonstige Leistungen (§ 18b)', v.kz21)) : ''}
             ${v.kz48 ? raw(kz(48, 'Steuerfreie Umsätze ohne Vorsteuerabzug', v.kz48)) : ''}
             ${v.kz89net ? raw(kz(89, 'Innergemeinschaftliche Erwerbe 19 %', v.kz89net)) : ''}
+            ${v.kz93net ? raw(kz(93, 'Innergemeinschaftliche Erwerbe 7 %', v.kz93net)) : ''}
             ${v.kz46net ? raw(kz(46, 'Leistungen nach § 13b', v.kz46net) + kz(47, 'Steuer nach § 13b', v.kz47tax)) : ''}
             ${raw(kz(66, 'Vorsteuer aus Rechnungen', v.kz66))}
             ${v.kz61 ? raw(kz(61, 'Vorsteuer aus i.g. Erwerben', v.kz61)) : ''}
@@ -457,7 +461,8 @@ function ust(root, db) {
         </table></div>
         <div class="card-body">
           <p class="small muted mb0">Zeitraum anklicken, um ihn oben als Auswertungszeitraum zu übernehmen.
-          Die Voranmeldung ist bis zum 10. Tag nach Ablauf des Zeitraums zu übermitteln.</p>
+          Die Voranmeldung ist bis zum 10. Tag nach Ablauf des Zeitraums zu übermitteln${db.settings.vatDeadline === 'dauerfrist'
+            ? ', mit Dauerfristverlängerung einen Monat später' : ''}; die Termine stehen auch in Übersicht und Kalender.</p>
         </div>
       </div>
     </div>`;

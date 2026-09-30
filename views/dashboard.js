@@ -13,8 +13,9 @@ import { icon, statCard, deltaBadge, compareLabel, rankBars, donut, emptyState, 
 import { store, sel } from '../lib/store.js';
 import {
   compareRanges, trend, openItems, accountBalances, balanceSheet,
-  receiptCoverage, healthChecks, topCategories, isKleinunternehmer, scopeDb, averages,
+  receiptCoverage, healthChecks, topCategories, isKleinunternehmer, scopeDb, averages, vatReturn, listedOnly,
 } from '../lib/calc.js';
+import { steuertermine } from '../lib/fristen.js';
 import {
   prefs, scope, scopeToggleHtml, wireScopeToggle, verlaufControls, wireVerlauf, verlaufBody,
   anteilControls, wireAnteil, loadDashLayout, saveDashLayout,
@@ -25,6 +26,8 @@ import { navigate } from '../lib/router.js';
 import { openTransactionDialog } from './transactions.js';
 import { openAppointmentDialog } from './calendar.js';
 import { openTodosSorted, todoRow, wireTodoRows } from './todos.js';
+import { checkNotice, wireCheckLinks, oeffneFrist } from './spruenge.js';
+import { offeneVorkommen, faelligeAnbieten } from './wiederkehrend.js';
 
 const period = defaultPeriod();
 /** Ist die Übersicht gerade im Anpassen-Modus? Gilt nur bis zum Verlassen der Ansicht. */
@@ -104,6 +107,7 @@ function context() {
     avg: once(() => averages(cmp().current)),
     open: once(() => openItems(db, todayISO())),
     accounts: once(() => accountBalances(db, todayISO())),
+    checks: once(() => healthChecks(db, period.from, period.to)),
   };
   return c;
 }
@@ -273,6 +277,35 @@ const WIDGETS = {
       });
     },
   },
+  fristen: {
+    // Fristen sind zu wichtig, um in einer schon angepassten Übersicht versteckt zu starten.
+    title: 'Steuertermine', size: 4, sichtbarWennNeu: true,
+    render: () => {
+      const heute = todayISO();
+      const termine = steuertermine(store.db.settings, heute, addDays(heute, 150)).slice(0, 5);
+      // Beträge wie in den Unterlagen fürs Finanzamt: ohne nicht gelistete Buchungen.
+      const amtlich = listedOnly(store.db);
+      const body = termine.length ? `<div class="frist-list">${termine.map((t, i) => {
+        const tage = Math.round((new Date(`${t.datum}T12:00:00`) - new Date(`${heute}T12:00:00`)) / 86400000);
+        const eilig = tage <= 7;
+        let betrag = '';
+        if (t.zeitraum) {
+          const kz83 = vatReturn(amtlich, t.zeitraum.from, t.zeitraum.to).kz83;
+          betrag = `<span class="num ${kz83 > 0 ? 'amount neg' : kz83 < 0 ? 'amount pos' : 'muted'}" title="Kennzahl 83 nach dem heutigen Stand">${kz83 < 0 ? 'Erstattung ' : ''}${esc(money(Math.abs(kz83)))} €</span>`;
+        }
+        return `<div class="row between list-row" data-frist="${i}" role="button" tabindex="0" title="${esc(t.hinweis)}">
+          <div style="min-width:0">
+            <div class="truncate">${esc(t.titel)}</div>
+            <div class="tiny muted">${esc(fmtDate(t.datum))} · ${esc(relativeDays(t.datum))}</div>
+          </div>
+          <div class="row nowrap" style="gap:8px">${betrag}${eilig ? `<span class="badge warn tiny">${tage <= 0 ? 'heute' : `${tage} T`}</span>` : ''}</div>
+        </div>`;
+      }).join('')}</div>
+        <p class="tiny muted mt8 mb0">Fristen nach § 18 UStG und § 149 AO, verschoben auf den nächsten Werktag. ${store.db.settings.vatDeadline === 'dauerfrist' ? 'Mit Dauerfristverlängerung.' : 'Dauerfristverlängerung unter Einstellungen.'}</p>`
+        : emptyState('Keine Termine', 'In den nächsten Monaten steht keine Steuerfrist an.').__raw;
+      return card('Steuertermine', body, { sub: 'nächste Fristen', tight: false });
+    },
+  },
   aufgaben: {
     title: 'Offene Aufgaben', size: 4,
     render: () => {
@@ -291,7 +324,7 @@ const WIDGETS = {
     title: 'Ordnung und Vollständigkeit', size: 4,
     render: (c) => {
       const cov = receiptCoverage(c.db, period.from, period.to);
-      const checks = healthChecks(c.db, period.from, period.to);
+      const checks = c.checks();
       return card('Ordnung und Vollständigkeit', `
         <div class="row" style="gap:16px;align-items:center">
           ${donut(cov.ratio, { color: cov.ratio > 0.9 ? 'var(--pos)' : cov.ratio > 0.6 ? 'var(--warn)' : 'var(--neg)' }).__raw}
@@ -303,7 +336,7 @@ const WIDGETS = {
         </div>
         <hr class="sep">
         ${checks.length
-          ? checks.map((k) => `<div class="notice ${k.level === 'error' ? 'danger' : k.level === 'warn' ? 'warn' : ''} mb8">${esc(k.text)}</div>`).join('')
+          ? checks.map((k, i) => checkNotice(k, i)).join('')
           : '<div class="notice ok">Keine Auffälligkeiten gefunden.</div>'}`);
     },
   },
@@ -353,7 +386,8 @@ const WIDGETS = {
 /**
  * Die gültige Anordnung: die gespeicherte, bereinigt um unbekannte Module
  * und ergänzt um solche, die eine neuere Fassung mitbringt – diese erst
- * einmal ausgeblendet, damit sich nichts ungefragt verschiebt.
+ * einmal ausgeblendet, damit sich nichts ungefragt verschiebt. Ausnahme sind
+ * Module mit `sichtbarWennNeu`: Sie kommen sichtbar ans Ende.
  */
 function currentLayout(c) {
   const voreinstellung = Object.entries(WIDGETS).map(([id, w]) => ({
@@ -368,7 +402,7 @@ function currentLayout(c) {
     seen.add(e.id);
     out.push({ id: e.id, size: SIZES.includes(e.size) ? e.size : WIDGETS[e.id].size, hidden: !!e.hidden });
   }
-  for (const d of voreinstellung) if (!seen.has(d.id)) out.push({ ...d, hidden: true });
+  for (const d of voreinstellung) if (!seen.has(d.id)) out.push({ ...d, hidden: WIDGETS[d.id].sichtbarWennNeu ? d.hidden : true });
   return out;
 }
 
@@ -405,6 +439,7 @@ function draw(root) {
   };
 
   const s = store.db.settings;
+  const faellig = editing ? 0 : offeneVorkommen().length;
   root.innerHTML = html`
     ${editing ? raw(`
     <div class="dash-bar" role="region" aria-label="Übersicht anpassen">
@@ -434,6 +469,10 @@ function draw(root) {
       <button type="button" class="btn ghost" id="dashEdit" title="Module anordnen, Größe ändern, ein- und ausblenden">${icon('layout', 16).__raw} Anpassen</button>
     </div>`)}
 
+    ${faellig ? raw(`<div class="notice warn mb16 row between wrap" style="gap:8px">
+      <span>${faellig === 1 ? 'Eine wiederkehrende Buchung ist' : `${int(faellig)} wiederkehrende Buchungen sind`} fällig.</span>
+      <button type="button" class="btn sm" id="recDue">${icon('refresh', 14).__raw} Ansehen und anlegen</button></div>`) : ''}
+
     <div class="dash${editing ? ' editing' : ''}" id="dashGrid">
       ${raw(sichtbar.map(item).join(''))}
     </div>
@@ -443,11 +482,11 @@ function draw(root) {
   mountTables(root);
   const redraw = () => draw(root);
   if (editing) wireEditing(root, lay, redraw);
-  else wireContent(root, redraw);
+  else wireContent(root, redraw, c);
 }
 
 /** Die Bedienung der Module selbst – im Anpassen-Modus ist sie gesperrt. */
-function wireContent(root, redraw) {
+function wireContent(root, redraw, c) {
   wireScopeToggle(root, redraw);
   wireVerlauf(root, redraw);
   wireAnteil(root, 'anteilAusgaben', redraw);
@@ -476,6 +515,10 @@ function wireContent(root, redraw) {
     });
   }));
   $('#showMissing', root)?.addEventListener('click', () => navigate('transactions', { receipt: 'ohne' }));
+  $('#recDue', root)?.addEventListener('click', () => faelligeAnbieten().then(redraw));
+  if (root.querySelector('[data-check]')) wireCheckLinks(root, c.checks(), period);
+  const termine = root.querySelector('[data-frist]') ? steuertermine(store.db.settings, todayISO(), addDays(todayISO(), 150)).slice(0, 5) : [];
+  oeffnen('[data-frist]', (n) => oeffneFrist(termine[Number(n.dataset.frist)]));
 }
 
 /** Verschieben, Breite, Aus- und Einblenden. Jede Änderung wird sofort gemerkt. */

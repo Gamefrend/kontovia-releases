@@ -7,7 +7,7 @@ pre{white-space:pre-wrap;word-wrap:break-word;font:inherit}
 @media (prefers-color-scheme:dark){body{background:#0e1116;color:#e7ecf2}}</style></head>
 <body><pre># Kontovia – rechtliche Einordnung
 
-Stand: September 2026, Programmversion 1.6.1
+Stand: 30. September 2026, Programmversion 1.8.0
 
 Dieses Dokument hält fest, welche Regelwerke auf Kontovia anwendbar sind, wie
 die Bewertung zustande kommt und was offen bleibt. Es ist eine technische
@@ -26,7 +26,7 @@ der Abschnitt „Vor der Weitergabe an Dritte" anwaltlich geprüft.
 | Verwendung der Exporte beim Finanzamt | Ja, als Arbeitshilfe; **kein KI-Hinweis nötig** | Bewertung in Abschnitt 7 |
 | Urheberrecht Dritter | Ja | Nur Electron/Chromium/Node; Lizenztexte liegen bei |
 | Markenrecht Dritter | Ja | DATEV, ELSTER, Google, Microsoft nur beschreibend genannt |
-| E-Rechnung (§ 14 UStG, seit 2025) | Ja, Empfang | Belege bleiben im Originalformat (auch XML) mit Prüfsumme; Anzeige und Auslesen fehlen noch |
+| E-Rechnung (§ 14 UStG, seit 2025) | Ja, Empfang | Original unverändert mit Prüfsumme; lesbare Anzeige und Übernahme in die Buchung für XRechnung (UBL) und ZUGFeRD / Factur-X (CII), seit 1.8.0 |
 | Cyber Resilience Act (EU) 2024/2847 | Erst bei Vertrieb | Meldepflichten seit 11.09.2026, übrige Pflichten ab 11.12.2027, Abschnitt 6 |
 | Produkthaftung, Richtlinie (EU) 2024/2853 | Erst bei Vertrieb | Software ist Produkt für alles, was ab 09.12.2026 in Verkehr kommt, Abschnitt 6 |
 
@@ -89,6 +89,11 @@ folgen, ist neu zu bewerten. Konkrete Beispiele:
 * automatisches Vorschlagen einer Kategorie anhand früherer Buchungen
 * Auslesen von Rechnungen per Texterkennung mit Modell
 * jede Anbindung an ein Sprachmodell
+
+Nicht darunter fällt das Lesen von E-Rechnungen (seit 1.8.0): Kontovia liest die
+Felder, die die Norm EN 16931 festlegt (Rechnungsnummer, Datum, Beträge, Steuersätze),
+aus der strukturierten XML-Datei. Es wird nichts erkannt oder geschätzt – dieselbe Datei
+ergibt immer dieselben Werte, und übernommen wird erst auf Knopfdruck.
 
 Eine solche Funktion wäre nach heutiger Einschätzung **kein** Hochrisiko-System
 (Anhang III nennt Buchhaltung nicht), löste aber die Transparenzpflicht nach
@@ -232,7 +237,10 @@ Umgesetzt:
   Einträge sind je Gerät über SHA-256 verkettet. Nachträgliches Verändern
   bricht die Kette nachweisbar.
 * **Festschreibung** – abgeschlossene Zeiträume lassen sich sperren; danach
-  sind nur noch Stornierungen möglich. Die Sperre greift in beide Richtungen:
+  sind nur noch Stornierungen möglich. Seit 1.8.0 gilt das auch für die Kosten
+  und die Abschreibung von Anlagegütern, die im gesperrten Zeitraum angeschafft
+  wurden, und für den Anfangsbestand eines Kontos, dessen Stichtag darin liegt –
+  sonst änderten sich AfA und Kassenbuch erklärter Jahre. Die Sperre greift in beide Richtungen:
   eine Buchung lässt sich weder aus einem festgeschriebenen Zeitraum
   herausnehmen noch nachträglich in einen solchen hineindatieren, und auch das
   Zahlungsdatum – bei der Ist-Besteuerung das periodenbestimmende Datum – kann
@@ -262,10 +270,18 @@ Umgesetzt:
   (XRechnung, ZUGFeRD) empfangen können. Nach der zweiten Änderung der GoBD
   (BMF-Schreiben vom 14.07.2025) genügt es, den strukturierten Teil (XML)
   aufzubewahren; der Beleg muss dabei unverändert bleiben. Kontovia speichert jede
-  Datei byte-genau mit SHA-256-Prüfsumme. Was fehlt: eine lesbare Anzeige einer
-  XML-Rechnung und das Übernehmen ihrer Werte in die Buchung. Ab 2027 bzw. 2028
+  Datei byte-genau mit SHA-256-Prüfsumme. Seit 1.8.0 zeigt Kontovia XRechnung
+  (UBL) und ZUGFeRD / Factur-X (CII, auch eingebettet im PDF) als lesbare Rechnung
+  an – das erfüllt die Pflicht, aufbewahrte Unterlagen lesbar machen zu können
+  (§ 147 Abs. 2 AO) – und übernimmt ihre Werte auf Wunsch in die Buchung. Der
+  XML-Leser löst weder externe Verweise noch selbst definierte Entitäten auf. Ab 2027 bzw. 2028
   kommt für Umsätze an Unternehmen die Pflicht hinzu, E-Rechnungen auszustellen –
   Kontovia stellt keine Rechnungen aus.
+
+* **Journal bei schnellen Änderungen** – bis 1.7 konnten zwei fast gleichzeitige
+  Änderungen dieselbe laufende Nummer bekommen; die Prüfung meldete dann einen
+  Bruch, obwohl nichts von außen verändert war. Seit 1.8.0 werden die Einträge
+  nacheinander angehängt (in `scripts/check.js` mit 25 gleichzeitigen Änderungen geprüft).
 
 ### Nicht gelistete Buchungen
 
@@ -407,6 +423,10 @@ Was noch fehlt, sobald Kontovia nicht mehr nur selbst genutzt wird:
    Kontovia heraus übermitteln will, braucht die Registrierung als
    Softwarehersteller bei ELSTER (kostenlos) und die Bibliothek ERiC; die
    Übermittlung erfolgt dann mit dem ELSTER-Zertifikat des Betriebs.
+10. **Öffentliche Datenschutzerklärung und Impressum für die Web-Fassung und Google.**
+   Die Web-Fassung ist unter einer öffentlichen Adresse erreichbar, und Google verlangt
+   für einen eigenen App-Namen im Anmeldedialog eine öffentlich erreichbare
+   Datenschutzerklärung samt Startseite. `DATENSCHUTZ.md` ist die Vorlage dafür.
 
 ---
 
@@ -508,6 +528,11 @@ Haftungsbegrenzung aus Abschnitt 6 – anwaltlich bzw. steuerberatend geprüft.
 | KI-Bestandteile | keine |
 | Lizenztexte der Laufzeitumgebung | beigelegt und in der Anwendung erreichbar |
 | Diese Datei und `DATENSCHUTZ.md` | werden mit ausgeliefert und sind über **Hilfe → Rechtliches** zu öffnen |
+| Anmeldemerkmale (Google, Firebase) | bleiben im Hauptprozess; nicht in der Oberfläche, nicht im JSON-Gesamtexport, nicht in Vollsicherungen (seit 1.8.0, `src/main/zugang.js`) |
+| Änderungsjournal bei gleichzeitigen Änderungen | lückenlose Kette, in `scripts/check.js` geprüft |
+| E-Rechnung | XRechnung und ZUGFeRD lesbar, Übernahme nur auf Knopfdruck; keine externen Verweise oder eigenen Entitäten |
+| Abschreibung | linear, degressiv (§ 7 Abs. 2 EStG, Anschaffung 07/2025 bis 12/2027), Computer und Software ein Jahr (BMF 22.02.2022) |
+| Umsatzsteuer-Kennzahlen | i. g. Erwerb 19 % in Kz. 89, 7 % in Kz. 93 |
 | Formeln in CSV-/DATEV-Ausgaben | neutralisiert – eine Zelle, die mit `=`, `+`, `@` beginnt, wird von Excel beim Empfänger nicht als Formel ausgeführt |
 | Belege mit ausführbarer Endung | werden nicht extern geöffnet |
 | Nicht gelistete Buchungen | fehlen in EÜR, UStVA, DATEV, Z3, Journal, Belegexport und Finanzamt-Paket (in `scripts/check.js` geprüft); Änderungsjournal bleibt vollständig |

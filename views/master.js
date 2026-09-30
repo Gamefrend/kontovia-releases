@@ -4,8 +4,13 @@ import {
   html, raw, esc, $, $$, money, moneyInput, parseMoney, fmtDate, todayISO, uid, int, sum, sortBy,
 } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, err } from '../lib/ui.js';
-import { store, sel, upsertEntity, deleteEntity } from '../lib/store.js';
-import { depreciationPlan, depreciationInRange, bookValue, EUER, EUER_ZEILEN, formLine, formYear, isVoidPart } from '../lib/calc.js';
+import { store, sel, upsertEntity, deleteEntity, isLockedDate, lockedUntil } from '../lib/store.js';
+import {
+  depreciationPlan, depreciationInRange, bookValue, EUER, EUER_ZEILEN, formLine, formYear, isVoidPart, afaMethod, AFA_METHODE, degressivSatz,
+} from '../lib/calc.js';
+import { neuesAnlagegut, anlageFelder, wireAnlageFelder, anlageAusFeldern, anlageGesperrt } from './anlageform.js';
+import { regelTabelle, offeneVorkommen, faelligeAnbieten } from './wiederkehrend.js';
+import { openTransactionDialog } from './transactions.js';
 import { refresh } from '../lib/router.js';
 import { table, mountTable, mountTables } from '../lib/table.js';
 
@@ -17,22 +22,27 @@ const TABS = {
   contacts: 'Kunden & Lieferanten',
   accounts: 'Zahlungskonten',
   assets: 'Anlagevermögen',
+  recurring: 'Wiederkehrend',
 };
 
 export async function render(root, params, { actions } = {}) {
   actions.innerHTML = html`<button class="btn primary" id="btnNew">${icon('plus', 16)} Neu</button>`;
-  actions.querySelector('#btnNew').addEventListener('click', () => openDialog(tab, null));
+  actions.querySelector('#btnNew').addEventListener('click', () => {
+    // Eine Wiederholung entsteht aus ihrer ersten Buchung.
+    if (tab === 'recurring') openTransactionDialog(null, 'expense', { wiederholen: 'monthly' });
+    else openDialog(tab, null);
+  });
   draw(root);
 }
 
 function draw(root) {
   root.innerHTML = html`
-    <div class="seg mb16">
+    <div class="seg tabs mb16" role="group" aria-label="Bereich">
       ${raw(Object.entries(TABS).map(([k, v]) => `<button data-tab="${k}" class="${tab === k ? 'active' : ''}">${esc(v)}</button>`).join(''))}
     </div>
     <div id="body"></div>`;
   $$('[data-tab]', root).forEach((b) => b.addEventListener('click', () => { tab = b.dataset.tab; draw(root); }));
-  ({ categories, contacts, accounts, assets }[tab])($('#body', root));
+  ({ categories, contacts, accounts, assets, recurring }[tab])($('#body', root));
 }
 
 /** Wie oft ein Stammdatum in Buchungen vorkommt – einmal gezählt statt je Zeile. */
@@ -245,9 +255,10 @@ function assets(root) {
   root.innerHTML = html`
     <div class="notice mb16">
       Wirtschaftsgüter über 800 € netto werden nicht sofort abgezogen, sondern über
-      ihre Nutzungsdauer verteilt (lineare AfA, § 7 EStG). Kontovia rechnet monatsgenau
-      ab dem Anschaffungsmonat und übernimmt den Betrag automatisch in Ihre
-      Betriebsausgaben und in Zeile ${formLine(EUER.afaBeweglich, year)} der Anlage EÜR ${formYear(year)}.
+      ihre Nutzungsdauer verteilt (§ 7 EStG) – linear, degressiv (Anschaffung 07/2025 bis 12/2027)
+      oder bei Computern und Software mit einem Jahr. Kontovia rechnet monatsgenau ab dem
+      Anschaffungsmonat und übernimmt den Betrag automatisch in Ihre Betriebsausgaben und in
+      Zeile ${formLine(EUER.afaBeweglich, year)} der Anlage EÜR ${formYear(year)}.
     </div>
     <div class="card">
       <div class="card-head"><h3>Anlagenverzeichnis</h3><div class="spacer"></div>
@@ -262,7 +273,7 @@ function assets(root) {
           { key: 'name', label: 'Wirtschaftsgut', type: 'text', tdCls: 'strong', cell: (a) => esc(a.name) },
           { key: 'purchaseDate', label: 'Anschaffung', type: 'date', cls: 'num', tdCls: 'nowrap', cell: (a) => esc(fmtDate(a.purchaseDate)) },
           { key: 'cost', label: 'Kosten', type: 'num', cell: (a) => `${esc(money(a.cost))} €` },
-          { key: 'usefulLifeYears', label: 'Nutzungsdauer', type: 'num', value: (a) => Number(a.usefulLifeYears), cell: (a) => `${esc(a.usefulLifeYears)} Jahre` },
+          { key: 'usefulLifeYears', label: 'Nutzungsdauer', type: 'num', value: (a) => (afaMethod(a) === 'sofort' ? 1 : Number(a.usefulLifeYears)), cell: (a) => `${esc(afaMethod(a) === 'sofort' ? 1 : a.usefulLifeYears)} J. · ${esc(afaMethod(a))}` },
           { key: 'afa', label: `AfA ${year}`, type: 'num', value: afa, cell: (a) => `${esc(money(afa(a)))} €` },
           { key: 'book', label: 'Restbuchwert heute', type: 'num', value: (a) => bookValue(a, todayISO()), cell: (a) => `${esc(money(bookValue(a, todayISO())))} €` },
           {
@@ -282,6 +293,25 @@ function assets(root) {
   mountTables(root);
 }
 
+/* -------------------------------------------------------------------------- */
+/* Wiederkehrende Buchungen                                                    */
+/* -------------------------------------------------------------------------- */
+
+function recurring(root) {
+  const faellig = offeneVorkommen().length;
+  root.innerHTML = html`
+    <div class="notice mb16">
+      Miete, Telefon, Versicherungen, Software-Abos: Eine wiederkehrende Buchung entsteht beim Erfassen
+      (Weitere Angaben → Wiederholen). Sobald die nächste fällig ist, bietet Kontovia sie zum Anlegen an –
+      nach dem Entsperren oder über „Jetzt anlegen“. Jede wird eine gewöhnliche Buchung mit eigenem Beleg.
+    </div>
+    ${faellig ? raw(`<div class="notice warn mb16 row between wrap" style="gap:8px"><span>${int(faellig)} fällig.</span>
+      <button type="button" class="btn sm" id="recNow">Jetzt anlegen</button></div>`) : ''}
+    <div class="card">${regelTabelle()}</div>`;
+  mountTables(root);
+  $('#recNow', root)?.addEventListener('click', () => faelligeAnbieten().then(() => refresh()));
+}
+
 function showPlan(id) {
   const a = sel.assets().find((x) => x.id === id);
   const plan = depreciationPlan(a);
@@ -294,8 +324,9 @@ function showPlan(id) {
   const m = modal({
     title: `Abschreibungsplan – ${a.name}`,
     body: html`
-      <p class="mt0 small muted">Anschaffungskosten ${money(a.cost)} € · ${a.usefulLifeYears} Jahre linear ·
-      ab ${fmtDate(a.purchaseDate)} · monatsgenau nach § 7 Abs. 1 Satz 4 EStG</p>
+      <p class="mt0 small muted">Anschaffungskosten ${money(a.cost)} € · ${AFA_METHODE[afaMethod(a)]}${afaMethod(a) === 'sofort' ? ''
+        : ` · ${a.usefulLifeYears} Jahre${afaMethod(a) === 'degressiv' ? ` · ${String(Math.round(degressivSatz(a.usefulLifeYears) * 1000) / 10).replace('.', ',')} % vom Restwert` : ''}`}
+      · ab ${fmtDate(a.purchaseDate)} · im ersten Jahr anteilig nach Monaten (§ 7 Abs. 1 Satz 4 EStG)</p>
       <table class="data compact">
         <thead><tr><th>Jahr</th><th class="num">Abschreibung</th><th class="num">Restbuchwert am Jahresende</th></tr></thead>
         <tbody>${raw([...byYear.entries()].map(([y, amount]) => {
@@ -317,6 +348,11 @@ function wireRowButtons(root, collection, usageField, label) {
   $$('[data-edit]', root).forEach((b) => b.addEventListener('click', () => openDialog(collection, b.dataset.edit)));
   $$('[data-del]', root).forEach((b) => b.addEventListener('click', async () => {
     const id = b.dataset.del;
+    const eintrag = (store.db[collection] || []).find((x) => x.id === id);
+    if (collection === 'assets' && anlageGesperrt(eintrag)) {
+      err('Festgeschrieben', 'Die Anschaffung liegt im festgeschriebenen Zeitraum – ihre Abschreibung ist erklärt und bleibt stehen.');
+      return;
+    }
     const used = sel.transactions().filter((t) => t[usageField] === id).length;
     if (used) {
       err('Wird noch verwendet', `${used} Buchungen verweisen darauf. Ändern Sie diese zuerst oder blenden Sie den Eintrag nur aus.`);
@@ -340,17 +376,29 @@ function openDialog(collection, id) {
   forms[collection](item ? structuredClone(item) : null);
 }
 
-function baseDialog({ title, body, onSave, wide = false }) {
+/** Stand aller Eingabefelder eines Fensters – für die Rückfrage vor dem Verwerfen. */
+function formStand(root) {
+  return JSON.stringify([...root.querySelectorAll('.modal-body input, .modal-body select, .modal-body textarea')]
+    .map((el) => (el.type === 'checkbox' ? el.checked : el.value)));
+}
+
+function baseDialog({ title, body, onSave, wide = false, onOpen = null }) {
+  let ausgangslage = null;
+  let fertig = false;
   const m = modal({
     title,
     size: wide ? '' : 'slim',
     body,
     foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Speichern</button>',
+    // Wie beim Erfassen einer Buchung: Eingaben gehen nicht still verloren.
+    confirmDismiss: () => !fertig && ausgangslage !== null && formStand(m.root) !== ausgangslage,
   });
-  m.root.querySelector('[data-no]').addEventListener('click', () => m.close());
+  onOpen?.(m.root);
+  ausgangslage = formStand(m.root);
+  m.root.querySelector('[data-no]').addEventListener('click', () => m.dismiss());
   m.root.querySelector('[data-yes]').addEventListener('click', async () => {
     const done = await onSave(m.root);
-    if (done !== false) { m.close(); refresh(); }
+    if (done !== false) { fertig = true; m.close(); refresh(); }
   });
   return m;
 }
@@ -468,9 +516,16 @@ function contactForm(c) {
 function accountForm(a) {
   const isNew = !a;
   a = a || { id: uid('acc'), name: '', kind: 'bank', iban: '', openingBalance: 0, openingDate: `${new Date().getFullYear()}-01-01`, skr03: '1200', skr04: '1800', active: true };
+  // Liegt der Stichtag des Anfangsbestands im festgeschriebenen Zeitraum, stehen
+  // Bestand und Stichtag fest – sonst änderten sich Kontenblätter und Kassenbuch
+  // abgeschlossener Zeiträume nachträglich.
+  const bestandFest = !isNew && !!a.openingDate && isLockedDate(a.openingDate);
+  const fest = bestandFest ? 'disabled' : '';
   baseDialog({
     title: isNew ? 'Neues Zahlungskonto' : 'Konto bearbeiten',
     body: html`
+      ${bestandFest ? raw(`<div class="notice warn mb16">Der Anfangsbestand gilt ab einem festgeschriebenen Tag
+        (bis ${esc(fmtDate(lockedUntil()))}) und lässt sich deshalb nicht mehr ändern.</div>`) : ''}
       <div class="field"><label>Name *</label><input id="f_name" value="${a.name}" placeholder="z. B. Geschäftskonto Sparkasse"></div>
       <div class="field"><label>Art</label>
         <select id="f_kind">
@@ -481,17 +536,22 @@ function accountForm(a) {
       </div>
       <div class="field"><label>IBAN</label><input id="f_iban" value="${a.iban || ''}"></div>
       <div class="form-grid">
-        <div class="field"><label>Anfangsbestand</label><input class="money-input" id="f_openingBalance" value="${moneyInput(a.openingBalance)}"></div>
-        <div class="field"><label>Gültig ab</label><input type="date" id="f_openingDate" value="${a.openingDate || ''}"></div>
+        <div class="field"><label>Anfangsbestand</label><input class="money-input" id="f_openingBalance" value="${moneyInput(a.openingBalance)}" ${fest}></div>
+        <div class="field"><label>Gültig ab</label><input type="date" id="f_openingDate" value="${a.openingDate || ''}" ${fest}></div>
         <div class="field"><label>Konto SKR03</label><input id="f_skr03" value="${a.skr03 || ''}"></div>
         <div class="field"><label>Konto SKR04</label><input id="f_skr04" value="${a.skr04 || ''}"></div>
       </div>`,
     onSave: async (rootEl) => {
       const g = (k) => rootEl.querySelector('#f_' + k);
       if (!g('name').value.trim()) { warn('Bitte einen Namen eintragen'); return false; }
+      const openingDate = bestandFest ? a.openingDate : g('openingDate').value;
+      if (!bestandFest && openingDate && isLockedDate(openingDate)) {
+        warn('Zeitraum ist festgeschrieben', `Der Anfangsbestand kann erst nach dem ${fmtDate(lockedUntil())} beginnen.`);
+        return false;
+      }
       await upsertEntity('accounts', {
         ...a, name: g('name').value.trim(), kind: g('kind').value, iban: g('iban').value.trim(),
-        openingBalance: parseMoney(g('openingBalance').value), openingDate: g('openingDate').value,
+        openingBalance: bestandFest ? a.openingBalance : parseMoney(g('openingBalance').value), openingDate,
         skr03: g('skr03').value.trim(), skr04: g('skr04').value.trim(),
       }, 'konto');
       ok('Konto gespeichert');
@@ -501,36 +561,15 @@ function accountForm(a) {
 
 function assetForm(a) {
   const isNew = !a;
-  a = a || { id: uid('ass'), name: '', cost: 0, purchaseDate: todayISO(), usefulLifeYears: 3, method: 'linear' };
+  const entwurf = a || neuesAnlagegut();
   baseDialog({
     title: isNew ? 'Neues Anlagegut' : 'Anlagegut bearbeiten',
-    body: html`
-      <div class="field"><label>Bezeichnung *</label><input id="f_name" value="${a.name}"></div>
-      <div class="field"><label>Anschaffungskosten (netto)</label><input class="money-input" id="f_cost" value="${moneyInput(a.cost)}"></div>
-      <div class="field"><label>Anschaffungsdatum</label><input type="date" id="f_purchaseDate" value="${a.purchaseDate}"></div>
-      <div class="field"><label>Nutzungsdauer in Jahren</label>
-        <input type="number" id="f_usefulLifeYears" min="1" max="50" step="1" value="${a.usefulLifeYears}">
-        <span class="hint">Übliche Werte: Computer 3, Maschinen 5–8, Pkw 6, Büromöbel 13 Jahre.
-        Verbindlich sind die AfA-Tabellen des Bundesfinanzministeriums.</span>
-      </div>`,
+    body: anlageFelder(entwurf, { bestehend: !isNew }),
+    onOpen: wireAnlageFelder,
     onSave: async (rootEl) => {
-      const g = (k) => rootEl.querySelector('#f_' + k);
-      const name = g('name').value.trim();
-      const cost = parseMoney(g('cost').value);
-      if (!name || !cost) { warn('Bezeichnung und Kosten werden benötigt'); return false; }
-      if (cost <= 80000) {
-        const yes = await confirmDialog({
-          title: 'Unter 800 € netto',
-          text: 'Wirtschaftsgüter bis 800 € netto dürfen als geringwertiges Wirtschaftsgut sofort in voller Höhe abgezogen werden. Wollen Sie es trotzdem über mehrere Jahre abschreiben?',
-          confirmLabel: 'Trotzdem abschreiben',
-        });
-        if (!yes) return false;
-      }
-      await upsertEntity('assets', {
-        ...a, name, cost,
-        purchaseDate: g('purchaseDate').value || todayISO(),
-        usefulLifeYears: Math.max(1, Number(g('usefulLifeYears').value) || 1),
-      }, 'anlage');
+      const next = await anlageAusFeldern(rootEl, entwurf, { bestehend: !isNew });
+      if (!next) return false;
+      await upsertEntity('assets', next, 'anlage');
       ok('Anlagegut gespeichert');
     },
   });

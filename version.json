@@ -1,12 +1,12 @@
 {
-  "version": "1.7.1",
-  "released": "2026-09-29T12:48:17.369Z",
-  "notes": "Korrekturen nach einer Durchsicht der ganzen Anwendung. Falls Sie von 1.6 kommen, ist\nauch alles aus 1.7.0 enthalten: die Aufgabenliste (Strg+7), Zahlungen im Monat des\nZahlungseingangs und Sonderzeichen, die beim Speichern nicht mehr umgeschrieben werden.\n\n* Festgeschriebene Rechnungen lassen sich noch als bezahlt vermerken. Bisher blieb\n  jede Rechnung, die beim Festschreiben offen war, für immer offen – auch wenn das Geld\n  später kam. Jetzt lässt sich die Zahlung eintragen, mit einem Datum nach der\n  Festschreibung; alles andere an der Buchung bleibt gesperrt. Festschreiben geht\n  außerdem nur noch bis heute, nicht versehentlich in die Zukunft.\n* Beträge mit Tausenderpunkt. „1.500“ wurde zu 1,50 €, „1.234.567“ sogar zu 0 €.\n  Jetzt ergibt das 1.500,00 € bzw. 1.234.567,00 €.\n* Monatliche Termine am 31. rutschten ab Februar für immer auf den 28. Jetzt\n  stehen sie in jedem Monat am richtigen Tag, in kürzeren Monaten am Monatsende.\n* Tab-Taste. Nach dem Schließen eines Abschreibungsplans oder nach einer\n  automatischen Sperre mit offenem Fenster reagierte die Tab-Taste bis zum Neustart\n  nicht mehr.\n* Sperren. Unter Windows ließ sich über das Menü (etwa Strg+N) über dem\n  Sperrbildschirm ein Fenster mit Kategorien, Kontakten und Konten öffnen. Beim\n  Sperren verlässt der entschlüsselte Bestand jetzt auch die Oberfläche, und was Sie\n  gerade eben geändert haben, wird vor dem Sperren noch gespeichert.\n* Filter bleiben, wie Sie sie setzen. Wer aus der Übersicht in die Buchungsliste\n  sprang, bekam nach jedem Speichern einer Buchung die alten Filter und den alten\n  Zeitraum zurück.\n* Termine und Aufgaben fragen vor dem Schließen nach, wenn Eingaben noch nicht\n  gespeichert sind – wie schon beim Erfassen einer Buchung.\n* Kleinere Korrekturen: Kontenblätter zählen Bewegungen vor dem Stichtag des\n  Anfangsbestands nicht mehr doppelt; der Umsatz je Kontakt wird durch Stornos nicht\n  mehr negativ; Hinweise nennen die EÜR-Zeilen des jeweiligen Vordrucks; ein Backslash\n  in Kalenderdateien bleibt erhalten; eine Aufgabe zu einer ausgelaufenen Terminserie\n  gilt bis zu deren letztem Termin; das Update lädt nur, was die geprüfte\n  Versionsdatei nennt.",
+  "version": "1.8.0",
+  "released": "2026-09-30T21:22:33.833Z",
+  "notes": "Neue Funktionen und Korrekturen aus einer Durchsicht von Bedienung, Programmcode und\nRechtslage.\n\n* E-Rechnungen lesen und übernehmen. XRechnung und ZUGFeRD / Factur-X erscheinen in\n  der Belegvorschau als lesbare Rechnung statt als XML. Ziehen Sie eine E-Rechnung in eine\n  Buchung, übernimmt Kontovia auf Knopfdruck Nummer, Datum, Fälligkeit, Betrag, Steuersatz\n  und Kontakt – auch aus ZUGFeRD-PDFs.\n* Wiederkehrende Buchungen. Miete, Telefon, Abos: unter *Weitere Angaben → Wiederholen*\n  einen Turnus wählen. Fällige Buchungen bietet Kontovia nach dem Entsperren zum Anlegen an.\n* Steuertermine in Übersicht und Kalender: die nächste Umsatzsteuer-Voranmeldung samt\n  Zahllast und die Frist der Jahreserklärungen, auf Werktage verschoben. Die\n  Dauerfristverlängerung stellen Sie unter Einstellungen ein.\n* Abschreibung. Computer, Notebooks, Tablets und Software lassen sich mit einem Jahr\n  voll im Anschaffungsjahr abschreiben (BMF 22.02.2022). Für Anschaffungen vom 01.07.2025\n  bis 31.12.2027 gibt es die degressive Abschreibung mit bis zu 30 %. Die vorgeschlagenen\n  Nutzungsdauern folgen der amtlichen AfA-Tabelle (Kopierer 7 statt 8 Jahre).\n* Sicherheit. Der JSON-Gesamtexport und neue Vollsicherungen enthalten keine\n  Anmeldemerkmale von Google mehr. Beim Einspielen einer Sicherung bleiben Cloud- und\n  Kalenderverbindung dieses Geräts bestehen.\n* Änderungsjournal. Zwei sehr schnelle Änderungen hintereinander (etwa zwei Klicks auf\n  „als bezahlt“) konnten die Prüfsummenkette brechen, und „Journal prüfen“ meldete dann\n  fälschlich eine Veränderung von außen. Das ist behoben.\n* Festschreibung. Kosten und Abschreibung eines Anlageguts sowie der Anfangsbestand\n  eines Kontos lassen sich im festgeschriebenen Zeitraum nicht mehr ändern.\n* Umsatzsteuer. Innergemeinschaftliche Erwerbe zu 7 % stehen jetzt in Kennzahl 93\n  statt 89.\n* Kleinere Verbesserungen: Hinweise der Datenprüfung führen per Klick zu den betroffenen\n  Buchungen; Rechnungsnummern beginnen jedes Jahr bei 0001; Prüfhinweis für\n  USt-IdNr. und Steuernummer; Hilfe bei vergessenem Passwort auf dem Sperrbildschirm;\n  Stammdaten fragen vor dem Verwerfen ungespeicherter Eingaben; Termine prüfen, dass das\n  Ende nicht vor dem Beginn liegt; eine aus einem Termin angelegte Buchung wird genau mit\n  diesem Termin verknüpft.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "322b899c74cfb726c1e44f4d497f7f6a9e5238acc5f213b534b9ec925dff0c60",
-      "size": 37359
+      "sha256": "e61615d3a2d9d6ca9a7bb126225cadda0cafc27e26e0861fb78ccddbc37d46d0",
+      "size": 39006
     },
     {
       "path": "icons/apple-touch-icon.png",
@@ -35,8 +35,13 @@
     },
     {
       "path": "lib/calc.js",
-      "sha256": "ffe2ede4316eec2620f3abdc2a7fd6e0cae14b4b3442257c1308808ce1ab5105",
-      "size": 42654
+      "sha256": "35e556e67ba483ecb93a24926540bc978e52aaae010d40776f5a02665f52f0d3",
+      "size": 45503
+    },
+    {
+      "path": "lib/erechnung.js",
+      "sha256": "0cb4e0b1609ca88aace350280aadd9a25ee39b93bd6e54b925a054b49bc5e704",
+      "size": 17728
     },
     {
       "path": "lib/euer.js",
@@ -45,8 +50,13 @@
     },
     {
       "path": "lib/exports.js",
-      "sha256": "babd613c7a65ccd20c58a3ef8139da6d75b216f57272db77b369f7da39ac6676",
-      "size": 37340
+      "sha256": "850cf3d91e822063c23b3a8931c96946c2ac22996030d771b3fe7c909592b631",
+      "size": 37744
+    },
+    {
+      "path": "lib/fristen.js",
+      "sha256": "593acc66319e00665a5482a741cd69beb180206d1678adfb90da8ba11b8e6c27",
+      "size": 6436
     },
     {
       "path": "lib/gcal.js",
@@ -65,8 +75,8 @@
     },
     {
       "path": "lib/merge.js",
-      "sha256": "9d7cda2421f699f0320497aef8d527986d016365de792733709bccd557211f77",
-      "size": 12335
+      "sha256": "57b6a4af54c5b487337dd9ae5ee0e97536f6633f39e80152c479c1591ef75e10",
+      "size": 12428
     },
     {
       "path": "lib/period.js",
@@ -85,8 +95,8 @@
     },
     {
       "path": "lib/reports.js",
-      "sha256": "133e46175b9c6543aa6082f771d9696678a46aca92ee3c52a89cc202eba4c4fd",
-      "size": 32646
+      "sha256": "4cd3e7bfdb7aaf4c77dcbf7795b5566f6b3d7008e957a737c147ffb1f53e3bdd",
+      "size": 33150
     },
     {
       "path": "lib/router.js",
@@ -95,8 +105,8 @@
     },
     {
       "path": "lib/store.js",
-      "sha256": "02964ba6059a9be042305adbf8e0ba036e12a35037fa1cd6d14335bdba204bfb",
-      "size": 31035
+      "sha256": "1551574ef73151d7e46ded04dfa39059ca3b9d73eb5178d0610ef31cc3b70576",
+      "size": 33524
     },
     {
       "path": "lib/sync.js",
@@ -115,8 +125,8 @@
     },
     {
       "path": "lib/ui.js",
-      "sha256": "82896586a9ab60ad58fc0a501c3bffc062cd4e42d233368b10d86c7e1cd50880",
-      "size": 40741
+      "sha256": "d10180a5769dabd0dba56991b1a03c04ce515a7dc8a08cd0d3466705a1256d26",
+      "size": 41784
     },
     {
       "path": "lib/updates.js",
@@ -125,33 +135,43 @@
     },
     {
       "path": "lib/util.js",
-      "sha256": "d3c629ee1c29a7addecc093b4202d1405599a63570f656831e3b4f0a78154d43",
-      "size": 12101
+      "sha256": "b5a0ce0268e9a2e66364541e4a4c061becee1b46e5c5743650d43d80103ab558",
+      "size": 14047
+    },
+    {
+      "path": "lib/wiederkehrend.js",
+      "sha256": "3c440cf907522329fb92e0d307d5dbb3d60d5aff45cd6f735285dfb92f6491af",
+      "size": 4378
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "cd02764b5ef92f8dd5f293b5cad3d99b4f98b25f068058a4144a3550ba184e09",
+      "sha256": "d9cf72ea703c34046f56301840e926613e1d7dbca6c3cbed3d64f0616b4ea7cf",
       "size": 886
     },
     {
       "path": "recht/COMPLIANCE.html",
-      "sha256": "45527de5d05880515d59decb88c498a27926dbddbce7ddaf97821ae487ff2308",
-      "size": 29096
+      "sha256": "ae6f0a0a19a424b7a399bb1ed0c42b2668816689fac8d85a4ce346c4bec74019",
+      "size": 31322
     },
     {
       "path": "recht/DATENSCHUTZ.html",
-      "sha256": "c26d479e395e5a281fff7cc9406bcd8b12f8ccc95ddcd7e14408f7d1e932be26",
-      "size": 11082
+      "sha256": "bde01262f969fd5d6989aa0817eeddaeabfb6e7d4081997433cd7fc49ef34f82",
+      "size": 11222
     },
     {
       "path": "styles.css",
-      "sha256": "09cc3ae35d82202c4030fce875593b3828f6b7f653fff55c2e1d44c70d62c8d4",
-      "size": 45565
+      "sha256": "f9a8fc633d3dd904f87fc272f6e16920a95947de988143f690745e09b111470f",
+      "size": 46655
+    },
+    {
+      "path": "views/anlageform.js",
+      "sha256": "a93983ffcd2d56c261acc0a00d67e8f93a89442f8b1e709e979c79644c60a70b",
+      "size": 7990
     },
     {
       "path": "views/calendar.js",
-      "sha256": "e19455a332057b950a70f64f239534882ca299d41dde505cb9b4498b36fe6a20",
-      "size": 31508
+      "sha256": "3732d03e27d90a064efe3de7b34b519cdc974ef129cb46ea699d87de414557c2",
+      "size": 33658
     },
     {
       "path": "views/calendarsync.js",
@@ -165,33 +185,43 @@
     },
     {
       "path": "views/dashboard.js",
-      "sha256": "74bf4ecfbdf6c67b2f102793ac8510290f8d72f351b031547e09d51b5120713d",
-      "size": 28806
+      "sha256": "f9b530af5776ad3321748434de70f705e7143919e3649d20cf823a76b974b687",
+      "size": 31911
+    },
+    {
+      "path": "views/erechnung.js",
+      "sha256": "c973591bb3b66ac97b04da35a192e8295de81c400dc03723fa9180629dd56397",
+      "size": 5060
     },
     {
       "path": "views/export.js",
-      "sha256": "68f97901c55b22d5cb1356058d6b02aa2afcb0de46f81bd102e38d7e75c44def",
-      "size": 20348
+      "sha256": "12b2af00ee1f3b314831d8e4503b7843bca88f0b8cb98f6cfc3cc6e6cda37a44",
+      "size": 20437
     },
     {
       "path": "views/help.js",
-      "sha256": "e66c43866c07dece9ede7322a203911ef39f50deb2ddd3090f75b28fead980fd",
-      "size": 37714
+      "sha256": "6c45eb5f0fb5b619a1031b4d1846139d4427638f0d4fbe7011c5d76de1b43d80",
+      "size": 41060
     },
     {
       "path": "views/master.js",
-      "sha256": "1aa03b1a62bfbabc29e95e359ded699b8662ec3b366c36816d335391e5d97644",
-      "size": 28335
+      "sha256": "332407c87069d274ec91342f6f4fcc5fbb5d2768c390988a067235724a2b256b",
+      "size": 30792
     },
     {
       "path": "views/reports.js",
-      "sha256": "b78d9f36d167af889d5fdf5f887b7b127f76128ce041a0c67b34a564ae03b1f4",
-      "size": 42301
+      "sha256": "bda3488498cc691bf6cc3f8877e8cf1f6d39df3e07c374d8a72e176c3982fd73",
+      "size": 42639
     },
     {
       "path": "views/settings.js",
-      "sha256": "f6ba26e9723e305f56f5fa7efcc2eae8f726d3d95f860033fbdeba1fab36728f",
-      "size": 27286
+      "sha256": "b66e46c3e05218b16c8544c7253b51e3c5139524313eec0bf8e086995dc8ee86",
+      "size": 28360
+    },
+    {
+      "path": "views/spruenge.js",
+      "sha256": "e519010f3a12a35140f0a741e2ebd38a44c2ddca6746b614c346c226b88dcc17",
+      "size": 1822
     },
     {
       "path": "views/todos.js",
@@ -200,8 +230,13 @@
     },
     {
       "path": "views/transactions.js",
-      "sha256": "8f58df43a64e840bf15485318a06dd84477d2ab6c6e2c7e121657b61d99b6751",
-      "size": 60950
+      "sha256": "bd8019541e98c385218cf5a815891e464486d1829bcf6468ef997be0a412e17a",
+      "size": 72494
+    },
+    {
+      "path": "views/wiederkehrend.js",
+      "sha256": "485a8ddf5083b648b0868f40ea54e330e55ad5b33db889a4e4872ae77a15a03f",
+      "size": 11437
     },
     {
       "path": "web/ablage.js",
@@ -210,7 +245,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "373b0a7f7e9164ea40642f4f6c4c5edce7769b738ae5b419d2ac6378e8050e2d",
+      "sha256": "49094e72e0e19aad95b204a52ad9aacf5d307d4b2c15b79e2d5a1c9b2806f867",
       "size": 6944
     },
     {
@@ -220,8 +255,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "6077faf0afc2a772d248c293d9fdf61429cd0f064dad28514fbcb158c32055d2",
-      "size": 26027
+      "sha256": "cbd39049f69d03e55b04e8a2e90c45936b0cfda57152e20a25c888f30083a1a9",
+      "size": 26363
     },
     {
       "path": "web/cloud.js",
@@ -280,13 +315,13 @@
     },
     {
       "path": "web/seed.js",
-      "sha256": "483ec74874c17763186cc23743aa866c11c9cf08df48a232cc1f91cb36250cf2",
-      "size": 5768
+      "sha256": "6e8c3e40684a1fe41df94a15be3218312a780e8b0fc92e1a85cb15762e387321",
+      "size": 5787
     },
     {
       "path": "web/tresor.js",
-      "sha256": "f63fa3fd18e70c4aff577aa74c526b7acc6275321b4e5a9e1d7602e1eb24f461",
-      "size": 9208
+      "sha256": "de3370a9ac91fdccbd1cf0cbc029252f89708072fc7c7f1d5c641cf69f410403",
+      "size": 9547
     },
     {
       "path": "web/updateinfo.js",
@@ -302,6 +337,11 @@
       "path": "web/zip.js",
       "sha256": "dfce2a9f4256cc89ae2af0d6c9b683a41267d8babe7a4c80412fdc2979d74ebf",
       "size": 4225
+    },
+    {
+      "path": "web/zugang.js",
+      "sha256": "1a0ebfc8c526dc6183b38e2b23206b74f4a81ae4c81536e8854e792a8291e723",
+      "size": 2832
     }
   ]
 }

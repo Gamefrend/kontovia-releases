@@ -3,8 +3,8 @@
  * Kümmert sich um Einrichtung, Entsperren, Rahmen und Navigation.
  */
 
-import { html, raw, esc, $, int, fmtDateTime, debounce, MOD } from './lib/util.js';
-import { icon, toast, ok, err, warn, modal, passwordInput, wirePasswordToggles } from './lib/ui.js';
+import { html, raw, esc, $, int, fmtDateTime, debounce, MOD, ustIdHinweis, steuernummerHinweis } from './lib/util.js';
+import { icon, toast, ok, err, warn, modal, passwordInput, wirePasswordToggles, feldHinweis } from './lib/ui.js';
 import { store, setDb, clearDb, subscribe, saveNow, sel, lockedUntil, setDevice, commit } from './lib/store.js';
 import { startAutoSync, syncState, onSync, syncNow } from './lib/sync.js';
 import { updateState, onUpdate, startUpdateWatch, markNotified } from './lib/updates.js';
@@ -260,6 +260,8 @@ function renderSetup() {
         </div>
       </div>`;
 
+    feldHinweis($('#f_taxNumber'), steuernummerHinweis);
+    feldHinweis($('#f_vatId'), ustIdHinweis);
     $('#f_taxMode')?.addEventListener('change', (e) => {
       const klein = e.target.value === 'kleinunternehmer';
       app.querySelectorAll('#f_vatBlock, [data-vat-only]').forEach((n) => { n.hidden = klein; });
@@ -346,12 +348,24 @@ function renderUnlock(message = '') {
           Die Entschlüsselung dauert bewusst rund eine Sekunde – das bremst
           Angreifer beim Durchprobieren von Passwörtern erheblich aus.
         </p>
+        <details class="forgot small mt8">
+          <summary>Passwort vergessen?</summary>
+          <p>Ohne Passwort lässt sich der Tresor nicht öffnen – auch nicht vom Hersteller. Genau
+          das schützt Ihre Buchhaltung, wenn jemand die Datei in die Hände bekommt.</p>
+          <p>Haben Sie eine <strong>Vollsicherung (.kvbak)</strong>, deren Passwort Sie kennen:
+          ${WEB
+            ? raw('In den Einstellungen des Browsers die Website-Daten dieser Seite löschen, Kontovia neu laden, einen neuen Tresor anlegen und unter <em>Einstellungen → Sicherung wiederherstellen</em> einspielen.')
+            : raw('Den Datenordner umbenennen (etwa in „daten-alt“ – nicht löschen, falls Ihnen das Passwort doch noch einfällt), Kontovia neu starten, einen neuen Tresor anlegen und unter <em>Einstellungen → Sicherung wiederherstellen</em> einspielen.')}</p>
+          <p class="muted">Die automatischen Sicherungen sind mit dem Tresorpasswort verschlüsselt, das zu ihrer Zeit galt.</p>
+          ${WEB ? '' : raw('<button type="button" class="btn sm" id="openData">Datenordner öffnen</button>')}
+        </details>
       </div>
     </div>`;
 
   const pw = $('#pw');
   const errEl = $('#unlockerr');
   const btn = $('#unlock');
+  $('#openData')?.addEventListener('click', () => api.app.openDataFolder().catch((e) => err('Ordner nicht geöffnet', e.message)));
   wirePasswordToggles(app);
   pw.focus();
 
@@ -408,6 +422,8 @@ async function afterUnlock() {
   // Der Kalenderabgleich läuft nur, wenn auf diesem Gerät ein Google-Konto verbunden ist.
   startCalendarSync().catch((e) => console.error('Kalenderabgleich:', e));
   await setupUpdateWatch();
+  // Fällige wiederkehrende Buchungen erst nach der Frage zur Update-Prüfung anbieten.
+  import('./views/wiederkehrend.js').then((m) => m.faelligeAnbieten()).catch((e) => console.error('Wiederkehrende Buchungen:', e));
 }
 
 /* -------------------------------------------------------------------------- */

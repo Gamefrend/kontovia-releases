@@ -1,13 +1,13 @@
 /** Kontovia – Einstellungen, Sicherheit, Sicherungen, Festschreibung. */
 
 import {
-  html, raw, esc, $, $$, money, fmtDate, fmtDateTime, todayISO, int, bytes, uid,
+  html, raw, esc, $, $$, fmtDate, fmtDateTime, todayISO, int, bytes, uid, ustIdHinweis, steuernummerHinweis,
 } from '../lib/util.js';
-import { icon, modal, confirmDialog, askPassword, ok, err, warn, toast, emptyState } from '../lib/ui.js';
+import { icon, modal, confirmDialog, askPassword, ok, err, warn, toast, feldHinweis } from '../lib/ui.js';
 import { store, sel, commit, saveNow, setDb, verifyAudit, lockedUntil } from '../lib/store.js';
 import { refresh, navigate, router } from '../lib/router.js';
-import { applyTheme, appInfo, lockNow } from '../app.js';
-import { renderCloudCard, renderUpdateCard, openConflicts } from './cloudpanel.js';
+import { applyTheme, lockNow } from '../app.js';
+import { renderCloudCard, renderUpdateCard } from './cloudpanel.js';
 import { renderCalendarCard } from './calendarsync.js';
 import { table, mountTables } from '../lib/table.js';
 
@@ -18,7 +18,7 @@ const WEB = api.platform === 'web';
 /** Felder, die erst mit „Einstellungen übernehmen“ gelten (das Erscheinungsbild wirkt sofort). */
 const FELDER = [
   'companyName', 'ownerName', 'street', 'zip', 'city', 'taxNumber', 'vatId', 'taxOffice', 'email', 'phone',
-  'taxMode', 'accountingBasis', 'defaultVatRate', 'vatPeriod', 'chartOfAccounts', 'fiscalYear',
+  'taxMode', 'accountingBasis', 'defaultVatRate', 'vatPeriod', 'vatDeadline', 'chartOfAccounts', 'fiscalYear',
   'autoLockMinutes', 'startView',
 ];
 
@@ -105,6 +105,14 @@ async function draw(root) {
                 <option value="vierteljährlich" ${s.vatPeriod === 'vierteljährlich' ? 'selected' : ''}>vierteljährlich</option>
                 <option value="jährlich" ${s.vatPeriod === 'jährlich' ? 'selected' : ''}>jährlich</option>
               </select>
+            </div>
+            <div class="field">
+              <label>Abgabe der Voranmeldung</label>
+              <select id="s_vatDeadline">
+                <option value="normal" ${s.vatDeadline !== 'dauerfrist' ? 'selected' : ''}>bis zum 10. des Folgemonats</option>
+                <option value="dauerfrist" ${s.vatDeadline === 'dauerfrist' ? 'selected' : ''}>mit Dauerfristverlängerung (+1 Monat)</option>
+              </select>
+              <span class="hint">Für die Steuertermine in Übersicht und Kalender. Die Dauerfristverlängerung beantragen Sie beim Finanzamt (§ 46 UStDV).</span>
             </div>
             <div class="field">
               <label>Kontenrahmen</label>
@@ -345,7 +353,7 @@ async function apply(root, { neuZeichnen = true } = {}) {
       zip: val('zip'), city: val('city'), taxNumber: val('taxNumber'), vatId: val('vatId'),
       taxOffice: val('taxOffice'), email: val('email'), phone: val('phone'),
       taxMode: val('taxMode'), accountingBasis: val('accountingBasis'),
-      defaultVatRate: Number(val('defaultVatRate')), vatPeriod: val('vatPeriod'),
+      defaultVatRate: Number(val('defaultVatRate')), vatPeriod: val('vatPeriod'), vatDeadline: val('vatDeadline'),
       chartOfAccounts: val('chartOfAccounts'), fiscalYear: Number(val('fiscalYear')),
       autoLockMinutes: Number(val('autoLockMinutes')),
       theme: val('theme'), startView: val('startView'),
@@ -364,6 +372,8 @@ async function apply(root, { neuZeichnen = true } = {}) {
 
 function wire(root) {
   $('#btnApply', root).addEventListener('click', () => apply(root));
+  feldHinweis($('#s_taxNumber', root), steuernummerHinweis);
+  feldHinweis($('#s_vatId', root), ustIdHinweis);
 
   // Das Erscheinungsbild wirkt sofort – ausprobieren soll ohne „Übernehmen“ gehen.
   $('#s_theme', root).addEventListener('change', async (e) => {
@@ -400,7 +410,8 @@ function wire(root) {
   $('#btnRestore', root).addEventListener('click', async () => {
     const yes = await confirmDialog({
       title: 'Sicherung wiederherstellen?',
-      text: 'Der aktuelle Datenbestand wird vollständig durch den Inhalt der Sicherung ersetzt. Erstellen Sie vorher eine Sicherung des jetzigen Standes, wenn Sie ihn behalten wollen.',
+      text: 'Der aktuelle Datenbestand wird vollständig durch den Inhalt der Sicherung ersetzt. Erstellen Sie vorher eine Sicherung des jetzigen Standes, wenn Sie ihn behalten wollen.'
+        + ' Ist der Cloud-Abgleich eingerichtet, gilt der wiederhergestellte Stand beim nächsten Abgleich auch für Ihre anderen Geräte: Was nach der Sicherung angelegt und schon abgeglichen wurde, verschwindet dann auch dort. Die Verbindungen dieses Geräts (Cloud, Google Kalender) bleiben bestehen.',
       confirmLabel: 'Weiter zur Auswahl', danger: true,
     });
     if (!yes) return;

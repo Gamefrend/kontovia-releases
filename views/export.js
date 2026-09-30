@@ -1,12 +1,12 @@
 /** Kontovia – Export für Finanzamt, Steuerkanzlei, Betriebsprüfung und Archiv. */
 
-import { html, raw, esc, $, $$, money, fmtDate, todayISO, int, bytes, sum } from '../lib/util.js';
-import { icon, ok, err, warn, modal, confirmDialog, askPassword } from '../lib/ui.js';
+import { html, raw, esc, $, $$, money, todayISO, int, sum } from '../lib/util.js';
+import { icon, ok, err, warn, modal, confirmDialog } from '../lib/ui.js';
 import { store, sel } from '../lib/store.js';
 import {
   euerReport, vatReturn, isKleinunternehmer, basisOf, effectiveDate, listedOnly, unlistedStats,
 } from '../lib/calc.js';
-import { defaultPeriod, periodControl, periodLabel } from '../lib/period.js';
+import { defaultPeriod, periodControl, periodLabel, setPeriod } from '../lib/period.js';
 import { navigate } from '../lib/router.js';
 import { appInfo } from '../app.js';
 import * as X from '../lib/exports.js';
@@ -18,6 +18,7 @@ const WEB = api.platform === 'web';
 const period = defaultPeriod();
 
 export async function render(root, params, { actions } = {}) {
+  if (params?.period?.from && params?.period?.to) setPeriod(period, params.period.from, params.period.to);
   actions.innerHTML = '<div id="exPeriod"></div>';
   periodControl($('#exPeriod', actions), period, () => draw(root));
   draw(root);
