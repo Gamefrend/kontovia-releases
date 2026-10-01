@@ -739,6 +739,23 @@ export async function renderUpdateCard(root) {
 }
 
 /**
+ * Wird ohne Assistenten installiert? (src/main/updater.js, installMode) Dann
+ * läuft alles in Kontovia ab: herunterladen, prüfen, neu starten.
+ */
+const still = (info) => !WEB && info.modus === 'still';
+const knopf = (info) => (WEB || still(info) ? 'Jetzt aktualisieren' : 'Herunterladen und installieren');
+
+/**
+ * RELEASE_NOTES.md ist für den Editor von Hand umbrochen. Im Fenster bricht
+ * der Text selbst um – sonst stehen Satzreste eingerückt auf eigenen Zeilen.
+ * Absätze (Leerzeile) und Aufzählungspunkte bleiben.
+ */
+const versionshinweise = (text) => String(text || '')
+  .replace(/\r\n/g, '\n')
+  .replace(/([^\n])\n(?![\n*-])[ \t]*/g, '$1 ')
+  .replace(/^[*-] /gm, '• ');
+
+/**
  * Zeigt die gefundene Fassung als eigenes Fenster – der Weg, der aus der
  * Seitenleiste und aus dem Hinweis beim Start führt. Die Kennungen `uGo` und
  * `uProgress` sind dieselben wie in der Karte unter „Einstellungen“, damit
@@ -752,13 +769,15 @@ export function openUpdateDialog(info) {
     body: html`
       <p class="mt0">Sie verwenden Version ${info.current}.
       ${info.released ? raw(`Die neue Fassung wurde am ${esc(fmtDate(String(info.released).slice(0, 10)))} veröffentlicht.`) : ''}</p>
-      ${info.notes ? raw(`<div class="notice mt16" style="white-space:pre-wrap">${esc(info.notes)}</div>`) : ''}
+      ${info.notes ? raw(`<div class="notice mt16" style="white-space:pre-wrap">${esc(versionshinweise(info.notes))}</div>`) : ''}
       <p class="small muted mt16">${WEB
         ? 'Kontovia lädt die neuen Programmdateien und prüft jede gegen ihre SHA-256-Prüfsumme. Ihre Buchhaltung bleibt dabei unberührt.'
-        : 'Kontovia lädt das Installationspaket herunter und prüft es gegen die hinterlegte SHA-512-Prüfsumme. Ihre Buchhaltung bleibt dabei unberührt – der Datenordner wird von der Installation nicht angefasst.'}</p>
+        : still(info)
+          ? `Kontovia lädt die neue Fassung herunter, prüft sie gegen die hinterlegte SHA-512-Prüfsumme und installiert sie ohne weitere Fragen. Danach startet Kontovia von selbst neu${info.angemeldetBleiben ? ' – Sie bleiben angemeldet' : ''}. Ihre Buchhaltung bleibt dabei unberührt.`
+          : 'Kontovia lädt das Installationspaket herunter und prüft es gegen die hinterlegte SHA-512-Prüfsumme. Ihre Buchhaltung bleibt dabei unberührt – der Datenordner wird von der Installation nicht angefasst.'}</p>
       <div id="uProgress" class="mt8"></div>`,
     foot: `<button class="btn" data-later>Später erinnern</button>
-           <button class="btn primary" id="uGo">${icon('export', 15).__raw} ${WEB ? 'Aktualisieren' : 'Herunterladen und installieren'}</button>`,
+           <button class="btn primary" id="uGo">${icon('export', 15).__raw} ${knopf(info)}</button>`,
   });
   m.root.querySelector('[data-later]').addEventListener('click', () => m.close());
   m.root.querySelector('#uGo').addEventListener('click', () => runUpdate(info, m.root));
@@ -799,9 +818,9 @@ export async function checkForUpdate(box, { silent = false } = {}) {
       <div class="notice warn">
         <strong>Version ${info.version} ist verfügbar</strong> – Sie haben ${info.current}.
         ${info.released ? raw(`<span class="muted"> Veröffentlicht am ${esc(fmtDate(String(info.released).slice(0, 10)))}.</span>`) : ''}
-        ${info.notes ? raw(`<div class="mt8" style="white-space:pre-wrap">${esc(info.notes)}</div>`) : ''}
+        ${info.notes ? raw(`<div class="mt8" style="white-space:pre-wrap">${esc(versionshinweise(info.notes))}</div>`) : ''}
         <div class="row mt16" style="gap:8px">
-          <button class="btn primary" id="uGo">${icon('export', 15)} ${WEB ? 'Aktualisieren' : 'Herunterladen und installieren'}</button>
+          <button class="btn primary" id="uGo">${icon('export', 15)} ${knopf(info)}</button>
           <span class="muted small">${bytes(info.size)}</span>
         </div>
         <div id="uProgress" class="mt8"></div>
@@ -816,6 +835,13 @@ async function runUpdate(info, box) {
     title: `Auf Version ${info.version} wechseln?`,
     text: 'Kontovia lädt die neuen Programmdateien, prüft jede gegen ihre Prüfsumme und lädt sich dann neu. Ungespeicherte Änderungen werden vorher gesichert; danach melden Sie sich wieder mit Ihrem Passwort an.',
     confirmLabel: 'Aktualisieren',
+  } : still(info) ? {
+    title: `Auf Version ${info.version} aktualisieren?`,
+    text: `Kontovia lädt die neue Fassung herunter, prüft die Prüfsumme und installiert sie. Dafür schließt sich Kontovia kurz und startet danach von selbst wieder${info.angemeldetBleiben
+      ? ' – Sie bleiben angemeldet und müssen Ihr Passwort nicht erneut eingeben' : ''}. Ungespeicherte Änderungen werden vorher gesichert.${info.admin
+      ? ' Weil Kontovia für alle Benutzer dieses Rechners installiert ist, fragt Windows dabei nach Administratorrechten.' : ''}`,
+    confirmLabel: 'Aktualisieren',
+    extra: `<div class="notice mt16 tiny" style="font-family:var(--mono);word-break:break-all">SHA-512: ${esc(info.sha512)}</div>`,
   } : {
     title: `Version ${info.version} installieren?`,
     text: 'Kontovia lädt das Installationspaket herunter, prüft die Prüfsumme und startet dann das Installationsprogramm. Die Anwendung wird dabei beendet – ungespeicherte Änderungen werden vorher gesichert.',
@@ -827,11 +853,16 @@ async function runUpdate(info, box) {
   const btn = box.querySelector('#uGo');
   const prog = box.querySelector('#uProgress');
   btn.disabled = true;
-  const off = api.on.updateProgress((p) => {
-    const pct = p.total ? Math.round((p.received / p.total) * 100) : 0;
+  const balken = (received, total) => {
+    const pct = total ? Math.min(100, Math.round((received / total) * 100)) : 0;
     prog.innerHTML = `<div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--accent)"></div></div>
-      <div class="tiny muted mt8">${bytes(p.received)}${p.total ? ' von ' + bytes(p.total) : ''}</div>`;
-  });
+      <div class="tiny muted mt8">${received ? bytes(received) : 'Verbindung wird aufgebaut …'}${total && received ? ` von ${bytes(total)} · ${pct} %` : ''}</div>`;
+  };
+  balken(0, 0);
+  // Im Fenster stehen darüber die Versionshinweise – der Fortschritt soll trotzdem zu sehen sein.
+  prog.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  // Die Größe aus der Versionsdatei gilt; der Hauptprozess meldet sie mit.
+  const off = api.on.updateProgress((p) => balken(p.received, p.total || info.size || 0));
 
   try {
     if (store.dirty) await saveNow();
@@ -839,7 +870,14 @@ async function runUpdate(info, box) {
     off();
     prog.innerHTML = WEB
       ? '<div class="notice ok">Alle Prüfsummen stimmen. Kontovia wird neu geladen …</div>'
-      : '<div class="notice ok">Prüfsumme stimmt. Das Installationsprogramm wird gestartet …</div>';
+      : still(info)
+        ? `<div class="notice ok">Prüfsumme stimmt. Kontovia schließt sich jetzt, installiert Version ${esc(info.version)} und
+           startet danach von selbst wieder – meist in weniger als einer Minute. Bitte öffnen Sie Kontovia in der Zeit nicht selbst.</div>`
+        : '<div class="notice ok">Prüfsumme stimmt. Das Installationsprogramm wird gestartet …</div>';
+    // Was während des Downloads noch eingetragen wurde, kommt mit.
+    if (store.dirty) await saveNow();
+    // Einen Moment zum Lesen, bevor sich das Fenster schließt.
+    if (still(info)) await new Promise((r) => setTimeout(r, 2500));
     await api.update.install(file.path);
   } catch (e) {
     off();

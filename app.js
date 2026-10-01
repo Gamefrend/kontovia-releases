@@ -109,10 +109,37 @@ async function boot() {
   // Web-Fassung: zurück von einer Anmeldung per Weiterleitung zu Google?
   const rm = await api.cloud.rueckmeldung?.().catch(() => null);
   if (rm?.fehler && !rm.abgebrochen) err('Anmeldung bei Google', rm.fehler);
-  if (!status.exists) renderSetup();
-  else renderUnlock(rm?.zweck === 'verbinden' && !rm.fehler
+  if (!status.exists) { renderSetup(); return; }
+  // Eben aus dem Programm heraus aktualisiert: weiter ohne Passwort.
+  if (status.fortsetzen && await nachAktualisierung()) return;
+  renderUnlock(rm?.zweck === 'verbinden' && !rm.fehler
     ? `Bei Google angemeldet als ${rm.email || 'Ihr Konto'}. Entsperren Sie Kontovia, um die Verbindung zu speichern.`
-    : '');
+    : status.fortsetzen
+      ? 'Kontovia wurde aktualisiert. Bitte melden Sie sich dieses eine Mal mit Ihrem Passwort an.'
+      : '');
+}
+
+/**
+ * Erster Start nach einer Aktualisierung aus dem Programm heraus: Der
+ * Hauptprozess hat den Tresorschlüssel für genau diesen Start bekommen
+ * (src/main/uebergabe.js). Klappt es nicht, bleibt die Passwortabfrage.
+ */
+async function nachAktualisierung() {
+  const db = await api.vault.resume().catch(() => null);
+  if (!db) return false;
+  eintreten(db);
+  toast(`Kontovia ${appInfo.version} ist installiert`,
+    'Die Aktualisierung ist abgeschlossen. Sie sind weiterhin angemeldet.', 'ok', 8000);
+  return true;
+}
+
+/** Öffnet die Buchhaltung, sobald der Tresor entsperrt ist. */
+function eintreten(db) {
+  setDb(db);
+  applyTheme();
+  renderShell();
+  navigate(db.settings.startView || 'dashboard');
+  afterUnlock();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -564,11 +591,7 @@ function renderUnlock(message = '') {
     try {
       const db = await api.vault.unlock(pw.value);
       pw.value = '';
-      setDb(db);
-      applyTheme();
-      renderShell();
-      navigate(db.settings.startView || 'dashboard');
-      afterUnlock();
+      eintreten(db);
     } catch (e) {
       errEl.textContent = e.message;
       btn.disabled = false;

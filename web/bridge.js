@@ -395,6 +395,10 @@ const api = {
         throw err;
       }
     }, { needsUnlock: false }),
+    // Angemeldet bleiben über eine Aktualisierung gibt es nur in der Windows-Fassung:
+    // Dort schützt die Datenschutz-API von Windows den Schlüssel über den Neustart
+    // (src/main/uebergabe.js). Der Browser hat nichts Vergleichbares.
+    resume: handle(async () => null, { needsUnlock: false }),
     lock: handle(async () => { doLock('manuell'); return true; }, { needsUnlock: false }),
     read: handle(async () => kopie(fuerOberflaeche(vault.db))),
     write: handle(async (db) => {

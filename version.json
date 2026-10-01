@@ -1,12 +1,12 @@
 {
-  "version": "1.10.0",
-  "released": "2026-10-01T18:56:36.152Z",
-  "notes": "Ihre Google-Kalender in beide Richtungen und Anmeldung ohne Code.\n\n* Hauptkalender und weitere Google-Kalender. Unter Einstellungen → Kalender-Abgleich →\n  „Weitere Kalender einbeziehen“ wählen Sie Kalender aus, etwa Ihren Hauptkalender. Deren\n  Termine erscheinen in Kontovia, und was Sie hier oder in Google ändern oder löschen, gilt\n  beim nächsten Abgleich auf beiden Seiten. Neue Termine lassen sich in Kontovia direkt einem\n  dieser Kalender zuordnen. Kontovia schreibt dabei nur, was Sie geändert haben – eine\n  Beschreibung mit Konferenzlink bleibt in Google, wie sie war. Der Kalender „Kontovia“ wird\n  wie bisher abgeglichen.\n* Web-Fassung: Anmeldung ohne Code. Auf iPhone, iPad und Mac leitet Kontovia zur Anmeldung\n  zu Google weiter und kommt danach zurück – meist genügt ein Tipp aufs Konto. Die Anmeldung\n  per Code bleibt als Rückfallweg.\n* Web-Fassung lädt aus der Cloud. Bisher konnte die Web-Fassung in die Cloud schreiben,\n  aber nichts daraus laden. Jetzt gleicht sie mit Ihren anderen Geräten ab, und auf einem neuen\n  iPhone lädt „Mit Google anmelden“ Ihre Buchhaltung.\n* Windows: Nach der Anmeldung im Browser kommt Kontovia von selbst wieder nach vorn. (Ein\n  Anmeldefenster in Kontovia selbst lässt Google nicht zu.)\n* Korrekturen: In der Karte „Kalender-Abgleich“ standen bei verbundenem Google-Konto die drei\n  Optionen als HTML-Text statt als Häkchen da. „Cloud trennen“ hat nebenbei auch die Freigabe\n  für den Kalender zurückgezogen – Google widerruft immer die ganze Freigabe einer App; jetzt\n  bleibt der Kalender verbunden.\n\nNeu seit 1.9, falls Sie von einer älteren Fassung kommen: Anmeldung mit Google beim ersten\nStart, Sicherungen in der Cloud mit Wiederherstellung, „Neu anmelden“ bei abgelaufener\nAnmeldung und mehrere Korrekturen am Abgleich. Bitte alle Geräte auf diese Fassung bringen.",
+  "version": "1.11.0",
+  "released": "2026-10-01T19:55:03.425Z",
+  "notes": "Aktualisieren ohne Umweg: Kontovia installiert neue Fassungen selbst und Sie bleiben angemeldet.\n\n* Aktualisierung direkt im Programm. „Jetzt aktualisieren“ lädt die neue Fassung, prüft die\n  Prüfsumme und installiert sie ohne Installationsassistenten. Kontovia schließt sich dafür kurz\n  und startet nach wenigen Sekunden von selbst wieder.\n* Angemeldet bleiben. Wer beim Aktualisieren angemeldet war, muss nach dem Neustart das\n  Passwort nicht erneut eingeben. Den Schlüssel dafür verwahrt Windows verschlüsselt für Ihr\n  Benutzerkonto – nur für diesen einen Start und höchstens zehn Minuten.\n* Korrekturen: Beim Herunterladen stand eine falsche Gesamtgröße da („12 MB von 1 B“). Jetzt\n  zeigt Kontovia die richtige Größe und den Fortschritt in Prozent. Die Versionshinweise im\n  Update-Fenster brechen sauber um, und der Fortschrittsbalken bleibt beim Laden im Blick.\n  Alte Installationsdateien im Temp-Ordner räumt Kontovia nach dem Start weg.\n\nGut zu wissen: Das neue Verfahren gilt ab dem nächsten Update. Den Wechsel auf 1.11 erledigt\nnoch Ihre bisherige Fassung – also ein letztes Mal mit Installationsassistent und Passwort.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "926d8807fee7759b058cbc1bb2324cd71ff6e1a0c1a1e224393135de115bc39f",
-      "size": 48987
+      "sha256": "65ac9d1fa39d329473aff49ae35faa333a12ec0312b4caf8da47a3e63d23a5b0",
+      "size": 49872
     },
     {
       "path": "icons/apple-touch-icon.png",
@@ -145,7 +145,7 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "7df6f2521fe34e71e53910753a0187ff5d8cd24bc890da98f8594aabb8a4c042",
+      "sha256": "6afb36d2ee5e04629263bf6d4619187fc2524e07064d9521b2fff354ce020c38",
       "size": 887
     },
     {
@@ -180,8 +180,8 @@
     },
     {
       "path": "views/cloudpanel.js",
-      "sha256": "f3fc610f7db5d89d6b097f0609536902f3122210abbccf220e42af3d29687ce3",
-      "size": 42604
+      "sha256": "37ec3d434a17c000692d92fd85bbd5e7539f16338310a780bf7c904fea435ad6",
+      "size": 45247
     },
     {
       "path": "views/dashboard.js",
@@ -245,7 +245,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "73ace01c15d69302894e2f08a39c2c89252ce5821890abfba10c83c2064ac03b",
+      "sha256": "b25cb97894aefa8bd1849e44fd8b9c36a82e11b1b044e307412d0a1a5017551c",
       "size": 6945
     },
     {
@@ -255,8 +255,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "e586b6703e0217f0ba5e05e728cdd73eb251caf1819795898ea7929c074db6d8",
-      "size": 29686
+      "sha256": "6e9ebb84f7bafa53720fa4a4a0311712a80551f4c76b45426f79d522d030a9ff",
+      "size": 29994
     },
     {
       "path": "web/cloud.js",
