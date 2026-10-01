@@ -1,7 +1,7 @@
 {
-  "version": "1.11.0",
-  "released": "2026-10-01T19:55:03.425Z",
-  "notes": "Aktualisieren ohne Umweg: Kontovia installiert neue Fassungen selbst und Sie bleiben angemeldet.\n\n* Aktualisierung direkt im Programm. „Jetzt aktualisieren“ lädt die neue Fassung, prüft die\n  Prüfsumme und installiert sie ohne Installationsassistenten. Kontovia schließt sich dafür kurz\n  und startet nach wenigen Sekunden von selbst wieder.\n* Angemeldet bleiben. Wer beim Aktualisieren angemeldet war, muss nach dem Neustart das\n  Passwort nicht erneut eingeben. Den Schlüssel dafür verwahrt Windows verschlüsselt für Ihr\n  Benutzerkonto – nur für diesen einen Start und höchstens zehn Minuten.\n* Korrekturen: Beim Herunterladen stand eine falsche Gesamtgröße da („12 MB von 1 B“). Jetzt\n  zeigt Kontovia die richtige Größe und den Fortschritt in Prozent. Die Versionshinweise im\n  Update-Fenster brechen sauber um, und der Fortschrittsbalken bleibt beim Laden im Blick.\n  Alte Installationsdateien im Temp-Ordner räumt Kontovia nach dem Start weg.\n\nGut zu wissen: Das neue Verfahren gilt ab dem nächsten Update. Den Wechsel auf 1.11 erledigt\nnoch Ihre bisherige Fassung – also ein letztes Mal mit Installationsassistent und Passwort.",
+  "version": "1.11.1",
+  "released": "2026-10-01T20:02:47.691Z",
+  "notes": "Test-Update ohne inhaltliche Änderungen.\n\n* Nur zum Ausprobieren der neuen Aktualisierung. Diese Fassung ändert am Programm nichts\n  außer der Versionsnummer. Sie dient dazu, das Update direkt im Programm zu testen: Kontovia\n  lädt die neue Fassung, installiert sie ohne Assistenten, startet von selbst neu – und Sie\n  bleiben angemeldet.\n\nNeu seit 1.11, falls Sie von einer älteren Fassung kommen: Aktualisierung direkt im Programm,\nangemeldet bleiben über den Neustart und die korrigierte Größenanzeige beim Herunterladen.",
   "files": [
     {
       "path": "app.js",
@@ -145,7 +145,7 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "6afb36d2ee5e04629263bf6d4619187fc2524e07064d9521b2fff354ce020c38",
+      "sha256": "c89df9ed9a4e28df6df4b9ebf7dfad945207e07660da692508852a594b0b55a1",
       "size": 887
     },
     {
@@ -245,7 +245,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "b25cb97894aefa8bd1849e44fd8b9c36a82e11b1b044e307412d0a1a5017551c",
+      "sha256": "cff7f6bd769f856f3f61308d658234631731c83e49a32191151bd81923975aa4",
       "size": 6945
     },
     {
