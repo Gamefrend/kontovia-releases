@@ -8,7 +8,7 @@ export default Object.freeze({
     "bucket": "finanztracker-149f2.firebasestorage.app"
   },
   "googleGeraet": {
-    "clientId": "",
-    "clientSecret": ""
+    "clientId": "614129333064-4ro66aq8ioaf1tkt6t4c111s3ftoi6ql.apps.googleusercontent.com",
+    "clientSecret": "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"
   }
 });

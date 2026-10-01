@@ -123,7 +123,8 @@ export async function authorize({ clientId, clientSecret, scopes, zeigeCode }) {
         idToken: data.id_token || '',
       };
     }
-    throw new Error('Die Anmeldung wurde abgebrochen.');
+    // Wie in der Windows-Fassung: die Oberfläche zeigt dazu keine Fehlermeldung.
+    throw Object.assign(new Error('Die Anmeldung wurde abgebrochen.'), { code: 'ABGEBROCHEN' });
   } finally {
     anzeige.schliessen();
   }

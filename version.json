@@ -1,7 +1,7 @@
 {
-  "version": "1.9.0",
-  "released": "2026-10-01T14:15:04.708Z",
-  "notes": "Cloud-Anbindung vollständig: Anmeldung mit Google gleich beim ersten Start und Sicherungen\nin der Cloud.\n\n* Mit Google anmelden beim ersten Start. Auf einem neuen Gerät lädt Kontovia Ihre\n  Buchhaltung aus der Cloud, sobald Sie ihr Passwort eingeben – ohne vorher einen Tresor\n  anlegen zu müssen. Wer neu anfängt, kann den neuen Tresor gleich mit dem Google-Konto\n  verbinden. Wer Kontovia bisher ohne Cloud nutzt, verbindet jederzeit nachträglich unter\n  Einstellungen → Cloud-Abgleich; die Statusleiste weist darauf hin.\n* Sicherungen in der Cloud. Einmal am Tag sowie vor jedem Überschreiben und jeder\n  Wiederherstellung legt Kontovia einen verschlüsselten Stand in Ihrem Konto ab; die 30\n  neuesten bleiben. Unter Einstellungen → Cloud-Abgleich → Sicherungen ansehen lässt sich\n  jeder davon wiederherstellen – auch Buchungen, die inzwischen auf allen Geräten gelöscht\n  wurden, kommen damit zurück.\n* Cloud-Stand übernehmen führte bisher nicht zur Passwortabfrage: Die Ansicht blieb mit\n  gesperrtem Tresor stehen. Jetzt erscheint die Anmeldung sofort, und das Gerät behält dabei\n  seine eigene Verbindung zu Google.\n* Abgleich nach einer Wiederherstellung. Eine eingespielte Sicherung – aus der Cloud\n  oder als Vollsicherung – wird auf den anderen Geräten nicht mehr durch deren ältere\n  Löschungen ausgehöhlt. Bitte alle Geräte auf 1.9.0 bringen.\n* Änderungsjournal. Nach dem Einspielen einer Sicherung meldete „Journal prüfen“ nach\n  dem nächsten Abgleich fälschlich eine Veränderung von außen. Das Journal bleibt jetzt über\n  die Wiederherstellung hinweg vollständig, und der Vorgang selbst steht darin.\n* Weniger in der Cloud. Was in die Cloud geht, enthält keine Anmeldemerkmale mehr; jedes\n  Gerät meldet sich mit seiner eigenen Anmeldung an.\n* Abgelaufene Anmeldung. Wurde der Zugriff im Google-Konto entfernt, zeigt Kontovia statt\n  eines Fehlercodes eine verständliche Meldung mit dem Knopf „Neu anmelden“.\n* Gleichzeitiger Abgleich zweier Geräte. War ein anderes Gerät schneller, sollte der\n  Abgleich von vorn beginnen. In der Windows-Fassung kam stattdessen eine Fehlermeldung; das\n  ist behoben, ebenso die Erkennung eines falschen Passworts beim Laden aus der Cloud.\n* Eine laufende Google-Anmeldung lässt sich abbrechen, statt fünf Minuten zu warten.",
+  "version": "1.9.1",
+  "released": "2026-10-01T15:34:08.533Z",
+  "notes": "Anmeldung mit Google jetzt auch in der Web-Fassung für iPhone, iPad und Mac.\n\n* Web-Fassung mit Cloud. Unter Einstellungen → Cloud-Abgleich auf „Mit Google verbinden“\n  tippen: Kontovia zeigt einen kurzen Code, den Sie auf google.com/device eingeben – auf\n  demselben oder einem anderen Gerät. Danach gleicht die Web-Fassung mit Ihren anderen Geräten\n  ab und legt Sicherungen in der Cloud an. Auf einem neuen iPhone oder iPad lädt „Mit Google\n  anmelden“ beim ersten Start Ihre vorhandene Buchhaltung. Gerade dort lohnt sich das: Der\n  Browser darf Website-Daten bei Platzmangel räumen.\n* Wer die Anmeldung in der Web-Fassung abbricht, bekommt keine Fehlermeldung mehr angezeigt.\n\nNeu seit 1.9.0, falls Sie von einer älteren Fassung kommen:\n\n* Mit Google anmelden beim ersten Start – auf einem neuen Gerät kommt die Buchhaltung\n  aus der Cloud, sobald Sie ihr Passwort eingeben. Wer bisher ohne Cloud arbeitet, verbindet\n  jederzeit nachträglich unter Einstellungen → Cloud-Abgleich.\n* Sicherungen in der Cloud – täglich sowie vor jedem Überschreiben und jeder\n  Wiederherstellung, die 30 neuesten bleiben; jede lässt sich wiederherstellen, auch wenn\n  alle Geräte den Stand schon übernommen haben.\n* Korrekturen: „Cloud-Stand übernehmen“ fragt wieder nach dem Passwort; eine\n  Wiederherstellung wird auf anderen Geräten nicht mehr durch ältere Löschungen ausgehöhlt;\n  „Journal prüfen“ meldet nach einer Wiederherstellung keine falsche Veränderung mehr; ein\n  gleichzeitiger Abgleich zweier Geräte beginnt von vorn statt mit einer Fehlermeldung;\n  abgelaufene Anmeldung mit „Neu anmelden“; in die Cloud gehen keine Anmeldemerkmale mehr.\n* Bitte alle Geräte auf diese Fassung bringen.",
   "files": [
     {
       "path": "app.js",
@@ -145,7 +145,7 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "894e6143c1da3816837fa76a67fc5b5693cd8e890a0fdc2f314cf609b160a89b",
+      "sha256": "73e97266d47e4915782b0b64d3363ffa22399eb5bb7472074252a26160a7b62b",
       "size": 886
     },
     {
@@ -245,13 +245,13 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "275f96032eb79133dc6a4709ef4c43aa2b3099a33b1f5b5643bdf44882fb780b",
+      "sha256": "50e19ad3d2dee17fa725009a812ec8c6b9aff19a00b758b49daa191d38770333",
       "size": 6944
     },
     {
       "path": "web/anmeldung.js",
-      "sha256": "4aaefdc25fb580b515ccf92e842ef5faaf9ea71b370df0447e14808746ef067e",
-      "size": 6550
+      "sha256": "cddeb57a2a2f6d99dcade8359a23c1c016e328da26a8468a224d1c09b4ef7fcb",
+      "size": 6673
     },
     {
       "path": "web/bridge.js",
@@ -265,8 +265,8 @@
     },
     {
       "path": "web/cloudconfig.js",
-      "sha256": "3509bb3468acd8c8039fed38a10f02e18dfb0e4f774c25bab0855301fe7a1a9f",
-      "size": 462
+      "sha256": "d8df2a48b31993d6b50c9f5a4c2758a122190de4622d53af5ff2b83ce8f2a45e",
+      "size": 569
     },
     {
       "path": "web/dateien.js",
