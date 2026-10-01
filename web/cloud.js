@@ -21,6 +21,7 @@ import { FirebaseBackend } from './firebase.js';
 import { DriveBackend } from './googledrive.js';
 import BUILTIN from './cloudconfig.js';
 import { journalNachEinspielen, fuerSicherung } from './zugang.js';
+import * as W from './weiterleitung.js';
 
 const BASIS = 'sync-basis.bin';
 const BASIS_AAD = K.utf8('kontovia/sync-basis');
@@ -62,6 +63,9 @@ export class Cloud {
     this.pending = null;
     this.anmeldung = null;
     this.mitnehmen = null;
+    /** Was nach einer Weiterleitung zu Google an die Oberfläche geht (einmalig). */
+    this.meldung = null;
+    this.ebenVerbunden = null;
   }
 
   cfg() {
@@ -112,8 +116,10 @@ export class Cloud {
     const clientId = c.webClientId || builtinClient;
     const apiKey = c.apiKey || BUILTIN.firebase.apiKey;
     const bucket = c.bucket || BUILTIN.firebase.bucket;
-    const configured = provider === 'drive' ? !!clientId : !!(apiKey && bucket && clientId);
+    const weiterleitung = this.weiterleitungMoeglich();
+    const configured = provider === 'drive' ? !!clientId : !!(apiKey && bucket && (clientId || weiterleitung));
     return {
+      weiterleitung,
       provider,
       configured,
       linked: !!state.refreshToken,
@@ -127,11 +133,11 @@ export class Cloud {
       builtIn: {
         apiKey: !!BUILTIN.firebase.apiKey,
         bucket: !!BUILTIN.firebase.bucket,
-        clientId: !!builtinClient,
+        clientId: !!builtinClient || weiterleitung,
       },
       missing: provider === 'drive'
         ? (clientId ? [] : ['clientId'])
-        : [!apiKey && 'apiKey', !bucket && 'bucket', !clientId && 'clientId'].filter(Boolean),
+        : [!apiKey && 'apiKey', !bucket && 'bucket', !(clientId || weiterleitung) && 'clientId'].filter(Boolean),
       lastError: this.lastError,
       busy: this.busy,
       clientKind: 'geraet',
@@ -184,10 +190,13 @@ export class Cloud {
   anmeldeStatus() {
     const f = BUILTIN.firebase || {};
     const g = BUILTIN.googleGeraet || {};
-    const moeglich = BUILTIN.provider === 'drive' ? !!g.clientId : !!(f.apiKey && f.bucket && g.clientId);
+    const weiterleitung = this.weiterleitungMoeglich();
+    const moeglich = BUILTIN.provider === 'drive' ? !!g.clientId : !!(f.apiKey && f.bucket && (g.clientId || weiterleitung));
     const a = this.anmeldung;
     return {
       moeglich,
+      weiterleitung,
+      code: BUILTIN.provider === 'drive' ? !!g.clientId : !!(f.apiKey && f.bucket && g.clientId),
       provider: BUILTIN.provider,
       angemeldet: !!a,
       email: a?.state.email || '',
@@ -219,6 +228,94 @@ export class Cloud {
     }
     this.anmeldung = { provider, state, be, meta, blob: null };
     return this.anmeldeStatus();
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Anmeldung per Weiterleitung (weiterleitung.js)                          */
+  /* ---------------------------------------------------------------------- */
+
+  /**
+   * Geht der Weg ohne Code? Nur mit Firebase im mitgelieferten Projekt – der
+   * Client für die Weiterleitung gehört zu diesem Projekt. Wer ein eigenes
+   * eingetragen hat oder in Google Drive ablegt, meldet sich per Code an.
+   */
+  weiterleitungMoeglich() {
+    const c = this.vault.db?.cloud || {};
+    const provider = c.provider || BUILTIN.provider;
+    return provider !== 'drive' && !c.apiKey && !c.bucket
+      && !!(BUILTIN.googleWeb?.clientId && BUILTIN.firebase?.apiKey && BUILTIN.firebase?.bucket);
+  }
+
+  /**
+   * Leitet zu Google weiter. Die Seite verlässt Kontovia; weiter geht es nach
+   * der Rückkehr in rueckkehr(). Der zurückgegebene Promise erfüllt sich nie.
+   * @param {'erststart'|'verbinden'} zweck
+   */
+  weiterleiten(zweck) {
+    const url = W.starten({
+      clientId: BUILTIN.googleWeb.clientId,
+      zweck,
+      loginHint: this.vault.db?.cloud?.state?.firebase?.email || '',
+    });
+    location.assign(url);
+    return new Promise(() => {});
+  }
+
+  /**
+   * Nach der Rückkehr von Google, beim Start (der Tresor ist gesperrt):
+   * Token bei Firebase eintauschen und nachsehen, ob im Konto schon eine
+   * Buchhaltung liegt. Verbunden wird erst beim Anlegen, Laden oder – für
+   * einen vorhandenen Tresor – nach dem Entsperren (anmeldungVerbinden).
+   */
+  async rueckkehr(antwort) {
+    this.meldung = { zweck: antwort.zweck, fehler: antwort.fehler || '', abgebrochen: !!antwort.abgebrochen, email: antwort.email || '' };
+    if (antwort.fehler) return;
+    try {
+      const state = {};
+      const be = this.baustein('firebase', {
+        apiKey: BUILTIN.firebase.apiKey, bucket: BUILTIN.firebase.bucket, clientId: BUILTIN.googleWeb.clientId, clientSecret: '',
+      }, state);
+      await be.mitIdToken(antwort.idToken, antwort.email);
+      let meta;
+      try {
+        meta = await be.vaultMeta();
+      } catch (err) {
+        await be.disconnect().catch(() => {});
+        throw new Error(`Angemeldet, aber die Cloud ist nicht erreichbar: ${err.message}`);
+      }
+      this.anmeldung = { provider: 'firebase', state, be, meta, blob: null, zweck: antwort.zweck };
+      this.meldung.email = state.email || antwort.email || '';
+    } catch (err) {
+      this.meldung.fehler = err.message;
+    }
+  }
+
+  /** Nach dem Entsperren: eine eben per Weiterleitung erfolgte Anmeldung mit diesem Tresor verbinden. */
+  async anmeldungVerbinden() {
+    const a = this.anmeldung;
+    if (!a || a.zweck !== 'verbinden' || this.vault.isLocked) return false;
+    this.anmeldung = null;
+    const c = this.cfg();
+    c.provider = a.provider;
+    c.state = { ...(c.state || {}), [a.provider]: a.state };
+    c.linkedAt = new Date().toISOString();
+    this.backend = a.be;
+    await this.vault.save(this.vault.db);
+    this.ebenVerbunden = a.state.email || 'Google-Konto';
+    return true;
+  }
+
+  /**
+   * Einmalige Meldungen an die Oberfläche: die Rückkehr von Google (beim Start
+   * abgeholt) und „eben verbunden“ (nach dem Entsperren abgeholt).
+   */
+  rueckmeldung() {
+    const m = this.meldung;
+    const v = this.ebenVerbunden;
+    this.meldung = null;
+    this.ebenVerbunden = null;
+    if (!m && !v) return null;
+    return { ...(m || {}), ...(v ? { ebenVerbunden: true, email: v } : {}) };
   }
 
   async anmeldungVerwerfen() {

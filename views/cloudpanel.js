@@ -63,17 +63,21 @@ export async function renderCloudCard(root) {
         ${!status.configured ? raw(setupForm(status)) : ''}
 
         ${status.configured && !status.linked ? raw(`
-          <div class="row" style="gap:8px">
+          <div class="row wrap" style="gap:8px">
             <button class="btn primary" id="btnConnect">${icon('key', 15).__raw} Mit Google verbinden</button>
+            ${WEB && status.weiterleitung ? '<button class="btn ghost" id="btnConnectCode">Stattdessen mit Code</button>' : ''}
             <button class="btn ghost" id="btnEditCreds">Zugangsdaten ändern</button>
           </div>
-          <p class="small muted mt16 mb0">${WEB
-            ? `Kontovia zeigt einen kurzen Code, den Sie auf google.com/device eingeben – auf
+          <p class="small muted mt16 mb0">${WEB && status.weiterleitung
+            ? `Sie werden zu Google weitergeleitet und kommen nach der Anmeldung hierher zurück. Kontovia
+          ist dann gesperrt – einmal mit Ihrem Passwort entsperren, und die Verbindung steht.`
+            : WEB
+              ? `Kontovia zeigt einen kurzen Code, den Sie auf google.com/device eingeben – auf
           diesem oder einem anderen Gerät. Dort sehen Sie in der Adresszeile, dass Sie Ihr
           Passwort bei Google eingeben und nicht bei Kontovia.`
-            : `Es öffnet sich Ihr normaler Browser mit der
-          Anmeldeseite von Google. Das ist Absicht: nur dort sehen Sie in der Adresszeile,
-          wo Sie Ihr Passwort eingeben.`} Ihre Buchhaltung bleibt dabei, wie sie ist. Ist das
+              : `Es öffnet sich Ihr normaler Browser mit der Anmeldeseite von Google; danach kommt
+          Kontovia von selbst wieder nach vorn. Ein Anmeldefenster in Kontovia selbst lässt Google
+          nicht zu – im Browser sehen Sie in der Adresszeile, wo Sie Ihr Passwort eingeben.`} Ihre Buchhaltung bleibt dabei, wie sie ist. Ist das
           Konto noch leer, wird sie hochgeladen; liegt dort schon eine, fragt Kontovia, welche gelten soll.</p>`) : ''}
 
         ${status.linked ? raw(`
@@ -234,10 +238,13 @@ function wireCloud(root, status) {
     renderCloudCard(root);
   });
 
-  $('#btnConnect', root)?.addEventListener('click', async (e) => {
+  const verbinden = async (e, { mitCode = false } = {}) => {
     const btn = e.target.closest('button');
     btn.disabled = true;
-    btn.textContent = WEB ? 'Warte auf die Anmeldung …' : 'Warte auf den Browser …';
+    const weiter = WEB && status.weiterleitung && !mitCode;
+    btn.textContent = weiter ? 'Weiter zu Google …' : WEB ? 'Warte auf die Anmeldung …' : 'Warte auf den Browser …';
+    // Die Weiterleitung verlässt die Seite – vorher alles speichern.
+    if (weiter && store.dirty) await saveNow();
     // Wer das Browserfenster schließt, soll nicht fünf Minuten warten müssen.
     const stop = document.createElement('button');
     stop.className = 'btn ghost';
@@ -245,14 +252,16 @@ function wireCloud(root, status) {
     stop.addEventListener('click', () => api.cloud.signinCancel?.().catch(() => {}));
     if (!WEB) btn.after(stop);
     try {
-      const res = await api.cloud.connect();
+      const res = await api.cloud.connect({ mitCode });
       ok('Mit Google verbunden', res.email);
       await firstLink(root);
     } catch (ex) {
       if (ex.code !== 'ABGEBROCHEN') err('Verbindung fehlgeschlagen', ex.message);
       renderCloudCard(root);
     }
-  });
+  };
+  $('#btnConnect', root)?.addEventListener('click', (e) => verbinden(e));
+  $('#btnConnectCode', root)?.addEventListener('click', (e) => verbinden(e, { mitCode: true }));
 
   $('#btnCloudBackup', root)?.addEventListener('click', async (e) => {
     const btn = e.target.closest('button');
@@ -418,6 +427,22 @@ async function restoreCloudBackup(root, s) {
     err('Wiederherstellung fehlgeschlagen', e.code === 'BAD_PASSWORD' ? 'Das Passwort passt nicht zu dieser Sicherung.' : e.message);
     renderCloudCard(root);
   }
+}
+
+/**
+ * Web-Fassung: zurück von Google und entsperrt – die Verbindung steht. Wie
+ * nach dem Verbinden ohne Weiterleitung entscheidet der erste Abgleich, welcher
+ * Stand gilt (bei einer anderen Buchhaltung in der Cloud fragt Kontovia).
+ */
+export async function nachWeiterleitung(email) {
+  await navigate('settings', { abschnitt: 'cloud' });
+  let root = null;
+  for (let i = 0; i < 100 && !root; i++) {
+    root = document.querySelector('#cloudCard');
+    if (!root?.querySelector('.card')) { root = null; await new Promise((r) => setTimeout(r, 100)); }
+  }
+  ok('Mit Google verbunden', email || '');
+  if (root) await firstLink(root);
 }
 
 /** Erster Abgleich nach dem Verbinden – hier entscheidet sich, welcher Stand gilt. */

@@ -106,8 +106,13 @@ async function boot() {
     setDevice(appInfo.deviceId);
   } catch { /* Standardwerte behalten */ }
   const status = await api.vault.status();
+  // Web-Fassung: zurück von einer Anmeldung per Weiterleitung zu Google?
+  const rm = await api.cloud.rueckmeldung?.().catch(() => null);
+  if (rm?.fehler && !rm.abgebrochen) err('Anmeldung bei Google', rm.fehler);
   if (!status.exists) renderSetup();
-  else renderUnlock();
+  else renderUnlock(rm?.zweck === 'verbinden' && !rm.fehler
+    ? `Bei Google angemeldet als ${rm.email || 'Ihr Konto'}. Entsperren Sie Kontovia, um die Verbindung zu speichern.`
+    : '');
 }
 
 /* -------------------------------------------------------------------------- */
@@ -147,6 +152,10 @@ function renderSetup() {
      eine Buchhaltung, wird sie geladen (renderCloudLaden); sonst verbindet
      der Hauptprozess den neuen Tresor beim Anlegen mit dem Konto. */
   let anmeldenMoeglich = false;
+  /** Web-Fassung: Anmeldung per Weiterleitung statt Code möglich? */
+  let weiterleitung = false;
+  /** …und der Code als Rückfallweg? */
+  let mitCodeMoeglich = false;
   let anmeldung = null;
   let wartet = false;
   let abgebrochen = false;
@@ -162,16 +171,20 @@ function renderSetup() {
     if (step !== 0 || !anmeldenMoeglich) return '';
     if (wartet) {
       return `<div class="signin-box mb16">
-        <div><strong>Warte auf die Anmeldung …</strong>
-        <div class="small muted">${WEB ? 'Geben Sie den angezeigten Code bei Google ein.'
-          : 'Melden Sie sich im Browserfenster bei Google an und kehren Sie dann hierher zurück.'}</div></div>
+        <div><strong>${wartet === 'weiterleitung' ? 'Weiter zu Google …' : 'Warte auf die Anmeldung …'}</strong>
+        <div class="small muted">${wartet === 'weiterleitung' ? 'Nach der Anmeldung kommen Sie hierher zurück.'
+          : WEB ? 'Geben Sie den angezeigten Code bei Google ein.'
+            : 'Melden Sie sich im Browserfenster bei Google an – danach kommt Kontovia von selbst wieder nach vorn.'}</div></div>
         <button class="btn sm" id="g_abbrechen">Abbrechen</button></div>`;
     }
     return `<div class="signin-box mb16">
       <div><strong>Kontovia schon auf einem anderen Gerät?</strong>
       <div class="small muted">Mit Google anmelden und Ihre Buchhaltung aus der Cloud laden – oder
       eine neue gleich verschlüsselt in Ihrem Konto sichern. Geht auch später in den Einstellungen.</div></div>
-      <button class="btn" id="g_anmelden">${icon('key', 15).__raw} Mit Google anmelden</button></div>`;
+      <div class="stack" style="gap:4px;align-items:flex-end">
+        <button class="btn" id="g_anmelden">${icon('key', 15).__raw} Mit Google anmelden</button>
+        ${weiterleitung && mitCodeMoeglich ? '<button class="btn ghost sm" id="g_code">Stattdessen mit Code</button>' : ''}
+      </div></div>`;
   };
 
   /* Der Kasten zeichnet sich allein neu – Eingaben in den Feldern darunter
@@ -180,7 +193,8 @@ function renderSetup() {
     const box = $('#g_box');
     if (!box) return;
     box.innerHTML = anmeldeKasten();
-    $('#g_anmelden', box)?.addEventListener('click', anmelden);
+    $('#g_anmelden', box)?.addEventListener('click', () => anmelden());
+    $('#g_code', box)?.addEventListener('click', () => anmelden({ mitCode: true }));
     $('#g_abbrechen', box)?.addEventListener('click', () => {
       abgebrochen = true;
       wartet = false;
@@ -194,12 +208,14 @@ function renderSetup() {
     });
   }
 
-  async function anmelden() {
-    wartet = true;
+  async function anmelden({ mitCode = false } = {}) {
+    // Per Weiterleitung verlässt die Seite Kontovia und lädt danach neu;
+    // weiter geht es dann unten bei signinStatus().
+    wartet = weiterleitung && !mitCode ? 'weiterleitung' : true;
     abgebrochen = false;
     kastenZeichnen();
     try {
-      const st = await api.cloud.signin();
+      const st = await api.cloud.signin({ mitCode });
       wartet = false;
       // Abgebrochen, während die Antwort unterwegs war: nichts zurückbehalten.
       if (abgebrochen) { api.cloud.signinCancel().catch(() => {}); return; }
@@ -406,6 +422,18 @@ function renderSetup() {
   // Ob sich diese Fassung bei Google anmelden kann, steht erst nach der Abfrage fest.
   api.cloud.signinStatus?.().then((st) => {
     anmeldenMoeglich = !!st?.moeglich;
+    weiterleitung = !!st?.weiterleitung;
+    mitCodeMoeglich = !!st?.code;
+    // Zurück von Google (Web-Fassung): die Anmeldung steht schon.
+    if (st?.angemeldet && !anmeldung) {
+      anmeldung = st;
+      if (st.vorhanden && app.querySelector('.gate-card')) {
+        collect();
+        renderCloudLaden(st, { neu: () => { anmeldung = null; draw(); } });
+        return;
+      }
+      ok('Mit Google angemeldet', st.email || '');
+    }
     kastenZeichnen();
   }).catch(() => {});
 }
@@ -583,6 +611,10 @@ export function setCloudVerbunden(wert) {
 /** Läuft nach jedem erfolgreichen Entsperren. */
 async function afterUnlock() {
   api.cloud.status().then((st) => setCloudVerbunden(st.configured ? !!st.linked : null)).catch(() => {});
+  // Web-Fassung: eben per Weiterleitung verbunden – der erste Abgleich entscheidet, welcher Stand gilt.
+  api.cloud.rueckmeldung?.().then((rm) => {
+    if (rm?.ebenVerbunden) import('./views/cloudpanel.js').then((m) => m.nachWeiterleitung(rm.email));
+  }).catch(() => {});
   announceMigrations().catch((e) => console.error('Hinweise der Schemapflege:', e));
   try { await startAutoSync(); } catch (e) { console.error("Cloud-Automatik:", e); }
   onSync(updateStatus);

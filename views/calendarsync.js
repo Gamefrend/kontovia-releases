@@ -3,7 +3,9 @@
  *
  * Zwei Wege:
  *   Google Kalender  laufender Abgleich in beide Richtungen, nur in der
- *                    Windows-Fassung (siehe src/web/bridge.js, warum)
+ *                    Windows-Fassung (siehe src/web/bridge.js, warum) – mit
+ *                    dem eigenen Kalender „Kontovia“ und auf Wunsch mit
+ *                    weiteren Kalendern des Kontos (Hauptkalender usw.)
  *   .ics-Datei       Export und Import von Hand, überall – auch für Apple
  *                    Kalender und Outlook
  */
@@ -81,11 +83,13 @@ export async function renderCalendarCard(el) {
                 <button class="btn primary" data-cal="sync">${icon('refresh', 15)} Jetzt abgleichen</button>
                 <button class="btn danger" data-cal="disconnect">Trennen</button>
               </div>
-              ${optionen}`) : raw(html`
+              ${raw(optionen)}
+              ${raw(weitereAbschnitt(st, cfg))}`) : raw(html`
               <p class="small mt0" style="line-height:1.6">Kontovia legt in Ihrem Google-Konto einen eigenen
               Kalender <strong>„Kontovia“</strong> an und gleicht Ihre Termine in beide Richtungen damit
               ab – auf dem Telefon sehen Sie sie in der Google-Kalender-App, und was Sie dort im Kalender
-              „Kontovia“ eintragen, erscheint hier. Ihre übrigen Kalender bleiben für Kontovia unsichtbar.</p>
+              „Kontovia“ eintragen, erscheint hier. Auf Wunsch kommen Ihre übrigen Kalender dazu, etwa
+              der Hauptkalender – ebenfalls in beide Richtungen.</p>
               ${st?.lastError ? raw(`<div class="notice warn mb8">${esc(st.lastError)}</div>`) : ''}
               <button class="btn primary" data-cal="connect">${icon('calendar', 15)} Mit Google Kalender verbinden</button>`)}
           </div>
@@ -113,6 +117,14 @@ export async function renderCalendarCard(el) {
     await manualSync();
     rerender();
   });
+  el.querySelector('[data-cal="weitere-freigeben"]')?.addEventListener('click', async () => {
+    if (await freigebenWeitere()) await openKalenderAuswahl();
+    rerender();
+  });
+  el.querySelector('[data-cal="weitere-waehlen"]')?.addEventListener('click', async () => {
+    await openKalenderAuswahl();
+    rerender();
+  });
   el.querySelector('[data-cal="ics-export"]').addEventListener('click', exportIcs);
   el.querySelector('[data-cal="ics-import"]').addEventListener('click', async () => { if (await importIcs()) rerender(); });
   el.querySelectorAll('[data-opt]').forEach((c) => c.addEventListener('change', async () => {
@@ -120,6 +132,109 @@ export async function renderCalendarCard(el) {
     ok('Gespeichert', 'Gilt ab dem nächsten Abgleich.');
     syncCalendar({ reason: 'einstellung' }).catch(() => {}).finally(rerender);
   }));
+}
+
+/** Abschnitt „Weitere Google-Kalender“ in der verbundenen Karte. */
+function weitereAbschnitt(st, cfg) {
+  const namen = cfg.weitere.map((k) => k.name || k.id);
+  if (!st.weitereErlaubt) {
+    return `<hr class="sep">
+      <strong style="font-size:13px">Weitere Google-Kalender</strong>
+      <p class="small mt8" style="line-height:1.6">Termine aus Ihrem Hauptkalender und anderen Kalendern
+      in Kontovia sehen und bearbeiten – Änderungen und Löschungen gehen in beide Richtungen.
+      Dafür braucht Kontovia einmal zusätzlich Ihre Freigabe bei Google.</p>
+      ${namen.length ? `<div class="notice warn small mb8">Ausgewählt sind ${esc(namen.join(', '))}, auf diesem Gerät
+        fehlt aber noch die Freigabe.</div>` : ''}
+      <button class="btn" data-cal="weitere-freigeben">${icon('calendar', 15).__raw} Weitere Kalender einbeziehen</button>`;
+  }
+  return `<hr class="sep">
+    <strong style="font-size:13px">Weitere Google-Kalender</strong>
+    <p class="small mt8 mb8" style="line-height:1.6">${namen.length
+      ? `In beide Richtungen abgeglichen: <strong>${esc(namen.join(', '))}</strong>. Termine ab gut einem Jahr zurück.`
+      : 'Noch kein weiterer Kalender ausgewählt.'}</p>
+    <button class="btn" data-cal="weitere-waehlen">${icon('calendar', 15).__raw} Kalender auswählen</button>`;
+}
+
+/** Holt die zusätzliche Freigabe für weitere Kalender – ein neuer Gang zu Google. */
+async function freigebenWeitere() {
+  const ja = await confirmDialog({
+    title: 'Weitere Kalender einbeziehen?',
+    text: 'Kontovia fragt bei Google zusätzlich das Recht an, Ihre Kalender aufzulisten und Termine darin zu lesen und zu ändern. '
+      + 'Abgeglichen werden danach nur die Kalender, die Sie anschließend auswählen – in beide Richtungen: Was Sie dort ändern oder löschen, '
+      + 'ändert sich hier, und umgekehrt. Es öffnet sich Ihr Browser mit der Anmeldung bei Google; Kontovia kommt danach von selbst wieder nach vorn.',
+    confirmLabel: 'Weiter zu Google',
+  });
+  if (!ja) return false;
+  try {
+    const res = await api.gcal.connect({ calendarIdHint: calendarSettings().calendarId, timeZone: timeZone(), weitere: true });
+    await refreshCalendarStatus();
+    if (!res.weitereErlaubt) {
+      warn('Nicht freigegeben', 'Im Google-Dialog wurde der Zugriff auf die übrigen Kalender nicht erlaubt. Der Kalender „Kontovia“ wird weiter abgeglichen.');
+      return false;
+    }
+    return true;
+  } catch (e) {
+    if (e.code !== 'ABGEBROCHEN') err('Freigabe fehlgeschlagen', e.message);
+    return false;
+  }
+}
+
+/** Auswahl der weiteren Kalender, die abgeglichen werden. */
+export async function openKalenderAuswahl() {
+  let liste;
+  try {
+    liste = await api.gcal.calendars();
+  } catch (e) {
+    err('Kalender nicht abrufbar', e.message);
+    return false;
+  }
+  const bisher = new Set(calendarSettings().weitere.map((k) => k.id));
+  const wahl = await new Promise((resolve) => {
+    let settled = false;
+    const m = modal({
+      title: 'Weitere Google-Kalender abgleichen',
+      body: html`
+        <p class="mt0 small" style="line-height:1.6">Die Termine der gewählten Kalender erscheinen in Kontovia,
+        ab gut einem Jahr zurück. Ändern oder löschen Sie einen davon hier oder in Google, gilt das beim
+        nächsten Abgleich auf beiden Seiten. Neue Termine können Sie in Kontovia direkt einem dieser Kalender
+        zuordnen.</p>
+        ${liste.length ? raw(liste.map((k) => `
+          <label class="check mb8"><input type="checkbox" value="${esc(k.id)}" ${bisher.has(k.id) ? 'checked' : ''}>
+          ${k.color ? `<span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${esc(k.color)}"></span>` : ''}
+          ${esc(k.name)}${k.primary ? ' <span class="muted small">(Hauptkalender)</span>' : ''}</label>`).join(''))
+          : raw('<p class="muted small">Es gibt keine weiteren Kalender, in die Kontovia schreiben darf.</p>')}`,
+      foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Übernehmen</button>',
+      onClose: () => { if (!settled) resolve(null); },
+    });
+    m.root.querySelector('[data-no]').addEventListener('click', () => { settled = true; m.close(); resolve(null); });
+    m.root.querySelector('[data-yes]').addEventListener('click', () => {
+      settled = true;
+      const ids = [...m.root.querySelectorAll('input[type=checkbox]:checked')].map((c) => c.value);
+      m.close();
+      resolve(liste.filter((k) => ids.includes(k.id)).map((k) => ({ id: k.id, name: k.name })));
+    });
+  });
+  if (!wahl) return false;
+
+  // Abgewählte Kalender: ihre Termine verschwinden aus Kontovia – in Google bleiben sie.
+  const weg = [...bisher].filter((id) => !wahl.some((k) => k.id === id));
+  const betroffen = sel.appointments().filter((a) => a.extern && weg.includes(a.extern.calendarId));
+  if (betroffen.length) {
+    const entfernen = await confirmDialog({
+      title: 'Termine abgewählter Kalender',
+      text: `${int(betroffen.length)} Termine stammen aus Kalendern, die nicht mehr abgeglichen werden. Aus Kontovia entfernen? In Google bleiben sie unverändert.`,
+      confirmLabel: 'Aus Kontovia entfernen', cancelLabel: 'Behalten',
+    });
+    if (entfernen) {
+      await applyCalendarChanges({ removals: betroffen.map((a) => a.id), ohneGrabstein: true, summary: `Google Kalender: ${betroffen.length} Termine abgewählter Kalender entfernt` });
+    }
+  }
+  await saveCalendarSettings({ weitere: wahl });
+  ok('Auswahl gespeichert', wahl.length ? wahl.map((k) => k.name).join(', ') : 'Kein weiterer Kalender');
+  const r = await syncCalendar({ reason: 'auswahl' }).catch((e) => { err('Kalenderabgleich fehlgeschlagen', e.message); return null; });
+  if (r?.summary) ok('Kalender abgeglichen', r.summary);
+  refresh();
+  return true;
 }
 
 /** Dialog aus der Kalenderansicht heraus – dieselbe Karte, im Fenster. */
@@ -160,7 +275,7 @@ function connectDialog() {
       body: html`
         <p class="mt0" style="line-height:1.6">Kontovia legt in Ihrem Google-Konto einen eigenen Kalender
         <strong>„Kontovia“</strong> an und gleicht Ihre Termine in beide Richtungen damit ab. Auf Ihre
-        übrigen Kalender greift Kontovia nicht zu.</p>
+        übrigen Kalender greift Kontovia nur zu, wenn Sie das unten ankreuzen.</p>
         <div class="notice warn">
           <strong>Was dafür an Google geht – unverschlüsselt,</strong> sonst könnte Google die Termine
           nicht anzeigen: Titel, Datum, Uhrzeit, Ort und Wiederholung Ihrer Termine, auf Wunsch auch
@@ -173,9 +288,10 @@ function connectDialog() {
           <label class="check"><input type="checkbox" id="g_events" ${cfg.includeEvents ? 'checked' : ''}> Veranstaltungstermine aus Anzahlungen mit übertragen (ohne Beträge)</label>
           <label class="check"><input type="checkbox" id="g_due" ${cfg.includeDue ? 'checked' : ''}> Fälligkeiten offener Rechnungen mit übertragen (ohne Beträge)</label>
           <label class="check"><input type="checkbox" id="g_notes" ${cfg.sendNotes ? 'checked' : ''}> Notizen der Termine mit übertragen</label>
+          <label class="check"><input type="checkbox" id="g_andere"> Auch meine anderen Google-Kalender einbeziehen (z. B. den Hauptkalender) – in beide Richtungen, welche, wählen Sie danach</label>
         </div>
         <p class="small muted mt16 mb0" style="line-height:1.6">Es öffnet sich Ihr Browser mit der
-        Anmeldung bei Google. Solange Google Kontovia nicht geprüft hat, erscheint dort der Hinweis
+        Anmeldung bei Google; danach kommt Kontovia von selbst wieder nach vorn. Solange Google Kontovia nicht geprüft hat, erscheint dort der Hinweis
         „Google hat diese App nicht überprüft“ – über <em>Erweitert → Weiter zu Kontovia</em> geht es
         weiter. Die Verbindung lässt sich jederzeit unter Einstellungen → Kalender-Abgleich trennen.</p>`,
       foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Mit Google verbinden</button>',
@@ -188,6 +304,7 @@ function connectDialog() {
         includeEvents: m.root.querySelector('#g_events').checked,
         includeDue: m.root.querySelector('#g_due').checked,
         sendNotes: m.root.querySelector('#g_notes').checked,
+        andere: m.root.querySelector('#g_andere').checked,
       };
       m.close();
       resolve(wahl);
@@ -207,19 +324,22 @@ export async function connectGoogle() {
     foot: '<button class="btn" data-x>Ausblenden</button>',
   });
   hinweis.root.querySelector('[data-x]').addEventListener('click', () => hinweis.close());
+  const { andere, ...einstellungen } = wahl;
   try {
-    const res = await api.gcal.connect({ calendarIdHint: calendarSettings().calendarId, timeZone: timeZone() });
-    await saveCalendarSettings({ ...wahl, calendarId: res.calendarId, account: res.email });
+    const res = await api.gcal.connect({ calendarIdHint: calendarSettings().calendarId, timeZone: timeZone(), weitere: andere });
+    await saveCalendarSettings({ ...einstellungen, calendarId: res.calendarId, account: res.email });
     hinweis.close();
     ok('Google Kalender verbunden', `${res.email} · Kalender „${res.calendarName}“${res.created ? ' angelegt' : ''}`);
     const r = await syncCalendar({ reason: 'erstverbindung' }).catch((e) => { err('Erster Abgleich fehlgeschlagen', e.message); return null; });
     if (r?.summary) ok('Kalender abgeglichen', r.summary);
     await startCalendarSync();
+    if (andere && res.weitereErlaubt) await openKalenderAuswahl();
+    else if (andere) warn('Weitere Kalender nicht freigegeben', 'Im Google-Dialog wurde der Zugriff auf die übrigen Kalender nicht erlaubt.');
     refresh();
     return true;
   } catch (e) {
     hinweis.close();
-    err('Verbinden fehlgeschlagen', e.message);
+    if (e.code !== 'ABGEBROCHEN') err('Verbinden fehlgeschlagen', e.message);
     return false;
   }
 }

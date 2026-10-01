@@ -7,6 +7,9 @@ export default Object.freeze({
     "apiKey": "AIzaSyCpWNCQx0QcJ0hI4OGMwALZgvIz_dZUYzE",
     "bucket": "finanztracker-149f2.firebasestorage.app"
   },
+  "googleWeb": {
+    "clientId": "614129333064-56dcl6mcgliqoci1v81upe6f4o4tdt0c.apps.googleusercontent.com"
+  },
   "googleGeraet": {
     "clientId": "614129333064-4ro66aq8ioaf1tkt6t4c111s3ftoi6ql.apps.googleusercontent.com",
     "clientSecret": "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"

@@ -11,7 +11,8 @@ import { expandAppointments } from '../lib/termine.js';
 import { refresh } from '../lib/router.js';
 import { openTransactionDialog } from './transactions.js';
 import { openCalendarSyncDialog, statusText } from './calendarsync.js';
-import { calState, onCalendarSync, refreshCalendarStatus, syncCalendar } from '../lib/gcalsync.js';
+import { calState, onCalendarSync, refreshCalendarStatus, syncCalendar, calendarSettings } from '../lib/gcalsync.js';
+import { eventIdFor } from '../lib/gcal.js';
 import { openMenu } from '../lib/popover.js';
 import { steuertermine } from '../lib/fristen.js';
 import { oeffneFrist } from './spruenge.js';
@@ -240,7 +241,7 @@ function cellHtml(date, monthRef, items) {
       ? `<div class="cal-ev" style="background:var(--warn-soft);color:var(--warn);border-left-color:var(--warn)" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(money(e.amount))} € ${esc(e.type === 'income' ? '↓' : '↑')}</div>`
       : e.isEvent
       ? `<div class="cal-ev" style="background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent)" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(e.title)}</div>`
-      : `<div class="cal-ev ${e.done ? 'done' : ''}" data-appt="${esc(e.id)}" title="${esc(e.title)}" ${e.color ? `style="border-left-color:${esc(e.color)};color:${esc(e.color)}"` : ''}>${e.allDay ? '' : esc((e.startTime || '') + ' ')}${esc(e.title)}</div>`).join('')}
+      : `<div class="cal-ev ${e.done ? 'done' : ''}" data-appt="${esc(e.id)}" title="${esc(e.title + (e.extern ? ` · Google Kalender „${kalenderName(e.extern)}“` : ''))}" ${e.color ? `style="border-left-color:${esc(e.color)};color:${esc(e.color)}"` : ''}>${e.allDay ? '' : esc((e.startTime || '') + ' ')}${esc(e.title)}</div>`).join('')}
     ${more > 0 ? `<div class="cal-more">+ ${more} weitere</div>` : ''}
   </div>`;
 }
@@ -436,9 +437,34 @@ export function openAppointmentDialog(id, preset = {}) {
     await applyTodoChanges({ upserts, removals: [] });
   }
 
+  /* Weitere Google-Kalender: Neue Termine lassen sich direkt dort eintragen,
+     bestehende zeigen, woher sie kommen. Den Kalender eines bestehenden
+     Termins zu wechseln, ist nicht vorgesehen. */
+  const weitere = calState.status?.linked && calState.status?.weitereErlaubt ? calendarSettings().weitere : [];
+  function kalenderFeld() {
+    if (a.extern && !isNew) {
+      const aktiv = calendarSettings().weitere.some((k) => k.id === a.extern.calendarId);
+      return `<div class="notice mb16 small">${icon('calendar', 14).__raw} Aus Google Kalender
+        <strong>„${esc(kalenderName(a.extern))}“</strong>. ${aktiv
+        ? 'Änderungen und Löschen gehen beim nächsten Abgleich auch dorthin.'
+        : 'Dieser Kalender wird derzeit nicht abgeglichen; Änderungen bleiben in Kontovia.'}</div>`;
+    }
+    if (!isNew || !weitere.length) return '';
+    const wahl = a.extern?.calendarId || '';
+    return `<div class="field">
+        <label>Kalender</label>
+        <select id="t_kalender">
+          <option value="">Kontovia</option>
+          ${weitere.map((k) => `<option value="${esc(k.id)}" ${k.id === wahl ? 'selected' : ''}>${esc(k.name || k.id)}</option>`).join('')}
+        </select>
+        <span class="hint">In welchem Google-Kalender der Termin erscheint.</span>
+      </div>`;
+  }
+
   function draw() {
     const linked = (a.transactionIds || []).map(sel.transaction).filter(Boolean);
     form.innerHTML = html`
+      ${raw(kalenderFeld())}
       <div class="field">
         <label>Titel *</label>
         <input id="t_title" value="${a.title}" placeholder="z. B. Steuerberater-Termin, Montage Kunde Meier">
@@ -612,6 +638,12 @@ export function openAppointmentDialog(id, preset = {}) {
     // erhalten, solange hier keine eigene gewählt wird.
     const google = freq === 'none' && Array.isArray(a.recurrence?.google) ? { google: a.recurrence.google } : {};
     a.recurrence = { freq, until: g('until').value, ...google };
+    const kal = form.querySelector('#t_kalender');
+    if (kal) {
+      const k = weitere.find((x) => x.id === kal.value);
+      if (k) a.extern = { calendarId: k.id, eventId: eventIdFor(a.id), calendarName: k.name || '' };
+      else delete a.extern;
+    }
   }
 
   /** Alles, was „Abbrechen“ verwerfen würde – Termin, Aufgaben und ein angefangener Aufgabentitel. */
@@ -641,7 +673,9 @@ export function openAppointmentDialog(id, preset = {}) {
     refresh();
   });
   m.root.querySelector('#btnDel')?.addEventListener('click', async () => {
-    if (!await confirmDialog({ title: 'Termin löschen?', text: `Der Termin wird entfernt. Verknüpfte Buchungen${todosVorher.size ? ' und Aufgaben' : ''} bleiben erhalten.`, confirmLabel: 'Löschen', danger: true })) return;
+    const auchGoogle = a.extern && calendarSettings().weitere.some((k) => k.id === a.extern.calendarId)
+      ? ` Beim nächsten Abgleich wird er auch in Google Kalender „${kalenderName(a.extern)}“ gelöscht.` : '';
+    if (!await confirmDialog({ title: 'Termin löschen?', text: `Der Termin wird entfernt. Verknüpfte Buchungen${todosVorher.size ? ' und Aufgaben' : ''} bleiben erhalten.${auchGoogle}`, confirmLabel: 'Löschen', danger: true })) return;
     fertig = true;
     await deleteAppointment(a.id);
     m.close();
@@ -661,6 +695,11 @@ export function openAppointmentDialog(id, preset = {}) {
 
   draw();
   ausgangslage = stand();
+}
+
+/** Anzeigename des Google-Kalenders, aus dem ein Termin stammt. */
+function kalenderName(extern) {
+  return calendarSettings().weitere.find((k) => k.id === extern?.calendarId)?.name || extern?.calendarName || 'weiterer Kalender';
 }
 
 /** Auswahlliste, um bestehende Buchungen mit einem Termin zu verbinden. */

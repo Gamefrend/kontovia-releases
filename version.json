@@ -1,12 +1,12 @@
 {
-  "version": "1.9.1",
-  "released": "2026-10-01T15:34:08.533Z",
-  "notes": "Anmeldung mit Google jetzt auch in der Web-Fassung für iPhone, iPad und Mac.\n\n* Web-Fassung mit Cloud. Unter Einstellungen → Cloud-Abgleich auf „Mit Google verbinden“\n  tippen: Kontovia zeigt einen kurzen Code, den Sie auf google.com/device eingeben – auf\n  demselben oder einem anderen Gerät. Danach gleicht die Web-Fassung mit Ihren anderen Geräten\n  ab und legt Sicherungen in der Cloud an. Auf einem neuen iPhone oder iPad lädt „Mit Google\n  anmelden“ beim ersten Start Ihre vorhandene Buchhaltung. Gerade dort lohnt sich das: Der\n  Browser darf Website-Daten bei Platzmangel räumen.\n* Wer die Anmeldung in der Web-Fassung abbricht, bekommt keine Fehlermeldung mehr angezeigt.\n\nNeu seit 1.9.0, falls Sie von einer älteren Fassung kommen:\n\n* Mit Google anmelden beim ersten Start – auf einem neuen Gerät kommt die Buchhaltung\n  aus der Cloud, sobald Sie ihr Passwort eingeben. Wer bisher ohne Cloud arbeitet, verbindet\n  jederzeit nachträglich unter Einstellungen → Cloud-Abgleich.\n* Sicherungen in der Cloud – täglich sowie vor jedem Überschreiben und jeder\n  Wiederherstellung, die 30 neuesten bleiben; jede lässt sich wiederherstellen, auch wenn\n  alle Geräte den Stand schon übernommen haben.\n* Korrekturen: „Cloud-Stand übernehmen“ fragt wieder nach dem Passwort; eine\n  Wiederherstellung wird auf anderen Geräten nicht mehr durch ältere Löschungen ausgehöhlt;\n  „Journal prüfen“ meldet nach einer Wiederherstellung keine falsche Veränderung mehr; ein\n  gleichzeitiger Abgleich zweier Geräte beginnt von vorn statt mit einer Fehlermeldung;\n  abgelaufene Anmeldung mit „Neu anmelden“; in die Cloud gehen keine Anmeldemerkmale mehr.\n* Bitte alle Geräte auf diese Fassung bringen.",
+  "version": "1.10.0",
+  "released": "2026-10-01T18:56:36.152Z",
+  "notes": "Ihre Google-Kalender in beide Richtungen und Anmeldung ohne Code.\n\n* Hauptkalender und weitere Google-Kalender. Unter Einstellungen → Kalender-Abgleich →\n  „Weitere Kalender einbeziehen“ wählen Sie Kalender aus, etwa Ihren Hauptkalender. Deren\n  Termine erscheinen in Kontovia, und was Sie hier oder in Google ändern oder löschen, gilt\n  beim nächsten Abgleich auf beiden Seiten. Neue Termine lassen sich in Kontovia direkt einem\n  dieser Kalender zuordnen. Kontovia schreibt dabei nur, was Sie geändert haben – eine\n  Beschreibung mit Konferenzlink bleibt in Google, wie sie war. Der Kalender „Kontovia“ wird\n  wie bisher abgeglichen.\n* Web-Fassung: Anmeldung ohne Code. Auf iPhone, iPad und Mac leitet Kontovia zur Anmeldung\n  zu Google weiter und kommt danach zurück – meist genügt ein Tipp aufs Konto. Die Anmeldung\n  per Code bleibt als Rückfallweg.\n* Web-Fassung lädt aus der Cloud. Bisher konnte die Web-Fassung in die Cloud schreiben,\n  aber nichts daraus laden. Jetzt gleicht sie mit Ihren anderen Geräten ab, und auf einem neuen\n  iPhone lädt „Mit Google anmelden“ Ihre Buchhaltung.\n* Windows: Nach der Anmeldung im Browser kommt Kontovia von selbst wieder nach vorn. (Ein\n  Anmeldefenster in Kontovia selbst lässt Google nicht zu.)\n* Korrekturen: In der Karte „Kalender-Abgleich“ standen bei verbundenem Google-Konto die drei\n  Optionen als HTML-Text statt als Häkchen da. „Cloud trennen“ hat nebenbei auch die Freigabe\n  für den Kalender zurückgezogen – Google widerruft immer die ganze Freigabe einer App; jetzt\n  bleibt der Kalender verbunden.\n\nNeu seit 1.9, falls Sie von einer älteren Fassung kommen: Anmeldung mit Google beim ersten\nStart, Sicherungen in der Cloud mit Wiederherstellung, „Neu anmelden“ bei abgelaufener\nAnmeldung und mehrere Korrekturen am Abgleich. Bitte alle Geräte auf diese Fassung bringen.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "8e53b79f13a89495d992c436c8269c074bed3d5b064bf1d62d7704a09dad8ca3",
-      "size": 47037
+      "sha256": "926d8807fee7759b058cbc1bb2324cd71ff6e1a0c1a1e224393135de115bc39f",
+      "size": 48987
     },
     {
       "path": "icons/apple-touch-icon.png",
@@ -60,13 +60,13 @@
     },
     {
       "path": "lib/gcal.js",
-      "sha256": "10bb0dcde5a12ebfd4bd872ac90fd33f2033e71794f06f91db4f543495ec6dd1",
-      "size": 17811
+      "sha256": "bc9bc90b44b34533ce6c1c695dbb119384a654a0a1d83f471c9e2bbf789917c9",
+      "size": 26021
     },
     {
       "path": "lib/gcalsync.js",
-      "sha256": "2c5ae150c0d0637ca5f7f1b16907b1a88ada9638a5e7b85776707b966e96932e",
-      "size": 7303
+      "sha256": "e9c74302413b69b283f699b0035754ffb5dd620347037ffed8710f06839291b6",
+      "size": 10077
     },
     {
       "path": "lib/ics.js",
@@ -105,8 +105,8 @@
     },
     {
       "path": "lib/store.js",
-      "sha256": "1551574ef73151d7e46ded04dfa39059ca3b9d73eb5178d0610ef31cc3b70576",
-      "size": 33524
+      "sha256": "b7907f882cc603a10970496fefd7d3d0e12ca664324b2cbcef60634bb7faea33",
+      "size": 33920
     },
     {
       "path": "lib/sync.js",
@@ -145,8 +145,8 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "73e97266d47e4915782b0b64d3363ffa22399eb5bb7472074252a26160a7b62b",
-      "size": 886
+      "sha256": "7df6f2521fe34e71e53910753a0187ff5d8cd24bc890da98f8594aabb8a4c042",
+      "size": 887
     },
     {
       "path": "recht/COMPLIANCE.html",
@@ -155,8 +155,8 @@
     },
     {
       "path": "recht/DATENSCHUTZ.html",
-      "sha256": "c2f1f39c97449126694ea0e176dd13274972206176258d2c93a02f947b46d8e2",
-      "size": 11674
+      "sha256": "4c57872d9d9d23fad2b8385b602e389f9db160b75baaf2910436f47a36a29154",
+      "size": 12273
     },
     {
       "path": "styles.css",
@@ -170,18 +170,18 @@
     },
     {
       "path": "views/calendar.js",
-      "sha256": "3732d03e27d90a064efe3de7b34b519cdc974ef129cb46ea699d87de414557c2",
-      "size": 33658
+      "sha256": "706cf50843ef3b50e6ef8c2b493f8520a7c1d693e4afdc118951f04d81800936",
+      "size": 35860
     },
     {
       "path": "views/calendarsync.js",
-      "sha256": "e0c778fa97ab2e773ae2c2eddde6fe430372658bcd54f895cd91409b16c7e86c",
-      "size": 17511
+      "sha256": "317f8f8669baf4ff355be275c8fd237993e6e1030777abac9342d645dac204aa",
+      "size": 24587
     },
     {
       "path": "views/cloudpanel.js",
-      "sha256": "af933ae7ab3ef230860341657fa426b85aa7c543c9b39addcf5dcb1b633fabb9",
-      "size": 41086
+      "sha256": "f3fc610f7db5d89d6b097f0609536902f3122210abbccf220e42af3d29687ce3",
+      "size": 42604
     },
     {
       "path": "views/dashboard.js",
@@ -200,8 +200,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "5e87a4a79d26f439a6e5135b03256745bf4b6e7dba8158fc86dbb8c1dc724fe8",
-      "size": 43132
+      "sha256": "d6df948560a4902bc01e5ae6879ac4f6ff6e6b746361ad10883a92e9dca5ee29",
+      "size": 43830
     },
     {
       "path": "views/master.js",
@@ -245,8 +245,8 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "50e19ad3d2dee17fa725009a812ec8c6b9aff19a00b758b49daa191d38770333",
-      "size": 6944
+      "sha256": "73ace01c15d69302894e2f08a39c2c89252ce5821890abfba10c83c2064ac03b",
+      "size": 6945
     },
     {
       "path": "web/anmeldung.js",
@@ -255,18 +255,18 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "c774f7c890c67e1f57813a922e497ffcdff630c15ed8473e8d5642df3d0f1b58",
-      "size": 28321
+      "sha256": "e586b6703e0217f0ba5e05e728cdd73eb251caf1819795898ea7929c074db6d8",
+      "size": 29686
     },
     {
       "path": "web/cloud.js",
-      "sha256": "770e32b292c029579e9b0c63e1da7e6f735c6e84c8070649fb03a05e826d4aaf",
-      "size": 20243
+      "sha256": "c73a4dc20623bfbede0e086a0af7483e912be9c1faef875fea677cbcb9f71ae4",
+      "size": 24250
     },
     {
       "path": "web/cloudconfig.js",
-      "sha256": "d8df2a48b31993d6b50c9f5a4c2758a122190de4622d53af5ff2b83ce8f2a45e",
-      "size": 569
+      "sha256": "ef8cbb153ffdc4b985748c333e24894457fffa321fee4254f378458452afe8b0",
+      "size": 682
     },
     {
       "path": "web/dateien.js",
@@ -280,8 +280,8 @@
     },
     {
       "path": "web/firebase.js",
-      "sha256": "edab56c5f2a70324886346512d1b36a454ba37ac78e94c90407f2b148050ccfe",
-      "size": 11199
+      "sha256": "17657aa40cf78af858923520b7b001122642a4e608cf4d273cd5f47748b74a7e",
+      "size": 11692
     },
     {
       "path": "web/googledrive.js",
@@ -332,6 +332,11 @@
       "path": "web/web.css",
       "sha256": "6c5c7c8595ab8ea51562ca8587e72be603bac4739689a9ff0fc9f5db9a574d47",
       "size": 6962
+    },
+    {
+      "path": "web/weiterleitung.js",
+      "sha256": "beb95eb9bd97a611441357c7ef0f3d6144c8a5073b54cf280b9496358d1561c9",
+      "size": 4797
     },
     {
       "path": "web/zip.js",

@@ -57,12 +57,23 @@ export class FirebaseBackend {
       zeigeCode: this.cfg.zeigeCode,
     });
     if (!google.idToken) throw new Error('Google hat kein Identitätsmerkmal geliefert – bitte erneut anmelden.');
+    const res = await this.mitIdToken(google.idToken, google.email);
+    this.state.googleRefreshToken = google.refreshToken || '';
+    return res;
+  }
 
+  /**
+   * Eintausch eines Google-ID-Tokens bei Firebase – aus der Anmeldung per Code
+   * oder per Weiterleitung (weiterleitung.js). Danach trägt die Firebase-Sitzung.
+   */
+  async mitIdToken(idToken, email = '') {
+    if (!this.cfg.apiKey) throw new Error('Es ist kein Firebase-Web-API-Schlüssel hinterlegt.');
+    if (!this.cfg.bucket) throw new Error('Es ist kein Firebase-Speicherort (Bucket) hinterlegt.');
     const data = await requestJson(`${IDENTITY}/accounts:signInWithIdp?key=${enc(this.cfg.apiKey)}`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        postBody: form({ id_token: google.idToken, providerId: 'google.com' }),
+        postBody: form({ id_token: idToken, providerId: 'google.com' }),
         // Wie in der Windows-Fassung. Beim Eintausch eines ID-Tokens gibt es
         // keine Umleitung; der Wert wird nur formal verlangt.
         requestUri: 'http://127.0.0.1',
@@ -77,8 +88,7 @@ export class FirebaseBackend {
 
     this.state.refreshToken = data.refreshToken;
     this.state.uid = data.localId;
-    this.state.email = data.email || google.email || '';
-    this.state.googleRefreshToken = google.refreshToken || '';
+    this.state.email = data.email || email || '';
     this.token = { idToken: data.idToken, expiresAt: Date.now() + (Number(data.expiresIn) || 3600) * 1000 - 60000 };
     return { email: this.state.email, uid: this.state.uid };
   }

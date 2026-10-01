@@ -124,8 +124,16 @@ Kalender über *Abgleich*) ausdrücklich verbunden und sich bei Google angemelde
 haben.
 
 Kontovia legt dafür in Ihrem Google-Konto einen eigenen Kalender „Kontovia“ an
-und erhält nur auf diesen Kalender Zugriff (Bereich `calendar.app.created`); Ihre
-übrigen Kalender kann Kontovia weder lesen noch ändern.
+und erhält zunächst nur auf diesen Kalender Zugriff (Bereich
+`calendar.app.created`).
+
+**Weitere Kalender (freiwillig):** Wenn Sie es einschalten, erhält Kontovia
+zusätzlich das Recht, Ihre Kalender aufzulisten und Termine darin zu lesen und
+zu ändern (Bereiche `calendar.readonly` und `calendar.events`). Abgeglichen
+werden nur die Kalender, die Sie auswählen, in beide Richtungen: Termine daraus
+werden – ab gut einem Jahr zurück – in Ihrem verschlüsselten Tresor gespeichert
+und gehen mit dem Cloud-Abgleich verschlüsselt auf Ihre anderen Geräte;
+Änderungen und Löschungen in Kontovia gehen an diese Kalender zurück.
 
 **Was übertragen wird – anders als beim Cloud-Abgleich unverschlüsselt**, weil
 Google die Termine sonst nicht anzeigen könnte: Titel, Datum, Uhrzeit, Ort und
@@ -196,9 +204,10 @@ sie gilt alles oben Gesagte mit folgenden Abweichungen:
   dauerhafte Speicherung und zeigt unter *Einstellungen* an, ob der Browser sie
   gewährt hat. Auf iPhone und iPad ist der Cloud-Abgleich oder eine regelmäßige
   Vollsicherung dringend zu empfehlen.
-* **Anmeldung bei Google.** Für den Cloud-Abgleich zeigt die Web-Fassung einen
-  kurzen Code, den Sie auf `google.com/device` eingeben. Was dabei an Google und
-  Firebase geht, entspricht dem oben Beschriebenen.
+* **Anmeldung bei Google.** Für den Cloud-Abgleich leitet die Web-Fassung zu
+  Google weiter und nach der Anmeldung zurück; ersatzweise zeigt sie einen kurzen
+  Code für `google.com/device`. Angefragt werden nur Name und E-Mail-Adresse. Was
+  dabei an Google und Firebase geht, entspricht dem oben Beschriebenen.
 
 ## Speicherdauer
 

@@ -17,6 +17,7 @@ import * as K from './kern.js';
 import * as A from './ablage.js';
 import { Vault, MAX_ATTACHMENT_BYTES } from './tresor.js';
 import { Cloud } from './cloud.js';
+import * as W from './weiterleitung.js';
 import * as D from './dateien.js';
 import { drucken } from './druck.js';
 import * as U from './aktualisierung.js';
@@ -27,6 +28,14 @@ import './mobil.js';
 
 const vault = new Vault(U.VERSION);
 const cloud = new Cloud(vault, { zeigeCode });
+
+/* Zurück von einer Anmeldung per Weiterleitung? Die Antwort von Google steht
+   im Anker der Adresse; sie wird sofort entfernt und im Hintergrund bei
+   Firebase eingetauscht. Wer den Stand der Anmeldung braucht, wartet darauf. */
+const rueckkehrFertig = (() => {
+  const antwort = W.antwortAusAdresse();
+  return antwort ? cloud.rueckkehr(antwort).catch((e) => console.error('Anmeldung nach Weiterleitung:', e)) : Promise.resolve();
+})();
 const device = { id: '', name: '' };
 
 let autoLockMinutes = 10;
@@ -347,7 +356,10 @@ const api = {
   },
 
   vault: {
-    status: handle(async () => ({ exists: await vault.exists(), locked: vault.isLocked, autoLockMinutes }), { needsUnlock: false }),
+    status: handle(async () => {
+      await rueckkehrFertig;
+      return { exists: await vault.exists(), locked: vault.isLocked, autoLockMinutes };
+    }, { needsUnlock: false }),
     create: handle(async (password, settings) => {
       if (typeof password !== 'string' || password.length < 10) throw new Error('Das Passwort muss mindestens 10 Zeichen haben.');
       const db = makeSeed(settings && typeof settings === 'object' ? kopie(settings) : {});
@@ -372,6 +384,8 @@ const api = {
         resetLockTimer();
         // Eben übernommener Tresor: Die Verbindung dieses Geräts wieder einsetzen.
         await cloud.nachEntsperren().catch((e) => console.error('Verbindung nach Übernahme:', e));
+        // Eben per Weiterleitung bei Google angemeldet: jetzt mit dem Tresor verbinden.
+        await cloud.anmeldungVerbinden().catch((e) => console.error('Verbinden nach Weiterleitung:', e));
         restartAutoSync();
         A.dauerhaftAnfordern();
         // Die Anmeldemerkmale bleiben in der Web-Schicht (zugang.js).
@@ -479,7 +493,13 @@ const api = {
       restartAutoSync();
       return cloud.status();
     }),
-    connect: handle(async () => {
+    connect: handle(async (opts = {}) => {
+      // Ohne Code: zu Google und zurück. Vorher alles Ungespeicherte schreiben –
+      // die Seite lädt dabei neu.
+      if (!opts?.mitCode && cloud.weiterleitungMoeglich()) {
+        await vault.saving?.catch(() => {});
+        return cloud.weiterleiten('verbinden');
+      }
       const res = await cloud.connect();
       restartAutoSync();
       return res;
@@ -515,8 +535,12 @@ const api = {
       if (res.state === 'uebernommen') nachSperre('sicherung-uebernommen');
       return res;
     }),
-    signinStatus: handle(async () => cloud.anmeldeStatus(), { needsUnlock: false }),
-    signin: handle(async () => cloud.anmelden(), { needsUnlock: false }),
+    signinStatus: handle(async () => { await rueckkehrFertig; return cloud.anmeldeStatus(); }, { needsUnlock: false }),
+    signin: handle(async (opts = {}) => {
+      if (!opts?.mitCode && cloud.weiterleitungMoeglich()) return cloud.weiterleiten('erststart');
+      return cloud.anmelden();
+    }, { needsUnlock: false }),
+    rueckmeldung: handle(async () => { await rueckkehrFertig; return kopie(cloud.rueckmeldung()); }, { needsUnlock: false }),
     signinCancel: handle(async () => cloud.anmeldungVerwerfen(), { needsUnlock: false }),
     signinLoad: handle(async (password) => {
       if (anderesFenster) throw new Error('Kontovia ist in einem anderen Fenster geöffnet. Bitte dort weiterarbeiten oder dieses Fenster neu laden.');
@@ -550,6 +574,7 @@ const api = {
     return {
       status: handle(async () => ({ available: false, reason: 'web', linked: false }), { needsUnlock: false }),
       connect: nurWindows, disconnect: nurWindows, pull: nurWindows, push: nurWindows, finish: nurWindows,
+      calendars: nurWindows, pullWeitere: nurWindows,
     };
   })(),
 

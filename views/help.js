@@ -318,13 +318,14 @@ function cloud(root) {
       </div></div>
 
       ${WEB ? raw(`<div class="notice warn mb16">
-        <strong>In der Web-Fassung (Browser, iPhone, iPad)</strong> meldet sich Kontovia
-        anders bei Google an: Sie bekommen einen kurzen Code und geben ihn auf
-        <code>google.com/device</code> ein. Dafür braucht es statt des Clients vom Typ
-        <strong>Desktop-App</strong> einen vom Typ <strong>Fernseher und Geräte mit
-        eingeschränkter Eingabe</strong> – angelegt an derselben Stelle wie unten in Schritt 5
-        beschrieben, im selben Projekt. Beide Clients können nebeneinander bestehen; ein Konto,
-        das am PC verbunden ist, sieht in der Web-Fassung denselben Tresor.
+        <strong>In der Web-Fassung (Browser, iPhone, iPad)</strong> leitet Kontovia zur
+        Anmeldung zu Google weiter und kommt danach zurück – ohne Code. Mit dem mitgelieferten
+        Projekt ist das fertig eingerichtet. Mit einem eigenen Projekt meldet sich die
+        Web-Fassung per Code an (<code>google.com/device</code>); dafür braucht es einen Client
+        vom Typ <strong>Fernseher und Geräte mit eingeschränkter Eingabe</strong>, angelegt wie
+        unten in Schritt 5. Damit die Web-Fassung Tresor und Belege laden darf, braucht der
+        Speicher außerdem CORS-Regeln (Schritt 4). Ein Konto, das am PC verbunden ist, sieht
+        in der Web-Fassung denselben Tresor.
       </div>`) : ''}
 
       <div class="card"><div class="card-body">
@@ -370,6 +371,10 @@ function cloud(root) {
               Programmverzeichnis vollständig einfügen und veröffentlichen.</li>
           <li>Oder aus dem Quellordner mit <code>npx firebase-tools deploy --only storage</code>;
               Projekt und Regeldatei stehen in <code>.firebaserc</code> und <code>firebase.json</code>.</li>
+          <li>Nur für die Web-Fassung: Der Browser darf Inhalte aus dem Speicher erst laden, wenn
+              der Bucket die Adresse der Web-Fassung zulässt. In der Cloud Shell des Projekts:
+              <code>gcloud storage buckets update gs://&lt;speicherort&gt; --cors-file=cors.json</code>
+              mit dem Inhalt von <code>firebase/cors.json</code> (Adressen anpassen).</li>
         </ol>
         <p class="small">Ohne diesen Schritt ist der Speicher entweder für alle Angemeldeten
         offen oder ganz gesperrt. Die Regeln begrenzen jeden Zugriff auf den eigenen Zweig:
@@ -481,7 +486,10 @@ function cloud(root) {
               eingeschaltet ist.</li>
           <li>Beim <strong>OAuth-Zustimmungsbildschirm</strong> den Bereich
               <code>…/auth/calendar.app.created</code> eintragen. Er erlaubt nur den eigenen
-              Kalender „Kontovia“, nicht die übrigen Kalender der Nutzer.</li>
+              Kalender „Kontovia“. Wer weitere Kalender einbezieht (Hauptkalender usw.), gibt
+              zusätzlich <code>…/auth/calendar.events</code> und
+              <code>…/auth/calendar.readonly</code> frei – Kontovia fragt sie erst an, wenn
+              jemand das einschaltet.</li>
           <li>Google stuft Kalenderbereiche als sensibel ein. Bis zur Überprüfung durch Google
               erscheint beim Verbinden „Google hat diese App nicht überprüft“, und es können
               höchstens 100 Konten verbunden werden. Für den eigenen Gebrauch und eine kleine
