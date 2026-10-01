@@ -1,12 +1,12 @@
 {
-  "version": "1.8.0",
-  "released": "2026-09-30T21:22:33.833Z",
-  "notes": "Neue Funktionen und Korrekturen aus einer Durchsicht von Bedienung, Programmcode und\nRechtslage.\n\n* E-Rechnungen lesen und übernehmen. XRechnung und ZUGFeRD / Factur-X erscheinen in\n  der Belegvorschau als lesbare Rechnung statt als XML. Ziehen Sie eine E-Rechnung in eine\n  Buchung, übernimmt Kontovia auf Knopfdruck Nummer, Datum, Fälligkeit, Betrag, Steuersatz\n  und Kontakt – auch aus ZUGFeRD-PDFs.\n* Wiederkehrende Buchungen. Miete, Telefon, Abos: unter *Weitere Angaben → Wiederholen*\n  einen Turnus wählen. Fällige Buchungen bietet Kontovia nach dem Entsperren zum Anlegen an.\n* Steuertermine in Übersicht und Kalender: die nächste Umsatzsteuer-Voranmeldung samt\n  Zahllast und die Frist der Jahreserklärungen, auf Werktage verschoben. Die\n  Dauerfristverlängerung stellen Sie unter Einstellungen ein.\n* Abschreibung. Computer, Notebooks, Tablets und Software lassen sich mit einem Jahr\n  voll im Anschaffungsjahr abschreiben (BMF 22.02.2022). Für Anschaffungen vom 01.07.2025\n  bis 31.12.2027 gibt es die degressive Abschreibung mit bis zu 30 %. Die vorgeschlagenen\n  Nutzungsdauern folgen der amtlichen AfA-Tabelle (Kopierer 7 statt 8 Jahre).\n* Sicherheit. Der JSON-Gesamtexport und neue Vollsicherungen enthalten keine\n  Anmeldemerkmale von Google mehr. Beim Einspielen einer Sicherung bleiben Cloud- und\n  Kalenderverbindung dieses Geräts bestehen.\n* Änderungsjournal. Zwei sehr schnelle Änderungen hintereinander (etwa zwei Klicks auf\n  „als bezahlt“) konnten die Prüfsummenkette brechen, und „Journal prüfen“ meldete dann\n  fälschlich eine Veränderung von außen. Das ist behoben.\n* Festschreibung. Kosten und Abschreibung eines Anlageguts sowie der Anfangsbestand\n  eines Kontos lassen sich im festgeschriebenen Zeitraum nicht mehr ändern.\n* Umsatzsteuer. Innergemeinschaftliche Erwerbe zu 7 % stehen jetzt in Kennzahl 93\n  statt 89.\n* Kleinere Verbesserungen: Hinweise der Datenprüfung führen per Klick zu den betroffenen\n  Buchungen; Rechnungsnummern beginnen jedes Jahr bei 0001; Prüfhinweis für\n  USt-IdNr. und Steuernummer; Hilfe bei vergessenem Passwort auf dem Sperrbildschirm;\n  Stammdaten fragen vor dem Verwerfen ungespeicherter Eingaben; Termine prüfen, dass das\n  Ende nicht vor dem Beginn liegt; eine aus einem Termin angelegte Buchung wird genau mit\n  diesem Termin verknüpft.",
+  "version": "1.9.0",
+  "released": "2026-10-01T14:15:04.708Z",
+  "notes": "Cloud-Anbindung vollständig: Anmeldung mit Google gleich beim ersten Start und Sicherungen\nin der Cloud.\n\n* Mit Google anmelden beim ersten Start. Auf einem neuen Gerät lädt Kontovia Ihre\n  Buchhaltung aus der Cloud, sobald Sie ihr Passwort eingeben – ohne vorher einen Tresor\n  anlegen zu müssen. Wer neu anfängt, kann den neuen Tresor gleich mit dem Google-Konto\n  verbinden. Wer Kontovia bisher ohne Cloud nutzt, verbindet jederzeit nachträglich unter\n  Einstellungen → Cloud-Abgleich; die Statusleiste weist darauf hin.\n* Sicherungen in der Cloud. Einmal am Tag sowie vor jedem Überschreiben und jeder\n  Wiederherstellung legt Kontovia einen verschlüsselten Stand in Ihrem Konto ab; die 30\n  neuesten bleiben. Unter Einstellungen → Cloud-Abgleich → Sicherungen ansehen lässt sich\n  jeder davon wiederherstellen – auch Buchungen, die inzwischen auf allen Geräten gelöscht\n  wurden, kommen damit zurück.\n* Cloud-Stand übernehmen führte bisher nicht zur Passwortabfrage: Die Ansicht blieb mit\n  gesperrtem Tresor stehen. Jetzt erscheint die Anmeldung sofort, und das Gerät behält dabei\n  seine eigene Verbindung zu Google.\n* Abgleich nach einer Wiederherstellung. Eine eingespielte Sicherung – aus der Cloud\n  oder als Vollsicherung – wird auf den anderen Geräten nicht mehr durch deren ältere\n  Löschungen ausgehöhlt. Bitte alle Geräte auf 1.9.0 bringen.\n* Änderungsjournal. Nach dem Einspielen einer Sicherung meldete „Journal prüfen“ nach\n  dem nächsten Abgleich fälschlich eine Veränderung von außen. Das Journal bleibt jetzt über\n  die Wiederherstellung hinweg vollständig, und der Vorgang selbst steht darin.\n* Weniger in der Cloud. Was in die Cloud geht, enthält keine Anmeldemerkmale mehr; jedes\n  Gerät meldet sich mit seiner eigenen Anmeldung an.\n* Abgelaufene Anmeldung. Wurde der Zugriff im Google-Konto entfernt, zeigt Kontovia statt\n  eines Fehlercodes eine verständliche Meldung mit dem Knopf „Neu anmelden“.\n* Gleichzeitiger Abgleich zweier Geräte. War ein anderes Gerät schneller, sollte der\n  Abgleich von vorn beginnen. In der Windows-Fassung kam stattdessen eine Fehlermeldung; das\n  ist behoben, ebenso die Erkennung eines falschen Passworts beim Laden aus der Cloud.\n* Eine laufende Google-Anmeldung lässt sich abbrechen, statt fünf Minuten zu warten.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "e61615d3a2d9d6ca9a7bb126225cadda0cafc27e26e0861fb78ccddbc37d46d0",
-      "size": 39006
+      "sha256": "8e53b79f13a89495d992c436c8269c074bed3d5b064bf1d62d7704a09dad8ca3",
+      "size": 47037
     },
     {
       "path": "icons/apple-touch-icon.png",
@@ -75,8 +75,8 @@
     },
     {
       "path": "lib/merge.js",
-      "sha256": "57b6a4af54c5b487337dd9ae5ee0e97536f6633f39e80152c479c1591ef75e10",
-      "size": 12428
+      "sha256": "0c2f3a402e032eddbfe37b208031542b809325cb8856c77f3f96fecedbaf23bf",
+      "size": 13542
     },
     {
       "path": "lib/period.js",
@@ -110,8 +110,8 @@
     },
     {
       "path": "lib/sync.js",
-      "sha256": "5d808cef2cd44e9136355f9f019eb5c7c46361373652a4582f60aa4f69ba57ed",
-      "size": 6531
+      "sha256": "3baae94990b1d7be9b1327524c409bea45954da337757bb977938c779a5045e0",
+      "size": 6713
     },
     {
       "path": "lib/table.js",
@@ -145,7 +145,7 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "d9cf72ea703c34046f56301840e926613e1d7dbca6c3cbed3d64f0616b4ea7cf",
+      "sha256": "894e6143c1da3816837fa76a67fc5b5693cd8e890a0fdc2f314cf609b160a89b",
       "size": 886
     },
     {
@@ -155,13 +155,13 @@
     },
     {
       "path": "recht/DATENSCHUTZ.html",
-      "sha256": "bde01262f969fd5d6989aa0817eeddaeabfb6e7d4081997433cd7fc49ef34f82",
-      "size": 11222
+      "sha256": "c2f1f39c97449126694ea0e176dd13274972206176258d2c93a02f947b46d8e2",
+      "size": 11674
     },
     {
       "path": "styles.css",
-      "sha256": "f9a8fc633d3dd904f87fc272f6e16920a95947de988143f690745e09b111470f",
-      "size": 46655
+      "sha256": "9bc4ecb6b24f8b17b0341da74f485fbc9413077393aa8f834b972f8b61fa18fb",
+      "size": 47109
     },
     {
       "path": "views/anlageform.js",
@@ -180,8 +180,8 @@
     },
     {
       "path": "views/cloudpanel.js",
-      "sha256": "84657135bad98db90c39474af505ff57269f8c64482cc09c39f2e39f13b6124f",
-      "size": 33440
+      "sha256": "af933ae7ab3ef230860341657fa426b85aa7c543c9b39addcf5dcb1b633fabb9",
+      "size": 41086
     },
     {
       "path": "views/dashboard.js",
@@ -200,8 +200,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "6c45eb5f0fb5b619a1031b4d1846139d4427638f0d4fbe7011c5d76de1b43d80",
-      "size": 41060
+      "sha256": "5e87a4a79d26f439a6e5135b03256745bf4b6e7dba8158fc86dbb8c1dc724fe8",
+      "size": 43132
     },
     {
       "path": "views/master.js",
@@ -215,8 +215,8 @@
     },
     {
       "path": "views/settings.js",
-      "sha256": "b66e46c3e05218b16c8544c7253b51e3c5139524313eec0bf8e086995dc8ee86",
-      "size": 28360
+      "sha256": "f89465b8f45f8604cbf006c1fac317ffdcd57f8727d8918b146e43316adc146b",
+      "size": 28862
     },
     {
       "path": "views/spruenge.js",
@@ -245,7 +245,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "49094e72e0e19aad95b204a52ad9aacf5d307d4b2c15b79e2d5a1c9b2806f867",
+      "sha256": "275f96032eb79133dc6a4709ef4c43aa2b3099a33b1f5b5643bdf44882fb780b",
       "size": 6944
     },
     {
@@ -255,13 +255,13 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "cbd39049f69d03e55b04e8a2e90c45936b0cfda57152e20a25c888f30083a1a9",
-      "size": 26363
+      "sha256": "c774f7c890c67e1f57813a922e497ffcdff630c15ed8473e8d5642df3d0f1b58",
+      "size": 28321
     },
     {
       "path": "web/cloud.js",
-      "sha256": "06c6e94f784169187ddecb07912f9902e6f960719531dc470600c263adffa028",
-      "size": 11190
+      "sha256": "770e32b292c029579e9b0c63e1da7e6f735c6e84c8070649fb03a05e826d4aaf",
+      "size": 20243
     },
     {
       "path": "web/cloudconfig.js",
@@ -280,13 +280,13 @@
     },
     {
       "path": "web/firebase.js",
-      "sha256": "ee846d0766ed9e4e26e9e4cb0b1d0460657ad358cc42d877589b1b4070d62cb7",
-      "size": 8123
+      "sha256": "edab56c5f2a70324886346512d1b36a454ba37ac78e94c90407f2b148050ccfe",
+      "size": 11199
     },
     {
       "path": "web/googledrive.js",
-      "sha256": "5bb4588e3233fe6e078b30e50d491ca519e93f43eb84d59d6ab342c398cc0c79",
-      "size": 7548
+      "sha256": "54c01a374aaac760f6f45e78af55fd6fff1374d15cc72d11fb8d248752994529",
+      "size": 8964
     },
     {
       "path": "web/kern.js",
@@ -320,8 +320,8 @@
     },
     {
       "path": "web/tresor.js",
-      "sha256": "de3370a9ac91fdccbd1cf0cbc029252f89708072fc7c7f1d5c641cf69f410403",
-      "size": 9547
+      "sha256": "93329d45ef0b737c74546acf259a8e282f4683732168239fd805f22930a87196",
+      "size": 10557
     },
     {
       "path": "web/updateinfo.js",
@@ -340,8 +340,8 @@
     },
     {
       "path": "web/zugang.js",
-      "sha256": "1a0ebfc8c526dc6183b38e2b23206b74f4a81ae4c81536e8854e792a8291e723",
-      "size": 2832
+      "sha256": "2a3be22d2c011d55d78bf554ba1d0aae6c3c69a20cd1776272747bbc42512eb3",
+      "size": 4317
     }
   ]
 }

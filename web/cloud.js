@@ -8,6 +8,10 @@
  * Auf dem iPhone ist der Abgleich wichtiger als am PC: Der Browser darf
  * Website-Daten bei Platzmangel räumen, und dann ist die Cloud der einzige
  * zweite Ort, an dem die Buchhaltung noch liegt.
+ *
+ * Sicherungen in der Cloud, die Anmeldung vor dem ersten Tresor und das
+ * Mitnehmen der Geräteverbindung beim Übernehmen laufen wie in der
+ * Windows-Fassung; die Begründungen stehen dort.
  */
 
 import * as K from './kern.js';
@@ -16,10 +20,33 @@ import { TRESOR } from './tresor.js';
 import { FirebaseBackend } from './firebase.js';
 import { DriveBackend } from './googledrive.js';
 import BUILTIN from './cloudconfig.js';
+import { journalNachEinspielen, fuerSicherung } from './zugang.js';
 
 const BASIS = 'sync-basis.bin';
 const BASIS_AAD = K.utf8('kontovia/sync-basis');
 const attachAad = (id) => K.utf8(`kontovia/attachment/${id}`);
+
+const SICHERUNG_ABSTAND_MS = 20 * 60 * 60 * 1000;
+const SICHERUNG_BEHALTEN = 30;
+const BELEG_FRIST_MS = 90 * 24 * 60 * 60 * 1000;
+/** Die Web-Fassung führt ihre Client-Felder unter eigenen Namen (webClientId, webClientSecret). */
+const VERBINDUNG = ['provider', 'apiKey', 'bucket', 'clientId', 'clientSecret', 'webClientId', 'webClientSecret',
+  'autoSync', 'autoSyncMinutes', 'state', 'linkedAt'];
+
+export function sicherungsName(anlass, jetzt = new Date()) {
+  return `${jetzt.toISOString().slice(0, 19).replace(/:/g, '-')}Z_${anlass}.kv`;
+}
+
+export function sicherungsAngaben(name) {
+  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})Z_([a-z-]+)\.kv$/.exec(String(name));
+  return m ? { at: `${m[1]}T${m[2]}:${m[3]}:${m[4]}.000Z`, anlass: m[5] } : null;
+}
+
+function verbindungVon(c) {
+  const out = {};
+  for (const k of VERBINDUNG) if (c?.[k] !== undefined) out[k] = structuredClone(c[k]);
+  return out;
+}
 
 export class Cloud {
   /**
@@ -33,6 +60,8 @@ export class Cloud {
     this.busy = false;
     this.lastError = null;
     this.pending = null;
+    this.anmeldung = null;
+    this.mitnehmen = null;
   }
 
   cfg() {
@@ -59,17 +88,19 @@ export class Cloud {
     };
   }
 
+  baustein(provider, e, state) {
+    const zeigeCode = this.ui.zeigeCode;
+    return provider === 'drive'
+      ? new DriveBackend({ clientId: e.clientId, clientSecret: e.clientSecret, zeigeCode }, state)
+      : new FirebaseBackend({ apiKey: e.apiKey, bucket: e.bucket, clientId: e.clientId, clientSecret: e.clientSecret, zeigeCode }, state);
+  }
+
   be() {
     const c = this.cfg();
     if (this.backend && this.backend.name === c.provider) return this.backend;
     c.state ??= {};
     c.state[c.provider] ??= {};
-    const state = c.state[c.provider];
-    const e = this.effective();
-    const zeigeCode = this.ui.zeigeCode;
-    this.backend = c.provider === 'drive'
-      ? new DriveBackend({ clientId: e.clientId, clientSecret: e.clientSecret, zeigeCode }, state)
-      : new FirebaseBackend({ apiKey: e.apiKey, bucket: e.bucket, clientId: e.clientId, clientSecret: e.clientSecret, zeigeCode }, state);
+    this.backend = this.baustein(c.provider, this.effective(), c.state[c.provider]);
     return this.backend;
   }
 
@@ -91,6 +122,8 @@ export class Cloud {
       autoSyncMinutes: Number(c.autoSyncMinutes ?? 15),
       lastSyncAt: c.lastSyncAt || null,
       lastRemoteVersion: c.remoteVersion || null,
+      lastCloudBackupAt: c.lastCloudBackupAt || null,
+      cloudBackupError: c.cloudBackupError || null,
       builtIn: {
         apiKey: !!BUILTIN.firebase.apiKey,
         bucket: !!BUILTIN.firebase.bucket,
@@ -143,6 +176,108 @@ export class Cloud {
     await this.vault.save(this.vault.db);
     return true;
   }
+
+  /* ---------------------------------------------------------------------- */
+  /* Anmeldung beim ersten Start                                             */
+  /* ---------------------------------------------------------------------- */
+
+  anmeldeStatus() {
+    const f = BUILTIN.firebase || {};
+    const g = BUILTIN.googleGeraet || {};
+    const moeglich = BUILTIN.provider === 'drive' ? !!g.clientId : !!(f.apiKey && f.bucket && g.clientId);
+    const a = this.anmeldung;
+    return {
+      moeglich,
+      provider: BUILTIN.provider,
+      angemeldet: !!a,
+      email: a?.state.email || '',
+      vorhanden: !!a?.meta.exists,
+      groesse: a?.meta.size || 0,
+      stand: a?.meta.updated || null,
+    };
+  }
+
+  async anmelden() {
+    if (await this.vault.exists()) throw new Error('In diesem Browser gibt es bereits eine Buchhaltung. Die Verbindung zu Google richten Sie in den Einstellungen ein.');
+    if (!this.anmeldeStatus().moeglich) throw new Error('In dieser Fassung ist keine Anmeldung bei Google hinterlegt.');
+    await this.anmeldungVerwerfen();
+    const provider = BUILTIN.provider === 'drive' ? 'drive' : 'firebase';
+    const state = {};
+    const be = this.baustein(provider, {
+      apiKey: BUILTIN.firebase.apiKey,
+      bucket: BUILTIN.firebase.bucket,
+      clientId: BUILTIN.googleGeraet?.clientId || '',
+      clientSecret: BUILTIN.googleGeraet?.clientSecret || '',
+    }, state);
+    await be.connect();
+    let meta;
+    try {
+      meta = await be.vaultMeta();
+    } catch (err) {
+      await be.disconnect().catch(() => {});
+      throw new Error(`Angemeldet, aber die Cloud ist nicht erreichbar: ${err.message}`);
+    }
+    this.anmeldung = { provider, state, be, meta, blob: null };
+    return this.anmeldeStatus();
+  }
+
+  async anmeldungVerwerfen() {
+    const a = this.anmeldung;
+    this.anmeldung = null;
+    if (a) await a.be.disconnect().catch(() => {});
+    return true;
+  }
+
+  async anmeldungEintragen() {
+    const a = this.anmeldung;
+    if (!a || this.vault.isLocked) return false;
+    this.anmeldung = null;
+    if (a.meta.exists) { await a.be.disconnect().catch(() => {}); return false; }
+    const c = this.cfg();
+    c.provider = a.provider;
+    c.state = { [a.provider]: a.state };
+    c.linkedAt = new Date().toISOString();
+    this.backend = a.be;
+    await this.vault.save(this.vault.db);
+    return true;
+  }
+
+  async ausCloudLaden(password) {
+    const a = this.anmeldung;
+    if (!a?.meta.exists) throw new Error('In Ihrem Konto liegt keine Buchhaltung, die sich laden ließe.');
+    a.blob ??= await a.be.vaultDownload();
+    const db = await this.vault.adoptContainer(a.blob, password);
+    this.anmeldung = null;
+    const c = (db.cloud && typeof db.cloud === 'object') ? db.cloud : (db.cloud = {});
+    for (const k of VERBINDUNG) delete c[k];
+    c.provider = a.provider;
+    c.state = { [a.provider]: a.state };
+    c.linkedAt = new Date().toISOString();
+    c.remoteVersion = a.meta.version;
+    delete c.lastSyncAt;
+    this.backend = a.be;
+    await this.writeBase(db);
+    await this.vault.save(db);
+    return db;
+  }
+
+  async nachEntsperren() {
+    const v = this.mitnehmen;
+    this.mitnehmen = null;
+    if (!v || this.vault.isLocked) return false;
+    const c = this.cfg();
+    for (const k of VERBINDUNG) delete c[k];
+    Object.assign(c, v);
+    delete c.remoteVersion;
+    delete c.lastSyncAt;
+    this.backend = null;
+    await this.vault.save(this.vault.db);
+    return true;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Basis und Abgleich                                                      */
+  /* ---------------------------------------------------------------------- */
 
   async readBase() {
     try {
@@ -216,12 +351,18 @@ export class Cloud {
     await this.vault.save(db);
 
     onProgress({ phase: 'tresor' });
-    const header = { ...this.vault.header, savedAt: new Date().toISOString() };
-    const container = K.packContainer(header, await K.sealBody(this.vault.dek, db, header));
+    const container = await this.verpacken(db);
     const up = await be.vaultUpload(container);
 
     c.remoteVersion = up.version;
     c.lastSyncAt = new Date().toISOString();
+
+    try {
+      await this.vielleichtSichern(container);
+      delete c.cloudBackupError;
+    } catch (err) {
+      c.cloudBackupError = String(err?.message || err).slice(0, 300);
+    }
 
     const attachments = await this.syncAttachments(db, onProgress);
     await this.writeBase(db);
@@ -260,37 +401,125 @@ export class Cloud {
       }
     }
 
+    // Nicht mehr gebrauchte Belege bleiben eine Frist lang für die Sicherungen liegen.
+    const c = this.cfg();
+    const bisher = c.verwaisteBelege && typeof c.verwaisteBelege === 'object' ? c.verwaisteBelege : {};
+    const verwaist = {};
+    const jetzt = Date.now();
     for (const a of remote) {
-      if (!wanted.has(a.id)) {
+      if (wanted.has(a.id)) continue;
+      const seit = Date.parse(bisher[a.id] || '') || jetzt;
+      if (jetzt - seit >= BELEG_FRIST_MS) {
         await be.attachmentRemove(a.id).catch(() => {});
         removed++;
+      } else {
+        verwaist[a.id] = new Date(seit).toISOString();
       }
     }
+    c.verwaisteBelege = verwaist;
     return { hochgeladen: up, heruntergeladen: down, entfernt: removed };
   }
+
+  /** Wie in der Windows-Fassung: ohne Anmeldemerkmale in die Cloud. */
+  async verpacken(db) {
+    const header = { ...this.vault.header, savedAt: new Date().toISOString() };
+    return K.packContainer(header, await K.sealBody(this.vault.dek, fuerSicherung(db), header));
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Sicherungen in der Cloud                                                */
+  /* ---------------------------------------------------------------------- */
+
+  async sicherungAblegen(container, anlass) {
+    const be = this.be();
+    const res = await be.backupUpload(sicherungsName(anlass), container);
+    this.cfg().lastCloudBackupAt = new Date().toISOString();
+    try {
+      const liste = (await be.listBackups()).sort((a, b) => b.name.localeCompare(a.name));
+      for (const alt of liste.slice(SICHERUNG_BEHALTEN)) await be.backupRemove(alt.name).catch(() => {});
+    } catch { /* aufgeräumt wird beim nächsten Mal */ }
+    return { name: res.name, size: res.size, ...sicherungsAngaben(res.name) };
+  }
+
+  async vielleichtSichern(container) {
+    const c = this.cfg();
+    if (Date.now() - (Date.parse(c.lastCloudBackupAt || '') || 0) < SICHERUNG_ABSTAND_MS) return null;
+    const neueste = (await this.be().listBackups())
+      .map((s) => Date.parse(sicherungsAngaben(s.name)?.at || '') || 0)
+      .reduce((a, b) => Math.max(a, b), 0);
+    if (Date.now() - neueste < SICHERUNG_ABSTAND_MS) {
+      c.lastCloudBackupAt = new Date(neueste).toISOString();
+      return null;
+    }
+    return this.sicherungAblegen(container, 'auto');
+  }
+
+  async sicherungen() {
+    this.vault.assertUnlocked();
+    return (await this.be().listBackups())
+      .map((s) => ({ name: s.name, size: s.size, ...sicherungsAngaben(s.name) }))
+      .sort((a, b) => b.name.localeCompare(a.name));
+  }
+
+  async jetztSichern() {
+    this.vault.assertUnlocked();
+    const res = await this.sicherungAblegen(await this.verpacken(this.vault.db), 'manuell');
+    await this.vault.save(this.vault.db);
+    return res;
+  }
+
+  async sicherungEinspielen(name, password) {
+    this.vault.assertUnlocked();
+    if (!sicherungsAngaben(name)) throw new Error('Ungültiger Name einer Sicherung.');
+    const blob = await this.be().backupDownload(name);
+    const { headerBuf, body } = K.unpackContainer(blob);
+    let db = null;
+    try { db = await K.openBody(this.vault.dek, body, headerBuf); } catch { db = null; }
+
+    if (db) {
+      await this.vault.sicherungskopie('vor-wiederherstellung');
+      await this.sicherungAblegen(await this.verpacken(this.vault.db), 'vor-wiederherstellung');
+      db.cloud = this.vault.db.cloud;
+      db.auditLog = journalNachEinspielen(this.vault.db.auditLog, db.auditLog);
+      db.restoredAt = new Date().toISOString();
+      await this.vault.save(db);
+      return { state: 'eingespielt', transactions: db.transactions?.length || 0, attachments: db.attachments?.length || 0 };
+    }
+
+    if (!password) return { state: 'passwort' };
+    const probe = await K.openContainer(String(password), blob); // wirft bei falschem Passwort
+    K.wipe(probe.dek);
+    await this.uebernehmen(blob, 'vor-wiederherstellung');
+    return { state: 'uebernommen' };
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Erstverknüpfung                                                         */
+  /* ---------------------------------------------------------------------- */
 
   /** Übernimmt den Cloud-Stand vollständig. Der hiesige Tresor wird vorher gesichert. */
   async adoptRemote() {
     this.vault.assertUnlocked();
-    const blob = await this.be().vaultDownload();
+    await this.uebernehmen(await this.be().vaultDownload(), 'vor-cloud-uebernahme');
+    return true;
+  }
+
+  async uebernehmen(blob, anlass) {
     K.unpackContainer(blob); // wirft, wenn es keine gültige Datei ist
-
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-    const bisher = await A.lesen('dateien', TRESOR);
-    if (bisher) await this.vault.backupAblegen(`vor-cloud-uebernahme-${stamp}.tresor`, bisher).catch(() => {});
-
+    await this.vault.sicherungskopie(anlass);
+    this.mitnehmen = verbindungVon(this.cfg());
     await A.schreiben('dateien', TRESOR, blob);
     await A.loeschen('dateien', BASIS).catch(() => {});
     this.backend = null;
-    this.vault.lock(); // der Schlüssel des Cloud-Tresors ist ein anderer
-    return true;
+    this.vault.lock(); // der Schlüssel des anderen Tresors ist ein anderer
   }
 
   async overwriteRemote() {
     this.vault.assertUnlocked();
     const db = this.vault.db;
-    const header = { ...this.vault.header, savedAt: new Date().toISOString() };
-    const container = K.packContainer(header, await K.sealBody(this.vault.dek, db, header));
+    const meta = await this.be().vaultMeta();
+    if (meta.exists) await this.sicherungAblegen(await this.be().vaultDownload(), 'vor-ueberschreiben');
+    const container = await this.verpacken(db);
     const up = await this.be().vaultUpload(container);
     const c = this.cfg();
     c.remoteVersion = up.version;

@@ -62,7 +62,36 @@ function cloudNachEinspielen(aktuell, ausSicherung) {
   return ohneZugangsdaten(ausSicherung || {}, { markieren: false });
 }
 
-module.exports = { ohneZugangsdaten, fuerOberflaeche, fuerSicherung, cloudNachEinspielen };
+/**
+ * Das Änderungsjournal nach dem Einspielen einer Sicherung.
+ *
+ * Jedes Gerät führt darin eine eigene verkettete Folge (seq, prev, hash).
+ * Würde das Journal auf den Stand der Sicherung zurückgesetzt, zählte dieses
+ * Gerät von dort aus weiter – und der nächste Abgleich brächte die jüngeren
+ * Einträge derselben Kette aus der Cloud zurück: dieselbe Nummer zweimal, und
+ * „Journal prüfen“ meldete eine Veränderung von außen. Das Journal ist ohnehin
+ * Geschichte, auch über eine Wiederherstellung hinweg.
+ *
+ * Gehören beide Journale zu derselben Geschichte (keine Nummer mit zwei
+ * verschiedenen Einträgen), bleibt deshalb alles erhalten. Sonst – etwa eine
+ * Sicherung aus einem früheren Tresor in einem frisch angelegten – gilt wie
+ * bisher das Journal der Sicherung.
+ */
+function journalNachEinspielen(aktuell, ausSicherung) {
+  const sicherung = Array.isArray(ausSicherung) ? ausSicherung : [];
+  const gesehen = new Map();
+  for (const e of [...(Array.isArray(aktuell) ? aktuell : []), ...sicherung]) {
+    if (!e || typeof e !== 'object') continue;
+    const key = `${e.device || 'lokal'}#${e.seq}`;
+    const vorher = gesehen.get(key);
+    if (vorher && vorher.hash !== e.hash) return sicherung;
+    gesehen.set(key, e);
+  }
+  return [...gesehen.values()].sort((x, y) => String(x.ts).localeCompare(String(y.ts))
+    || String(x.device).localeCompare(String(y.device)) || (x.seq - y.seq));
+}
+
+module.exports = { ohneZugangsdaten, fuerOberflaeche, fuerSicherung, cloudNachEinspielen, journalNachEinspielen };
 
 })(module, module.exports);
-export const { ohneZugangsdaten, fuerOberflaeche, fuerSicherung, cloudNachEinspielen } = module.exports;
+export const { ohneZugangsdaten, fuerOberflaeche, fuerSicherung, cloudNachEinspielen, journalNachEinspielen } = module.exports;

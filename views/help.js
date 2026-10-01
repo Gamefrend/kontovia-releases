@@ -281,7 +281,9 @@ function cloud(root) {
         <strong>Für den normalen Gebrauch müssen Sie hier nichts tun.</strong> Das
         Firebase-Projekt ist bereits mitgeliefert. Gehen Sie einfach auf
         <a data-go="settings">Einstellungen → Cloud-Abgleich</a> und klicken Sie
-        <strong>Mit Google verbinden</strong> – das war es.
+        <strong>Mit Google verbinden</strong> – das war es. Auf einem neuen Gerät geht es
+        noch schneller: beim ersten Start <strong>Mit Google anmelden</strong>, und Kontovia
+        lädt Ihre Buchhaltung aus der Cloud.
       </div>
 
       <div class="notice mb16">
@@ -366,6 +368,8 @@ function cloud(root) {
           <li><strong>Storage → Regeln</strong> öffnen.</li>
           <li>Den Inhalt der Datei <code>firebase/storage.rules</code> aus dem
               Programmverzeichnis vollständig einfügen und veröffentlichen.</li>
+          <li>Oder aus dem Quellordner mit <code>npx firebase-tools deploy --only storage</code>;
+              Projekt und Regeldatei stehen in <code>.firebaserc</code> und <code>firebase.json</code>.</li>
         </ol>
         <p class="small">Ohne diesen Schritt ist der Speicher entweder für alle Angemeldeten
         offen oder ganz gesperrt. Die Regeln begrenzen jeden Zugriff auf den eigenen Zweig:
@@ -419,11 +423,34 @@ function cloud(root) {
 
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Zweites Gerät anschließen</h3>
-        <p>Installieren Sie Kontovia dort, legen Sie einen Tresor an (das Passwort ist
-        zunächst egal) und tragen Sie dieselben Zugangsdaten ein. Beim Verbinden erkennt
-        Kontovia, dass in der Cloud schon eine Buchhaltung liegt, und bietet
-        <strong>Cloud-Stand übernehmen</strong> an. Danach melden Sie sich mit dem Passwort
-        des ersten Geräts an – ab da arbeiten beide Rechner auf demselben Bestand.</p>
+        <p>Installieren Sie Kontovia dort und klicken Sie beim ersten Start auf
+        <strong>Mit Google anmelden</strong>. Kontovia findet Ihre Buchhaltung im Konto und
+        lädt sie, sobald Sie ihr Passwort eingeben – das Passwort des ersten Geräts. Ab da
+        arbeiten beide Geräte auf demselben Bestand; die Belege kommen beim ersten Abgleich nach.</p>
+        <p class="small muted mb0">Haben Sie dort schon einen Tresor angelegt: unter
+        <a data-go="settings">Einstellungen → Cloud-Abgleich</a> verbinden. Kontovia erkennt die
+        Buchhaltung in der Cloud und bietet <strong>Cloud-Stand übernehmen</strong> an; der
+        Tresor des Geräts wird vorher in den Sicherungsordner gelegt.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
+        <h3 class="mt0">Sicherungen in der Cloud</h3>
+        <p>Neben dem laufenden Stand legt der Abgleich einmal am Tag eine Sicherung in Ihrem
+        Konto ab, ebenso vor jedem „Cloud überschreiben“ und vor jeder Wiederherstellung. Die
+        30 neuesten bleiben erhalten; sie sind genauso verschlüsselt wie der Tresor.</p>
+        <ul>
+          <li><strong>Wiederherstellen</strong> unter <a data-go="settings">Einstellungen →
+              Cloud-Abgleich → Sicherungen ansehen</a>. Der gewählte Stand ersetzt den Bestand
+              dieses Geräts und gilt nach dem nächsten Abgleich auch auf den anderen –
+              auch Buchungen, die dort inzwischen gelöscht wurden, kommen zurück.</li>
+          <li>Belege, die nicht mehr gebraucht werden, bleiben noch 90 Tage in der Cloud,
+              damit die Sicherungen vollständig wiederherstellbar sind.</li>
+          <li>Eine Sicherung aus der Zeit vor einem Passwortwechsel öffnet sich ohne
+              Rückfrage. Eine Sicherung einer <em>anderen</em> Buchhaltung (etwa der Stand vor
+              „Cloud überschreiben“) fragt nach deren Passwort.</li>
+        </ul>
+        <p class="small muted mb0">Die Sicherungen ersetzen nicht die Vollsicherung auf einem
+        eigenen Datenträger: Wer das Google-Konto verliert, verliert auch sie.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">

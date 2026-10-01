@@ -1,12 +1,12 @@
 /** Kontovia – Bedienflächen für Cloud-Abgleich und Programmaktualisierung. */
 
 import { html, raw, esc, $, $$, bytes, fmtDateTime, fmtDate, int } from '../lib/util.js';
-import { icon, modal, confirmDialog, ok, err, warn, toast, emptyState } from '../lib/ui.js';
+import { icon, modal, confirmDialog, askPassword, ok, err, warn, toast, emptyState } from '../lib/ui.js';
 import { store, commit, saveNow, setDb } from '../lib/store.js';
 import { syncNow, syncState, onSync, startAutoSync } from '../lib/sync.js';
 import { checkUpdates, markNotified } from '../lib/updates.js';
-import { refresh } from '../lib/router.js';
-import { appInfo } from '../app.js';
+import { refresh, navigate } from '../lib/router.js';
+import { appInfo, setCloudVerbunden } from '../app.js';
 import { table, mountTables } from '../lib/table.js';
 
 const api = window.kontovia;
@@ -14,6 +14,8 @@ const api = window.kontovia;
 const WEB = api.platform === 'web';
 /** In der Web-Fassung meldet sich Kontovia per Code an – mit einem anderen Client-Typ. */
 const CLIENT_TYP = WEB ? 'Fernseher und Geräte mit eingeschränkter Eingabe' : 'Desktop-App';
+/** Wie SICHERUNG_BEHALTEN in src/main/cloud.js und src/web/cloud.js. */
+const SICHERUNGEN_BEHALTEN = 30;
 
 /* -------------------------------------------------------------------------- */
 /* Cloud                                                                       */
@@ -22,6 +24,7 @@ const CLIENT_TYP = WEB ? 'Fernseher und Geräte mit eingeschränkter Eingabe' : 
 export async function renderCloudCard(root) {
   const status = await api.cloud.status().catch(() => ({ configured: false }));
   const conflicts = store.db.syncConflicts || [];
+  setCloudVerbunden(status.configured ? !!status.linked : null);
 
   let quotaLine = '';
   if (status.linked) {
@@ -36,7 +39,7 @@ export async function renderCloudCard(root) {
   root.innerHTML = html`
     <div class="card">
       <div class="card-head">
-        <h3>${icon('archive', 16)} Cloud-Abgleich</h3>
+        <h3>${icon('archive', 16)} Cloud-Abgleich und Sicherung</h3>
         <span class="sub">${status.provider === 'drive' ? 'Google Drive' : 'Firebase'}</span>
         <div class="spacer"></div>
         ${status.linked ? raw(`<span class="badge pos">verbunden${status.email ? ' – ' + esc(status.email) : ''}</span>`)
@@ -54,6 +57,7 @@ export async function renderCloudCard(root) {
           Google-Kontingent, Gebühren entstehen keine.`) : raw(`Er landet in Ihrem
           Firebase-Projekt, in einem Zweig, den die Zugriffsregeln auf Ihr Konto begrenzen.
           Jeder Nutzer kommt ausschließlich an die eigenen Daten.`)}
+          Daneben bleiben bis zu ${SICHERUNGEN_BEHALTEN} ältere Stände als Sicherung dort liegen.
         </div>
 
         ${!status.configured ? raw(setupForm(status)) : ''}
@@ -69,7 +73,8 @@ export async function renderCloudCard(root) {
           Passwort bei Google eingeben und nicht bei Kontovia.`
             : `Es öffnet sich Ihr normaler Browser mit der
           Anmeldeseite von Google. Das ist Absicht: nur dort sehen Sie in der Adresszeile,
-          wo Sie Ihr Passwort eingeben.`}</p>`) : ''}
+          wo Sie Ihr Passwort eingeben.`} Ihre Buchhaltung bleibt dabei, wie sie ist. Ist das
+          Konto noch leer, wird sie hochgeladen; liegt dort schon eine, fragt Kontovia, welche gelten soll.</p>`) : ''}
 
         ${status.linked ? raw(`
           <div class="grid c2">
@@ -103,7 +108,20 @@ export async function renderCloudCard(root) {
             <div class="spacer"></div>
             <button class="btn danger" id="btnUnlink">Verbindung trennen</button>
           </div>
-          <div id="syncStatus" class="mt16"></div>`) : ''}
+          <div id="syncStatus" class="mt16"></div>
+
+          <h4 class="mt24 mb8" style="font-size:14px">Sicherungen in der Cloud</h4>
+          <p class="small muted mt0">Einmal am Tag legt der Abgleich zusätzlich eine Kopie des
+          verschlüsselten Tresors in Ihrem Konto ab, außerdem vor jedem Überschreiben und jeder
+          Wiederherstellung. Die ${SICHERUNGEN_BEHALTEN} neuesten bleiben erhalten. So lässt sich
+          auch ein Stand zurückholen, den alle Geräte schon übernommen haben – etwa nach einem
+          versehentlichen Löschen.</p>
+          ${status.cloudBackupError ? `<div class="notice warn mb8 small">Die letzte Sicherung in der Cloud ist fehlgeschlagen: ${esc(status.cloudBackupError)}</div>` : ''}
+          <div class="row wrap" style="gap:8px">
+            <button class="btn" id="btnCloudBackup">${icon('save', 15).__raw} Jetzt in der Cloud sichern</button>
+            <button class="btn" id="btnCloudBackups">${icon('history', 15).__raw} Sicherungen ansehen</button>
+            <span class="small muted">${status.lastCloudBackupAt ? `Zuletzt ${esc(fmtDateTime(status.lastCloudBackupAt))}` : 'Noch keine Sicherung von diesem Gerät'}</span>
+          </div>`) : ''}
       </div>
     </div>`;
 
@@ -220,15 +238,36 @@ function wireCloud(root, status) {
     const btn = e.target.closest('button');
     btn.disabled = true;
     btn.textContent = WEB ? 'Warte auf die Anmeldung …' : 'Warte auf den Browser …';
+    // Wer das Browserfenster schließt, soll nicht fünf Minuten warten müssen.
+    const stop = document.createElement('button');
+    stop.className = 'btn ghost';
+    stop.textContent = 'Abbrechen';
+    stop.addEventListener('click', () => api.cloud.signinCancel?.().catch(() => {}));
+    if (!WEB) btn.after(stop);
     try {
       const res = await api.cloud.connect();
       ok('Mit Google verbunden', res.email);
       await firstLink(root);
     } catch (ex) {
-      err('Verbindung fehlgeschlagen', ex.message);
+      if (ex.code !== 'ABGEBROCHEN') err('Verbindung fehlgeschlagen', ex.message);
       renderCloudCard(root);
     }
   });
+
+  $('#btnCloudBackup', root)?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button');
+    btn.disabled = true;
+    try {
+      if (store.dirty) await saveNow();
+      const res = await api.cloud.backupNow();
+      ok('In der Cloud gesichert', `${fmtDateTime(res.at)} · ${bytes(res.size)}`);
+    } catch (ex) {
+      err('Sicherung fehlgeschlagen', ex.message);
+    }
+    renderCloudCard(root);
+  });
+
+  $('#btnCloudBackups', root)?.addEventListener('click', () => openCloudBackups(root));
 
   $('#cAuto', root)?.addEventListener('change', async (e) => {
     await api.cloud.configure({ autoSync: e.target.checked });
@@ -253,7 +292,7 @@ function wireCloud(root, status) {
     try {
       await api.cloud.disconnect(!wahl.loeschen);
       ok('Verbindung getrennt', wahl.loeschen
-        ? 'Tresor und Belege wurden auch in der Cloud gelöscht.'
+        ? 'Tresor, Belege und Sicherungen wurden auch in der Cloud gelöscht.'
         : 'Der verschlüsselte Stand bleibt in der Cloud liegen.');
     } catch (e) {
       err('Trennen fehlgeschlagen', e.message);
@@ -276,8 +315,8 @@ function askUnlink() {
       body: html`
         <p class="mt0" style="line-height:1.6">Der Zugriff wird bei Google widerrufen. Ihre
         Buchhaltung bleibt vollständig auf diesem ${WEB ? 'Gerät' : 'Rechner'}.</p>
-        <label class="check mt16"><input type="checkbox" id="unlinkDelete"> Tresor und Belege
-        auch in der Cloud löschen</label>
+        <label class="check mt16"><input type="checkbox" id="unlinkDelete"> Tresor, Belege und
+        Sicherungen auch in der Cloud löschen</label>
         <p class="small muted mt8 mb0">Ohne Häkchen bleibt der verschlüsselte Stand dort liegen,
         etwa um sich später wieder zu verbinden. Nach einem erneuten Verbinden lässt er sich
         hier jederzeit löschen.</p>`,
@@ -292,6 +331,93 @@ function askUnlink() {
       resolve({ loeschen });
     });
   });
+}
+
+const ANLASS = {
+  auto: 'täglich',
+  manuell: 'von Hand',
+  'vor-ueberschreiben': 'vor dem Überschreiben',
+  'vor-wiederherstellung': 'vor einer Wiederherstellung',
+};
+
+/** Die Sicherungen in der Cloud – ansehen und einzeln wiederherstellen. */
+async function openCloudBackups(root) {
+  const m = modal({
+    title: 'Sicherungen in der Cloud',
+    size: 'wide',
+    body: '<div class="skeleton" style="height:120px"></div>',
+    foot: '<button class="btn primary" data-x>Schließen</button>',
+  });
+  m.root.querySelector('[data-x]').addEventListener('click', () => m.close());
+  const body = m.body;
+
+  let liste;
+  try {
+    liste = await api.cloud.backups();
+  } catch (e) {
+    body.innerHTML = html`<div class="notice danger">Die Liste ließ sich nicht laden: ${e.message}</div>`;
+    return;
+  }
+  if (!liste.length) {
+    body.innerHTML = emptyState('Noch keine Sicherung', 'Die erste entsteht beim nächsten Abgleich oder mit „Jetzt in der Cloud sichern“.').__raw;
+    return;
+  }
+  body.innerHTML = html`
+    <p class="mt0 small muted">Eine Sicherung ersetzt beim Wiederherstellen den Bestand dieses Geräts;
+    der nächste Abgleich bringt ihn zu Ihren anderen Geräten. Der jetzige Stand wird vorher gesichert –
+    hier in der Liste und im Sicherungsordner dieses Geräts.</p>
+    <table class="data compact">
+      <thead><tr><th>Zeitpunkt</th><th>Anlass</th><th class="num">Größe</th><th></th></tr></thead>
+      <tbody>${raw(liste.map((s, i) => `<tr>
+        <td class="nowrap">${esc(fmtDateTime(s.at))}</td>
+        <td><span class="badge">${esc(ANLASS[s.anlass] || s.anlass || '')}</span></td>
+        <td class="num">${esc(bytes(s.size))}</td>
+        <td class="right"><button class="btn sm" data-restore="${i}">Wiederherstellen</button></td>
+      </tr>`).join(''))}</tbody>
+    </table>`;
+  body.querySelectorAll('[data-restore]').forEach((b) => b.addEventListener('click', () => {
+    m.close();
+    restoreCloudBackup(root, liste[Number(b.dataset.restore)]);
+  }));
+}
+
+async function restoreCloudBackup(root, s) {
+  const yes = await confirmDialog({
+    title: `Stand vom ${fmtDateTime(s.at)} wiederherstellen?`,
+    text: 'Der Bestand dieses Geräts wird durch die Sicherung ersetzt, und beim nächsten Abgleich gilt sie auch für Ihre anderen Geräte: '
+      + 'Was nach diesem Zeitpunkt angelegt oder geändert wurde, ist danach überall auf dem Stand der Sicherung. '
+      + 'Der jetzige Stand wird vorher in der Cloud und auf diesem Gerät gesichert. Die Verbindungen dieses Geräts bleiben bestehen.',
+    confirmLabel: 'Wiederherstellen', danger: true,
+  });
+  if (!yes) return;
+  try {
+    if (store.dirty) await saveNow();
+    let res = await api.cloud.restoreBackup(s.name);
+    if (res.state === 'passwort') {
+      // Die Sicherung stammt aus einem anderen Tresor, etwa dem Stand vor „Cloud überschreiben“.
+      const pw = await askPassword({
+        title: 'Passwort dieser Sicherung',
+        text: 'Diese Sicherung gehört zu einer anderen Buchhaltung als der auf diesem Gerät – etwa dem Stand, der vor einem „Cloud überschreiben“ dort lag. '
+          + 'Mit ihrem Passwort wird sie zur Buchhaltung dieses Geräts; die jetzige kommt vorher in den Sicherungsordner.',
+        label: 'Passwort', confirmLabel: 'Laden',
+      });
+      if (!pw) return;
+      res = await api.cloud.restoreBackup(s.name, pw);
+    }
+    // Bei „übernommen“ ist Kontovia jetzt gesperrt und fragt nach dem Passwort der Sicherung.
+    if (res.state !== 'eingespielt') return;
+    setDb(await api.vault.read());
+    await commit('sicherung.wiederhergestellt', () => null, {
+      entity: 'bestand', summary: `Stand der Cloud-Sicherung vom ${fmtDateTime(s.at)} wiederhergestellt`,
+    });
+    await saveNow();
+    ok('Sicherung wiederhergestellt', `${int(res.transactions)} Buchungen. Der Abgleich bringt den Stand jetzt zu Ihren anderen Geräten.`);
+    navigate('dashboard');
+    syncNow({ silent: true, reason: 'wiederherstellung' });
+  } catch (e) {
+    err('Wiederherstellung fehlgeschlagen', e.code === 'BAD_PASSWORD' ? 'Das Passwort passt nicht zu dieser Sicherung.' : e.message);
+    renderCloudCard(root);
+  }
 }
 
 /** Erster Abgleich nach dem Verbinden – hier entscheidet sich, welcher Stand gilt. */
@@ -343,8 +469,8 @@ async function decideForeign(root, begin) {
         </div>
         <div class="notice">
           <strong>Cloud überschreiben</strong> – nur, wenn der Cloud-Stand veraltet oder ein
-          Fehlversuch war. <span class="strong" style="color:var(--neg)">Was dort liegt, ist
-          danach weg.</span>
+          Fehlversuch war. Was dort liegt, wird vorher als Sicherung abgelegt und lässt sich
+          unter <em>Sicherungen ansehen</em> mit seinem Passwort zurückholen.
         </div>
       </div>`,
     foot: `<button class="btn" data-cancel>Später entscheiden</button>
@@ -374,8 +500,8 @@ async function decideForeign(root, begin) {
   m.root.querySelector('[data-overwrite]').addEventListener('click', async () => {
     m.close();
     const yes = await confirmDialog({
-      title: 'Cloud-Stand unwiderruflich überschreiben?',
-      text: 'Die Buchhaltung, die derzeit in Ihrem Google-Konto liegt, wird durch den Stand dieses Geräts ersetzt und ist danach nicht wiederherstellbar.',
+      title: 'Cloud-Stand überschreiben?',
+      text: 'Die Buchhaltung, die derzeit in Ihrem Google-Konto liegt, wird durch den Stand dieses Geräts ersetzt. Vorher legt Kontovia sie als Sicherung ab; sie bleibt dort, bis 30 neuere Sicherungen sie verdrängen, und lässt sich mit ihrem Passwort zurückholen.',
       confirmLabel: 'Überschreiben', danger: true,
     });
     if (!yes) { renderCloudCard(root); return; }
@@ -409,6 +535,22 @@ function paintSyncStatus(root) {
   const s = syncState;
   if (s.running) {
     box.innerHTML = html`<div class="notice">Abgleich läuft …${s.progress ? raw(` <span class="muted">${esc(String(s.progress.phase || ''))}</span>`) : ''}</div>`;
+  } else if (s.lastErrorCode === 'NEU_ANMELDEN') {
+    // Sitzung abgelaufen oder widerrufen: neu anmelden, dann gleich weiter abgleichen.
+    box.innerHTML = html`<div class="notice warn row wrap" style="gap:12px;justify-content:space-between">
+      <span>${s.lastError}</span>
+      <button class="btn primary sm" id="btnReauth">${icon('key', 14)} Neu anmelden</button></div>`;
+    $('#btnReauth', box).addEventListener('click', async (e) => {
+      e.target.closest('button').disabled = true;
+      try {
+        const res = await api.cloud.connect();
+        ok('Wieder angemeldet', res.email || '');
+        await runSync(root);
+      } catch (ex) {
+        if (ex.code !== 'ABGEBROCHEN') err('Anmeldung fehlgeschlagen', ex.message);
+        renderCloudCard(root);
+      }
+    });
   } else if (s.lastError) {
     box.innerHTML = html`<div class="notice danger">Letzter Versuch fehlgeschlagen: ${s.lastError}</div>`;
   } else if (s.lastResult) {

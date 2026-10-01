@@ -15,8 +15,19 @@ const SECURETOKEN = 'https://securetoken.googleapis.com/v1';
 const STORAGE = 'https://firebasestorage.googleapis.com/v0/b';
 
 export const VAULT_NAME = 'tresor.kv';
+/** Wie in der Windows-Fassung: 2026-10-01T08-30-00Z_auto.kv */
+export const BACKUP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z_[a-z-]{1,30}\.kv$/;
 
 const enc = (s) => encodeURIComponent(s);
+
+/** Wie in der Windows-Fassung: abgelaufene oder widerrufene Sitzung → code NEU_ANMELDEN. */
+export function anmeldungUngueltig(err) {
+  if (!/INVALID_REFRESH_TOKEN|TOKEN_EXPIRED|USER_DISABLED|USER_NOT_FOUND|invalid_grant|expired or revoked/i.test(String(err?.message))) return err;
+  return Object.assign(
+    new Error('Die Anmeldung bei Google gilt nicht mehr – etwa weil der Zugriff im Google-Konto entfernt wurde. Bitte neu anmelden; Ihre Daten bleiben dabei, wie sie sind.'),
+    { code: 'NEU_ANMELDEN' },
+  );
+}
 
 export class FirebaseBackend {
   /**
@@ -84,12 +95,17 @@ export class FirebaseBackend {
   async idToken() {
     if (!this.state.refreshToken) throw new Error('Es ist kein Konto verbunden.');
     if (this.token && this.token.expiresAt > Date.now()) return this.token.idToken;
-    const data = await requestJson(`${SECURETOKEN}/token?key=${enc(this.cfg.apiKey)}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: form({ grant_type: 'refresh_token', refresh_token: this.state.refreshToken }),
-      timeoutMs: 30000,
-    });
+    let data;
+    try {
+      data = await requestJson(`${SECURETOKEN}/token?key=${enc(this.cfg.apiKey)}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+        body: form({ grant_type: 'refresh_token', refresh_token: this.state.refreshToken }),
+        timeoutMs: 30000,
+      });
+    } catch (err) {
+      throw anmeldungUngueltig(err);
+    }
     if (!data?.id_token) throw new Error('Die Sitzung konnte nicht erneuert werden. Bitte neu anmelden.');
     if (data.refresh_token) this.state.refreshToken = data.refresh_token;
     this.state.uid = data.user_id || this.state.uid;
@@ -187,8 +203,59 @@ export class FirebaseBackend {
     return true;
   }
 
+  async listBackups() {
+    const headers = await this.auth();
+    const prefix = `${this.base()}/sicherungen/`;
+    const out = [];
+    let pageToken = '';
+    do {
+      const url = `${STORAGE}/${enc(this.cfg.bucket)}/o?prefix=${enc(prefix)}&maxResults=1000`
+        + (pageToken ? `&pageToken=${enc(pageToken)}` : '');
+      const data = await requestJson(url, { headers, timeoutMs: 30000 });
+      for (const item of data?.items || []) {
+        const name = String(item.name || '').slice(prefix.length);
+        if (BACKUP_RE.test(name)) out.push({ name, size: Number(item.size || 0), updated: item.updated || '' });
+      }
+      pageToken = data?.nextPageToken || '';
+    } while (pageToken && out.length < 2000);
+    return out;
+  }
+
+  async backupDownload(name) {
+    if (!BACKUP_RE.test(name)) throw new Error('Ungültiger Name einer Sicherung.');
+    const headers = await this.auth();
+    const res = await request(this.objectUrl(`${this.base()}/sicherungen/${name}`, '?alt=media'), {
+      headers, timeoutMs: 10 * 60 * 1000,
+    });
+    if (res.status !== 200) throw new Error(`Die Sicherung konnte nicht geladen werden (HTTP ${res.status}).`);
+    return res.body;
+  }
+
+  async backupUpload(name, bytes) {
+    if (!BACKUP_RE.test(name)) throw new Error('Ungültiger Name einer Sicherung.');
+    const headers = { ...(await this.auth()), 'content-type': 'application/octet-stream' };
+    const path = `${this.base()}/sicherungen/${name}`;
+    const m = await requestJson(
+      `${STORAGE}/${enc(this.cfg.bucket)}/o?uploadType=media&name=${enc(path)}`,
+      { method: 'POST', headers, body: bytes, timeoutMs: 10 * 60 * 1000 },
+    );
+    return { name, size: Number(m?.size || bytes.length), updated: m?.updated || '' };
+  }
+
+  async backupRemove(name) {
+    if (!BACKUP_RE.test(name)) throw new Error('Ungültiger Name einer Sicherung.');
+    const headers = await this.auth();
+    try {
+      await requestJson(this.objectUrl(`${this.base()}/sicherungen/${name}`), { method: 'DELETE', headers, timeoutMs: 20000 });
+    } catch (err) {
+      if (err.status !== 404) throw err;
+    }
+    return true;
+  }
+
   async removeAll() {
     for (const a of await this.listAttachments()) await this.attachmentRemove(a.id).catch(() => {});
+    for (const s of await this.listBackups().catch(() => [])) await this.backupRemove(s.name).catch(() => {});
     const headers = await this.auth();
     try {
       await requestJson(this.objectUrl(`${this.base()}/${VAULT_NAME}`), { method: 'DELETE', headers, timeoutMs: 20000 });
@@ -200,8 +267,9 @@ export class FirebaseBackend {
 
   async quota() {
     const attachments = await this.listAttachments();
+    const backups = await this.listBackups().catch(() => []);
     const meta = await this.vaultMeta().catch(() => ({ size: 0 }));
-    const used = (meta.size || 0) + attachments.reduce((s, a) => s + a.size, 0);
+    const used = (meta.size || 0) + [...attachments, ...backups].reduce((s, a) => s + a.size, 0);
     return { email: this.state.email || '', used, limit: 0, scope: 'eigener Verbrauch im Projekt' };
   }
 }

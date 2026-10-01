@@ -6,7 +6,7 @@
 
 import * as K from './kern.js';
 import * as A from './ablage.js';
-import { fuerSicherung, cloudNachEinspielen } from './zugang.js';
+import { fuerSicherung, cloudNachEinspielen, journalNachEinspielen } from './zugang.js';
 
 export const MAX_ATTACHMENT_BYTES = 40 * 1024 * 1024; // 40 MB pro Beleg
 const BACKUP_KEEP = 25;
@@ -63,6 +63,22 @@ export class Vault {
     const { data, dek, header } = await K.openContainer(password, buf);
     await this._adopt(dek, header, data);
     return data;
+  }
+
+  /** Übernimmt einen Tresor aus der Cloud als ersten Tresor – geschrieben wird erst, wenn das Passwort passt. */
+  async adoptContainer(bytes, password) {
+    if (await this.exists()) throw new Error('Es existiert bereits ein Tresor in diesem Browser.');
+    const { data, dek, header } = await K.openContainer(String(password ?? ''), bytes);
+    await A.schreiben('dateien', TRESOR, bytes);
+    await this._adopt(dek, header, data);
+    return data;
+  }
+
+  /** Legt den jetzigen Stand vor einem Eingriff als Sicherung ab. */
+  async sicherungskopie(anlass) {
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    const bisher = await A.lesen('dateien', TRESOR);
+    if (bisher) await this.backupAblegen(`${anlass}-${stamp}.tresor`, bisher).catch(() => {});
   }
 
   lock() {
@@ -258,8 +274,12 @@ export class Vault {
       throw new Error('Die Datei ist keine Kontovia-Vollsicherung.');
     }
     this.assertUnlocked();
-    // Die Verbindungen dieses Geräts bleiben, wie sie sind.
-    if (data.db && typeof data.db === 'object') data.db.cloud = cloudNachEinspielen(this.db?.cloud, data.db.cloud);
+    // Die Verbindungen dieses Geräts bleiben, wie sie sind; restoredAt wie in der Windows-Fassung.
+    if (data.db && typeof data.db === 'object') {
+      data.db.cloud = cloudNachEinspielen(this.db?.cloud, data.db.cloud);
+      data.db.auditLog = journalNachEinspielen(this.db?.auditLog, data.db.auditLog);
+      data.db.restoredAt = new Date().toISOString();
+    }
     // Belege zuerst, danach der Bestand – bei einem Abbruch bleibt nie ein
     // Datensatz ohne zugehörige Datei zurück.
     const eintraege = [];

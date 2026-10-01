@@ -5,9 +5,11 @@
 
 import { requestJson, request } from './netz.js';
 import * as gauth from './anmeldung.js';
+import { BACKUP_RE, anmeldungUngueltig } from './firebase.js';
 
 const VAULT_NAME = 'tresor.kv';
 const ATTACH_PREFIX = 'beleg_';
+const BACKUP_PREFIX = 'sicherung_';
 const FILES = 'https://www.googleapis.com/drive/v3/files';
 const UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
 const FIELDS = 'id,name,size,modifiedTime,md5Checksum,appProperties';
@@ -125,11 +127,15 @@ export class DriveBackend {
   async accessToken() {
     if (!this.state.refreshToken) throw new Error('Es ist kein Google-Konto verbunden.');
     if (this.token && this.token.expiresAt > Date.now()) return this.token.accessToken;
-    this.token = await gauth.refresh({
-      clientId: this.cfg.clientId,
-      clientSecret: this.cfg.clientSecret,
-      refreshToken: this.state.refreshToken,
-    });
+    try {
+      this.token = await gauth.refresh({
+        clientId: this.cfg.clientId,
+        clientSecret: this.cfg.clientSecret,
+        refreshToken: this.state.refreshToken,
+      });
+    } catch (err) {
+      throw anmeldungUngueltig(err);
+    }
     return this.token.accessToken;
   }
 
@@ -188,6 +194,34 @@ export class DriveBackend {
   async attachmentRemove(id) {
     const token = await this.accessToken();
     const found = (await this.listAttachments()).find((a) => a.id === id);
+    if (found) await remove(token, found.fileId).catch(() => {});
+    return true;
+  }
+
+  async listBackups() {
+    const token = await this.accessToken();
+    return (await list(token))
+      .filter((f) => f.name.startsWith(BACKUP_PREFIX) && BACKUP_RE.test(f.name.slice(BACKUP_PREFIX.length)))
+      .map((f) => ({ name: f.name.slice(BACKUP_PREFIX.length), size: Number(f.size || 0), updated: f.modifiedTime || '', fileId: f.id }));
+  }
+
+  async backupDownload(name) {
+    const token = await this.accessToken();
+    const found = (await this.listBackups()).find((b) => b.name === name);
+    if (!found) throw new Error('Die Sicherung liegt nicht (mehr) in der Cloud.');
+    return download(token, found.fileId);
+  }
+
+  async backupUpload(name, bytes) {
+    if (!BACKUP_RE.test(name)) throw new Error('Ungültiger Name einer Sicherung.');
+    const token = await this.accessToken();
+    const f = await create(token, BACKUP_PREFIX + name, bytes, { app: 'Kontovia', kind: 'sicherung' });
+    return { name, size: Number(f?.size || bytes.length), updated: f?.modifiedTime || '' };
+  }
+
+  async backupRemove(name) {
+    const token = await this.accessToken();
+    const found = (await this.listBackups()).find((b) => b.name === name);
     if (found) await remove(token, found.fileId).catch(() => {});
     return true;
   }

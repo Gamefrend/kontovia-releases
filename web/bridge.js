@@ -135,6 +135,11 @@ function pruefeSperre() {
 function doLock(reason) {
   if (vault.isLocked) return;
   vault.lock();
+  nachSperre(reason);
+}
+
+/** Was dem Sperren folgt – auch, wenn cloud.js beim Übernehmen schon gesperrt hat. */
+function nachSperre(reason) {
   if (lockTimer) clearTimeout(lockTimer);
   lockTimer = null;
   restartAutoSync();
@@ -350,7 +355,9 @@ const api = {
       autoLockMinutes = db.settings.autoLockMinutes;
       resetLockTimer();
       A.dauerhaftAnfordern();
-      return kopie(fuerOberflaeche(db));
+      // Wer sich beim Einrichten mit Google angemeldet hat, ist ab jetzt verbunden.
+      if (await cloud.anmeldungEintragen().catch(() => false)) restartAutoSync();
+      return kopie(fuerOberflaeche(vault.db));
     }, { needsUnlock: false }),
     unlock: handle(async (password) => {
       if (anderesFenster) throw new Error('Kontovia ist in einem anderen Fenster geöffnet. Bitte dort weiterarbeiten oder dieses Fenster neu laden.');
@@ -363,10 +370,12 @@ const api = {
         failedUnlocks = 0;
         autoLockMinutes = Number(db?.settings?.autoLockMinutes ?? 10);
         resetLockTimer();
+        // Eben übernommener Tresor: Die Verbindung dieses Geräts wieder einsetzen.
+        await cloud.nachEntsperren().catch((e) => console.error('Verbindung nach Übernahme:', e));
         restartAutoSync();
         A.dauerhaftAnfordern();
         // Die Anmeldemerkmale bleiben in der Web-Schicht (zugang.js).
-        return kopie(fuerOberflaeche(db));
+        return kopie(fuerOberflaeche(vault.db));
       } catch (err) {
         failedUnlocks++;
         throw err;
@@ -494,11 +503,40 @@ const api = {
     }),
     adoptRemote: handle(async () => {
       await cloud.adoptRemote();
-      doLock('cloud-uebernahme');
+      nachSperre('cloud-uebernahme');
       return true;
     }),
     overwriteRemote: handle(async () => cloud.overwriteRemote()),
     quota: handle(async () => cloud.quota()),
+    backups: handle(async () => kopie(await cloud.sicherungen())),
+    backupNow: handle(async () => cloud.jetztSichern()),
+    restoreBackup: handle(async (name, password) => {
+      const res = await cloud.sicherungEinspielen(str(name, 80), password ? String(password) : '');
+      if (res.state === 'uebernommen') nachSperre('sicherung-uebernommen');
+      return res;
+    }),
+    signinStatus: handle(async () => cloud.anmeldeStatus(), { needsUnlock: false }),
+    signin: handle(async () => cloud.anmelden(), { needsUnlock: false }),
+    signinCancel: handle(async () => cloud.anmeldungVerwerfen(), { needsUnlock: false }),
+    signinLoad: handle(async (password) => {
+      if (anderesFenster) throw new Error('Kontovia ist in einem anderen Fenster geöffnet. Bitte dort weiterarbeiten oder dieses Fenster neu laden.');
+      if (failedUnlocks > 0) {
+        const wait = Math.min(8000, 250 * 2 ** Math.min(failedUnlocks, 5));
+        await new Promise((r) => setTimeout(r, wait));
+      }
+      try {
+        const db = await cloud.ausCloudLaden(String(password ?? ''));
+        failedUnlocks = 0;
+        autoLockMinutes = Number(db?.settings?.autoLockMinutes ?? 10);
+        resetLockTimer();
+        restartAutoSync();
+        A.dauerhaftAnfordern();
+        return kopie(fuerOberflaeche(db));
+      } catch (err) {
+        if (err?.code === 'BAD_PASSWORD') failedUnlocks++;
+        throw err;
+      }
+    }, { needsUnlock: false }),
   },
 
   /* Google Kalender: Die Web-Fassung meldet sich per Code an (RFC 8628), und

@@ -40,7 +40,9 @@ export async function render(root, params, { actions } = {}) {
     await saveNow();
     ok('Gespeichert');
   });
-  draw(root);
+  await draw(root);
+  // Aus der Statusleiste („Cloud-Sicherung einrichten“) direkt zur Cloud-Karte.
+  if (params?.abschnitt === 'cloud') $('#cloudCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
 async function draw(root) {
@@ -422,6 +424,11 @@ function wire(root) {
       if (!res) return;
       const db = await api.vault.read();
       setDb(db);
+      // Wie beim Wiederherstellen aus der Cloud: Der Vorgang steht im Journal.
+      await commit('sicherung.eingespielt', () => null, {
+        entity: 'bestand', summary: `Vollsicherung eingespielt (${res.transactions} Buchungen, ${res.attachments} Belege)`,
+      });
+      await saveNow();
       ok('Sicherung eingespielt', `${res.transactions} Buchungen, ${res.attachments} Belege`);
       navigate('dashboard');
     } catch (e) {

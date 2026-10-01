@@ -477,6 +477,15 @@ hr.sep { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .pw-meter { height: 4px; border-radius: 3px; background: var(--surface-3); overflow: hidden; margin-top: 6px; }
 .pw-meter i { display: block; height: 100%; width: 0; transition: width .2s, background .2s; }
 
+/* Anmeldung mit Google im Einrichtungsassistenten */
+.signin-box {
+  display: flex; gap: 14px; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface-2); line-height: 1.5;
+}
+.signin-box > div { flex: 1 1 280px; }
+.signin-box.ok { background: var(--pos-soft); border-color: color-mix(in srgb, var(--pos) 30%, transparent); }
+
 .steps { display: flex; gap: 6px; margin-bottom: 22px; }
 .steps i { height: 3px; flex: 1; border-radius: 2px; background: var(--surface-3); }
 .steps i.done { background: var(--accent); }

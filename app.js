@@ -3,7 +3,7 @@
  * Kümmert sich um Einrichtung, Entsperren, Rahmen und Navigation.
  */
 
-import { html, raw, esc, $, int, fmtDateTime, debounce, MOD, ustIdHinweis, steuernummerHinweis } from './lib/util.js';
+import { html, raw, esc, $, int, bytes, fmtDateTime, debounce, MOD, ustIdHinweis, steuernummerHinweis } from './lib/util.js';
 import { icon, toast, ok, err, warn, modal, passwordInput, wirePasswordToggles, feldHinweis } from './lib/ui.js';
 import { store, setDb, clearDb, subscribe, saveNow, sel, lockedUntil, setDevice, commit } from './lib/store.js';
 import { startAutoSync, syncState, onSync, syncNow } from './lib/sync.js';
@@ -143,6 +143,82 @@ function renderSetup() {
 
   const stepsHtml = () => `<div class="steps">${[0, 1, 2].map((i) => `<i class="${i <= step ? 'done' : ''}"></i>`).join('')}</div>`;
 
+  /* Anmeldung mit Google, bevor es einen Tresor gibt. Liegt im Konto schon
+     eine Buchhaltung, wird sie geladen (renderCloudLaden); sonst verbindet
+     der Hauptprozess den neuen Tresor beim Anlegen mit dem Konto. */
+  let anmeldenMoeglich = false;
+  let anmeldung = null;
+  let wartet = false;
+  let abgebrochen = false;
+
+  const anmeldeKasten = () => {
+    if (anmeldung && !anmeldung.vorhanden) {
+      return `<div class="signin-box ok mb16">
+        <div>Angemeldet als <strong>${esc(anmeldung.email || 'Google-Konto')}</strong>
+        <div class="small muted">Ihre Buchhaltung wird nach dem Anlegen verschlüsselt in Ihrem Konto
+        gesichert und lässt sich auf weiteren Geräten laden.</div></div>
+        <button class="btn ghost sm" id="g_abmelden">Abmelden</button></div>`;
+    }
+    if (step !== 0 || !anmeldenMoeglich) return '';
+    if (wartet) {
+      return `<div class="signin-box mb16">
+        <div><strong>Warte auf die Anmeldung …</strong>
+        <div class="small muted">${WEB ? 'Geben Sie den angezeigten Code bei Google ein.'
+          : 'Melden Sie sich im Browserfenster bei Google an und kehren Sie dann hierher zurück.'}</div></div>
+        <button class="btn sm" id="g_abbrechen">Abbrechen</button></div>`;
+    }
+    return `<div class="signin-box mb16">
+      <div><strong>Kontovia schon auf einem anderen Gerät?</strong>
+      <div class="small muted">Mit Google anmelden und Ihre Buchhaltung aus der Cloud laden – oder
+      eine neue gleich verschlüsselt in Ihrem Konto sichern. Geht auch später in den Einstellungen.</div></div>
+      <button class="btn" id="g_anmelden">${icon('key', 15).__raw} Mit Google anmelden</button></div>`;
+  };
+
+  /* Der Kasten zeichnet sich allein neu – Eingaben in den Feldern darunter
+     bleiben dabei unberührt, auch wenn die Antwort mitten im Tippen kommt. */
+  function kastenZeichnen() {
+    const box = $('#g_box');
+    if (!box) return;
+    box.innerHTML = anmeldeKasten();
+    $('#g_anmelden', box)?.addEventListener('click', anmelden);
+    $('#g_abbrechen', box)?.addEventListener('click', () => {
+      abgebrochen = true;
+      wartet = false;
+      api.cloud.signinCancel().catch(() => {});
+      kastenZeichnen();
+    });
+    $('#g_abmelden', box)?.addEventListener('click', () => {
+      anmeldung = null;
+      api.cloud.signinCancel().catch(() => {});
+      kastenZeichnen();
+    });
+  }
+
+  async function anmelden() {
+    wartet = true;
+    abgebrochen = false;
+    kastenZeichnen();
+    try {
+      const st = await api.cloud.signin();
+      wartet = false;
+      // Abgebrochen, während die Antwort unterwegs war: nichts zurückbehalten.
+      if (abgebrochen) { api.cloud.signinCancel().catch(() => {}); return; }
+      anmeldung = st;
+      if (st.vorhanden) {
+        collect();
+        renderCloudLaden(st, {
+          neu: () => { anmeldung = null; draw(); },
+        });
+        return;
+      }
+      ok('Mit Google angemeldet', st.email || '');
+    } catch (e) {
+      wartet = false;
+      if (e.code !== 'ABGEBROCHEN' && !abgebrochen) err('Anmeldung fehlgeschlagen', e.message);
+    }
+    kastenZeichnen();
+  }
+
   const bodies = [
     () => html`
       <h2>Willkommen bei Kontovia</h2>
@@ -251,6 +327,7 @@ function renderSetup() {
         <div class="gate-card wide">
           <div class="gate-logo">K</div>
           ${raw(stepsHtml())}
+          <div id="g_box"></div>
           ${raw(bodies[step]())}
           <div class="row end mt24" style="gap:8px">
             ${step > 0 ? raw('<button class="btn" id="back">Zurück</button>') : ''}
@@ -260,6 +337,7 @@ function renderSetup() {
         </div>
       </div>`;
 
+    kastenZeichnen();
     feldHinweis($('#f_taxNumber'), steuernummerHinweis);
     feldHinweis($('#f_vatId'), ustIdHinweis);
     $('#f_taxMode')?.addEventListener('change', (e) => {
@@ -299,7 +377,8 @@ function renderSetup() {
         renderShell();
         navigate('dashboard');
         afterUnlock();
-        toast('Tresor angelegt', 'Ihre Daten liegen verschlüsselt in ' + (appInfo.dataDir || 'Ihrem Benutzerordner'), 'ok', 7000);
+        toast('Tresor angelegt', 'Ihre Daten liegen verschlüsselt in ' + (appInfo.dataDir || 'Ihrem Benutzerordner')
+          + (anmeldung ? ' und werden gleich in Ihrem Google-Konto gesichert.' : ''), 'ok', 7000);
       } catch (e) {
         errEl.textContent = e.message;
         btn.disabled = false;
@@ -324,6 +403,86 @@ function renderSetup() {
   }
 
   draw();
+  // Ob sich diese Fassung bei Google anmelden kann, steht erst nach der Abfrage fest.
+  api.cloud.signinStatus?.().then((st) => {
+    anmeldenMoeglich = !!st?.moeglich;
+    kastenZeichnen();
+  }).catch(() => {});
+}
+
+/**
+ * Neues Gerät: Im Google-Konto liegt schon eine Buchhaltung. Sie wird mit
+ * ihrem Passwort geladen – geprüft, bevor auf dem Gerät etwas entsteht.
+ */
+function renderCloudLaden(st, { neu }) {
+  app.innerHTML = html`
+    <div class="gate">
+      <div class="gate-card">
+        <div class="gate-logo">K</div>
+        <h2>Buchhaltung aus der Cloud laden</h2>
+        <p class="lead">Angemeldet als <strong>${st.email || 'Google-Konto'}</strong>. In Ihrem Konto
+        liegt eine Kontovia-Buchhaltung${st.stand ? raw(`, Stand ${esc(fmtDateTime(st.stand))}`) : ''}${st.groesse ? raw(` (${esc(bytes(st.groesse))})`) : ''}.
+        Sie ist mit dem Passwort verschlüsselt, das Sie auf Ihrem anderen Gerät festgelegt haben.</p>
+        <div class="field">
+          <label>Passwort der Buchhaltung</label>
+          ${passwordInput('cloudPw', { autocomplete: 'current-password' })}
+        </div>
+        <div class="err small mb16" id="cloudErr"></div>
+        <button class="btn primary lg block" id="cloudLaden">Laden und entsperren</button>
+        <p class="tiny muted mt16" style="text-align:center">Die Belege kommen danach im Hintergrund nach.</p>
+        <details class="forgot small mt8">
+          <summary>Passwort vergessen?</summary>
+          <p>Ohne das Passwort lässt sich die Buchhaltung nicht öffnen – weder von Kontovia noch
+          von Google. Ist sie auf einem anderen Gerät noch entsperrt, ändern Sie dort unter
+          <em>Einstellungen → Sicherheit</em> das Passwort und gleichen ab; danach gilt hier das neue.</p>
+        </details>
+        <div class="row mt16" style="gap:8px;justify-content:space-between">
+          <button class="btn ghost sm" id="cloudAbmelden">Abmelden</button>
+          <button class="btn ghost sm" id="cloudNeu">Stattdessen neu anfangen</button>
+        </div>
+      </div>
+    </div>`;
+
+  const pw = $('#cloudPw');
+  const btn = $('#cloudLaden');
+  const errEl = $('#cloudErr');
+  wirePasswordToggles(app);
+  pw.focus();
+
+  const laden = async () => {
+    if (!pw.value) return;
+    btn.disabled = true;
+    btn.textContent = 'Lade und entschlüssele …';
+    errEl.textContent = '';
+    try {
+      const db = await api.cloud.signinLoad(pw.value);
+      pw.value = '';
+      setDb(db);
+      applyTheme();
+      renderShell();
+      navigate(db.settings?.startView || 'dashboard');
+      afterUnlock();
+      toast('Buchhaltung geladen', 'Dieses Gerät ist jetzt mit Ihrem Google-Konto verbunden. Belege werden im Hintergrund geholt.', 'ok', 8000);
+    } catch (e) {
+      errEl.textContent = e.code === 'BAD_PASSWORD' ? 'Das Passwort passt nicht zu dieser Buchhaltung.' : e.message;
+      btn.disabled = false;
+      btn.textContent = 'Laden und entsperren';
+      pw.select();
+    }
+  };
+  btn.addEventListener('click', laden);
+  pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') laden(); });
+
+  // Ohne Laden zurück in die Einrichtung. Die Buchhaltung im Konto bleibt
+  // unberührt; verbinden lässt sich später in den Einstellungen.
+  const zurueck = async (text) => {
+    await api.cloud.signinCancel().catch(() => {});
+    neu();
+    if (text) toast(text[0], text[1], '', 9000);
+  };
+  $('#cloudAbmelden').addEventListener('click', () => zurueck());
+  $('#cloudNeu').addEventListener('click', () => zurueck(['Neue Buchhaltung',
+    'Die Buchhaltung in Ihrem Google-Konto bleibt unberührt. Wenn Sie dieses Gerät später in den Einstellungen verbinden, fragt Kontovia, welche gelten soll.']));
 }
 
 /* -------------------------------------------------------------------------- */
@@ -414,8 +573,16 @@ async function announceMigrations() {
   }
 }
 
+/** Ob dieses Gerät mit der Cloud verbunden ist (null: unbekannt) – für die Statusleiste. */
+let cloudVerbunden = null;
+export function setCloudVerbunden(wert) {
+  cloudVerbunden = wert;
+  updateStatus();
+}
+
 /** Läuft nach jedem erfolgreichen Entsperren. */
 async function afterUnlock() {
+  api.cloud.status().then((st) => setCloudVerbunden(st.configured ? !!st.linked : null)).catch(() => {});
   announceMigrations().catch((e) => console.error('Hinweise der Schemapflege:', e));
   try { await startAutoSync(); } catch (e) { console.error("Cloud-Automatik:", e); }
   onSync(updateStatus);
@@ -618,7 +785,7 @@ function renderShell() {
   renderThemeToggle();
   $('#statSync').addEventListener('click', async () => {
     const st = await api.cloud.status().catch(() => ({}));
-    if (!st.linked) { navigate('settings'); return; }
+    if (!st.linked || syncState.lastErrorCode === 'NEU_ANMELDEN') { navigate('settings', { abschnitt: 'cloud' }); return; }
     try { const r = await syncNow({ reason: 'statusleiste' }); ok('Abgleich abgeschlossen', r.summary || ''); }
     catch (e) { err('Abgleich fehlgeschlagen', e.message); }
   });
@@ -648,6 +815,10 @@ function updateStatus() {
   const syncEl = document.getElementById("statSync");
   if (syncEl) {
     if (syncState.running) syncEl.textContent = "Cloud: Abgleich läuft …";
+    // Ohne Verbindung (nie eingerichtet oder eben getrennt) zählt kein früherer
+    // Abgleich mehr – ein leiser Hinweis, dass sich jederzeit verbinden lässt.
+    else if (cloudVerbunden === false) syncEl.textContent = 'Cloud-Sicherung einrichten';
+    else if (syncState.lastErrorCode === 'NEU_ANMELDEN') syncEl.textContent = 'Cloud: bitte neu anmelden';
     else if (syncState.lastError) syncEl.textContent = "Cloud: " + syncState.lastError.slice(0, 60);
     else if (syncState.lastAt) syncEl.textContent = "Cloud: abgeglichen " + fmtDateTime(syncState.lastAt);
     else syncEl.textContent = "";
@@ -716,6 +887,8 @@ api.on.locked(async ({ reason }) => {
     hintergrund: 'Kontovia war einige Minuten im Hintergrund und wurde deshalb gesperrt.',
     'anderes-fenster': 'Kontovia wurde in einem anderen Fenster geöffnet und hier gesperrt. Laden Sie diese Seite neu, um hier weiterzuarbeiten.',
     aktualisierung: 'Die neue Fassung wird geladen …',
+    'cloud-uebernahme': 'Der Stand aus der Cloud ist übernommen. Entsperren Sie ihn mit dem Passwort, das auf Ihrem anderen Gerät gilt.',
+    'sicherung-uebernommen': 'Die Sicherung gehörte zu einer anderen Buchhaltung und ist jetzt geladen. Entsperren Sie sie mit dem Passwort der Sicherung.',
     manuell: '',
   };
   renderUnlock(texts[reason] ?? '');
