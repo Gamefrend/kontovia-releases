@@ -660,7 +660,8 @@ tr.unlisted td:not(:last-child) { color: var(--text-2); }
    im Dialog nachlesen lassen – der Bruttobetrag rechts bleibt immer sichtbar,
    statt über den Kartenrand hinauszuragen. */
 @media (max-width: 1440px) { table.data .col-nr, table.data .col-ust { display: none; } }
-@media (max-width: 1180px) { table.data .col-kontakt { display: none; } }
+/* Ab hier bliebe der Beschreibung kaum Platz („Kontoführ…“) – Netto steht im Dialog. */
+@media (max-width: 1180px) { table.data .col-kontakt, table.data .col-netto { display: none; } }
 table.data.fixed th, table.data.fixed td { padding-left: 10px; padding-right: 10px; }
 
 /* Aufklappfelder (popover.js): liegen genau unter ihrem Knopf, sind in der
@@ -877,6 +878,23 @@ table.data tbody tr.empty-row:hover { background: none; }
 .help p, .help li { color: var(--text-2); line-height: 1.65; font-size: 13.5px; }
 .help ul { padding-left: 20px; }
 .help code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; font-family: var(--mono); font-size: 12px; }
+
+/* Neuigkeiten: ältere Versionen aufklappbar */
+.versionen-aelter summary { cursor: pointer; color: var(--text); }
+.versionen-aelter .version-alt { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 14px; }
+.versionen-aelter .version-alt ul { margin-top: 6px; }
+
+/* Rechtstexte im Fenster (DATENSCHUTZ.md) */
+.legal { user-select: text; max-width: 760px; }
+.legal h3 { margin: 4px 0 6px; font-size: 18px; }
+.legal h4 { margin: 22px 0 6px; font-size: 15px; }
+.legal h5 { margin: 16px 0 4px; font-size: 13.5px; }
+.legal p, .legal li { color: var(--text-2); line-height: 1.6; font-size: 13.5px; }
+.legal ul { padding-left: 20px; }
+.legal pre { background: var(--surface-2); padding: 10px 14px; border-radius: 8px; font-family: inherit; white-space: pre-wrap; }
+.legal blockquote { margin: 12px 0; padding: 8px 14px; border-left: 3px solid var(--warn); background: var(--surface-2); }
+.legal code { background: var(--surface-2); padding: 1px 5px; border-radius: 4px; font-family: var(--mono); font-size: 12px; }
+.legal hr { border: 0; border-top: 1px solid var(--border); margin: 18px 0; }
 
 kbd {
   font-family: var(--mono); font-size: 11px; padding: 1px 5px;

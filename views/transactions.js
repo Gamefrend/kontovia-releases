@@ -908,7 +908,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         <div class="thumb">${a.recovered ? '?' : esc((a.fileName.split('.').pop() || '?').slice(0, 4).toUpperCase())}</div>
         <div class="name" title="${esc(a.fileName)}">${esc(a.fileName)}<div class="tiny muted">${a.recovered
           ? 'aus einer älteren Fassung wiederhergestellt – Name und Prüfsumme fehlen'
-          : `${esc(bytes(a.size))} · SHA-256 ${esc(String(a.sha256 || '').slice(0, 10))}…`}</div></div>
+          : `${esc(bytes(a.size))} · Prüfsumme ${esc(String(a.sha256 || '').slice(0, 10))}…`}</div></div>
         <button class="btn sm ghost" data-view-att="${esc(a.id)}" title="Ansehen">${icon('eye', 14).__raw}</button>
         <button class="btn sm ghost" data-save-att="${esc(a.id)}" title="Speichern unter">${icon('save', 14).__raw}</button>
         <button class="btn sm ghost" data-del-att="${esc(a.id)}" title="Entfernen">${icon('trash', 14).__raw}</button>
@@ -1336,9 +1336,9 @@ export async function previewAttachment(id, metaHint = null) {
           ? `<iframe class="preview-frame" src="${url}"></iframe>`
           : isText
             ? `<pre class="preview-text">${esc(textInhalt)}${daten.length > 400000 ? '\n…' : ''}</pre>`
-            : `<div class="empty"><h4>Keine Vorschau möglich</h4><p class="small">Dateityp ${esc(mime)}. Sie können den Beleg speichern oder extern öffnen.</p></div>`,
+            : `<div class="empty"><h4>Keine Vorschau möglich</h4><p class="small">Diese Datei kann Kontovia nicht selbst anzeigen. Sie können den Beleg speichern oder extern öffnen.</p></div>`,
     foot: `<span class="left muted tiny">${meta.sha256
-      ? `${esc(bytes(meta.size || 0))} · SHA-256 ${esc(String(meta.sha256).slice(0, 16))}…`
+      ? `${esc(bytes(meta.size || 0))} · Prüfsumme ${esc(String(meta.sha256).slice(0, 16))}…`
       : esc(bytes(daten.length))}</span>
            ${eRechnung ? '<button class="btn" data-roh>XML anzeigen</button>' : ''}
            <button class="btn" data-erech hidden>${icon('file', 14).__raw} E-Rechnung anzeigen</button>

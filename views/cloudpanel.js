@@ -1,7 +1,7 @@
 /** Kontovia – Bedienflächen für Cloud-Abgleich und Programmaktualisierung. */
 
 import { html, raw, esc, $, $$, bytes, fmtDateTime, fmtDate, int } from '../lib/util.js';
-import { icon, modal, confirmDialog, askPassword, ok, err, warn, toast, emptyState } from '../lib/ui.js';
+import { icon, modal, confirmDialog, askPassword, ok, err, toast, emptyState } from '../lib/ui.js';
 import { store, commit, saveNow, setDb } from '../lib/store.js';
 import { syncNow, syncState, onSync, startAutoSync } from '../lib/sync.js';
 import { checkUpdates, markNotified } from '../lib/updates.js';
@@ -12,8 +12,6 @@ import { table, mountTables } from '../lib/table.js';
 const api = window.kontovia;
 /** Läuft Kontovia im Browser statt in Electron? (src/web/bridge.js) */
 const WEB = api.platform === 'web';
-/** In der Web-Fassung meldet sich Kontovia per Code an – mit einem anderen Client-Typ. */
-const CLIENT_TYP = WEB ? 'Fernseher und Geräte mit eingeschränkter Eingabe' : 'Desktop-App';
 /** Wie SICHERUNG_BEHALTEN in src/main/cloud.js und src/web/cloud.js. */
 const SICHERUNGEN_BEHALTEN = 30;
 
@@ -40,33 +38,31 @@ export async function renderCloudCard(root) {
     <div class="card">
       <div class="card-head">
         <h3>${icon('archive', 16)} Cloud-Abgleich und Sicherung</h3>
-        <span class="sub">${status.provider === 'drive' ? 'Google Drive' : 'Firebase'}</span>
         <div class="spacer"></div>
         ${status.linked ? raw(`<span class="badge pos">verbunden${status.email ? ' – ' + esc(status.email) : ''}</span>`)
-          : status.configured ? raw('<span class="badge warn">eingerichtet, nicht verbunden</span>')
-            : raw('<span class="badge">nicht eingerichtet</span>')}
+          : raw('<span class="badge">nicht verbunden</span>')}
       </div>
       <div class="card-body">
         <div class="notice mb16">
-          <strong>Was dabei übertragen wird.</strong> Ausschließlich der bereits
-          verschlüsselte Tresor. Gespeichert wird ein Block, der ohne Ihr Passwort
-          nicht zu entziffern ist – auch nicht vom Betreiber der Ablage.
-          ${status.provider === 'drive' ? raw(`Er landet in einem versteckten, für Kontovia
-          reservierten Bereich Ihres Google Drive; auf Ihre übrigen Dateien hat die Anwendung
-          keinen Zugriff und kann ihn auch nicht erhalten. Der Platz zählt auf Ihr
-          Google-Kontingent, Gebühren entstehen keine.`) : raw(`Er landet in Ihrem
-          Firebase-Projekt, in einem Zweig, den die Zugriffsregeln auf Ihr Konto begrenzen.
-          Jeder Nutzer kommt ausschließlich an die eigenen Daten.`)}
+          <strong>Was dabei übertragen wird.</strong> Ausschließlich Ihre bereits
+          verschlüsselte Buchhaltung. Ohne Ihr Passwort lässt sie sich nicht lesen –
+          weder von Google noch vom Hersteller von Kontovia.
+          ${status.provider === 'drive' ? raw(`Sie liegt in einem versteckten, für Kontovia
+          reservierten Bereich Ihres Google Drive; auf Ihre übrigen Dateien hat Kontovia
+          keinen Zugriff. Der Platz zählt auf Ihren Google-Speicher, Gebühren entstehen keine.`)
+          : raw(`Sie liegt im Cloud-Speicher von Kontovia bei Google, in einem Bereich, an den nur
+          Ihr Google-Konto herankommt. Kosten entstehen Ihnen keine.`)}
           Daneben bleiben bis zu ${SICHERUNGEN_BEHALTEN} ältere Stände als Sicherung dort liegen.
         </div>
 
-        ${!status.configured ? raw(setupForm(status)) : ''}
+        ${!status.configured ? raw(`<div class="notice warn">In dieser Fassung ist kein Cloud-Abgleich
+          verfügbar. Ihre Buchhaltung bleibt auf diesem ${WEB ? 'Gerät' : 'Rechner'}; sichern Sie sie
+          regelmäßig mit einer Vollsicherung.</div>`) : ''}
 
         ${status.configured && !status.linked ? raw(`
           <div class="row wrap" style="gap:8px">
             <button class="btn primary" id="btnConnect">${icon('key', 15).__raw} Mit Google verbinden</button>
             ${WEB && status.weiterleitung ? '<button class="btn ghost" id="btnConnectCode">Stattdessen mit Code</button>' : ''}
-            <button class="btn ghost" id="btnEditCreds">Zugangsdaten ändern</button>
           </div>
           <p class="small muted mt16 mb0">${WEB && status.weiterleitung
             ? `Sie werden zu Google weitergeleitet und kommen nach der Anmeldung hierher zurück. Kontovia
@@ -133,111 +129,7 @@ export async function renderCloudCard(root) {
   paintSyncStatus(root);
 }
 
-function setupForm(status) {
-  const c = store.db.cloud || {};
-  const firebase = (status.provider || 'firebase') !== 'drive';
-  const built = status.builtIn || {};
-  return `
-    <div class="field">
-      <label>Wohin wird abgeglichen?</label>
-      <select id="cProvider">
-        <option value="firebase" ${firebase ? 'selected' : ''}>Firebase – ein Projekt, an das sich beliebig viele Geräte anmelden</option>
-        <option value="drive" ${firebase ? '' : 'selected'}>Google Drive – jeder Nutzer speichert im eigenen Drive</option>
-      </select>
-      <span class="hint">${firebase
-        ? 'Ihre Nutzer melden sich nur mit Google an, mehr ist von ihnen nicht zu tun. Google führt den Zugriffsbereich als nicht sensibel, daher gibt es weder eine Prüfpflicht noch ein Nutzerlimit.'
-        : 'Kostet nichts und Sie halten keine fremden Daten: Der Tresor liegt im Drive jedes Nutzers und zählt gegen dessen Speicherplatz. Google führt den Anwendungsordner als nicht sensibel – keine Prüfpflicht, kein Nutzerlimit. Im Google-Cloud-Projekt muss die Google Drive API eingeschaltet sein.'}</span>
-    </div>
-
-    <p class="small mb8" style="color:var(--text-2)">Die vollständige Anleitung mit allen
-    Klickwegen steht unter <strong>Hilfe → Cloud einrichten</strong>.</p>
-
-    ${firebase && built.apiKey && built.bucket && !built.clientId ? `
-    <div class="notice ok mb16">
-      Das Firebase-Projekt ist bereits mitgeliefert – Web-API-Schlüssel und Speicherort
-      müssen Sie nicht eintragen. Es fehlt nur noch der OAuth-Client vom Typ
-      <strong>${CLIENT_TYP}</strong> aus derselben Google-Cloud-Konsole.
-    </div>` : ''}
-
-    <div class="form-grid">
-      ${firebase && !built.apiKey ? `
-      <div class="field full">
-        <label>Firebase Web-API-Schlüssel</label>
-        <input id="cApiKey" value="${esc(c.apiKey || '')}" placeholder="AIzaSy…" autocomplete="off">
-        <span class="hint">Projekteinstellungen → Allgemein → Web-API-Schlüssel. Dieser Wert ist
-        nicht geheim; abgesichert wird über die Zugriffsregeln des Speichers.</span>
-      </div>` : ''}
-      ${firebase && !built.bucket ? `
-      <div class="field full">
-        <label>Speicherort (Bucket)</label>
-        <input id="cBucket" value="${esc(c.bucket || '')}" placeholder="mein-projekt.firebasestorage.app" autocomplete="off">
-      </div>` : ''}
-      <div class="field full">
-        <label>Google-Client-ID (${CLIENT_TYP})</label>
-        <input id="cClientId" value="${esc(c.clientId || '')}" placeholder="1234567890-abcdef.apps.googleusercontent.com" autocomplete="off">
-      </div>
-      <div class="field full">
-        <label>Client-Schlüssel</label>
-        <input id="cClientSecret" type="password" placeholder="${c.clientSecret ? '••••••••  (gespeichert)' : 'GOCSPX-…'}" autocomplete="off">
-        <span class="hint">Bei diesem Client-Typ gilt der Wert nach Googles eigener
-        Festlegung nicht als geheim – er wird trotzdem verschlüsselt im Tresor abgelegt.</span>
-      </div>
-    </div>
-    <button class="btn primary" id="btnSaveCreds">Zugangsdaten speichern</button>`;
-}
-
 function wireCloud(root, status) {
-  // Beim Wechsel des Anbieters ändern sich die benötigten Felder.
-  $('#cProvider', root)?.addEventListener('change', async (e) => {
-    await api.cloud.configure({ provider: e.target.value });
-    renderCloudCard(root);
-  });
-
-  $('#btnSaveCreds', root)?.addEventListener('click', async () => {
-    const provider = $('#cProvider', root)?.value || 'firebase';
-    const clientId = $('#cClientId', root).value.trim();
-    const clientSecret = $('#cClientSecret', root).value.trim();
-    if (!/\.apps\.googleusercontent\.com$/.test(clientId)) {
-      warn('Die Client-ID sieht nicht richtig aus', 'Sie endet normalerweise auf .apps.googleusercontent.com');
-      return;
-    }
-    const cfg = { provider, clientId };
-    // Ein leeres Feld heißt „nicht ändern“, damit ein gespeicherter Schlüssel
-    // nicht versehentlich gelöscht wird.
-    if (clientSecret) cfg.clientSecret = clientSecret;
-
-    if (provider === 'firebase') {
-      // Felder, die bereits mitgeliefert sind, werden gar nicht erst angezeigt.
-      const apiKeyEl = $('#cApiKey', root);
-      const bucketEl = $('#cBucket', root);
-      if (apiKeyEl) {
-        const apiKey = apiKeyEl.value.trim();
-        if (!/^AIza[\w-]{20,}$/.test(apiKey)) {
-          warn('Der Web-API-Schlüssel sieht nicht richtig aus', 'Er beginnt normalerweise mit AIza…');
-          return;
-        }
-        cfg.apiKey = apiKey;
-      }
-      if (bucketEl) {
-        const bucket = bucketEl.value.trim();
-        if (!bucket || /\s/.test(bucket)) {
-          warn('Bitte den Speicherort eintragen', 'Zum Beispiel mein-projekt.firebasestorage.app');
-          return;
-        }
-        cfg.bucket = bucket;
-      }
-    }
-
-    await api.cloud.configure(cfg);
-    ok('Zugangsdaten gespeichert');
-    renderCloudCard(root);
-  });
-
-  $('#btnEditCreds', root)?.addEventListener('click', async () => {
-    await api.cloud.configure({ clientId: '', clientSecret: '' });
-    renderCloudCard(root);
-  });
-
   const verbinden = async (e, { mitCode = false } = {}) => {
     const btn = e.target.closest('button');
     btn.disabled = true;
@@ -319,16 +211,17 @@ function askUnlink() {
   return new Promise((resolve) => {
     let settled = false;
     const m = modal({
-      title: 'Verbindung zu Google trennen?',
+      title: 'Verbindung zur Cloud trennen?',
       size: 'slim',
       body: html`
-        <p class="mt0" style="line-height:1.6">Der Zugriff wird bei Google widerrufen. Ihre
-        Buchhaltung bleibt vollständig auf diesem ${WEB ? 'Gerät' : 'Rechner'}.</p>
+        <p class="mt0" style="line-height:1.6">Dieses Gerät meldet sich von der Cloud ab. Ihre
+        Buchhaltung bleibt vollständig auf diesem ${WEB ? 'Gerät' : 'Rechner'}, und Ihre anderen
+        Geräte bleiben verbunden.</p>
         <label class="check mt16"><input type="checkbox" id="unlinkDelete"> Tresor, Belege und
         Sicherungen auch in der Cloud löschen</label>
         <p class="small muted mt8 mb0">Ohne Häkchen bleibt der verschlüsselte Stand dort liegen,
-        etwa um sich später wieder zu verbinden. Nach einem erneuten Verbinden lässt er sich
-        hier jederzeit löschen.</p>`,
+        etwa für Ihre anderen Geräte oder um sich später wieder zu verbinden. Den Zugriff von
+        Kontovia auf Ihr Google-Konto entfernen Sie ganz unter myaccount.google.com/connections.</p>`,
       foot: '<button class="btn" data-no>Abbrechen</button><button class="btn danger" data-yes>Trennen</button>',
       onClose: () => { if (!settled) resolve(null); },
     });
@@ -667,13 +560,10 @@ function zeigeVerworfen(c) {
 /* -------------------------------------------------------------------------- */
 
 export async function renderUpdateCard(root) {
-  const feed = store.db.settings.updateFeedUrl || '';
-  // Ist nichts eingetragen, greift die mitgelieferte Adresse. Sie wird
-  // angezeigt, damit sichtbar ist, wohin die Prüfung ginge – abgefragt wird
-  // sie erst, wenn jemand auf „Nach Updates suchen“ drückt oder die Prüfung
-  // beim Start ausdrücklich einschaltet.
-  const eingebaut = appInfo.defaultUpdateFeed || '';
-  const wirksam = feed || eingebaut;
+  // Die Update-Adresse ist eingebaut und gehört nicht in die Einstellungen.
+  // Nur wer früher eine eigene eingetragen hat, sieht sie – mit dem Weg zurück.
+  const feed = WEB ? '' : store.db.settings.updateFeedUrl || '';
+  const wirksam = feed || appInfo.defaultUpdateFeed || '';
   root.innerHTML = html`
     <div class="card">
       <div class="card-head">
@@ -683,47 +573,31 @@ export async function renderUpdateCard(root) {
       </div>
       <div class="card-body">
         ${WEB ? raw(`<p class="small mt0" style="color:var(--text-2);line-height:1.6">Die Web-Fassung
-          liegt vollständig auf diesem Gerät und läuft auch ohne Netz. Eine neue Fassung wird erst
-          geladen und eingesetzt, wenn Sie es hier bestätigen – vorher prüft Kontovia jede Datei
-          gegen ihre SHA-256-Prüfsumme.</p>`) : raw(`<div class="field">
-          <label>Adresse der Versionsdatei</label>
-          <div class="row" style="gap:8px">
-            <input id="uFeed" value="${esc(feed)}" placeholder="${esc(eingebaut || 'https://…/update.json')}" style="flex:1">
-            <button class="btn" id="uSave">Speichern</button>
-          </div>
-          <span class="hint">Zeigt auf eine kleine JSON-Datei mit Versionsnummer, Download-Adresse
-          und SHA-512-Prüfsumme des Installationspakets.${eingebaut && !feed
-            ? ' Solange das Feld leer bleibt, wird die mitgelieferte Adresse verwendet.' : ''}</span>
-        </div>`)}
-        <div class="row" style="gap:8px">
+          liegt vollständig auf diesem Gerät und läuft auch ohne Netz. Eine neue Version wird erst
+          geladen, wenn Sie es hier bestätigen.</p>`) : ''}
+        ${feed ? raw(`<div class="notice warn mb16 small">Kontovia sucht Updates an einer eigenen Adresse:
+          <span style="word-break:break-all">${esc(feed)}</span>
+          <div class="mt8"><button class="btn sm" id="uReset">Mitgelieferte Adresse verwenden</button></div></div>`) : ''}
+        <div class="row wrap" style="gap:8px">
           <button class="btn primary" id="uCheck" ${wirksam ? '' : 'disabled'}>${icon('refresh', 15)} Nach Updates suchen</button>
-          <label class="check"><input type="checkbox" id="uAuto" ${store.db.settings.updateCheckOnStart === true ? 'checked' : ''}> beim Programmstart prüfen</label>
+          <label class="check"><input type="checkbox" id="uAuto" ${store.db.settings.updateCheckOnStart === true ? 'checked' : ''}> regelmäßig von selbst suchen</label>
+          <button class="btn ghost" id="uNeu">${icon('history', 15)} Neuigkeiten</button>
         </div>
         <div id="uResult" class="mt16"></div>
-        ${WEB ? raw(`<p class="small muted mt16 mb0">Außerhalb des Cloud-Abgleichs ruft Kontovia nur
-        hier etwas ab, und nur, wenn Sie es auslösen oder oben einschalten. Unabhängig davon
-        fragt der Browser beim Öffnen von sich aus nach, ob sich die kleine Steuerdatei
-        <code>sw.js</code> geändert hat – das lässt sich bei Web-Apps nicht abschalten, tauscht
-        aber nichts aus. Der Betreiber des Servers sieht dabei jeweils Ihre IP-Adresse; Angaben
-        zu Ihrem Gerät oder Ihrer Buchhaltung werden nicht mitgesendet. Stimmt die Prüfsumme
-        einer neuen Datei nicht, wird die ganze neue Fassung verworfen.</p>`) : raw(`<p class="small muted mt16 mb0">Die Prüfung ist der einzige Netzzugriff außerhalb des
-        Cloud-Abgleichs und findet nur statt, wenn Sie sie auslösen oder oben einschalten.
-        Der Betreiber des Servers sieht dabei Ihre IP-Adresse; Angaben zu Ihrem Gerät oder
-        Ihrer Buchhaltung werden nicht mitgesendet. Vor der Installation wird die
-        heruntergeladene Datei gegen die Prüfsumme aus der Versionsdatei geprüft. Stimmt sie
-        nicht, wird die Datei verworfen. Installiert wird erst nach Ihrer ausdrücklichen
-        Bestätigung.</p>`)}
+        <p class="small muted mt16 mb0">Gesucht wird nur, wenn Sie es auslösen oder oben einschalten.
+        Der Server sieht dabei Ihre IP-Adresse; Angaben zu Ihrem Gerät oder Ihrer Buchhaltung werden
+        nicht mitgesendet. Bevor eine neue Version eingesetzt wird, prüft Kontovia, dass sie
+        vollständig und unverändert angekommen ist, und installiert sie erst nach Ihrer Bestätigung.</p>
       </div>
     </div>`;
 
-  $('#uSave', root)?.addEventListener('click', async () => {
-    const url = $('#uFeed', root).value.trim();
-    if (url && !/^https:\/\//.test(url)) { warn('Die Adresse muss mit https:// beginnen'); return; }
-    await commit('einstellung.update', (db) => { db.settings.updateFeedUrl = url; }, { silent: true });
+  $('#uReset', root)?.addEventListener('click', async () => {
+    await commit('einstellung.update', (db) => { db.settings.updateFeedUrl = ''; }, { silent: true });
     await saveNow();
-    ok('Gespeichert');
+    ok('Mitgelieferte Adresse wird verwendet');
     renderUpdateCard(root);
   });
+  $('#uNeu', root).addEventListener('click', () => navigate('help', { tab: 'neu' }));
 
   $('#uAuto', root).addEventListener('change', async (e) => {
     const an = e.target.checked;
@@ -746,13 +620,13 @@ const still = (info) => !WEB && info.modus === 'still';
 const knopf = (info) => (WEB || still(info) ? 'Jetzt aktualisieren' : 'Herunterladen und installieren');
 
 /**
- * RELEASE_NOTES.md ist für den Editor von Hand umbrochen. Im Fenster bricht
- * der Text selbst um – sonst stehen Satzreste eingerückt auf eigenen Zeilen.
- * Absätze (Leerzeile) und Aufzählungspunkte bleiben.
+ * Ältere Versionshinweise waren für den Editor von Hand umbrochen. Im Fenster
+ * bricht der Text selbst um – sonst stehen Satzreste eingerückt auf eigenen
+ * Zeilen. Absätze (Leerzeile) und Aufzählungspunkte bleiben.
  */
 const versionshinweise = (text) => String(text || '')
   .replace(/\r\n/g, '\n')
-  .replace(/([^\n])\n(?![\n*-])[ \t]*/g, '$1 ')
+  .replace(/([^\n])\n(?![\n*•-])[ \t]*/g, '$1 ')
   .replace(/^[*-] /gm, '• ');
 
 /**
@@ -771,10 +645,10 @@ export function openUpdateDialog(info) {
       ${info.released ? raw(`Die neue Fassung wurde am ${esc(fmtDate(String(info.released).slice(0, 10)))} veröffentlicht.`) : ''}</p>
       ${info.notes ? raw(`<div class="notice mt16" style="white-space:pre-wrap">${esc(versionshinweise(info.notes))}</div>`) : ''}
       <p class="small muted mt16">${WEB
-        ? 'Kontovia lädt die neuen Programmdateien und prüft jede gegen ihre SHA-256-Prüfsumme. Ihre Buchhaltung bleibt dabei unberührt.'
+        ? 'Kontovia lädt die neue Version und prüft, dass sie vollständig und unverändert angekommen ist. Ihre Buchhaltung bleibt dabei unberührt.'
         : still(info)
-          ? `Kontovia lädt die neue Fassung herunter, prüft sie gegen die hinterlegte SHA-512-Prüfsumme und installiert sie ohne weitere Fragen. Danach startet Kontovia von selbst neu${info.angemeldetBleiben ? ' – Sie bleiben angemeldet' : ''}. Ihre Buchhaltung bleibt dabei unberührt.`
-          : 'Kontovia lädt das Installationspaket herunter und prüft es gegen die hinterlegte SHA-512-Prüfsumme. Ihre Buchhaltung bleibt dabei unberührt – der Datenordner wird von der Installation nicht angefasst.'}</p>
+          ? `Kontovia lädt die neue Version herunter, prüft, dass sie unverändert angekommen ist, und installiert sie ohne weitere Fragen. Danach startet Kontovia von selbst neu${info.angemeldetBleiben ? ' – Sie bleiben angemeldet' : ''}. Ihre Buchhaltung bleibt dabei unberührt.`
+          : 'Kontovia lädt das Installationsprogramm herunter und prüft, dass es unverändert angekommen ist. Ihre Buchhaltung bleibt dabei unberührt.'}</p>
       <div id="uProgress" class="mt8"></div>`,
     foot: `<button class="btn" data-later>Später erinnern</button>
            <button class="btn primary" id="uGo">${icon('export', 15).__raw} ${knopf(info)}</button>`,
@@ -833,20 +707,18 @@ export async function checkForUpdate(box, { silent = false } = {}) {
 async function runUpdate(info, box) {
   const yes = await confirmDialog(WEB ? {
     title: `Auf Version ${info.version} wechseln?`,
-    text: 'Kontovia lädt die neuen Programmdateien, prüft jede gegen ihre Prüfsumme und lädt sich dann neu. Ungespeicherte Änderungen werden vorher gesichert; danach melden Sie sich wieder mit Ihrem Passwort an.',
+    text: 'Kontovia lädt die neue Version, prüft sie und lädt sich dann neu. Ungespeicherte Änderungen werden vorher gesichert; danach melden Sie sich wieder mit Ihrem Passwort an.',
     confirmLabel: 'Aktualisieren',
   } : still(info) ? {
     title: `Auf Version ${info.version} aktualisieren?`,
-    text: `Kontovia lädt die neue Fassung herunter, prüft die Prüfsumme und installiert sie. Dafür schließt sich Kontovia kurz und startet danach von selbst wieder${info.angemeldetBleiben
+    text: `Kontovia lädt die neue Version herunter, prüft sie und installiert sie. Dafür schließt sich Kontovia kurz und startet danach von selbst wieder${info.angemeldetBleiben
       ? ' – Sie bleiben angemeldet und müssen Ihr Passwort nicht erneut eingeben' : ''}. Ungespeicherte Änderungen werden vorher gesichert.${info.admin
       ? ' Weil Kontovia für alle Benutzer dieses Rechners installiert ist, fragt Windows dabei nach Administratorrechten.' : ''}`,
     confirmLabel: 'Aktualisieren',
-    extra: `<div class="notice mt16 tiny" style="font-family:var(--mono);word-break:break-all">SHA-512: ${esc(info.sha512)}</div>`,
   } : {
     title: `Version ${info.version} installieren?`,
-    text: 'Kontovia lädt das Installationspaket herunter, prüft die Prüfsumme und startet dann das Installationsprogramm. Die Anwendung wird dabei beendet – ungespeicherte Änderungen werden vorher gesichert.',
+    text: 'Kontovia lädt das Installationsprogramm herunter, prüft es und startet es dann. Kontovia wird dabei beendet – ungespeicherte Änderungen werden vorher gesichert.',
     confirmLabel: 'Herunterladen',
-    extra: `<div class="notice mt16 tiny" style="font-family:var(--mono);word-break:break-all">SHA-512: ${esc(info.sha512)}</div>`,
   });
   if (!yes) return;
 
@@ -869,11 +741,11 @@ async function runUpdate(info, box) {
     const file = await api.update.download(info);
     off();
     prog.innerHTML = WEB
-      ? '<div class="notice ok">Alle Prüfsummen stimmen. Kontovia wird neu geladen …</div>'
+      ? '<div class="notice ok">Alles vollständig angekommen. Kontovia wird neu geladen …</div>'
       : still(info)
-        ? `<div class="notice ok">Prüfsumme stimmt. Kontovia schließt sich jetzt, installiert Version ${esc(info.version)} und
+        ? `<div class="notice ok">Geprüft und vollständig. Kontovia schließt sich jetzt, installiert Version ${esc(info.version)} und
            startet danach von selbst wieder – meist in weniger als einer Minute. Bitte öffnen Sie Kontovia in der Zeit nicht selbst.</div>`
-        : '<div class="notice ok">Prüfsumme stimmt. Das Installationsprogramm wird gestartet …</div>';
+        : '<div class="notice ok">Geprüft und vollständig. Das Installationsprogramm wird gestartet …</div>';
     // Was während des Downloads noch eingetragen wurde, kommt mit.
     if (store.dirty) await saveNow();
     // Einen Moment zum Lesen, bevor sich das Fenster schließt.

@@ -152,12 +152,12 @@ async function draw(root) {
           </div>
           <div class="notice">
             <strong>Wie Ihre Daten geschützt sind.</strong><br>
-            Die gesamte Buchhaltung liegt in einer einzigen Datei, verschlüsselt mit
-            AES-256-GCM. Der Schlüssel wird mit scrypt aus Ihrem Passwort abgeleitet –
-            bewusst rechenintensiv, damit Durchprobieren teuer wird. Belege werden
-            einzeln verschlüsselt, ihre Dateinamen auf der Platte sind Zufallswerte.
-            Eine Wiederherstellung ohne Passwort gibt es nicht. Der freiwillige Cloud-Abgleich
-            überträgt ausschließlich den bereits verschlüsselten Tresor.
+            Die gesamte Buchhaltung ist mit Ihrem Passwort verschlüsselt (AES-256).
+            Das Entschlüsseln ist bewusst aufwendig, damit niemand Passwörter in großer
+            Zahl durchprobieren kann. Belege werden einzeln verschlüsselt und tragen auf
+            der Festplatte keine sprechenden Namen. Eine Wiederherstellung ohne Passwort
+            gibt es nicht. Der freiwillige Cloud-Abgleich überträgt ausschließlich die
+            bereits verschlüsselte Buchhaltung.
           </div>
         </div>
       </div>
@@ -226,9 +226,9 @@ async function draw(root) {
           </div>
           <div>
             <p class="small muted mt0">
-              Jede Änderung landet im Änderungsjournal. Die Einträge sind über SHA-256
-              miteinander verkettet – wird nachträglich etwas verändert, passen die
-              Prüfsummen nicht mehr zusammen.
+              Jede Änderung landet im Änderungsjournal. Die Einträge sind über Prüfsummen
+              miteinander verkettet – wird nachträglich etwas verändert, passen sie nicht
+              mehr zusammen.
             </p>
             <div class="row" style="gap:8px">
               <button class="btn" id="btnVerify">${icon('check', 15)} Journal prüfen</button>
@@ -507,9 +507,46 @@ export async function runBackup() {
   }
 }
 
+/*
+ * Vorgänge im Journal in Worten. Gespeichert (und für die Betriebsprüfung
+ * exportiert) bleibt die feste Kennung wie „buchung.anlegen“; unbekannte
+ * Kennungen erscheinen, wie sie sind.
+ */
+const DINGE = {
+  buchung: 'Buchung', termin: 'Termin', aufgabe: 'Aufgabe', kategorie: 'Kategorie', kontakt: 'Kontakt',
+  konto: 'Konto', anlage: 'Anlagegut', wiederkehrend: 'Wiederkehrende Buchung', beleg: 'Beleg',
+};
+const TUN = {
+  anlegen: 'angelegt', aendern: 'geändert', loeschen: 'gelöscht', stornieren: 'storniert', entfernen: 'entfernt',
+};
+const VORGAENGE = {
+  festschreibung: 'Zeitraum festgeschrieben',
+  'einstellungen.aendern': 'Einstellungen geändert',
+  'einstellung.update': 'Update-Suche geändert',
+  'einstellung.darstellung': 'Darstellung geändert',
+  'einstellung.kalender': 'Kalender-Abgleich eingestellt',
+  'einstellung.datev': 'DATEV-Angaben geändert',
+  'konflikte.geleert': 'Konfliktliste geleert',
+  'sicherung.eingespielt': 'Vollsicherung eingespielt',
+  'sicherung.wiederhergestellt': 'Cloud-Sicherung wiederhergestellt',
+  'korrektur.storno': 'Korrektur: Stornos',
+  'korrektur.euer': 'Korrektur: EÜR-Zeilen',
+  'korrektur.sonderzeichen': 'Korrektur: Sonderzeichen',
+  'termin.kalenderabgleich': 'Kalenderabgleich',
+  'beleg.aufraeumen': 'Belege aufgeräumt',
+  'wiederkehrend.fortschreiben': 'Wiederkehrende Buchungen angelegt',
+  'testdaten.ergaenzen': 'Vorführdaten ergänzt',
+};
+
+export function vorgangText(action) {
+  if (VORGAENGE[action]) return VORGAENGE[action];
+  const [ding, tun] = String(action || '').split('.');
+  return DINGE[ding] && TUN[tun] ? `${DINGE[ding]} ${TUN[tun]}` : String(action || '');
+}
+
 function showJournal() {
   const log = [...(store.db.auditLog || [])].reverse().slice(0, 800);
-  const vorgaenge = [...new Set(log.map((e) => e.action))].sort((a, b) => a.localeCompare(b, 'de'));
+  const vorgaenge = [...new Set(log.map((e) => e.action))].sort((a, b) => vorgangText(a).localeCompare(vorgangText(b), 'de'));
   const m = modal({
     title: 'Änderungsjournal',
     size: 'wide',
@@ -522,17 +559,20 @@ function showJournal() {
         maxHeight: '56vh',
         defaultSort: { key: 'seq', dir: -1 },
         rows: log,
-        search: { placeholder: 'Vorgang oder Beschreibung suchen …', text: (e) => [e.action, e.summary, e.seq].join(' ') },
+        search: { placeholder: 'Vorgang oder Beschreibung suchen …', text: (e) => [vorgangText(e.action), e.action, e.summary, e.seq].join(' ') },
         columns: [
           { key: 'seq', label: 'Nr.', type: 'num', tdCls: 'muted' },
           { key: 'ts', label: 'Zeitpunkt', type: 'date', tdCls: 'nowrap small', cell: (e) => esc(fmtDateTime(e.ts)) },
-          { key: 'action', label: 'Vorgang', type: 'text', tdCls: 'small', cell: (e) => `<span class="badge">${esc(e.action)}</span>` },
+          {
+            key: 'action', label: 'Vorgang', type: 'text', tdCls: 'small', value: (e) => vorgangText(e.action),
+            cell: (e) => `<span class="badge">${esc(vorgangText(e.action))}</span>`,
+          },
           { key: 'summary', label: 'Beschreibung', type: 'text', tdCls: 'small', cell: (e) => `<span class="truncate" style="display:block;max-width:340px">${esc(e.summary || '')}</span>` },
           { key: 'hash', label: 'Prüfsumme', type: 'none', tdCls: 'tiny muted', cell: (e) => `<span style="font-family:var(--mono)">${esc((e.hash || '').slice(0, 12))}…</span>` },
         ],
         filters: vorgaenge.length > 1 ? [{
           key: 'vorgang', column: 'action', title: 'Vorgang', initial: '', search: vorgaenge.length > 8,
-          options: () => [['', 'Alle Vorgänge', () => true], ...vorgaenge.map((v) => [v, v, (e) => e.action === v])],
+          options: () => [['', 'Alle Vorgänge', () => true], ...vorgaenge.map((v) => [v, vorgangText(v), (e) => e.action === v])],
         }] : [],
         emptyTitle: 'Noch keine Einträge',
       })}`,

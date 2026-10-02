@@ -83,7 +83,7 @@ export class FirebaseBackend {
       timeoutMs: 30000,
     });
     if (!data?.idToken || !data?.refreshToken) {
-      throw new Error('Firebase hat die Anmeldung nicht bestätigt. Ist die Google-Anmeldung im Firebase-Projekt eingeschaltet?');
+      throw new Error('Der Cloud-Speicher hat die Anmeldung nicht bestätigt. Bitte versuchen Sie es später noch einmal.');
     }
 
     this.state.refreshToken = data.refreshToken;
@@ -93,8 +93,9 @@ export class FirebaseBackend {
     return { email: this.state.email, uid: this.state.uid };
   }
 
-  async disconnect() {
-    await gauth.revoke(this.state.googleRefreshToken);
+  /** @param {{widerrufen?:boolean}} opts  false: die Google-Freigabe stehen lassen (cloud.js) */
+  async disconnect({ widerrufen = true } = {}) {
+    if (widerrufen) await gauth.revoke(this.state.googleRefreshToken);
     delete this.state.refreshToken;
     delete this.state.googleRefreshToken;
     delete this.state.uid;

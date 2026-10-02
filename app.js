@@ -12,6 +12,7 @@ import { router, onNavigate, navigate, refresh } from './lib/router.js';
 import { closePopover } from './lib/popover.js';
 import { scope } from './lib/prefs.js';
 import { startCalendarSync, stopCalendarSync } from './lib/gcalsync.js';
+import { VERSIONEN } from './lib/versionen.js';
 
 import * as viewDashboard from './views/dashboard.js';
 import * as viewTransactions from './views/transactions.js';
@@ -127,10 +128,45 @@ async function boot() {
 async function nachAktualisierung() {
   const db = await api.vault.resume().catch(() => null);
   if (!db) return false;
+  ebenAktualisiert = true;
   eintreten(db);
-  toast(`Kontovia ${appInfo.version} ist installiert`,
-    'Die Aktualisierung ist abgeschlossen. Sie sind weiterhin angemeldet.', 'ok', 8000);
   return true;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Neuigkeiten nach einem Update                                               */
+/* -------------------------------------------------------------------------- */
+
+/** Welche Version auf diesem Gerät zuletzt geöffnet wurde. */
+const VERSION_KEY = 'kontovia.version';
+/** Eben aus dem Programm heraus aktualisiert – der Hinweis sagt dann auch das. */
+let ebenAktualisiert = false;
+/** Eben eingerichtet oder aus der Cloud geladen – dann ist nichts „neu“. */
+let ohneNeuigkeiten = false;
+
+/**
+ * Nach dem ersten Öffnen einer neuen Version einmal auf die Neuigkeiten
+ * hinweisen. Gemerkt wird je Gerät, nicht im Tresor: Jedes Gerät wird für
+ * sich aktualisiert.
+ */
+function neuigkeitenHinweis() {
+  let vorher = null;
+  try {
+    vorher = localStorage.getItem(VERSION_KEY);
+    localStorage.setItem(VERSION_KEY, appInfo.version);
+  } catch {
+    // Ohne Gedächtnis auf dem Gerät nur dann, wenn das Update eben selbst lief.
+    vorher = ebenAktualisiert ? '' : appInfo.version;
+  }
+  const ueberspringen = ohneNeuigkeiten;
+  ohneNeuigkeiten = false;
+  if (ueberspringen || vorher === appInfo.version) return;
+  const v = VERSIONEN.find((e) => e.version === appInfo.version);
+  const text = (ebenAktualisiert ? 'Die Aktualisierung ist abgeschlossen, Sie sind weiterhin angemeldet. ' : '')
+    + (v ? `${v.titel}. ` : '') + 'Hier klicken für alle Neuigkeiten.';
+  toast(ebenAktualisiert ? `Kontovia ${appInfo.version} ist installiert` : `Neu in Kontovia ${appInfo.version}`, text, 'ok', 12000)
+    ?.addEventListener('click', () => navigate('help', { tab: 'neu' }));
+  ebenAktualisiert = false;
 }
 
 /** Öffnet die Buchhaltung, sobald der Tresor entsperrt ist. */
@@ -330,10 +366,9 @@ function renderSetup() {
 
     () => html`
       <h2>Passwort festlegen</h2>
-      <p class="lead">Ihre gesamte Buchhaltung wird mit diesem Passwort verschlüsselt
-      (AES-256 mit scrypt-Schlüsselableitung). Ohne das Passwort sind die Daten
-      unwiederbringlich verloren – es gibt bewusst keine Hintertür und keine
-      Zurücksetzfunktion.</p>
+      <p class="lead">Ihre gesamte Buchhaltung wird mit diesem Passwort verschlüsselt.
+      Ohne das Passwort sind die Daten unwiederbringlich verloren – es gibt bewusst
+      keine Hintertür und keine Zurücksetzfunktion.</p>
       <div class="field">
         <label>Passwort</label>
         ${passwordInput('f_pw1', { autocomplete: 'new-password' })}
@@ -419,6 +454,7 @@ function renderSetup() {
         applyTheme();
         renderShell();
         navigate('dashboard');
+        ohneNeuigkeiten = true;
         afterUnlock();
         toast('Tresor angelegt', 'Ihre Daten liegen verschlüsselt in ' + (appInfo.dataDir || 'Ihrem Benutzerordner')
           + (anmeldung ? ' und werden gleich in Ihrem Google-Konto gesichert.' : ''), 'ok', 7000);
@@ -516,6 +552,7 @@ function renderCloudLaden(st, { neu }) {
       applyTheme();
       renderShell();
       navigate(db.settings?.startView || 'dashboard');
+      ohneNeuigkeiten = true;
       afterUnlock();
       toast('Buchhaltung geladen', 'Dieses Gerät ist jetzt mit Ihrem Google-Konto verbunden. Belege werden im Hintergrund geholt.', 'ok', 8000);
     } catch (e) {
@@ -639,6 +676,7 @@ async function afterUnlock() {
     if (rm?.ebenVerbunden) import('./views/cloudpanel.js').then((m) => m.nachWeiterleitung(rm.email));
   }).catch(() => {});
   announceMigrations().catch((e) => console.error('Hinweise der Schemapflege:', e));
+  neuigkeitenHinweis();
   try { await startAutoSync(); } catch (e) { console.error("Cloud-Automatik:", e); }
   onSync(updateStatus);
   // Der Kalenderabgleich läuft nur, wenn auf diesem Gerät ein Google-Konto verbunden ist.
@@ -1002,7 +1040,7 @@ async function checkUpdateFromMenu() {
     err('Update-Prüfung fehlgeschlagen', e.message);
     return;
   }
-  if (!info?.configured) { warn('Keine Update-Adresse hinterlegt', 'Unter Einstellungen → Programmaktualisierung eintragen.'); return; }
+  if (!info?.configured) { warn('Keine Update-Suche möglich', 'In dieser Fassung ist keine Update-Adresse hinterlegt.'); return; }
   if (info.reachable === false) { warn('Update-Server nicht erreichbar', info.error || ''); return; }
   if (info.available) { openUpdate(); return; }
   ok('Keine neue Version', `Sie verwenden bereits die neueste Fassung (${info.current}).`);
@@ -1017,17 +1055,17 @@ function showAbout() {
       <table class="data compact mt16">
         <tbody>
           <tr><td class="muted">Datenordner</td><td class="tiny">${appInfo.dataDir || '–'}</td></tr>
-          <tr><td class="muted">Verschlüsselung</td><td>AES-256-GCM, Schlüssel über scrypt</td></tr>
-          <tr><td class="muted">Electron</td><td>${appInfo.electron || '–'}</td></tr>
-          <tr><td class="muted">Chromium</td><td>${appInfo.chrome || '–'}</td></tr>
+          <tr><td class="muted">Verschlüsselung</td><td>AES-256, der Schlüssel entsteht aus Ihrem Passwort</td></tr>
         </tbody>
       </table>
       <p class="small muted mt16">Kontovia ersetzt keine Steuerberatung. Die Zuordnung zu
       EÜR-Zeilen, Kennzahlen und Konten sind Vorschläge, die Sie prüfen sollten.</p>`,
-    foot: `<button class="btn" data-recht>${icon('file', 15).__raw} Rechtliches und Lizenzen</button>
+    foot: `<button class="btn left" data-neu>${icon('history', 15).__raw} Neuigkeiten</button>
+           <button class="btn" data-recht>${icon('file', 15).__raw} Rechtliches und Lizenzen</button>
            <button class="btn primary" data-close-modal>Schließen</button>`,
   });
   m.root.querySelector('[data-close-modal]').addEventListener('click', () => m.close());
+  m.root.querySelector('[data-neu]').addEventListener('click', () => { m.close(); navigate('help', { tab: 'neu' }); });
   m.root.querySelector('[data-recht]').addEventListener('click', () => { m.close(); navigate('help', { tab: 'recht' }); });
 }
 

@@ -69,9 +69,8 @@ export async function renderCalendarCard(el) {
           <div>
             ${WEB || st?.available === false ? raw(`
               <div class="notice">
-                <strong>Google Kalender gibt es nur in der Windows-Fassung.</strong> Die Web-Fassung
-                meldet sich per Code bei Google an, und für diesen Weg erlaubt Google keinen
-                Kalenderzugriff. Übertragen Sie Termine hier als Kalenderdatei (.ics).
+                <strong>Google Kalender gibt es nur in der Windows-Fassung.</strong> Hier übertragen
+                Sie Termine als Kalenderdatei (.ics).
               </div>`) : st?.linked ? raw(html`
               <div class="notice ok">
                 <strong>Verbunden</strong> mit ${st.email || 'Ihrem Google-Konto'} · Kalender
@@ -291,9 +290,10 @@ function connectDialog() {
           <label class="check"><input type="checkbox" id="g_andere"> Auch meine anderen Google-Kalender einbeziehen (z. B. den Hauptkalender) – in beide Richtungen, welche, wählen Sie danach</label>
         </div>
         <p class="small muted mt16 mb0" style="line-height:1.6">Es öffnet sich Ihr Browser mit der
-        Anmeldung bei Google; danach kommt Kontovia von selbst wieder nach vorn. Solange Google Kontovia nicht geprüft hat, erscheint dort der Hinweis
-        „Google hat diese App nicht überprüft“ – über <em>Erweitert → Weiter zu Kontovia</em> geht es
-        weiter. Die Verbindung lässt sich jederzeit unter Einstellungen → Kalender-Abgleich trennen.</p>`,
+        Anmeldung bei Google; danach kommt Kontovia von selbst wieder nach vorn. Erscheint dort der
+        Hinweis „Google hat diese App nicht überprüft“, geht es über <em>Erweitert</em> und den Link
+        darunter weiter. Die Verbindung lässt sich jederzeit unter Einstellungen → Kalender-Abgleich
+        trennen.</p>`,
       foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Mit Google verbinden</button>',
       onClose: () => { if (!settled) resolve(null); },
     });
@@ -321,9 +321,14 @@ export async function connectGoogle() {
     body: `<p class="mt0" style="line-height:1.6">Bitte melden Sie sich im geöffneten Browserfenster an und
       erlauben Sie den Zugriff auf den Kalender. Dieses Fenster schließt sich danach von selbst.</p>
       <p class="small muted mb0">Nach fünf Minuten ohne Anmeldung bricht Kontovia den Versuch ab.</p>`,
-    foot: '<button class="btn" data-x>Ausblenden</button>',
+    foot: '<button class="btn" data-stop>Abbrechen</button><button class="btn" data-x>Ausblenden</button>',
   });
   hinweis.root.querySelector('[data-x]').addEventListener('click', () => hinweis.close());
+  // Wer das Browserfenster geschlossen hat, soll nicht fünf Minuten warten müssen.
+  hinweis.root.querySelector('[data-stop]').addEventListener('click', () => {
+    hinweis.close();
+    api.cloud.signinCancel?.().catch(() => {});
+  });
   const { andere, ...einstellungen } = wahl;
   try {
     const res = await api.gcal.connect({ calendarIdHint: calendarSettings().calendarId, timeZone: timeZone(), weitere: andere });
@@ -351,7 +356,9 @@ function disconnectDialog() {
       title: 'Google Kalender trennen?',
       size: 'slim',
       body: `<p class="mt0" style="line-height:1.6">Kontovia gleicht danach nicht mehr mit Google ab, und die
-        Freigabe im Google-Konto wird zurückgezogen. Ihre Termine in Kontovia bleiben unverändert.</p>
+        Freigabe im Google-Konto wird zurückgezogen. Ihre Termine in Kontovia bleiben unverändert.
+        Ist Google Kalender auch auf einem anderen Gerät verbunden, muss er dort danach neu verbunden
+        werden.</p>
         <label class="check"><input type="checkbox" id="g_delete"> Auch den Kalender „Kontovia“ in Google löschen</label>
         <p class="tiny muted mt8 mb0">Nur ankreuzen, wenn kein anderes Gerät mehr mit diesem Kalender arbeitet.</p>`,
       foot: '<button class="btn" data-no>Abbrechen</button><button class="btn danger" data-yes>Trennen</button>',

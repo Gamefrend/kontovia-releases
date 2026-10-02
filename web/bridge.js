@@ -330,11 +330,15 @@ const api = {
     openDataFolder: handle(async () => {
       throw new Error('Die Web-Fassung legt ihre Daten im Speicher des Browsers ab – einen Ordner dafür gibt es nicht.');
     }, { needsUnlock: false }),
-    openLicense: handle(async (which) => {
-      const datei = { compliance: 'COMPLIANCE.html', datenschutz: 'DATENSCHUTZ.html' }[String(which)];
-      if (!datei) throw new Error('Die Web-Fassung enthält weder Electron noch Chromium; es gelten die Lizenzbedingungen Ihres Browsers.');
-      window.open(new URL(`../recht/${datei}`, import.meta.url).href, '_blank', 'noopener');
-      return datei;
+    openLicense: handle(async () => {
+      throw new Error('Die Web-Fassung läuft in Ihrem Browser; es gelten dessen Lizenzbedingungen.');
+    }, { needsUnlock: false }),
+    /** Die Datenschutzhinweise als Text – Kontovia zeigt sie selbst an. */
+    legalText: handle(async (which) => {
+      if (String(which) !== 'datenschutz') throw new Error('Unbekanntes Dokument.');
+      const res = await fetch(new URL('../recht/DATENSCHUTZ.md', import.meta.url).href, { cache: 'no-cache' });
+      if (!res.ok) throw new Error('Die Datenschutzhinweise sind in dieser Fassung nicht enthalten.');
+      return res.text();
     }, { needsUnlock: false }),
     activity: async () => { resetLockTimer(); return true; },
     setAutoLock: handle(async (minutes) => {

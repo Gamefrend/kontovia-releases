@@ -1,18 +1,14 @@
-<!doctype html><html lang="de"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
-<title>Datenschutzhinweise – Kontovia</title>
-<style>body{font:15px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;max-width:860px;margin:0 auto;padding:24px 18px 60px;color:#131a22;background:#fff}
-pre{white-space:pre-wrap;word-wrap:break-word;font:inherit}
-@media (prefers-color-scheme:dark){body{background:#0e1116;color:#e7ecf2}}</style></head>
-<body><pre># Datenschutzhinweise zu Kontovia
+# Datenschutzhinweise zu Kontovia
 
-&gt; **Vorlage.** Dieser Text beschreibt zutreffend, was das Programm technisch tut.
-&gt; Bevor Sie ihn veröffentlichen oder an Nutzer weitergeben, tragen Sie unter
-&gt; „Verantwortlicher" Ihre Angaben ein und lassen Sie ihn juristisch prüfen.
-&gt; Rechtsberatung ist das hier nicht.
+<!--
+  Hinweis für den Betreiber (erscheint nicht im Programm, Kontovia blendet
+  HTML-Kommentare aus): Dieser Text beschreibt zutreffend, was das Programm
+  technisch tut. Bevor er an Nutzer geht, unter „Verantwortlicher“ und
+  „Bei der Ablage in Firebase“ die eigenen Angaben eintragen und ihn juristisch
+  prüfen lassen. Rechtsberatung ist das hier nicht.
+-->
 
-Stand: 30. September 2026, Programmversion 1.8.0
+Stand: 2. Oktober 2026, Programmversion 1.12.0
 
 ---
 
@@ -24,10 +20,11 @@ Stand: 30. September 2026, Programmversion 1.8.0
 
 ## Kurzfassung
 
-Kontovia ist ein Programm, das auf Ihrem eigenen Rechner läuft. Es gibt keinen
-Server des Anbieters, kein Benutzerkonto und keine Auswertung Ihrer Nutzung.
-Ohne den ausdrücklich eingerichteten Cloud-Abgleich und ohne verbundenen
-Google Kalender verlässt kein einziges Byte Ihren Rechner.
+Kontovia ist ein Programm, das auf Ihrem eigenen Rechner läuft. Es gibt kein
+Benutzerkonto beim Anbieter und keine Auswertung Ihrer Nutzung. Ohne den
+ausdrücklich eingerichteten Cloud-Abgleich und ohne verbundenen Google
+Kalender verlässt kein einziges Byte Ihren Rechner; die Suche nach neuen
+Versionen läuft nur mit Ihrer Zustimmung.
 
 ## Welche Daten das Programm verarbeitet
 
@@ -49,8 +46,8 @@ Arbeitsspeicher, solange das Programm entsperrt ist.
 * keine künstliche Intelligenz und damit keine Verarbeitung Ihrer Daten durch
   Modelle Dritter
 
-Der Hauptprozess verwirft jede nicht-lokale Netzanfrage der Oberfläche. Die
-einzigen Verbindungen, die das Programm überhaupt aufbauen kann, sind die unten
+Kontovia baut von sich aus keine Verbindung ins Internet auf. Die einzigen
+Verbindungen, die das Programm überhaupt aufbauen kann, sind die unten
 genannten – der Cloud-Abgleich, der Abgleich mit Google Kalender und die Suche
 nach einer neuen Programmversion. Alle drei laufen erst, wenn Sie ihnen
 ausdrücklich zustimmen.
@@ -82,7 +79,7 @@ Google Ireland Limited beziehungsweise Google LLC als Auftragsverarbeiter.
 Gespeichert werden:
 
 * der verschlüsselte Tresor und die verschlüsselten Belege im Cloud Storage
-  (Standort: [Region eintragen, empfohlen europe-west3 Frankfurt])
+  (Standort: Europäische Union, Rechenzentren in Finnland und den Niederlanden)
 * über Firebase Authentication Ihre E-Mail-Adresse und eine Kontokennung –
   diese liegen unverschlüsselt vor und dienen allein dazu, Ihnen beim Anmelden
   Ihren eigenen Bereich zuzuordnen
@@ -111,10 +108,12 @@ Firebase-Projekt ist er verfügbar; bei einem privaten Google-Konto in der
 Drive-Variante besteht keiner – in dem Fall ist der gewerbliche Einsatz
 datenschutzrechtlich problematisch.
 
-**Widerruf:** In den Einstellungen unter „Verbindung trennen". Der Zugriff wird
-dann auch bei Google widerrufen. Im selben Dialog können Sie wählen, ob der
-verschlüsselte Tresor samt Belegen und Sicherungen in der Cloud gelöscht werden
-soll.
+**Widerruf:** In den Einstellungen unter „Verbindung trennen“. Das Gerät meldet
+sich dann von der Cloud ab; Ihre anderen Geräte bleiben verbunden. Im selben
+Dialog können Sie wählen, ob der verschlüsselte Tresor samt Belegen und
+Sicherungen in der Cloud gelöscht werden soll. Die Freigabe für Kontovia in
+Ihrem Google-Konto entfernen Sie unter *Sicherheit → Verbindungen zu
+Drittanbieter-Apps* (myaccount.google.com/connections).
 
 ## Google Kalender (freiwillig, nur Windows-Fassung)
 
@@ -154,7 +153,9 @@ Kontovia erhält dabei keine Daten.
 
 **Widerruf:** *Trennen* zieht die Freigabe bei Google zurück; auf Wunsch wird
 der Kalender „Kontovia“ in Google gelöscht. Die Termine in Kontovia bleiben
-erhalten.
+erhalten. Google zieht dabei die Freigabe des ganzen Kontos zurück – ist Google
+Kalender auch auf einem anderen Gerät verbunden, muss er dort neu verbunden
+werden.
 
 Ohne Google-Konto lassen sich Termine als Kalenderdatei (.ics) exportieren und
 importieren; dabei entsteht keine Verbindung ins Netz.
@@ -178,11 +179,17 @@ alle sechs Stunden ab, solange das Programm geöffnet ist. Liegt eine neuere
 Fassung vor, erscheint ein Hinweis; heruntergeladen und installiert wird erst
 nach einer weiteren ausdrücklichen Bestätigung.
 
-Bei jeder solchen Abfrage erfährt der Betreiber dieses Servers zwangsläufig Ihre
-IP-Adresse und den Zeitpunkt der Anfrage. Es werden keine Kennungen Ihres Geräts
-und keine Angaben aus Ihrer Buchhaltung mitgesendet. Sie können die Prüfung
-jederzeit unter *Einstellungen → Programmaktualisierung* wieder abschalten oder
-statt der mitgelieferten eine eigene Adresse eintragen.
+Bei jeder solchen Abfrage erfährt der Betreiber dieses Servers (GitHub, Inc.,
+USA) zwangsläufig Ihre IP-Adresse und den Zeitpunkt der Anfrage. Es werden keine
+Kennungen Ihres Geräts und keine Angaben aus Ihrer Buchhaltung mitgesendet. Sie
+können die Prüfung jederzeit unter *Einstellungen → Programmaktualisierung*
+wieder abschalten.
+
+**Angemeldet bleiben beim Update (Windows):** Installieren Sie ein Update aus
+dem entsperrten Programm heraus, legt Kontovia den Schlüssel Ihrer Buchhaltung
+für den Neustart ab – verschlüsselt durch Windows für Ihr Benutzerkonto, gültig
+nur für die neue Version und höchstens zehn Minuten. Beim Start wird er sofort
+gelöscht; wer zwischendurch sperrt, verwirft ihn. Das Gerät verlässt er nie.
 
 ## Web-Fassung (Browser, iPhone, iPad)
 
@@ -191,7 +198,7 @@ iPhone, iPad und Mac „zum Home-Bildschirm“ bzw. „zum Dock“ hinzufügen l
 sie gilt alles oben Gesagte mit folgenden Abweichungen:
 
 * **Auslieferung.** Die Programmdateien kommen von einem Webserver
-  ([Betreiber eintragen, vorgesehen: GitHub Pages der GitHub, Inc.]). Beim
+  (GitHub Pages der GitHub, Inc., USA). Beim
   ersten Aufruf und bei einer bestätigten Aktualisierung werden sie dort
   abgerufen; danach liegen sie auf dem Gerät und Kontovia läuft ohne Netz.
   Unabhängig davon fragt der Browser beim Öffnen selbstständig nach, ob sich die
@@ -233,11 +240,12 @@ die Auskunft hilft der Kontakt-Export unter „Export → Rohdaten".
 * Belegdateien einzeln verschlüsselt, Dateinamen ohne Aussagekraft
 * verkettetes Änderungsjournal zum Nachweis der Unveränderbarkeit
 * Anmeldemerkmale für Google und Firebase bleiben im Programmkern; sie stehen
-  weder im JSON-Gesamtexport noch in einer Vollsicherung
+  weder im JSON-Gesamtexport noch in einer Vollsicherung noch in der Cloud
 * Verschlüsselung vor jeder Übertragung in die Cloud
+* Schlüsselübergabe beim Update nur über die Windows-Datenschutzschnittstelle,
+  für höchstens zehn Minuten und genau einen Start
 
 ## Änderungen
 
 Diese Hinweise gelten für die oben genannte Programmversion. Neue Fassungen
 liegen der jeweiligen Version bei.
-</pre></body></html>

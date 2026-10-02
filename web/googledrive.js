@@ -116,8 +116,8 @@ export class DriveBackend {
     return { email: res.email };
   }
 
-  async disconnect() {
-    await gauth.revoke(this.state.refreshToken);
+  async disconnect({ widerrufen = true } = {}) {
+    if (widerrufen) await gauth.revoke(this.state.refreshToken);
     delete this.state.refreshToken;
     delete this.state.email;
     delete this.state.fileId;

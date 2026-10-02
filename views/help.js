@@ -1,10 +1,12 @@
-/** Kontovia – Kurzanleitung, Cloud-Einrichtung und rechtliche Hinweise. */
+/** Kontovia – Kurzanleitung, Cloud und Geräte, Neuigkeiten und rechtliche Hinweise. */
 
-import { html, raw, esc, $, $$, MOD } from '../lib/util.js';
-import { icon, err } from '../lib/ui.js';
+import { html, raw, esc, $, $$, MOD, fmtDate } from '../lib/util.js';
+import { icon, err, modal } from '../lib/ui.js';
 import { store } from '../lib/store.js';
 import { navigate } from '../lib/router.js';
 import { EUER, formLine } from '../lib/calc.js';
+import { VERSIONEN } from '../lib/versionen.js';
+import { markdownZuHtml } from '../lib/markdown.js';
 import { appInfo } from '../app.js';
 
 const api = window.kontovia;
@@ -12,17 +14,17 @@ const api = window.kontovia;
 const WEB = api.platform === 'web';
 let tab = 'anleitung';
 
-const TABS = { anleitung: 'Kurzanleitung', cloud: 'Cloud einrichten', recht: 'Rechtliches' };
+const TABS = { anleitung: 'Kurzanleitung', cloud: 'Cloud und Geräte', neu: 'Neuigkeiten', recht: 'Rechtliches' };
 
 export async function render(root, params = {}) {
-  if (params.tab) tab = params.tab;
+  if (params.tab && TABS[params.tab]) tab = params.tab;
   root.innerHTML = html`
     <div class="seg tabs mb16" id="helpTabs" role="group" aria-label="Hilfe">
       ${raw(Object.entries(TABS).map(([k, v]) => `<button data-tab="${k}" class="${tab === k ? 'active' : ''}">${esc(v)}</button>`).join(''))}
     </div>
     <div id="helpBody" class="help"></div>`;
   $$('[data-tab]', root).forEach((b) => b.addEventListener('click', () => { tab = b.dataset.tab; render(root); }));
-  ({ anleitung, cloud, recht }[tab] || anleitung)($('#helpBody', root));
+  ({ anleitung, cloud, neu, recht }[tab] || anleitung)($('#helpBody', root));
   // Sprung zu einem Abschnitt, etwa aus der Export-Ansicht.
   // Ohne Animation: die wird bei verdecktem Fenster ausgesetzt, der Sprung bliebe dann aus.
   if (params.anker) setTimeout(() => $(`#recht-${params.anker}`, root)?.scrollIntoView({ block: 'start' }), 60);
@@ -71,7 +73,7 @@ function anleitung(root) {
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Belege – der häufigste Streitpunkt mit dem Finanzamt</h3>
         <p>Keine Betriebsausgabe ohne Beleg. Kontovia speichert jede Rechnung verschlüsselt im
-        Tresor und merkt sich eine SHA-256-Prüfsumme, mit der sich später nachweisen lässt,
+        Tresor und merkt sich eine Prüfsumme, mit der sich später nachweisen lässt,
         dass die Datei unverändert ist. Auf der Übersicht sehen Sie Ihre Belegquote.</p>
         <p>Bei Bewirtungskosten gehört der betriebliche Anlass und die Teilnehmerliste dazu –
         schreiben Sie beides ins Notizfeld. Kontovia zieht davon automatisch nur 70 % ab.</p>
@@ -153,9 +155,9 @@ function anleitung(root) {
         Kalender oder unter Einstellungen → Kalender-Abgleich verbinden Sie Kontovia mit Ihrem
         Google-Konto. Kontovia legt dort einen eigenen Kalender „Kontovia“ an und gleicht in beide
         Richtungen ab – auf dem Telefon sehen Sie Ihre Termine in der Google-Kalender-App, und was
-        Sie dort im Kalender „Kontovia“ eintragen, erscheint hier. Ihre anderen Kalender sieht
-        Kontovia nicht. Beträge, Buchungen und Kontakte gehen nie an Google. Ohne Google-Konto
-        geht es per Kalenderdatei (.ics).</p>`)}
+        Sie dort im Kalender „Kontovia“ eintragen, erscheint hier. Ihre übrigen Kalender bezieht
+        Kontovia nur ein, wenn Sie das ausdrücklich einschalten. Beträge, Buchungen und Kontakte
+        gehen nie an Google. Ohne Google-Konto geht es per Kalenderdatei (.ics).</p>`)}
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -277,153 +279,23 @@ function anleitung(root) {
 function cloud(root) {
   root.innerHTML = html`
     <div class="content narrow" style="padding:0">
-      <div class="notice ok mb16">
-        <strong>Für den normalen Gebrauch müssen Sie hier nichts tun.</strong> Das
-        Firebase-Projekt ist bereits mitgeliefert. Gehen Sie einfach auf
-        <a data-go="settings">Einstellungen → Cloud-Abgleich</a> und klicken Sie
-        <strong>Mit Google verbinden</strong> – das war es. Auf einem neuen Gerät geht es
-        noch schneller: beim ersten Start <strong>Mit Google anmelden</strong>, und Kontovia
-        lädt Ihre Buchhaltung aus der Cloud.
-      </div>
-
-      <div class="notice mb16">
-        <strong>Der Rest dieser Seite</strong> ist für den Fall, dass Sie ein
-        <em>eigenes</em> Projekt betreiben wollen, etwa weil die Daten in Ihrer eigenen
-        Hand liegen sollen. Kontovia kann den verschlüsselten Tresor entweder in ein
-        <strong>Firebase-Projekt</strong> legen oder in das <strong>Google Drive</strong>
-        jedes einzelnen Nutzers. In beiden Fällen geht nur Chiffretext raus – der
-        Schlüssel bleibt auf dem Gerät.
-      </div>
-
-      <div class="card mb16"><div class="card-body">
-        <h3 class="mt0">Welchen Weg nehmen?</h3>
-        <table class="data">
-          <thead><tr><th></th><th>Firebase</th><th>Google Drive</th></tr></thead>
-          <tbody>
-            <tr><td class="muted">Aufwand für Ihre Nutzer</td><td><strong>nur „mit Google anmelden“</strong></td><td>ebenfalls nur anmelden</td></tr>
-            <tr><td class="muted">Prüfung durch Google nötig</td><td><strong>nein</strong></td><td><strong>nein</strong></td></tr>
-            <tr><td class="muted">Nutzerobergrenze</td><td><strong>keine</strong></td><td><strong>keine</strong></td></tr>
-            <tr><td class="muted">Wo die Daten liegen</td><td>in Ihrem Projekt</td><td><strong>beim Nutzer selbst</strong>, in dessen Speicherplatz</td></tr>
-            <tr><td class="muted">Kosten</td><td>Kreditkarte nötig, real unter einem Euro im Monat bei 100 Nutzern</td><td><strong>keine</strong></td></tr>
-            <tr><td class="muted">Ihre Rolle im Datenschutz</td><td>Sie halten fremde (verschlüsselte) Daten</td><td><strong>Sie halten nichts</strong></td></tr>
-          </tbody>
-        </table>
-        <p class="small mt16 mb0"><strong>Beide Wege taugen auch für die Weitergabe an andere.</strong>
-        Google führt beide Zugriffsbereiche als nicht sensibel – den Drive-Anwendungsordner ebenso
-        wie Name und E-Mail-Adresse bei Firebase. Es gibt also weder eine Prüfpflicht noch ein
-        Nutzerlimit, sobald der Zustimmungsbildschirm auf „In Produktion“ steht.
-        <strong>Firebase</strong> ist voreingestellt und fertig eingerichtet.
-        <strong>Drive</strong> ist die datensparsamere Wahl: kostenlos, und Sie halten keine
-        fremden Daten.</p>
-      </div></div>
-
-      ${WEB ? raw(`<div class="notice warn mb16">
-        <strong>In der Web-Fassung (Browser, iPhone, iPad)</strong> leitet Kontovia zur
-        Anmeldung zu Google weiter und kommt danach zurück – ohne Code. Mit dem mitgelieferten
-        Projekt ist das fertig eingerichtet. Mit einem eigenen Projekt meldet sich die
-        Web-Fassung per Code an (<code>google.com/device</code>); dafür braucht es einen Client
-        vom Typ <strong>Fernseher und Geräte mit eingeschränkter Eingabe</strong>, angelegt wie
-        unten in Schritt 5. Damit die Web-Fassung Tresor und Belege laden darf, braucht der
-        Speicher außerdem CORS-Regeln (Schritt 4). Ein Konto, das am PC verbunden ist, sieht
-        in der Web-Fassung denselben Tresor.
-      </div>`) : ''}
-
       <div class="card"><div class="card-body">
-        <h3 class="mt0">Firebase einrichten</h3>
-
-        <h3>1 – Projekt anlegen</h3>
+        <h3 class="mt0">Cloud-Abgleich einschalten</h3>
+        <p>Mit dem Cloud-Abgleich arbeiten Sie auf mehreren Geräten an derselben Buchhaltung, und
+        Kontovia legt jeden Tag eine Sicherung in der Cloud ab. Sie brauchen dafür nur ein
+        Google-Konto.</p>
         <ol>
-          <li><code>console.firebase.google.com</code> öffnen, <strong>Projekt hinzufügen</strong>,
-              Name zum Beispiel <code>kontovia</code>.</li>
-          <li>Google Analytics können Sie abwählen, es wird nicht gebraucht.</li>
+          <li>Öffnen Sie <a data-go="settings">Einstellungen → Cloud-Abgleich</a>.</li>
+          <li>Klicken Sie auf <strong>Mit Google verbinden</strong>.</li>
+          <li>${WEB
+            ? 'Kontovia leitet Sie zu Google weiter. Nach der Anmeldung kommen Sie zurück und entsperren Kontovia einmal mit Ihrem Passwort.'
+            : 'Ihr Browser öffnet sich mit der Anmeldeseite von Google. Nach der Anmeldung kommt Kontovia von selbst wieder nach vorn.'}</li>
         </ol>
-
-        <h3>2 – Anmeldung einschalten</h3>
-        <ol>
-          <li><strong>Authentication → Jetzt starten</strong>.</li>
-          <li>Bei den Anbietern <strong>Google</strong> aktivieren, Support-E-Mail wählen, speichern.</li>
-        </ol>
-
-        <h3>3 – Speicher anlegen</h3>
-        <ol>
-          <li><strong>Storage → Jetzt starten</strong>. Firebase verlangt dafür den
-              Tarif <strong>Blaze</strong>, also eine hinterlegte Kreditkarte.</li>
-          <li>Als Standort <strong><code>europe-west3</code> (Frankfurt)</strong> wählen.
-              Das ist wichtiger als es aussieht: Ein Standort in der EU erspart die
-              Diskussion um Drittlandübermittlung nach der DSGVO und passt zu
-              § 146 Abs. 2a AO. Der Standort lässt sich später <strong>nicht</strong> ändern.</li>
-          <li>Den angezeigten Speicherort notieren, etwa <code>kontovia-1234.firebasestorage.app</code>.</li>
-        </ol>
-        <div class="notice warn">
-          <strong>Zu den Kosten.</strong> Der Tarif Blaze rechnet nach Verbrauch ab. Das
-          kostenlose Kontingent gilt nur in US-Regionen – bei Frankfurt zahlen Sie ab dem
-          ersten Byte, aber sehr wenig: rund 0,02 € je Gigabyte und Monat. Hundert Nutzer mit
-          je 200 MB liegen bei etwa 0,50 € im Monat. Kontovia lädt den Tresor außerdem nur
-          dann herunter, wenn sich tatsächlich etwas geändert hat – das hält die
-          Übertragungsmengen klein. Legen Sie trotzdem unter
-          <em>Google Cloud → Abrechnung → Budgets</em> eine Warnung bei etwa 5 € an.
-        </div>
-
-        <h3>4 – Zugriffsregeln setzen</h3>
-        <ol>
-          <li><strong>Storage → Regeln</strong> öffnen.</li>
-          <li>Den Inhalt der Datei <code>firebase/storage.rules</code> aus dem
-              Programmverzeichnis vollständig einfügen und veröffentlichen.</li>
-          <li>Oder aus dem Quellordner mit <code>npx firebase-tools deploy --only storage</code>;
-              Projekt und Regeldatei stehen in <code>.firebaserc</code> und <code>firebase.json</code>.</li>
-          <li>Nur für die Web-Fassung: Der Browser darf Inhalte aus dem Speicher erst laden, wenn
-              der Bucket die Adresse der Web-Fassung zulässt. In der Cloud Shell des Projekts:
-              <code>gcloud storage buckets update gs://&lt;speicherort&gt; --cors-file=cors.json</code>
-              mit dem Inhalt von <code>firebase/cors.json</code> (Adressen anpassen).</li>
-        </ol>
-        <p class="small">Ohne diesen Schritt ist der Speicher entweder für alle Angemeldeten
-        offen oder ganz gesperrt. Die Regeln begrenzen jeden Zugriff auf den eigenen Zweig:
-        Wer angemeldet ist, kommt an <code>tresore/&lt;eigene Kennung&gt;/</code> und sonst
-        an nichts.</p>
-
-        <h3>5 – Zugangsdaten für die Anwendung</h3>
-        <ol>
-          <li><strong>Projekteinstellungen → Allgemein</strong>: den
-              <strong>Web-API-Schlüssel</strong> kopieren (beginnt mit <code>AIza…</code>).
-              Er ist kein Geheimnis – die Absicherung leisten die Regeln aus Schritt 4.</li>
-          <li>In der <strong>Google Cloud Console</strong> (dasselbe Projekt) unter
-              <strong>APIs und Dienste → Anmeldedaten → Anmeldedaten erstellen →
-              OAuth-Client-ID</strong> einen Client vom Typ <strong>Desktop-App</strong>
-              anlegen. Client-ID und Client-Schlüssel kopieren.</li>
-          <li>Beim OAuth-Zustimmungsbildschirm reichen App-Name und Ihre E-Mail-Adresse.
-              Bereiche müssen Sie <strong>keine</strong> hinzufügen – Kontovia fragt nur
-              Name und E-Mail an, und die sind nicht prüfpflichtig.
-              Die App auf <strong>Veröffentlicht</strong> setzen, sonst laufen die
-              Anmeldungen nach sieben Tagen ab.</li>
-        </ol>
-
-        <h3>6 – In Kontovia eintragen</h3>
-        <ol>
-          <li><a data-go="settings">Einstellungen → Cloud-Abgleich</a>, als Ablage
-              <strong>Firebase</strong> wählen.</li>
-          <li>Web-API-Schlüssel, Speicherort, Client-ID und Client-Schlüssel eintragen,
-              speichern, dann <strong>Mit Google verbinden</strong>.</li>
-        </ol>
-        <p class="small muted">Es öffnet sich Ihr normaler Browser mit der Anmeldeseite von
-        Google. Das ist Absicht: nur dort sehen Sie in der Adresszeile, wo Sie Ihr Passwort
-        eingeben.</p>
-      </div></div>
-
-      <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Google Drive einrichten</h3>
-        <p>Kürzer, weil kein Speicher und keine Abrechnung nötig sind:</p>
-        <ol>
-          <li><code>console.cloud.google.com</code> → neues Projekt.</li>
-          <li><strong>APIs und Dienste → Bibliothek</strong> → <strong>Google Drive API</strong> aktivieren.</li>
-          <li><strong>OAuth-Zustimmungsbildschirm</strong>: Extern, App-Name, E-Mail,
-              auf <strong>Veröffentlicht</strong> setzen.</li>
-          <li><strong>Anmeldedaten</strong> → OAuth-Client-ID → <strong>Desktop-App</strong>.</li>
-          <li>In <a data-go="settings">Einstellungen → Cloud-Abgleich</a> als Ablage
-              <strong>Google Drive</strong> wählen und die beiden Werte eintragen.</li>
-        </ol>
-        <p class="small">Solange der Zustimmungsbildschirm im Status „Test“ steht, kommen nur
-        die dort eingetragenen Testnutzer hinein. Nach dem Veröffentlichen braucht der
-        Drive-Anwendungsordner keine Überprüfung durch Google.</p>
+        <p>Ab dann gleicht Kontovia von selbst ab – nach jeder Änderung, beim Start und in
+        regelmäßigen Abständen.</p>
+        <div class="notice ok mb0"><strong>Ihre Daten bleiben verschlüsselt.</strong> In die Cloud geht
+        nur Ihre bereits verschlüsselte Buchhaltung. Lesen kann sie nur, wer Ihr Passwort kennt –
+        weder Google noch der Hersteller von Kontovia.</div>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -435,7 +307,7 @@ function cloud(root) {
         <p class="small muted mb0">Haben Sie dort schon einen Tresor angelegt: unter
         <a data-go="settings">Einstellungen → Cloud-Abgleich</a> verbinden. Kontovia erkennt die
         Buchhaltung in der Cloud und bietet <strong>Cloud-Stand übernehmen</strong> an; der
-        Tresor des Geräts wird vorher in den Sicherungsordner gelegt.</p>
+        Tresor des Geräts wird vorher gesichert.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -454,53 +326,95 @@ function cloud(root) {
               Rückfrage. Eine Sicherung einer <em>anderen</em> Buchhaltung (etwa der Stand vor
               „Cloud überschreiben“) fragt nach deren Passwort.</li>
         </ul>
-        <p class="small muted mb0">Die Sicherungen ersetzen nicht die Vollsicherung auf einem
-        eigenen Datenträger: Wer das Google-Konto verliert, verliert auch sie.</p>
+        <p class="small muted mb0">Die Sicherungen in der Cloud ersetzen nicht die Vollsicherung auf
+        einem eigenen Datenträger: Wer den Zugang zum Google-Konto verliert, verliert auch sie.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Was passiert, wenn beide Geräte dasselbe ändern?</h3>
-        <p>Kontovia vergleicht nicht die Datei, sondern jeden einzelnen Datensatz – und zwar
-        gegen den letzten Stand, den beide Geräte gemeinsam hatten. Daraus ergibt sich:</p>
+        <p>Kontovia vergleicht jeden einzelnen Eintrag mit dem letzten Stand, den beide Geräte
+        gemeinsam hatten. Daraus ergibt sich:</p>
         <ul>
           <li>Änderung nur auf einer Seite → sie wird übernommen, ohne Nachfrage.</li>
           <li>Änderung auf beiden Seiten → die zuletzt bearbeitete Fassung gilt, die andere
-              wird unter <em>Einstellungen → Konflikte ansehen</em> zum Nachlesen abgelegt.</li>
-          <li>Auf einem Gerät gelöscht, auf dem anderen geändert → der Datensatz
+              wird unter <em>Einstellungen → Cloud-Abgleich → Konflikte ansehen</em> zum Nachlesen
+              abgelegt.</li>
+          <li>Auf einem Gerät gelöscht, auf dem anderen geändert → der Eintrag
               <strong>bleibt erhalten</strong>. Eine Buchung verschwindet nie stillschweigend,
-              nur weil ein anderer Rechner sie gelöscht hat.</li>
-          <li>Belege sind unveränderlich und werden immer nur ergänzt.</li>
+              nur weil ein anderes Gerät sie gelöscht hat.</li>
+          <li>Belege werden nie verändert, nur ergänzt.</li>
         </ul>
-        <p class="small muted">Wollen beide Geräte gleichzeitig hochladen, bemerkt die
-        Anwendung das und beginnt den Abgleich von vorn, statt den fremden Stand zu
-        überschreiben.</p>
+        <p class="small muted mb0">Speichern zwei Geräte genau gleichzeitig, bemerkt Kontovia das
+        und beginnt den Abgleich von vorn, statt den Stand des anderen zu überschreiben.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Google Kalender einrichten (einmalig, für den Betreiber)</h3>
-        <p>Der Kalenderabgleich nutzt denselben OAuth-Client wie der Cloud-Abgleich. Im selben
-        Google-Cloud-Projekt braucht es zusätzlich:</p>
-        <ol>
-          <li><strong>APIs und Dienste → Bibliothek → Google Calendar API</strong> aktivieren.
-              Ohne diesen Schritt meldet Kontovia beim Verbinden, dass die Schnittstelle nicht
-              eingeschaltet ist.</li>
-          <li>Beim <strong>OAuth-Zustimmungsbildschirm</strong> den Bereich
-              <code>…/auth/calendar.app.created</code> eintragen. Er erlaubt nur den eigenen
-              Kalender „Kontovia“. Wer weitere Kalender einbezieht (Hauptkalender usw.), gibt
-              zusätzlich <code>…/auth/calendar.events</code> und
-              <code>…/auth/calendar.readonly</code> frei – Kontovia fragt sie erst an, wenn
-              jemand das einschaltet.</li>
-          <li>Google stuft Kalenderbereiche als sensibel ein. Bis zur Überprüfung durch Google
-              erscheint beim Verbinden „Google hat diese App nicht überprüft“, und es können
-              höchstens 100 Konten verbunden werden. Für den eigenen Gebrauch und eine kleine
-              Testgruppe reicht das.</li>
-        </ol>
-        <p class="small muted mb0">Die Web-Fassung kann Google Kalender nicht anbinden: Ihre Anmeldung
-        per Code (für Fernseher und Geräte mit eingeschränkter Eingabe) lässt Google nur für
-        Anmeldung, Drive-Dateien und YouTube zu. Dort helfen Kalenderdateien (.ics).</p>
+        <h3 class="mt0">Google Kalender</h3>
+        ${WEB ? raw(`<p class="mb0">Den laufenden Abgleich mit Google Kalender gibt es nur in der
+        Windows-Fassung. Hier übertragen Sie Termine als Kalenderdatei (.ics): im
+        <a data-go="calendar">Kalender</a> über <em>Abgleich</em>. Die Datei öffnet Google Kalender,
+        Apple Kalender oder Outlook.</p>`) : raw(`<p>Im <a data-go="calendar">Kalender</a> über
+        <em>Abgleich</em> oder unter <a data-go="settings">Einstellungen → Kalender-Abgleich</a>
+        verbinden Sie Kontovia mit Google. Kontovia legt in Ihrem Konto einen eigenen Kalender
+        „Kontovia“ an und gleicht in beide Richtungen ab. Auf Wunsch kommen Ihr Hauptkalender und
+        weitere Kalender dazu.</p>
+        <ul>
+          <li><strong>Was an Google geht:</strong> Titel, Zeit, Ort und Wiederholung Ihrer Termine, die
+              Notiz nur, wenn Sie das einschalten – anders als beim Cloud-Abgleich unverschlüsselt,
+              sonst könnte Google die Termine nicht anzeigen. Beträge, Buchungen, Kontakte und Belege
+              gehen nie an Google.</li>
+          <li><strong>Hinweis von Google:</strong> Beim Verbinden kann „Google hat diese App nicht
+              überprüft“ erscheinen. Über <em>Erweitert</em> und den Link darunter geht es weiter.</li>
+          <li><strong>Trennen</strong> unter Einstellungen → Kalender-Abgleich. Ihre Termine in
+              Kontovia bleiben, auf Wunsch wird der Kalender „Kontovia“ in Google gelöscht.</li>
+        </ul>`)}
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
+        <h3 class="mt0">Verbindung trennen</h3>
+        <p>Unter <a data-go="settings">Einstellungen → Cloud-Abgleich → Verbindung trennen</a> meldet
+        sich dieses Gerät von der Cloud ab. Ihre Buchhaltung bleibt vollständig auf dem Gerät, und
+        Ihre anderen Geräte bleiben verbunden. Auf Wunsch löscht Kontovia dabei auch Tresor, Belege
+        und Sicherungen in der Cloud.</p>
+        <p class="small muted mb0">Den Zugriff von Kontovia auf Ihr Google-Konto entfernen Sie ganz in
+        Ihrem Google-Konto unter <em>Sicherheit → Verbindungen zu Drittanbieter-Apps</em>
+        (myaccount.google.com/connections).</p>
       </div></div>
     </div>`;
   wireLinks(root);
+}
+
+/* -------------------------------------------------------------------------- */
+
+/** So viele Versionen stehen offen da; die älteren klappen sich auf Wunsch auf. */
+const NEU_OFFEN = 4;
+
+function versionsBlock(v, { karte }) {
+  const ihre = v.version === appInfo.version;
+  const kopf = `<div class="row wrap" style="gap:8px;align-items:baseline">
+      <strong style="font-size:${karte ? 15 : 14}px">${esc(v.titel)}</strong>
+      <span class="spacer"></span>
+      <span class="badge${ihre ? ' info' : ''}">Version ${esc(v.version)}${ihre ? ' · Ihre Version' : ''}</span>
+    </div>
+    <div class="tiny muted mt8">${esc(fmtDate(v.datum))}</div>
+    <ul class="mb0">${v.punkte.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>`;
+  return karte ? `<div class="card mb16"><div class="card-body">${kopf}</div></div>` : `<div class="version-alt">${kopf}</div>`;
+}
+
+function neu(root) {
+  const offen = VERSIONEN.slice(0, NEU_OFFEN);
+  const aelter = VERSIONEN.slice(NEU_OFFEN);
+  root.innerHTML = html`
+    <div class="content narrow" style="padding:0">
+      <p class="small muted mt0 mb16">Was sich in Kontovia geändert hat – die neueste Version zuerst.</p>
+      ${raw(offen.map((v) => versionsBlock(v, { karte: true })).join(''))}
+      ${aelter.length ? raw(`<div class="card"><div class="card-body">
+        <details class="versionen-aelter">
+          <summary><strong>Ältere Versionen</strong> <span class="muted small">(${aelter.length})</span></summary>
+          ${aelter.map((v) => versionsBlock(v, { karte: false })).join('')}
+        </details>
+      </div></div>`) : ''}
+    </div>`;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -513,28 +427,39 @@ function recht(root) {
         <table class="data compact">
           <tbody>
             <tr><td class="muted">Programm</td><td>Kontovia ${appInfo.version || ''}</td></tr>
-            <tr><td class="muted">Datenordner</td><td class="tiny">${appInfo.dataDir || ''}</td></tr>
-            <tr><td class="muted">Verschlüsselung</td><td>AES-256-GCM, Schlüsselableitung mit scrypt</td></tr>
-            <tr><td class="muted">Laufzeitumgebung</td><td>Electron ${appInfo.electron || ''}, Chromium ${appInfo.chrome || ''}</td></tr>
-            <tr><td class="muted">Fremder Programmcode</td><td>keiner – null Laufzeitabhängigkeiten</td></tr>
+            <tr><td class="muted">${WEB ? 'Ablage' : 'Datenordner'}</td><td class="tiny">${appInfo.dataDir || ''}</td></tr>
+            <tr><td class="muted">Verschlüsselung</td><td>AES-256, der Schlüssel entsteht aus Ihrem Passwort</td></tr>
           </tbody>
         </table>
+      </div></div>
+
+      <div class="card mt16" id="recht-datenschutz"><div class="card-body">
+        <h3 class="mt0">Datenschutz</h3>
+        <p>Ohne Cloud-Abgleich, ohne Google Kalender und ohne Ihre Zustimmung zur Update-Suche
+        verlässt nichts ${WEB ? 'dieses Gerät' : 'diesen Rechner'}. Es gibt keine Telemetrie, keine
+        Absturzberichte, keine Nutzungsstatistik und kein Benutzerkonto beim Hersteller.</p>
+        <ul>
+          <li><strong>Update-Suche:</strong> nur, wenn Sie zugestimmt haben. Dabei sieht der Server
+              Ihre IP-Adresse, sonst nichts. Abschalten unter
+              <a data-go="settings">Einstellungen → Programmaktualisierung</a>.</li>
+          <li><strong>Cloud-Abgleich:</strong> Übertragen wird nur Ihre bereits verschlüsselte
+              Buchhaltung. Für die Anmeldung speichert Google zusätzlich Ihre E-Mail-Adresse.</li>
+          ${WEB ? '' : raw(`<li><strong>Google Kalender:</strong> Titel, Zeit und Ort Ihrer Termine gehen
+              unverschlüsselt an Google, damit der Kalender sie anzeigen kann – Beträge, Buchungen,
+              Kontakte und Belege nie.</li>`)}
+        </ul>
+        <button class="btn" id="btnDatenschutz">${icon('file', 15)} Datenschutzhinweise lesen</button>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Künstliche Intelligenz</h3>
         <p><strong>Kontovia enthält keine.</strong> Es gibt kein Modell, kein Training, keine
         Ableitung aus Daten. Jede Zuordnung folgt einer Tabelle, die Sie selbst pflegen;
-        jede Berechnung ist handgeschriebene Arithmetik. Gleiche Eingabe ergibt immer
+        jede Berechnung folgt festen Rechenregeln. Gleiche Eingabe ergibt immer
         dieselbe Ausgabe.</p>
-        <p>Damit ist die KI-Verordnung der EU (Verordnung (EU) 2024/1689) auf dieses Programm
+        <p class="mb0">Damit ist die KI-Verordnung der EU (Verordnung (EU) 2024/1689) auf dieses Programm
         nicht anwendbar: Erwägungsgrund 12 nimmt Systeme ausdrücklich aus, die auf
-        ausschließlich von Menschen definierten Regeln beruhen. Die ausführliche Bewertung
-        steht in <code>COMPLIANCE.md</code>.</p>
-        <div class="row" style="gap:8px">
-          <button class="btn" data-lic="compliance">${icon('file', 15)} Rechtliche Einordnung öffnen</button>
-          <button class="btn" data-lic="datenschutz">${icon('file', 15)} Datenschutzhinweise öffnen</button>
-        </div>
+        ausschließlich von Menschen definierten Regeln beruhen.</p>
       </div></div>
 
       <div class="card mt16" id="recht-export"><div class="card-body">
@@ -545,61 +470,29 @@ function recht(root) {
         von Hand vorbereitet. Eine Zulassung oder Zertifizierung von Buchhaltungsprogrammen gibt es
         nicht; Bescheinigungen Dritter binden das Finanzamt ausdrücklich nicht (GoBD Rz. 181).</p>
         <p><strong>Ein KI-Hinweis ist nicht nötig.</strong> Die Werte in den Exporten entstehen nach
-        festen Rechenregeln aus Ihren Buchungen; bei ihrer Berechnung wirkt keine künstliche
-        Intelligenz mit. Die Kennzeichnungspflichten der KI-Verordnung (Art. 50, seit 2. August 2026)
-        betreffen Inhalte, die ein KI-System erzeugt – das ist Kontovia nicht. Dass beim Schreiben des
-        Programms KI-Werkzeuge geholfen haben, ändert daran nichts; es löst weder eine
-        Kennzeichnungspflicht aus noch mindert es die Verwendbarkeit der Zahlen. Auch das
-        Steuerrecht kennt keine Pflicht, anzugeben, womit eine Erklärung vorbereitet wurde.
-        Freiwillig und zur Transparenz trägt jeder Bericht einen Herkunftsvermerk.</p>
+        festen Rechenregeln aus Ihren Buchungen; künstliche Intelligenz wirkt dabei nicht mit. Die
+        Kennzeichnungspflichten der KI-Verordnung (Art. 50, seit 2. August 2026) betreffen Inhalte, die
+        ein KI-System erzeugt – das ist Kontovia nicht. Auch das Steuerrecht kennt keine Pflicht,
+        anzugeben, womit eine Erklärung vorbereitet wurde. Freiwillig und zur Transparenz trägt jeder
+        Bericht einen Herkunftsvermerk.</p>
         <p><strong>Wer lieber selbst zusammenstellt,</strong> kann das: Die Tabellen unter
-        <a data-go="export">Export</a> (CSV) enthalten die Rohdaten, aus denen sich eigene Unterlagen
-        bauen lassen, und die Werte für ELSTER tragen Sie ohnehin selbst ein. Im Zweifel lohnt ein
-        einmaliger Abgleich der Zuordnungen mit der Steuerberatung.</p>
-        <p class="small muted">Eine technische Einschätzung, keine Rechtsberatung. Die ausführliche
-        Begründung steht in <code>COMPLIANCE.md</code>, Abschnitt 7.</p>
+        <a data-go="export">Export</a> (CSV) enthalten die Rohdaten, und die Werte für ELSTER tragen Sie
+        ohnehin selbst ein. Im Zweifel lohnt ein einmaliger Abgleich der Zuordnungen mit der
+        Steuerberatung.</p>
+        <p class="small muted mb0">Eine sorgfältige Einschätzung, keine Rechtsberatung.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Datenschutz</h3>
-        <p>Ohne eingerichteten Cloud-Abgleich, ohne verbundenen Google Kalender und ohne Zustimmung
-        zur Update-Prüfung verlässt kein Byte diesen Rechner. Es gibt keine Telemetrie, keine Absturzberichte, keine
-        Nutzungsstatistik und kein Benutzerkonto beim Hersteller. Nicht-lokale Netzanfragen
-        der Oberfläche werden im Hauptprozess verworfen.</p>
-        <p>Die Suche nach neuen Programmversionen ist die einzige weitere Verbindung. Sie läuft
-        nur, wenn Sie ihr zugestimmt haben, überträgt außer Ihrer IP-Adresse nichts und lässt
-        sich unter <a data-go="settings">Einstellungen → Programmaktualisierung</a> jederzeit
-        abschalten.</p>
-        ${WEB ? '' : raw(`<p><strong>Google Kalender</strong> ist die Ausnahme von der Verschlüsselung und
-        deshalb nur nach ausdrücklichem Verbinden aktiv: Damit Google Termine anzeigen kann, gehen
-        Titel, Zeit, Ort, Wiederholung und – abschaltbar – die Notiz Ihrer Termine unverschlüsselt in
-        den Kalender „Kontovia“ Ihres Google-Kontos. Beträge, Buchungen, Kontakte und Belege gehen
-        nicht mit. Trennen unter Einstellungen → Kalender-Abgleich zieht die Freigabe bei Google
-        zurück.</p>`)}
-        <p>Mit Cloud-Abgleich wird ausschließlich der <strong>bereits verschlüsselte</strong>
-        Tresor übertragen – je nach Einstellung in ein Firebase-Projekt oder in Ihr eigenes
-        Google Drive. Der Betreiber der Ablage sieht Dateigröße und Änderungszeitpunkt, aber
-        keinen Inhalt: der Schlüssel bleibt auf Ihrem Gerät.</p>
-        <p class="small">Bei der Firebase-Variante speichert Firebase Authentication
-        zusätzlich Ihre E-Mail-Adresse und eine Kontokennung im Klartext – nötig, damit Ihnen
-        beim Anmelden Ihr eigener Bereich zugeordnet werden kann. Wer auch das vermeiden will,
-        wählt die Drive-Variante; dort entsteht beim Anbieter der Anwendung überhaupt kein
-        Datenbestand. Die vollständige Abwägung steht in <code>COMPLIANCE.md</code>.</p>
-      </div></div>
-
-      <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Lizenzen der Laufzeitumgebung</h3>
-        ${WEB ? raw(`<p>Kontovia selbst enthält keinen fremden Quellcode. Die Web-Fassung läuft im
-        Browser und bringt keine eigene Laufzeitumgebung mit; für den Browser gelten dessen
-        Lizenzbedingungen.</p>`) : raw(`<p>Kontovia selbst enthält keinen fremden Quellcode. Mitgeliefert wird die
-        Laufzeitumgebung Electron (MIT-Lizenz) einschließlich Chromium (BSD-3-Clause und
-        weitere) sowie Node.js (MIT-Lizenz).</p>
+        <h3 class="mt0">Lizenzen</h3>
+        ${WEB ? raw(`<p class="mb0">Kontovia selbst enthält keinen fremden Programmcode. Die Web-Fassung
+        läuft in Ihrem Browser; für ihn gelten dessen Lizenzbedingungen.</p>`) : raw(`<p>Kontovia selbst enthält
+        keinen fremden Programmcode. Mitgeliefert wird die Laufzeitumgebung Electron
+        ${esc(appInfo.electron || '')} (MIT-Lizenz) mit Chromium ${esc(appInfo.chrome || '')} (BSD-Lizenz und
+        weitere) und Node.js (MIT-Lizenz).</p>
         <div class="row" style="gap:8px">
           <button class="btn" data-lic="electron">${icon('file', 15).__raw} Electron-Lizenz öffnen</button>
           <button class="btn" data-lic="chromium">${icon('file', 15).__raw} Chromium-Lizenzen öffnen</button>
         </div>`)}
-        <p class="small muted mt16 mb0">Schriftarten werden nur über ihren Namen angesprochen;
-        es wird keine Schriftdatei mitgeliefert.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -608,7 +501,7 @@ function recht(root) {
         ausschließlich beschreibend verwendet, um ein Format oder eine Schnittstelle zu
         benennen. Es besteht keine geschäftliche Verbindung zu den Inhabern, keine Empfehlung
         und keine Zertifizierung durch sie.</p>
-        <ul>
+        <ul class="mb0">
           <li><strong>DATEV</strong> – DATEV eG. Kontovia erzeugt eine Datei im DATEV-Importformat.
               Die Kontenrahmen SKR03 und SKR04 stammen von der DATEV eG; Kontovia hinterlegt
               einzelne Kontonummern als frei änderbare Vorschläge, um den Import zu ermöglichen.</li>
@@ -635,7 +528,25 @@ function recht(root) {
       err('Lizenzdatei nicht gefunden', e.message);
     }
   }));
+  $('#btnDatenschutz', root).addEventListener('click', () => zeigeDatenschutz());
   wireLinks(root);
+}
+
+/** Die vollständigen Datenschutzhinweise (DATENSCHUTZ.md) in einem Fenster. */
+export async function zeigeDatenschutz() {
+  const m = modal({
+    title: 'Datenschutzhinweise',
+    size: 'wide',
+    body: '<div class="skeleton" style="height:240px"></div>',
+    foot: '<button class="btn primary" data-x>Schließen</button>',
+  });
+  m.root.querySelector('[data-x]').addEventListener('click', () => m.close());
+  try {
+    const text = await api.app.legalText('datenschutz');
+    m.body.innerHTML = `<div class="legal">${markdownZuHtml(text)}</div>`;
+  } catch (e) {
+    m.body.innerHTML = html`<div class="notice danger">${e.message}</div>`;
+  }
 }
 
 function wireLinks(root) {

@@ -173,7 +173,8 @@ export class Cloud {
     if (!keepRemote) {
       try { await be.removeAll(); } catch { /* auch dann wird lokal getrennt */ }
     }
-    await be.disconnect();
+    // Wie in der Windows-Fassung (src/main/cloud.js): abmelden, nicht widerrufen.
+    await be.disconnect({ widerrufen: false });
     const c = this.cfg();
     delete c.remoteVersion;
     delete c.lastSyncAt;
@@ -223,7 +224,7 @@ export class Cloud {
     try {
       meta = await be.vaultMeta();
     } catch (err) {
-      await be.disconnect().catch(() => {});
+      await be.disconnect({ widerrufen: false }).catch(() => {});
       throw new Error(`Angemeldet, aber die Cloud ist nicht erreichbar: ${err.message}`);
     }
     this.anmeldung = { provider, state, be, meta, blob: null };
@@ -280,7 +281,7 @@ export class Cloud {
       try {
         meta = await be.vaultMeta();
       } catch (err) {
-        await be.disconnect().catch(() => {});
+        await be.disconnect({ widerrufen: false }).catch(() => {});
         throw new Error(`Angemeldet, aber die Cloud ist nicht erreichbar: ${err.message}`);
       }
       this.anmeldung = { provider: 'firebase', state, be, meta, blob: null, zweck: antwort.zweck };
@@ -321,7 +322,7 @@ export class Cloud {
   async anmeldungVerwerfen() {
     const a = this.anmeldung;
     this.anmeldung = null;
-    if (a) await a.be.disconnect().catch(() => {});
+    if (a) await a.be.disconnect({ widerrufen: false }).catch(() => {});
     return true;
   }
 
@@ -329,7 +330,7 @@ export class Cloud {
     const a = this.anmeldung;
     if (!a || this.vault.isLocked) return false;
     this.anmeldung = null;
-    if (a.meta.exists) { await a.be.disconnect().catch(() => {}); return false; }
+    if (a.meta.exists) { await a.be.disconnect({ widerrufen: false }).catch(() => {}); return false; }
     const c = this.cfg();
     c.provider = a.provider;
     c.state = { [a.provider]: a.state };

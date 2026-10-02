@@ -58,12 +58,10 @@ function draw(root) {
 
     <div class="notice mb16">
       <strong>Zur Einordnung.</strong> Kontovia übermittelt nichts an die Finanzverwaltung.
-      Eine direkte Abgabe über ELSTER setzt die amtliche ERiC-Schnittstelle samt
-      Zertifikat voraus. Was Sie hier bekommen, sind fertig aufbereitete Werte samt
-      Zeilen- und Kennzahlenangabe, die Sie in „Mein ELSTER“ nur noch eintragen –
-      sowie Dateien, die eine Steuerkanzlei direkt einlesen kann. Die Werte entstehen nach
-      festen Rechenregeln, nicht durch künstliche Intelligenz; einen KI-Hinweis braucht es dafür
-      nicht, die Verantwortung für die Erklärung bleibt aber bei Ihnen.
+      Sie bekommen hier fertig aufbereitete Werte samt Zeilen- und Kennzahlenangabe, die Sie
+      in „Mein ELSTER“ nur noch eintragen – sowie Dateien, die eine Steuerkanzlei direkt
+      einlesen kann. Die Werte entstehen nach festen Rechenregeln, nicht durch künstliche
+      Intelligenz; die Verantwortung für die Erklärung bleibt bei Ihnen.
       <a data-recht>Was das rechtlich bedeutet</a>
     </div>
 
@@ -116,7 +114,7 @@ function draw(root) {
         title: 'Belege ausleiten', sub: `${int(attCount)} Dateien im Zeitraum`,
         body: `Alle hinterlegten Rechnungen und Quittungen des Zeitraums als einzelne Dateien,
           benannt nach Datum, Belegnummer und Beschreibung. Dazu ein Verzeichnis mit
-          SHA-256-Prüfsummen. <strong>Achtung:</strong> Die Dateien liegen danach unverschlüsselt
+          Prüfsummen, die belegen, dass die Dateien unverändert sind. <strong>Achtung:</strong> Die Dateien liegen danach unverschlüsselt
           im Zielordner.`,
         button: `<button class="btn" id="btnAttach">${icon('paperclip', 16).__raw} Belege exportieren</button>`,
       }))}

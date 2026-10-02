@@ -1,12 +1,12 @@
 {
-  "version": "1.11.1",
-  "released": "2026-10-01T20:02:47.691Z",
-  "notes": "Test-Update ohne inhaltliche Änderungen.\n\n* Nur zum Ausprobieren der neuen Aktualisierung. Diese Fassung ändert am Programm nichts\n  außer der Versionsnummer. Sie dient dazu, das Update direkt im Programm zu testen: Kontovia\n  lädt die neue Fassung, installiert sie ohne Assistenten, startet von selbst neu – und Sie\n  bleiben angemeldet.\n\nNeu seit 1.11, falls Sie von einer älteren Fassung kommen: Aktualisierung direkt im Programm,\nangemeldet bleiben über den Neustart und die korrigierte Größenanzeige beim Herunterladen.",
+  "version": "1.12.0",
+  "released": "2026-10-02T11:34:43.041Z",
+  "notes": "Neuigkeiten im Programm und eine aufgeräumte Hilfe\n\n- Was neu ist, steht jetzt unter Hilfe → Neuigkeiten – für jede Version seit der ersten. Nach einem Update weist Kontovia einmal darauf hin.\n- Hilfe und Einstellungen sind aufgeräumt: Anleitungen, die nur für den Hersteller gedacht waren, sind verschwunden. Die Datenschutzhinweise öffnen sich direkt im Programm.\n- Wer beim ersten Start die Google-Anmeldung abbricht oder die Cloud auf einem Gerät trennt, lässt die anderen Geräte verbunden. Bisher musste dort Google Kalender neu verbunden werden.\n- Das Änderungsjournal nennt jeden Vorgang in Worten, etwa „Buchung angelegt“.\n- In schmalen Fenstern bleibt die Beschreibung in der Buchungsliste lesbar, und das Warten auf die Anmeldung bei Google Kalender lässt sich abbrechen.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "65ac9d1fa39d329473aff49ae35faa333a12ec0312b4caf8da47a3e63d23a5b0",
-      "size": 49872
+      "sha256": "69c794b416c0c3883b39ce430a112ed1768b269fe934cb2bb53d61797c1e0c8a",
+      "size": 51584
     },
     {
       "path": "icons/apple-touch-icon.png",
@@ -74,6 +74,11 @@
       "size": 8609
     },
     {
+      "path": "lib/markdown.js",
+      "sha256": "97fb7c510c81453724a6ffdee364a4372665213156d580000c35ab6db5bdfce8",
+      "size": 2627
+    },
+    {
       "path": "lib/merge.js",
       "sha256": "0c2f3a402e032eddbfe37b208031542b809325cb8856c77f3f96fecedbaf23bf",
       "size": 13542
@@ -139,29 +144,29 @@
       "size": 14047
     },
     {
+      "path": "lib/versionen.js",
+      "sha256": "9ef8c21fc64f1526e3515a538cca2282dc4bd27483e868ec53c04ffeaaaf9f4b",
+      "size": 9113
+    },
+    {
       "path": "lib/wiederkehrend.js",
       "sha256": "3c440cf907522329fb92e0d307d5dbb3d60d5aff45cd6f735285dfb92f6491af",
       "size": 4378
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "c89df9ed9a4e28df6df4b9ebf7dfad945207e07660da692508852a594b0b55a1",
+      "sha256": "fc2f40d001c906377089576b16dc00b9ba5709b8bd64339dfa30a8c7de391f40",
       "size": 887
     },
     {
-      "path": "recht/COMPLIANCE.html",
-      "sha256": "ae6f0a0a19a424b7a399bb1ed0c42b2668816689fac8d85a4ce346c4bec74019",
-      "size": 31322
-    },
-    {
-      "path": "recht/DATENSCHUTZ.html",
-      "sha256": "4c57872d9d9d23fad2b8385b602e389f9db160b75baaf2910436f47a36a29154",
-      "size": 12273
+      "path": "recht/DATENSCHUTZ.md",
+      "sha256": "aa5d7e2c0a233908ba8092f2ff0eea211a6e4fb42b972b5b1a93087da37f444c",
+      "size": 12636
     },
     {
       "path": "styles.css",
-      "sha256": "9bc4ecb6b24f8b17b0341da74f485fbc9413077393aa8f834b972f8b61fa18fb",
-      "size": 47109
+      "sha256": "02ae18dca225feaabd2756f1f54259068a46584a109605d3ced566e0a75d3a52",
+      "size": 48335
     },
     {
       "path": "views/anlageform.js",
@@ -175,13 +180,13 @@
     },
     {
       "path": "views/calendarsync.js",
-      "sha256": "317f8f8669baf4ff355be275c8fd237993e6e1030777abac9342d645dac204aa",
-      "size": 24587
+      "sha256": "dc0fcbdd14d034524d5333ff2b2093c452f8af731e348f9da9e9926addc91a18",
+      "size": 24826
     },
     {
       "path": "views/cloudpanel.js",
-      "sha256": "37ec3d434a17c000692d92fd85bbd5e7539f16338310a780bf7c904fea435ad6",
-      "size": 45247
+      "sha256": "594e79023ab09d87c0be44cbd7b3bb29f7883bd465e5896da58ad39d8d53c5ea",
+      "size": 38242
     },
     {
       "path": "views/dashboard.js",
@@ -195,13 +200,13 @@
     },
     {
       "path": "views/export.js",
-      "sha256": "12b2af00ee1f3b314831d8e4503b7843bca88f0b8cb98f6cfc3cc6e6cda37a44",
-      "size": 20437
+      "sha256": "1c0185c62b720ef78d322cc0dad0adcef0c0da0270195b1f9a0e995922558fa6",
+      "size": 20314
     },
     {
       "path": "views/help.js",
-      "sha256": "d6df948560a4902bc01e5ae6879ac4f6ff6e6b746361ad10883a92e9dca5ee29",
-      "size": 43830
+      "sha256": "496f17342315bb1c87420f451a41f0240c9e1ab1b2eeef0b7cbf1ec27c0c6d20",
+      "size": 36740
     },
     {
       "path": "views/master.js",
@@ -215,8 +220,8 @@
     },
     {
       "path": "views/settings.js",
-      "sha256": "f89465b8f45f8604cbf006c1fac317ffdcd57f8727d8918b146e43316adc146b",
-      "size": 28862
+      "sha256": "52c6c052c75d061f07c9a411e4689c0d5995098e65ab8f928e4de08ca88e8c50",
+      "size": 30639
     },
     {
       "path": "views/spruenge.js",
@@ -230,8 +235,8 @@
     },
     {
       "path": "views/transactions.js",
-      "sha256": "bd8019541e98c385218cf5a815891e464486d1829bcf6468ef997be0a412e17a",
-      "size": 72494
+      "sha256": "a46fcef0a369a5973e62c5d5e4e9ee643d8f09f3960b4b5e889dd3d2f15257e2",
+      "size": 72526
     },
     {
       "path": "views/wiederkehrend.js",
@@ -245,7 +250,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "cff7f6bd769f856f3f61308d658234631731c83e49a32191151bd81923975aa4",
+      "sha256": "5ebd52675baf75560fe0d0cce49c0da1377c6a5a2d0a3f5511369d7b640cc3b5",
       "size": 6945
     },
     {
@@ -255,13 +260,13 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "6e9ebb84f7bafa53720fa4a4a0311712a80551f4c76b45426f79d522d030a9ff",
-      "size": 29994
+      "sha256": "650bb33141c9a1d796409de8be9faadf3b22d09adb2c83cc2ea55f90407a579a",
+      "size": 30211
     },
     {
       "path": "web/cloud.js",
-      "sha256": "c73a4dc20623bfbede0e086a0af7483e912be9c1faef875fea677cbcb9f71ae4",
-      "size": 24250
+      "sha256": "287c4420aa9bc169977af78971c13aab4dda783db490a8345fa81e28ac41d0d7",
+      "size": 24438
     },
     {
       "path": "web/cloudconfig.js",
@@ -280,13 +285,13 @@
     },
     {
       "path": "web/firebase.js",
-      "sha256": "17657aa40cf78af858923520b7b001122642a4e608cf4d273cd5f47748b74a7e",
-      "size": 11692
+      "sha256": "7c6038776458556c5ef40c3814f25c07f3f9fdce368d71bcd1c2d9fdc4144ae0",
+      "size": 11826
     },
     {
       "path": "web/googledrive.js",
-      "sha256": "54c01a374aaac760f6f45e78af55fd6fff1374d15cc72d11fb8d248752994529",
-      "size": 8964
+      "sha256": "c2f4b9e11507731bc5b92ee83769935011804e980349f287381d19964b8dcf9b",
+      "size": 9006
     },
     {
       "path": "web/kern.js",
