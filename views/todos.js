@@ -61,7 +61,7 @@ function dueBadge(todo, today = todayISO()) {
   const cls = date < today ? 'neg' : date === today ? 'warn' : date <= addDays(today, 7) ? 'info' : '';
   const rel = relativeDays(date);
   const text = date < today ? `überfällig seit ${fmtDateShort(date)}` : `bis ${rel === 'heute' || rel === 'morgen' ? rel : fmtDateShort(date)}`;
-  return `<span class="badge ${cls} tiny" title="${esc(fromAppointment ? `Kein eigenes Datum – es gilt der Termin am ${fmtDate(date)}` : `Fällig am ${fmtDate(date)}`)}">${icon('clock', 11).__raw} ${esc(text)}</span>`;
+  return `<span class="badge ${cls} tiny" title="${esc(fromAppointment ? `Kein eigenes Datum, es gilt der Termin am ${fmtDate(date)}` : `Fällig am ${fmtDate(date)}`)}">${icon('clock', 11).__raw} ${esc(text)}</span>`;
 }
 
 function apptChip(todo) {
@@ -193,7 +193,7 @@ function draw(root) {
     if (!title) { $('#todoTitle', root).focus(); return; }
     await upsertTodo(newTodoDraft({ title, dueDate: $('#todoDue', root).value || '' }));
     // In der Ansicht „Erledigt“ taucht die neue Aufgabe nicht auf – dann wenigstens bestätigen.
-    if (state.show === 'done') ok('Aufgabe angelegt', `${title} – steht unter „Offen“`);
+    if (state.show === 'done') ok('Aufgabe angelegt', `„${title}“ steht unter „Offen“`);
     draw(root);
     $('#todoTitle', root)?.focus();
   });
@@ -236,7 +236,7 @@ function appointmentOptions(selectedId) {
   kommend.sort((x, y) => (x.tag + (x.a.startTime || '')).localeCompare(y.tag + (y.a.startTime || '')));
   vergangen.sort((x, y) => y.tag.localeCompare(x.tag));
   const opt = ({ a, tag }) => `<option value="${esc(a.id)}" ${a.id === selectedId ? 'selected' : ''}>${esc(fmtDate(tag))} · ${esc(a.title || 'Termin')}${(a.recurrence?.freq || 'none') !== 'none' ? ' (Serie)' : ''}</option>`;
-  return `<option value="">– kein Termin –</option>`
+  return `<option value="">Kein Termin</option>`
     + (kommend.length ? `<optgroup label="Kommende Termine">${kommend.map(opt).join('')}</optgroup>` : '')
     + (vergangen.length ? `<optgroup label="Vergangene Termine">${vergangen.map(opt).join('')}</optgroup>` : '');
 }

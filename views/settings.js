@@ -85,11 +85,11 @@ async function draw(root) {
           <div class="field">
             <label>Umsatzsteuer berechnen nach</label>
             <select id="s_accountingBasis">
-              <option value="ist" ${s.accountingBasis === 'ist' ? 'selected' : ''}>Zahlungseingang – Ist-Versteuerung (§ 20 UStG)</option>
-              <option value="soll" ${s.accountingBasis === 'soll' ? 'selected' : ''}>Rechnungsdatum – Soll-Versteuerung</option>
+              <option value="ist" ${s.accountingBasis === 'ist' ? 'selected' : ''}>Zahlungseingang (Ist-Versteuerung, § 20 UStG)</option>
+              <option value="soll" ${s.accountingBasis === 'soll' ? 'selected' : ''}>Rechnungsdatum (Soll-Versteuerung)</option>
             </select>
             <span class="hint">Gilt für die Voranmeldung und die Umsatzsteuer-Angaben in der Übersicht.
-            Einnahmen, Ausgaben und Gewinn zählen überall am Zahlungstag – wie in der Anlage EÜR (§ 11 EStG).</span>
+            Einnahmen, Ausgaben und Gewinn zählen überall am Zahlungstag, wie in der Anlage EÜR (§ 11 EStG).</span>
           </div>
           <div class="form-grid">
             <div class="field">
@@ -126,7 +126,7 @@ async function draw(root) {
             <div class="field">
               <label>Erstes Buchungsjahr</label>
               <input id="s_fiscalYear" type="number" min="2000" max="2100" value="${s.fiscalYear || new Date().getFullYear()}">
-              <span class="hint">Nur zur Orientierung – die Auswertungen richten sich nach dem jeweils gewählten Zeitraum.</span>
+              <span class="hint">Nur zur Orientierung. Die Auswertungen richten sich nach dem jeweils gewählten Zeitraum.</span>
             </div>
           </div>
         </div>
@@ -176,7 +176,7 @@ async function draw(root) {
             <p class="small muted mt16">
               Die Vollsicherung enthält alle Buchungen <em>und</em> alle Belege in einer
               Datei, verschlüsselt mit einem Passwort Ihrer Wahl. Bewahren Sie sie an
-              einem anderen Ort auf als den Arbeitsrechner – eine defekte Festplatte
+              einem anderen Ort auf als den Arbeitsrechner. Eine defekte Festplatte
               nimmt sonst beides mit.
             </p>
           </div>
@@ -188,7 +188,7 @@ async function draw(root) {
                 <tr><td class="muted">Automatische Sicherungen</td><td class="num">${int(storage.backups.count)} · ${esc(bytes(storage.backups.bytes))}</td></tr>
                 <tr><td class="muted">${WEB ? 'Ort' : 'Ordner'}</td><td class="tiny">${esc(storage.dataDir)}</td></tr>
                 ${storage.browser ? `<tr><td class="muted">Vor Räumen geschützt</td><td class="small">${storage.browser.persistent
-                  ? 'ja' : 'nein – der Browser darf bei Platzmangel räumen, bitte Cloud-Abgleich nutzen'}</td></tr>` : ''}
+                  ? 'ja' : 'nein, der Browser darf bei Platzmangel räumen, bitte Cloud-Abgleich nutzen'}</td></tr>` : ''}
               </tbody>
             </table>`) : ''}
             <p class="tiny muted mt8">
@@ -227,7 +227,7 @@ async function draw(root) {
           <div>
             <p class="small muted mt0">
               Jede Änderung landet im Änderungsjournal. Die Einträge sind über Prüfsummen
-              miteinander verkettet – wird nachträglich etwas verändert, passen sie nicht
+              miteinander verkettet. Wird nachträglich etwas verändert, passen sie nicht
               mehr zusammen.
             </p>
             <div class="row" style="gap:8px">
@@ -395,7 +395,7 @@ function wire(root) {
     if (!oldPw) return;
     const newPw = await askPassword({
       title: 'Neues Passwort',
-      text: 'Mindestens 10 Zeichen. Es gibt keine Wiederherstellung – notieren Sie es an einem sicheren Ort.',
+      text: 'Mindestens 10 Zeichen. Es gibt keine Wiederherstellung, notieren Sie es deshalb an einem sicheren Ort.',
       label: 'Neues Passwort', confirmLabel: 'Passwort ändern', repeat: true,
     });
     if (!newPw) return;
@@ -462,12 +462,12 @@ function wire(root) {
     if (!date) { warn('Bitte ein Datum wählen'); return; }
     // Festgeschrieben wird Abgeschlossenes. Ein Datum in der Zukunft sperrte
     // Zeiträume, in denen noch gebucht werden muss – und das für immer.
-    if (date > todayISO()) { warn('Datum liegt in der Zukunft', 'Festschreiben lässt sich nur ein Zeitraum, der schon vorbei ist – höchstens bis heute.'); return; }
+    if (date > todayISO()) { warn('Datum liegt in der Zukunft', 'Festschreiben lässt sich nur ein Zeitraum, der schon vorbei ist, höchstens bis heute.'); return; }
     if (bisher && date <= bisher) { warn('Schon festgeschrieben', `Bis zum ${fmtDate(bisher)} ist bereits festgeschrieben. Wählen Sie ein späteres Datum.`); return; }
     const affected = sel.transactions().filter((t) => t.date <= date && (!bisher || t.date > bisher)).length;
     const yes = await confirmDialog({
       title: 'Zeitraum festschreiben?',
-      text: `${affected} ${bisher ? 'weitere ' : ''}Buchungen bis zum ${fmtDate(date)} lassen sich danach nicht mehr ändern oder löschen – nur noch stornieren. Offene Rechnungen lassen sich weiterhin als bezahlt vermerken. Das Festschreiben lässt sich nicht zurücknehmen.`,
+      text: `${affected} ${bisher ? 'weitere ' : ''}Buchungen bis zum ${fmtDate(date)} lassen sich danach nicht mehr ändern oder löschen, nur noch stornieren. Offene Rechnungen lassen sich weiterhin als bezahlt vermerken. Das Festschreiben lässt sich nicht zurücknehmen.`,
       confirmLabel: 'Festschreiben', danger: true,
     });
     if (!yes) return;
@@ -494,7 +494,7 @@ function wire(root) {
 export async function runBackup() {
   const pw = await askPassword({
     title: 'Vollsicherung erstellen',
-    text: 'Die Sicherung enthält alle Buchungen und Belege. Wählen Sie ein Passwort – Sie können dasselbe wie für den Tresor nehmen oder ein eigenes.',
+    text: 'Die Sicherung enthält alle Buchungen und Belege. Wählen Sie ein Passwort. Sie können dasselbe wie für den Tresor nehmen oder ein eigenes.',
     label: 'Passwort für die Sicherung', confirmLabel: 'Sicherung erstellen', repeat: true,
   });
   if (!pw) return;
@@ -552,7 +552,7 @@ function showJournal() {
     size: 'wide',
     body: html`
       <p class="mt0 small muted">Die letzten ${int(log.length)} von ${int((store.db.auditLog || []).length)} Einträgen.
-      Jeder Eintrag enthält die Prüfsumme des vorherigen – dadurch lässt sich nachträgliches Verändern erkennen.</p>
+      Jeder Eintrag enthält die Prüfsumme des vorherigen. So lässt sich nachträgliches Verändern erkennen.</p>
       ${table({
         id: 'journal',
         cls: 'data compact',

@@ -19,11 +19,11 @@ import { degressivMoeglich, degressivSatz, DEGRESSIV_VON, DEGRESSIV_BIS } from '
  * (BMF-Schreiben vom 22.02.2022): ein Jahr, auf Wunsch voll im Anschaffungsjahr.
  */
 const TYPISCH = [
-  ['sofort', 'Computer, Notebook, Tablet, Drucker, Software – 1 Jahr'],
-  ['5', 'Mobiltelefon – 5 Jahre'],
-  ['6', 'Pkw – 6 Jahre'],
-  ['7', 'Kopiergerät – 7 Jahre'],
-  ['13', 'Büromöbel – 13 Jahre'],
+  ['sofort', 'Computer, Notebook, Tablet, Drucker, Software (1 Jahr)'],
+  ['5', 'Mobiltelefon (5 Jahre)'],
+  ['6', 'Pkw (6 Jahre)'],
+  ['7', 'Kopiergerät (7 Jahre)'],
+  ['13', 'Büromöbel (13 Jahre)'],
 ];
 
 export function neuesAnlagegut(preset = {}) {
@@ -64,7 +64,7 @@ export function anlageFelder(a, { bestehend = false } = {}) {
     <div class="field">
       <label for="a_typ">Übliche Werte</label>
       <select id="a_typ" ${zu}>
-        <option value="">– Wirtschaftsgut wählen, um die Nutzungsdauer zu übernehmen –</option>
+        <option value="">Wirtschaftsgut wählen, um die Nutzungsdauer zu übernehmen</option>
         ${raw(TYPISCH.map(([v, t]) => `<option value="${v}">${esc(t)}</option>`).join(''))}
       </select>
       <span class="hint">Nach der amtlichen AfA-Tabelle; für anderes dort nachschlagen oder mit der Steuerberatung klären.</span>
@@ -73,9 +73,9 @@ export function anlageFelder(a, { bestehend = false } = {}) {
       <div class="field">
         <label for="a_method">Abschreibung</label>
         <select id="a_method" ${zu}>
-          <option value="linear" ${methode === 'linear' ? 'selected' : ''}>linear – gleiche Beträge</option>
-          <option value="degressiv" ${methode === 'degressiv' ? 'selected' : ''}>degressiv – fallend, höchstens 30 %</option>
-          <option value="sofort" ${methode === 'sofort' ? 'selected' : ''}>1 Jahr – voll im Anschaffungsjahr</option>
+          <option value="linear" ${methode === 'linear' ? 'selected' : ''}>linear (gleiche Beträge)</option>
+          <option value="degressiv" ${methode === 'degressiv' ? 'selected' : ''}>degressiv (fallend, höchstens 30 %)</option>
+          <option value="sofort" ${methode === 'sofort' ? 'selected' : ''}>1 Jahr (voll im Anschaffungsjahr)</option>
         </select>
       </div>
       <div class="field">
@@ -101,7 +101,7 @@ export function wireAnlageFelder(root) {
       const satz = Math.round(degressivSatz(jahre) * 1000) / 10;
       text = degressivMoeglich(datum)
         ? `${String(satz).replace('.', ',')} % vom jeweiligen Restwert, im ersten Jahr anteilig nach Monaten; sobald die lineare Rate höher ist, wechselt Kontovia zu ihr (§ 7 Abs. 2 und 3 EStG).`
-          + (jahre < 4 ? ' Bei unter vier Jahren Nutzungsdauer bringt degressiv nichts – es bleibt praktisch linear.' : '')
+          + (jahre < 4 ? ' Bei unter vier Jahren Nutzungsdauer bringt degressiv nichts, es bleibt praktisch linear.' : '')
         : `Degressiv nur für Anschaffungen vom ${fmtDate(DEGRESSIV_VON)} bis ${fmtDate(DEGRESSIV_BIS)} (bewegliche Wirtschaftsgüter).`;
     } else {
       text = `${String(Math.round(1000 / jahre) / 10).replace('.', ',')} % je Jahr, monatsgenau ab dem Anschaffungsmonat (§ 7 Abs. 1 EStG).`;
@@ -142,7 +142,7 @@ export async function anlageAusFeldern(root, a, { bestehend = false } = {}) {
   const usefulLifeYears = method === 'sofort' ? 1 : Math.max(1, Math.min(50, Math.round(Number(g('life').value) || 1)));
   if (cost <= 0) { warn('Bitte die Anschaffungskosten eintragen'); g('cost').focus(); return null; }
   if (isLockedDate(purchaseDate)) {
-    warn('Zeitraum ist festgeschrieben', `Bis ${fmtDate(lockedUntil())} lässt sich kein Anlagegut mehr anschaffen – bitte ein späteres Datum wählen.`);
+    warn('Zeitraum ist festgeschrieben', `Bis ${fmtDate(lockedUntil())} lässt sich kein Anlagegut mehr anschaffen. Bitte ein späteres Datum wählen.`);
     return null;
   }
   if (method === 'degressiv' && !degressivMoeglich(purchaseDate)) {
@@ -152,7 +152,7 @@ export async function anlageAusFeldern(root, a, { bestehend = false } = {}) {
   if (cost <= 80000 && method !== 'sofort') {
     const trotzdem = await confirmDialog({
       title: 'Bis 800 € netto',
-      text: `${money(cost)} € – Wirtschaftsgüter bis 800 € netto dürfen als geringwertiges Wirtschaftsgut sofort in voller Höhe abgezogen werden (§ 6 Abs. 2 EStG). Trotzdem über mehrere Jahre abschreiben?`,
+      text: `Das Wirtschaftsgut kostet ${money(cost)} €. Wirtschaftsgüter bis 800 € netto dürfen als geringwertiges Wirtschaftsgut sofort in voller Höhe abgezogen werden (§ 6 Abs. 2 EStG). Trotzdem über mehrere Jahre abschreiben?`,
       confirmLabel: 'Trotzdem abschreiben',
     });
     if (!trotzdem) return null;

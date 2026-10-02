@@ -76,7 +76,7 @@ function paymentFoot(cur, kind) {
   let out = '';
   if (fremdN) {
     out += `<button type="button" class="stat-link" data-tx-list="${kind}:fremd"
-      title="Im Zeitraum bezahlt, aber mit einem Datum davor oder danach gebucht – etwa eine Restzahlung vor dem Veranstaltungstag. Zählt am Zahlungstag, also hier.">
+      title="Im Zeitraum bezahlt, aber mit einem Datum davor oder danach gebucht, etwa eine Restzahlung vor dem Veranstaltungstag. Zählt am Zahlungstag, also hier.">
       inkl. ${esc(money(fremd))} € aus ${fremdN === 1 ? `${eins} eines anderen Zeitraums` : `${fremdN} ${viele} anderer Zeiträume`}</button>`;
   }
   if (offenN) {
@@ -456,13 +456,13 @@ function draw(root) {
         <span class="small muted">Ausgeblendet:</span>
         ${versteckt.length
           ? versteckt.map((e) => `<button type="button" class="chip" data-show="${e.id}">${icon('plus', 12).__raw} ${esc(WIDGETS[e.id].title)}</button>`).join('')
-          : '<span class="small muted">nichts – alle Module sind zu sehen.</span>'}
+          : '<span class="small muted">nichts, alle Module sind zu sehen.</span>'}
       </div>
     </div>`) : raw(`
     <div class="page-head">
       <div>
         <h2>${esc(s.companyName || s.ownerName || 'Ihre Buchhaltung')}</h2>
-        <p title="Einnahmen, Ausgaben und Gewinn zählen am Tag der Zahlung – wie in der Anlage EÜR. Eine im Zeitraum bezahlte Rechnung zählt also auch dann, wenn ihr Datum außerhalb liegt.">Einnahmen und Ausgaben nach Zahlungsdatum · ${c.klein ? 'Kleinunternehmer § 19 UStG' : c.db.settings.accountingBasis === 'soll' ? 'Umsatzsteuer nach Rechnungsdatum (Soll)' : 'Umsatzsteuer nach Zahlungseingang (Ist)'}</p>
+        <p title="Einnahmen, Ausgaben und Gewinn zählen am Tag der Zahlung, wie in der Anlage EÜR. Eine im Zeitraum bezahlte Rechnung zählt also auch dann, wenn ihr Datum außerhalb liegt.">Einnahmen und Ausgaben nach Zahlungsdatum · ${c.klein ? 'Kleinunternehmer § 19 UStG' : c.db.settings.accountingBasis === 'soll' ? 'Umsatzsteuer nach Rechnungsdatum (Soll)' : 'Umsatzsteuer nach Zahlungseingang (Ist)'}</p>
       </div>
       <div class="spacer"></div>
       ${scopeToggleHtml(store.db, period.from, period.to).__raw}

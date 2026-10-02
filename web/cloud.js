@@ -429,7 +429,7 @@ export class Cloud {
 
   async commit(db, onProgress = () => {}) {
     this.vault.assertUnlocked();
-    if (!this.pending) throw new Error('Kein laufender Abgleich – bitte erneut starten.');
+    if (!this.pending) throw new Error('Kein laufender Abgleich. Bitte erneut starten.');
     const be = this.be();
 
     if (this.pending.hadRemote) {

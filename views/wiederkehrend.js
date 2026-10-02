@@ -41,7 +41,7 @@ export async function faelligeAnbieten() {
     let fertig = false;
     const zeile = (e, i) => {
       const t = e.regel.template || {};
-      const grund = e.gesperrt ? 'festgeschrieben – wird übersprungen' : '';
+      const grund = e.gesperrt ? 'festgeschrieben, wird übersprungen' : '';
       return `<label class="attach" style="cursor:${grund ? 'default' : 'pointer'}">
         <input type="checkbox" data-i="${i}" ${grund ? 'disabled' : 'checked'}>
         <div class="name">${esc(t.description || '(ohne Beschreibung)')}
@@ -52,7 +52,7 @@ export async function faelligeAnbieten() {
     };
     const m = modal({
       title: `${liste.length === 1 ? 'Eine wiederkehrende Buchung ist' : `${int(liste.length)} wiederkehrende Buchungen sind`} fällig`,
-      body: `<p class="mt0 small muted">Angelegt wird, was angehakt ist – jede als eigene Buchung, die Sie danach wie jede
+      body: `<p class="mt0 small muted">Angelegt wird, was angehakt ist. Jede ist eine eigene Buchung, die Sie danach wie jede
         andere ändern oder stornieren können. Nicht Angehaktes wird übersprungen. Belege hängen Sie an die einzelne Buchung an.</p>
         <div style="max-height:52vh;overflow-y:auto">${liste.map(zeile).join('')}</div>`,
       foot: '<button class="btn" data-later>Später</button><button class="btn primary" data-go>Anlegen</button>',
@@ -114,7 +114,7 @@ export function regelTabelle() {
       },
     ],
     emptyTitle: 'Keine wiederkehrenden Buchungen',
-    emptyText: 'Beim Erfassen einer Buchung unter „Weitere Angaben → Wiederholen“ einen Turnus wählen – etwa für Miete, Telefon oder Software-Abos.',
+    emptyText: 'Beim Erfassen einer Buchung unter „Weitere Angaben → Wiederholen“ einen Turnus wählen, etwa für Miete, Telefon oder Software-Abos.',
     onRowClick: (r) => regelDialog(r),
     onRender: (el) => {
       el.querySelectorAll('[data-rec-edit]').forEach((b) => b.addEventListener('click', () => regelDialog(sel.recurringRule(b.dataset.recEdit))));
@@ -154,10 +154,10 @@ export function regelDialog(regel) {
         <div class="field"><label for="w_next">Nächste Buchung am</label><input type="date" id="w_next" value="${naechstesDatum(r) || ''}"></div>
         <div class="field"><label for="w_until">Endet am (freiwillig)</label><input type="date" id="w_until" value="${r.until || ''}"></div>
         <div class="field"><label for="w_account">Zahlungskonto</label>
-          <select id="w_account"><option value="">– keins –</option>${raw(sel.accounts().map((a) => `<option value="${esc(a.id)}" ${a.id === t.accountId ? 'selected' : ''}>${esc(a.name)}</option>`).join(''))}</select></div>
+          <select id="w_account"><option value="">Keins</option>${raw(sel.accounts().map((a) => `<option value="${esc(a.id)}" ${a.id === t.accountId ? 'selected' : ''}>${esc(a.name)}</option>`).join(''))}</select></div>
       </div>
       <label class="check"><input type="checkbox" id="w_paid" ${r.paid ? 'checked' : ''}> gleich als bezahlt anlegen (etwa bei Lastschrift oder Dauerauftrag)</label>
-      <label class="check mt8"><input type="checkbox" id="w_active" ${r.active !== false ? 'checked' : ''}> aktiv – fällige Buchungen werden angeboten</label>
+      <label class="check mt8"><input type="checkbox" id="w_active" ${r.active !== false ? 'checked' : ''}> aktiv (fällige Buchungen werden angeboten)</label>
       <p class="hint mt8">${klein ? 'Als Kleinunternehmer ohne Umsatzsteuer.' : `Umsatzsteuer wie in der Vorlage: ${t.vatRate ?? 0} %.`} Weitere Angaben der Vorlage
       (Kontakt, Notiz) stammen aus der ersten Buchung.</p>`,
     foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Speichern</button>',

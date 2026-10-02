@@ -111,7 +111,15 @@ async function boot() {
   const rm = await api.cloud.rueckmeldung?.().catch(() => null);
   if (rm?.fehler && !rm.abgebrochen) err('Anmeldung bei Google', rm.fehler);
   if (!status.exists) { renderSetup(); return; }
-  // Eben aus dem Programm heraus aktualisiert: weiter ohne Passwort.
+  // Eben aus dem Programm heraus aktualisiert: weiter ohne Passwort. Der
+  // Startbildschirm sagt schon vorher, was gerade geschieht.
+  if (status.fortsetzen) {
+    const gate = document.querySelector('.gate-card');
+    if (gate) {
+      gate.querySelector('h2').textContent = `Kontovia ${appInfo.version} ist installiert`;
+      gate.querySelector('.lead').textContent = 'Sie werden gleich angemeldet.';
+    }
+  }
   if (status.fortsetzen && await nachAktualisierung()) return;
   renderUnlock(rm?.zweck === 'verbinden' && !rm.fehler
     ? `Bei Google angemeldet als ${rm.email || 'Ihr Konto'}. Entsperren Sie Kontovia, um die Verbindung zu speichern.`
@@ -162,9 +170,9 @@ function neuigkeitenHinweis() {
   ohneNeuigkeiten = false;
   if (ueberspringen || vorher === appInfo.version) return;
   const v = VERSIONEN.find((e) => e.version === appInfo.version);
-  const text = (ebenAktualisiert ? 'Die Aktualisierung ist abgeschlossen, Sie sind weiterhin angemeldet. ' : '')
+  const text = (ebenAktualisiert ? 'Sie sind weiterhin angemeldet. ' : '')
     + (v ? `${v.titel}. ` : '') + 'Hier klicken für alle Neuigkeiten.';
-  toast(ebenAktualisiert ? `Kontovia ${appInfo.version} ist installiert` : `Neu in Kontovia ${appInfo.version}`, text, 'ok', 12000)
+  toast(ebenAktualisiert ? `Aktualisierung abgeschlossen: Version ${appInfo.version}` : `Neu in Kontovia ${appInfo.version}`, text, 'ok', 12000)
     ?.addEventListener('click', () => navigate('help', { tab: 'neu' }));
   ebenAktualisiert = false;
 }
@@ -237,13 +245,13 @@ function renderSetup() {
         <div><strong>${wartet === 'weiterleitung' ? 'Weiter zu Google …' : 'Warte auf die Anmeldung …'}</strong>
         <div class="small muted">${wartet === 'weiterleitung' ? 'Nach der Anmeldung kommen Sie hierher zurück.'
           : WEB ? 'Geben Sie den angezeigten Code bei Google ein.'
-            : 'Melden Sie sich im Browserfenster bei Google an – danach kommt Kontovia von selbst wieder nach vorn.'}</div></div>
+            : 'Melden Sie sich im Browserfenster bei Google an. Danach kommt Kontovia von selbst wieder nach vorn.'}</div></div>
         <button class="btn sm" id="g_abbrechen">Abbrechen</button></div>`;
     }
     return `<div class="signin-box mb16">
       <div><strong>Kontovia schon auf einem anderen Gerät?</strong>
-      <div class="small muted">Mit Google anmelden und Ihre Buchhaltung aus der Cloud laden – oder
-      eine neue gleich verschlüsselt in Ihrem Konto sichern. Geht auch später in den Einstellungen.</div></div>
+      <div class="small muted">Mit Google anmelden und Ihre Buchhaltung aus der Cloud laden, oder
+      eine neue gleich verschlüsselt in Ihrem Konto sichern. Das geht auch später in den Einstellungen.</div></div>
       <div class="stack" style="gap:4px;align-items:flex-end">
         <button class="btn" id="g_anmelden">${icon('key', 15).__raw} Mit Google anmelden</button>
         ${weiterleitung && mitCodeMoeglich ? '<button class="btn ghost sm" id="g_code">Stattdessen mit Code</button>' : ''}
@@ -304,10 +312,10 @@ function renderSetup() {
       ${WEB ? raw(`<p class="lead">Ihre Buchhaltung bleibt auf diesem Gerät, verschlüsselt mit
       Ihrem Passwort. Es gibt kein Benutzerkonto beim Hersteller und keine Telemetrie; Ihre
       Buchhaltung verlässt das Gerät nur, wenn Sie den Cloud-Abgleich einschalten. Zuerst ein
-      paar Angaben zu Ihrem Betrieb – alles später änderbar.</p>`) : raw(`<p class="lead">Ihre Buchhaltung bleibt auf diesem Rechner, verschlüsselt mit Ihrem
+      paar Angaben zu Ihrem Betrieb. Sie lassen sich später ändern.</p>`) : raw(`<p class="lead">Ihre Buchhaltung bleibt auf diesem Rechner, verschlüsselt mit Ihrem
       Passwort. Es gibt kein Benutzerkonto beim Hersteller und keine Telemetrie; ohne Ihre
       ausdrückliche Zustimmung baut Kontovia keine Verbindung auf. Zuerst ein paar Angaben
-      zu Ihrem Betrieb – alles später änderbar.</p>`)}
+      zu Ihrem Betrieb. Sie lassen sich später ändern.</p>`)}
       <div class="form-grid">
         <div class="field full"><label>Firma / Name des Betriebs</label><input id="f_companyName" value="${data.companyName}" placeholder="z. B. Musterbau GmbH oder Ihr Name"></div>
         <div class="field full"><label>Inhaber / Ansprechpartner</label><input id="f_ownerName" value="${data.ownerName}"></div>
@@ -321,22 +329,22 @@ function renderSetup() {
 
     () => html`
       <h2>Steuerliche Einstellungen</h2>
-      <p class="lead">Diese Weichen bestimmen, wie Kontovia rechnet. Wenn Sie
+      <p class="lead">Diese Einstellungen bestimmen, wie Kontovia rechnet. Wenn Sie
       unsicher sind: Die Voreinstellung passt für die meisten Selbstständigen und
       kleinen Betriebe. Die Anlage EÜR folgt immer dem Zahlungsfluss.</p>
       <div class="field">
         <label>Umsatzsteuer</label>
         <select id="f_taxMode">
-          <option value="regelbesteuerung" ${data.taxMode === 'regelbesteuerung' ? 'selected' : ''}>Regelbesteuerung – ich weise Umsatzsteuer aus</option>
-          <option value="kleinunternehmer" ${data.taxMode === 'kleinunternehmer' ? 'selected' : ''}>Kleinunternehmer nach § 19 UStG – keine Umsatzsteuer</option>
+          <option value="regelbesteuerung" ${data.taxMode === 'regelbesteuerung' ? 'selected' : ''}>Regelbesteuerung (ich weise Umsatzsteuer aus)</option>
+          <option value="kleinunternehmer" ${data.taxMode === 'kleinunternehmer' ? 'selected' : ''}>Kleinunternehmer nach § 19 UStG (keine Umsatzsteuer)</option>
         </select>
         <span class="hint">Als Kleinunternehmer rechnet Kontovia durchgehend mit Bruttobeträgen und blendet alle Umsatzsteuerfelder aus.</span>
       </div>
       <div class="field" id="f_vatBlock" ${data.taxMode === 'kleinunternehmer' ? 'hidden' : ''}>
         <label>Umsatzsteuer berechnen nach</label>
         <select id="f_accountingBasis">
-          <option value="ist" ${data.accountingBasis === 'ist' ? 'selected' : ''}>Zahlungseingang – Ist-Versteuerung (§ 20 UStG, auf Antrag)</option>
-          <option value="soll" ${data.accountingBasis === 'soll' ? 'selected' : ''}>Rechnungsdatum – Soll-Versteuerung (gesetzlicher Regelfall)</option>
+          <option value="ist" ${data.accountingBasis === 'ist' ? 'selected' : ''}>Zahlungseingang (Ist-Versteuerung, § 20 UStG, auf Antrag)</option>
+          <option value="soll" ${data.accountingBasis === 'soll' ? 'selected' : ''}>Rechnungsdatum (Soll-Versteuerung, gesetzlicher Regelfall)</option>
         </select>
         <span class="hint">Steht in Ihrem Steuerbescheid oder im Fragebogen zur steuerlichen Erfassung.
         Selbstständige und Betriebe bis 800.000 € Umsatz bekommen die Ist-Versteuerung meist auf Antrag.
@@ -358,7 +366,7 @@ function renderSetup() {
         <div class="field full">
           <label>Kontenrahmen für den DATEV-Export</label>
           <select id="f_chartOfAccounts">
-            <option value="SKR03" ${data.chartOfAccounts !== 'SKR04' ? 'selected' : ''}>SKR03 (Prozessgliederung – am weitesten verbreitet)</option>
+            <option value="SKR03" ${data.chartOfAccounts !== 'SKR04' ? 'selected' : ''}>SKR03 (Prozessgliederung, am weitesten verbreitet)</option>
             <option value="SKR04" ${data.chartOfAccounts === 'SKR04' ? 'selected' : ''}>SKR04 (Abschlussgliederung)</option>
           </select>
         </div>
@@ -367,8 +375,8 @@ function renderSetup() {
     () => html`
       <h2>Passwort festlegen</h2>
       <p class="lead">Ihre gesamte Buchhaltung wird mit diesem Passwort verschlüsselt.
-      Ohne das Passwort sind die Daten unwiederbringlich verloren – es gibt bewusst
-      keine Hintertür und keine Zurücksetzfunktion.</p>
+      Ohne das Passwort sind die Daten unwiederbringlich verloren. Es gibt keine
+      Hintertür und keine Zurücksetzfunktion.</p>
       <div class="field">
         <label>Passwort</label>
         ${passwordInput('f_pw1', { autocomplete: 'new-password' })}
@@ -381,8 +389,8 @@ function renderSetup() {
       </div>
       <div class="notice warn mt8">
         <strong>Bitte notieren Sie das Passwort an einem sicheren Ort.</strong>
-        Ein Passwortmanager oder ein Zettel im Safe – beides ist besser als Vertrauen
-        aufs Gedächtnis. Legen Sie außerdem regelmäßig Vollsicherungen an
+        Ein Passwortmanager oder ein Zettel im Safe ist besser, als sich aufs Gedächtnis
+        zu verlassen. Legen Sie außerdem regelmäßig Vollsicherungen an
         (Einstellungen → Sicherung und Speicherort${WEB ? '' : ' oder Datei → Vollsicherung erstellen'}).
       </div>
       <div class="field mt16">
@@ -523,7 +531,7 @@ function renderCloudLaden(st, { neu }) {
         <p class="tiny muted mt16" style="text-align:center">Die Belege kommen danach im Hintergrund nach.</p>
         <details class="forgot small mt8">
           <summary>Passwort vergessen?</summary>
-          <p>Ohne das Passwort lässt sich die Buchhaltung nicht öffnen – weder von Kontovia noch
+          <p>Ohne das Passwort lässt sich die Buchhaltung nicht öffnen, weder von Kontovia noch
           von Google. Ist sie auf einem anderen Gerät noch entsperrt, ändern Sie dort unter
           <em>Einstellungen → Sicherheit</em> das Passwort und gleichen ab; danach gilt hier das neue.</p>
         </details>
@@ -596,17 +604,17 @@ function renderUnlock(message = '') {
         <div class="err small mb16" id="unlockerr"></div>
         <button class="btn primary lg block" id="unlock">Entsperren</button>
         <p class="tiny muted mt16" style="text-align:center">
-          Die Entschlüsselung dauert bewusst rund eine Sekunde – das bremst
-          Angreifer beim Durchprobieren von Passwörtern erheblich aus.
+          Das Entschlüsseln dauert etwa eine Sekunde. Das bremst Angreifer,
+          die Passwörter durchprobieren.
         </p>
         <details class="forgot small mt8">
           <summary>Passwort vergessen?</summary>
-          <p>Ohne Passwort lässt sich der Tresor nicht öffnen – auch nicht vom Hersteller. Genau
-          das schützt Ihre Buchhaltung, wenn jemand die Datei in die Hände bekommt.</p>
+          <p>Ohne Passwort lässt sich der Tresor nicht öffnen, auch nicht vom Hersteller. Das
+          schützt Ihre Buchhaltung, falls jemand die Datei in die Hände bekommt.</p>
           <p>Haben Sie eine <strong>Vollsicherung (.kvbak)</strong>, deren Passwort Sie kennen:
           ${WEB
             ? raw('In den Einstellungen des Browsers die Website-Daten dieser Seite löschen, Kontovia neu laden, einen neuen Tresor anlegen und unter <em>Einstellungen → Sicherung wiederherstellen</em> einspielen.')
-            : raw('Den Datenordner umbenennen (etwa in „daten-alt“ – nicht löschen, falls Ihnen das Passwort doch noch einfällt), Kontovia neu starten, einen neuen Tresor anlegen und unter <em>Einstellungen → Sicherung wiederherstellen</em> einspielen.')}</p>
+            : raw('Den Datenordner umbenennen (zum Beispiel in „daten-alt“; nicht löschen, falls Ihnen das Passwort doch noch einfällt), Kontovia neu starten, einen neuen Tresor anlegen und unter <em>Einstellungen → Sicherung wiederherstellen</em> einspielen.')}</p>
           <p class="muted">Die automatischen Sicherungen sind mit dem Tresorpasswort verschlüsselt, das zu ihrer Zeit galt.</p>
           ${WEB ? '' : raw('<button type="button" class="btn sm" id="openData">Datenordner öffnen</button>')}
         </details>
@@ -740,7 +748,7 @@ function askUpdateConsent() {
       size: 'slim',
       body: html`
         <p class="mt0" style="line-height:1.6">Kontovia kann Sie darauf hinweisen, wenn eine neue
-        Fassung vorliegt, und sie auf Wunsch direkt installieren – Sie müssen dann nichts im
+        Fassung vorliegt, und sie auf Wunsch direkt installieren. Sie müssen dann nichts im
         Internet suchen.</p>
         <p style="line-height:1.6">Dafür wird beim Start und danach alle sechs Stunden eine kleine
         Versionsdatei abgerufen. Der Betreiber des Servers sieht dabei Ihre IP-Adresse. Angaben zu
@@ -975,8 +983,8 @@ api.on.locked(async ({ reason }) => {
   clearDb();
   const texts = {
     inaktiv: 'Kontovia wurde wegen Inaktivität gesperrt.',
-    standby: 'Der Rechner ging in den Ruhezustand – Kontovia wurde gesperrt.',
-    bildschirmsperre: 'Der Bildschirm wurde gesperrt – Kontovia wurde ebenfalls gesperrt.',
+    standby: 'Der Rechner ging in den Ruhezustand, deshalb wurde Kontovia gesperrt.',
+    bildschirmsperre: 'Der Bildschirm wurde gesperrt, deshalb wurde auch Kontovia gesperrt.',
     hintergrund: 'Kontovia war einige Minuten im Hintergrund und wurde deshalb gesperrt.',
     'anderes-fenster': 'Kontovia wurde in einem anderen Fenster geöffnet und hier gesperrt. Laden Sie diese Seite neu, um hier weiterzuarbeiten.',
     aktualisierung: 'Die neue Fassung wird geladen …',
@@ -1051,14 +1059,14 @@ function showAbout() {
     title: 'Über Kontovia',
     size: 'slim',
     body: html`
-      <p class="mt0"><strong>Kontovia ${appInfo.version}</strong> – Buchhaltung, die auf Ihrem Rechner bleibt.</p>
+      <p class="mt0"><strong>Kontovia ${appInfo.version}</strong>: Buchhaltung, die auf Ihrem Rechner bleibt.</p>
       <table class="data compact mt16">
         <tbody>
           <tr><td class="muted">Datenordner</td><td class="tiny">${appInfo.dataDir || '–'}</td></tr>
           <tr><td class="muted">Verschlüsselung</td><td>AES-256, der Schlüssel entsteht aus Ihrem Passwort</td></tr>
         </tbody>
       </table>
-      <p class="small muted mt16">Kontovia ersetzt keine Steuerberatung. Die Zuordnung zu
+      <p class="small muted mt16">Kontovia ersetzt keine Steuerberatung. Die Zuordnungen zu
       EÜR-Zeilen, Kennzahlen und Konten sind Vorschläge, die Sie prüfen sollten.</p>`,
     foot: `<button class="btn left" data-neu>${icon('history', 15).__raw} Neuigkeiten</button>
            <button class="btn" data-recht>${icon('file', 15).__raw} Rechtliches und Lizenzen</button>

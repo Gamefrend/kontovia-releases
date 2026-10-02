@@ -59,7 +59,7 @@ function draw(root) {
     <div class="notice mb16">
       <strong>Zur Einordnung.</strong> Kontovia übermittelt nichts an die Finanzverwaltung.
       Sie bekommen hier fertig aufbereitete Werte samt Zeilen- und Kennzahlenangabe, die Sie
-      in „Mein ELSTER“ nur noch eintragen – sowie Dateien, die eine Steuerkanzlei direkt
+      in „Mein ELSTER“ nur noch eintragen, dazu Dateien, die eine Steuerkanzlei direkt
       einlesen kann. Die Werte entstehen nach festen Rechenregeln, nicht durch künstliche
       Intelligenz; die Verantwortung für die Erklärung bleibt bei Ihnen.
       <a data-recht>Was das rechtlich bedeutet</a>
@@ -68,7 +68,7 @@ function draw(root) {
     ${hidden.count ? raw(`<div class="notice warn mb16">
       <strong>${hidden.count === 1 ? '1 nicht gelistete Buchung' : `${int(hidden.count)} nicht gelistete Buchungen`} im Zeitraum</strong>
       (Einnahmen ${esc(money(hidden.income))} €, Ausgaben ${esc(money(hidden.expense))} €) sind in keinem dieser
-      Exporte enthalten – weder in Zahlen noch in Journal, DATEV-Stapel, Prüfungsordner oder Belegen.
+      Exporte enthalten, weder in Zahlen noch im Journal, im DATEV-Stapel, im Prüfungsordner oder in den Belegen.
       Nur der Gesamtexport „Alles (JSON)“ enthält den vollständigen Bestand.
     </div>`) : ''}
 
@@ -86,7 +86,7 @@ function draw(root) {
       ${raw(card({
         title: 'Vollständiges Berichtspaket als PDF', sub: 'ein Dokument',
         body: `Gewinn- und Verlustrechnung, Anlage EÜR${klein ? '' : ', Umsatzsteuer-Voranmeldung'},
-          Vermögensübersicht, offene Posten und das komplette Buchungsjournal –
+          Vermögensübersicht, offene Posten und das komplette Buchungsjournal,
           hintereinander in einer PDF-Datei, mit Seitenzahlen und Ihren Firmendaten im Kopf.`,
         button: `<button class="btn primary" id="btnPackPdf">${icon('pdf', 16).__raw} PDF erstellen</button>
                  <button class="btn" id="btnPackPdfPreview">${icon('eye', 16).__raw} Vorschau</button>`,
@@ -104,7 +104,7 @@ function draw(root) {
       ${raw(card({
         title: 'Betriebsprüfung (GoBD)', sub: 'Datenträgerüberlassung Z3',
         body: `Alle Daten in maschinell auswertbarer Form mit beschreibender <code>index.xml</code>
-          nach dem GDPdU-Beschreibungsstandard – so, wie es eine Prüferin oder ein Prüfer
+          nach dem GDPdU-Beschreibungsstandard, so wie es eine Prüferin oder ein Prüfer
           erwartet. Enthält auch das verkettete Änderungsjournal als Nachweis der
           Unveränderbarkeit.`,
         button: `<button class="btn primary" id="btnGobd">${icon('archive', 16).__raw} Prüfungsordner</button>`,
@@ -121,7 +121,7 @@ function draw(root) {
 
       ${raw(card({
         title: 'Rohdaten', sub: 'CSV und JSON',
-        body: `Einzelne Tabellen für die Weiterverarbeitung in Excel oder LibreOffice –
+        body: `Einzelne Tabellen für die Weiterverarbeitung in Excel oder LibreOffice:
           die gelisteten Buchungen und die Kontakte. Damit lassen sich eigene Unterlagen auch
           selbst zusammenstellen. Der JSON-Export enthält den kompletten Bestand, falls Sie die
           Daten je in ein anderes Programm übernehmen wollen.`,
@@ -244,7 +244,7 @@ function wire(root, db, rows) {
   $('#btnAttach', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const yes = await confirmDialog({
       title: 'Belege unverschlüsselt ausleiten?',
-      text: 'Die Dateien werden im Zielordner im Klartext abgelegt. Wählen Sie einen Ort, der ausreichend geschützt ist – kein ungesicherter Cloud-Ordner und kein USB-Stick, der herumliegt.',
+      text: 'Die Dateien werden im Zielordner im Klartext abgelegt. Wählen Sie einen Ort, der ausreichend geschützt ist. Ein ungesicherter Cloud-Ordner oder ein USB-Stick, der herumliegt, ist dafür nicht geeignet.',
       confirmLabel: 'Verstanden, exportieren',
     });
     if (!yes) return;
@@ -288,7 +288,7 @@ function wire(root, db, rows) {
   $('#btnJson', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const yes = await confirmDialog({
       title: 'Unverschlüsselten Gesamtexport erstellen?',
-      text: 'Die JSON-Datei enthält Ihre komplette Buchhaltung im Klartext – ohne Belege, aber mit allen Beträgen, Kontakten und Notizen. Für eine Sicherung nehmen Sie besser die verschlüsselte Vollsicherung unter Einstellungen.',
+      text: 'Die JSON-Datei enthält Ihre komplette Buchhaltung im Klartext, ohne Belege, aber mit allen Beträgen, Kontakten und Notizen. Für eine Sicherung nehmen Sie besser die verschlüsselte Vollsicherung unter Einstellungen.',
       confirmLabel: 'Trotzdem exportieren', danger: true,
     });
     if (!yes) return;
@@ -352,7 +352,7 @@ function datevNumbersDialog(db, einzeln) {
         <div class="field"><label>Beraternummer</label><input id="d_berater" inputmode="numeric" value="${db.settings.datevBerater || ''}" placeholder="1001 bis 9999999"></div>
         <div class="field"><label>Mandantennummer</label><input id="d_mandant" inputmode="numeric" value="${db.settings.datevMandant || ''}" placeholder="1 bis 99999"></div>
         ${klein ? '' : raw(`<label class="check"><input type="checkbox" id="d_bu" ${db.settings.datevSteuerschluessel ? 'checked' : ''}>
-          Steuerschlüssel mitgeben (9/8 Vorsteuer, 3/2 Umsatzsteuer) – nur für Konten ohne Automatik; vorher mit der Kanzlei abstimmen</label>`)}
+          Steuerschlüssel mitgeben (9/8 Vorsteuer, 3/2 Umsatzsteuer). Das ist nur für Konten ohne Automatik gedacht; vorher mit der Kanzlei abstimmen</label>`)}
         <label class="check"><input type="checkbox" id="d_save" checked> Angaben für das nächste Mal merken</label>
         <div class="err small mt8" id="d_err" role="alert"></div>`,
       foot: `<button class="btn" data-no>Abbrechen</button>
@@ -366,7 +366,7 @@ function datevNumbersDialog(db, einzeln) {
       const mandantNr = wert('#d_mandant');
       const steuerschluessel = !!m.root.querySelector('#d_bu')?.checked;
       if (!X.datevNumbersValid(beraterNr, mandantNr)) {
-        m.root.querySelector('#d_err').textContent = 'Beraternummer 1001 bis 9999999, Mandantennummer 1 bis 99999 – nur Ziffern.';
+        m.root.querySelector('#d_err').textContent = 'Beraternummer 1001 bis 9999999, Mandantennummer 1 bis 99999, nur Ziffern.';
         return;
       }
       if (m.root.querySelector('#d_save').checked) {

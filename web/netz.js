@@ -72,7 +72,7 @@ export async function request(url, opts = {}) {
         received += value.length;
         if (received > maxBytes) {
           ctrl.abort();
-          throw new Error('Antwort ist unerwartet groß – abgebrochen.');
+          throw new Error('Die Antwort ist unerwartet groß und wurde abgebrochen.');
         }
         chunks.push(value);
         if (onProgress) onProgress(received, total);

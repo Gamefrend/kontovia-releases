@@ -466,6 +466,19 @@ hr.sep { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .gate .forgot summary { cursor: pointer; color: var(--accent); text-align: center; list-style-position: inside; }
 .gate .forgot p { line-height: 1.55; color: var(--text-2); margin: 8px 0; }
 
+/* Aktualisierung: Schritte und das letzte Bild vor dem Neustart */
+.upd-steps { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.upd-steps li { display: flex; align-items: center; gap: 9px; color: var(--muted); }
+.upd-steps li::before { content: ''; width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--border-strong); flex: none; }
+.upd-steps li.done { color: var(--text-2); }
+.upd-steps li.done::before { background: var(--pos); border-color: var(--pos); }
+.upd-steps li.now { color: var(--text); font-weight: 600; }
+.upd-steps li.now::before { border-color: var(--accent); animation: pulse 1.2s infinite; }
+.upd-vollbild { position: fixed; inset: 0; z-index: 500; animation: fade .2s ease; }
+.gate.upd-vollbild p.lead { margin-bottom: 18px; }
+.upd-warten .bar-fill { width: 35%; background: var(--accent); animation: upd-lauf 1.5s ease-in-out infinite; }
+@keyframes upd-lauf { from { margin-left: -35%; } to { margin-left: 100%; } }
+
 /* Passwortfeld mit Anzeigen-Knopf und Hinweis auf die Feststelltaste */
 .pw-wrap { position: relative; }
 .pw-wrap input { padding-right: 38px; }

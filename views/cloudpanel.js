@@ -39,14 +39,14 @@ export async function renderCloudCard(root) {
       <div class="card-head">
         <h3>${icon('archive', 16)} Cloud-Abgleich und Sicherung</h3>
         <div class="spacer"></div>
-        ${status.linked ? raw(`<span class="badge pos">verbunden${status.email ? ' – ' + esc(status.email) : ''}</span>`)
+        ${status.linked ? raw(`<span class="badge pos">verbunden${status.email ? ': ' + esc(status.email) : ''}</span>`)
           : raw('<span class="badge">nicht verbunden</span>')}
       </div>
       <div class="card-body">
         <div class="notice mb16">
           <strong>Was dabei übertragen wird.</strong> Ausschließlich Ihre bereits
-          verschlüsselte Buchhaltung. Ohne Ihr Passwort lässt sie sich nicht lesen –
-          weder von Google noch vom Hersteller von Kontovia.
+          verschlüsselte Buchhaltung. Ohne Ihr Passwort lässt sie sich nicht lesen, weder
+          von Google noch vom Hersteller von Kontovia.
           ${status.provider === 'drive' ? raw(`Sie liegt in einem versteckten, für Kontovia
           reservierten Bereich Ihres Google Drive; auf Ihre übrigen Dateien hat Kontovia
           keinen Zugriff. Der Platz zählt auf Ihren Google-Speicher, Gebühren entstehen keine.`)
@@ -66,14 +66,14 @@ export async function renderCloudCard(root) {
           </div>
           <p class="small muted mt16 mb0">${WEB && status.weiterleitung
             ? `Sie werden zu Google weitergeleitet und kommen nach der Anmeldung hierher zurück. Kontovia
-          ist dann gesperrt – einmal mit Ihrem Passwort entsperren, und die Verbindung steht.`
+          ist dann gesperrt. Entsperren Sie es einmal mit Ihrem Passwort, dann steht die Verbindung.`
             : WEB
-              ? `Kontovia zeigt einen kurzen Code, den Sie auf google.com/device eingeben – auf
+              ? `Kontovia zeigt einen kurzen Code, den Sie auf google.com/device eingeben, auf
           diesem oder einem anderen Gerät. Dort sehen Sie in der Adresszeile, dass Sie Ihr
           Passwort bei Google eingeben und nicht bei Kontovia.`
               : `Es öffnet sich Ihr normaler Browser mit der Anmeldeseite von Google; danach kommt
           Kontovia von selbst wieder nach vorn. Ein Anmeldefenster in Kontovia selbst lässt Google
-          nicht zu – im Browser sehen Sie in der Adresszeile, wo Sie Ihr Passwort eingeben.`} Ihre Buchhaltung bleibt dabei, wie sie ist. Ist das
+          nicht zu. Im Browser sehen Sie in der Adresszeile, wo Sie Ihr Passwort eingeben.`} Ihre Buchhaltung bleibt dabei, wie sie ist. Ist das
           Konto noch leer, wird sie hochgeladen; liegt dort schon eine, fragt Kontovia, welche gelten soll.</p>`) : ''}
 
         ${status.linked ? raw(`
@@ -114,7 +114,7 @@ export async function renderCloudCard(root) {
           <p class="small muted mt0">Einmal am Tag legt der Abgleich zusätzlich eine Kopie des
           verschlüsselten Tresors in Ihrem Konto ab, außerdem vor jedem Überschreiben und jeder
           Wiederherstellung. Die ${SICHERUNGEN_BEHALTEN} neuesten bleiben erhalten. So lässt sich
-          auch ein Stand zurückholen, den alle Geräte schon übernommen haben – etwa nach einem
+          auch ein Stand zurückholen, den alle Geräte schon übernommen haben, etwa nach einem
           versehentlichen Löschen.</p>
           ${status.cloudBackupError ? `<div class="notice warn mb8 small">Die letzte Sicherung in der Cloud ist fehlgeschlagen: ${esc(status.cloudBackupError)}</div>` : ''}
           <div class="row wrap" style="gap:8px">
@@ -266,8 +266,8 @@ async function openCloudBackups(root) {
   }
   body.innerHTML = html`
     <p class="mt0 small muted">Eine Sicherung ersetzt beim Wiederherstellen den Bestand dieses Geräts;
-    der nächste Abgleich bringt ihn zu Ihren anderen Geräten. Der jetzige Stand wird vorher gesichert –
-    hier in der Liste und im Sicherungsordner dieses Geräts.</p>
+    der nächste Abgleich bringt ihn zu Ihren anderen Geräten. Der jetzige Stand wird vorher
+    gesichert, und zwar hier in der Liste und im Sicherungsordner dieses Geräts.</p>
     <table class="data compact">
       <thead><tr><th>Zeitpunkt</th><th>Anlass</th><th class="num">Größe</th><th></th></tr></thead>
       <tbody>${raw(liste.map((s, i) => `<tr>
@@ -299,7 +299,7 @@ async function restoreCloudBackup(root, s) {
       // Die Sicherung stammt aus einem anderen Tresor, etwa dem Stand vor „Cloud überschreiben“.
       const pw = await askPassword({
         title: 'Passwort dieser Sicherung',
-        text: 'Diese Sicherung gehört zu einer anderen Buchhaltung als der auf diesem Gerät – etwa dem Stand, der vor einem „Cloud überschreiben“ dort lag. '
+        text: 'Diese Sicherung gehört zu einer anderen Buchhaltung als der auf diesem Gerät, etwa dem Stand, der vor einem „Cloud überschreiben“ dort lag. '
           + 'Mit ihrem Passwort wird sie zur Buchhaltung dieses Geräts; die jetzige kommt vorher in den Sicherungsordner.',
         label: 'Passwort', confirmLabel: 'Laden',
       });
@@ -380,13 +380,13 @@ async function decideForeign(root, begin) {
       <h4 style="margin:20px 0 6px;font-size:14px">Wie möchten Sie weitermachen?</h4>
       <div class="stack" style="gap:12px">
         <div class="notice">
-          <strong>Cloud-Stand übernehmen</strong> – der empfohlene Weg, wenn dieses Gerät neu
+          <strong>Cloud-Stand übernehmen</strong> ist der empfohlene Weg, wenn dieses Gerät neu
           dazukommt. Ihr hiesiger Tresor wird vorher gesichert, dann durch den Cloud-Stand
           ersetzt. Danach melden Sie sich mit dem Passwort des anderen Geräts an, und ab da
           arbeiten beide Geräte auf demselben Bestand.
         </div>
         <div class="notice">
-          <strong>Cloud überschreiben</strong> – nur, wenn der Cloud-Stand veraltet oder ein
+          <strong>Cloud überschreiben</strong> brauchen Sie nur, wenn der Cloud-Stand veraltet oder ein
           Fehlversuch war. Was dort liegt, wird vorher als Sicherung abgelegt und lässt sich
           unter <em>Sicherungen ansehen</em> mit seinem Passwort zurückholen.
         </div>
@@ -492,7 +492,7 @@ export function openConflicts() {
     body: html`
       <p class="mt0 small muted">Ein Konflikt entsteht, wenn derselbe Datensatz auf zwei
       Geräten unterschiedlich geändert wurde. Kontovia behält die zuletzt bearbeitete
-      Fassung und legt die andere hier ab – verloren geht nichts.</p>
+      Fassung und legt die andere hier ab. Es geht nichts verloren.</p>
       ${list.length ? table({
         id: 'konflikte',
         cls: 'data compact',
@@ -619,9 +619,29 @@ export async function renderUpdateCard(root) {
 const still = (info) => !WEB && info.modus === 'still';
 const knopf = (info) => (WEB || still(info) ? 'Jetzt aktualisieren' : 'Herunterladen und installieren');
 
+/** Dauer des Neustarts in Worten. Gemessen gut zehn Sekunden, auf langsameren Rechnern mehr. */
+const NEUSTART_DAUER = 'rund einer halben Minute';
+
+/**
+ * Was vor dem Klick gesagt wird: Wer weiß, dass das Fenster verschwindet und
+ * wann es wiederkommt, hält es nicht für einen Absturz.
+ */
+function vorabText(info) {
+  if (WEB) {
+    return 'Kontovia lädt die neue Version, prüft sie und lädt sich dann neu. Ihre Daten bleiben, wie sie sind. Danach geben Sie einmal Ihr Passwort ein.';
+  }
+  if (still(info)) {
+    return `Kontovia lädt die neue Version herunter, prüft sie und installiert sie von selbst. Das Fenster schließt sich dabei und öffnet sich nach ${NEUSTART_DAUER} wieder. `
+      + (info.angemeldetBleiben ? 'Sie bleiben angemeldet. ' : 'Danach geben Sie einmal Ihr Passwort ein. ')
+      + 'Ihre Daten bleiben, wie sie sind.'
+      + (info.admin ? ' Weil Kontovia für alle Benutzer dieses Rechners installiert ist, fragt Windows zwischendurch nach Administratorrechten.' : '');
+  }
+  return 'Kontovia lädt das Installationsprogramm herunter und prüft es. Danach schließt sich Kontovia, und der Installationsassistent öffnet sich. Ihre Daten bleiben, wie sie sind.';
+}
+
 /**
  * Ältere Versionshinweise waren für den Editor von Hand umbrochen. Im Fenster
- * bricht der Text selbst um – sonst stehen Satzreste eingerückt auf eigenen
+ * bricht der Text selbst um, sonst stehen Satzreste eingerückt auf eigenen
  * Zeilen. Absätze (Leerzeile) und Aufzählungspunkte bleiben.
  */
 const versionshinweise = (text) => String(text || '')
@@ -630,8 +650,8 @@ const versionshinweise = (text) => String(text || '')
   .replace(/^[*-] /gm, '• ');
 
 /**
- * Zeigt die gefundene Fassung als eigenes Fenster – der Weg, der aus der
- * Seitenleiste und aus dem Hinweis beim Start führt. Die Kennungen `uGo` und
+ * Zeigt die gefundene Fassung als eigenes Fenster, der Weg aus der
+ * Seitenleiste und aus dem Hinweis beim Start. Die Kennungen `uGo` und
  * `uProgress` sind dieselben wie in der Karte unter „Einstellungen“, damit
  * `runUpdate` beide Wege ohne Sonderfall bedienen kann.
  */
@@ -644,11 +664,7 @@ export function openUpdateDialog(info) {
       <p class="mt0">Sie verwenden Version ${info.current}.
       ${info.released ? raw(`Die neue Fassung wurde am ${esc(fmtDate(String(info.released).slice(0, 10)))} veröffentlicht.`) : ''}</p>
       ${info.notes ? raw(`<div class="notice mt16" style="white-space:pre-wrap">${esc(versionshinweise(info.notes))}</div>`) : ''}
-      <p class="small muted mt16">${WEB
-        ? 'Kontovia lädt die neue Version und prüft, dass sie vollständig und unverändert angekommen ist. Ihre Buchhaltung bleibt dabei unberührt.'
-        : still(info)
-          ? `Kontovia lädt die neue Version herunter, prüft, dass sie unverändert angekommen ist, und installiert sie ohne weitere Fragen. Danach startet Kontovia von selbst neu${info.angemeldetBleiben ? ' – Sie bleiben angemeldet' : ''}. Ihre Buchhaltung bleibt dabei unberührt.`
-          : 'Kontovia lädt das Installationsprogramm herunter und prüft, dass es unverändert angekommen ist. Ihre Buchhaltung bleibt dabei unberührt.'}</p>
+      <p class="small muted mt16">${vorabText(info)}</p>
       <div id="uProgress" class="mt8"></div>`,
     foot: `<button class="btn" data-later>Später erinnern</button>
            <button class="btn primary" id="uGo">${icon('export', 15).__raw} ${knopf(info)}</button>`,
@@ -690,9 +706,10 @@ export async function checkForUpdate(box, { silent = false } = {}) {
   if (box) {
     box.innerHTML = html`
       <div class="notice warn">
-        <strong>Version ${info.version} ist verfügbar</strong> – Sie haben ${info.current}.
+        <strong>Version ${info.version} ist verfügbar.</strong> Sie haben Version ${info.current}.
         ${info.released ? raw(`<span class="muted"> Veröffentlicht am ${esc(fmtDate(String(info.released).slice(0, 10)))}.</span>`) : ''}
         ${info.notes ? raw(`<div class="mt8" style="white-space:pre-wrap">${esc(versionshinweise(info.notes))}</div>`) : ''}
+        <p class="small muted mt16 mb0">${vorabText(info)}</p>
         <div class="row mt16" style="gap:8px">
           <button class="btn primary" id="uGo">${icon('export', 15)} ${knopf(info)}</button>
           <span class="muted small">${bytes(info.size)}</span>
@@ -704,56 +721,93 @@ export async function checkForUpdate(box, { silent = false } = {}) {
   return info;
 }
 
-async function runUpdate(info, box) {
-  const yes = await confirmDialog(WEB ? {
-    title: `Auf Version ${info.version} wechseln?`,
-    text: 'Kontovia lädt die neue Version, prüft sie und lädt sich dann neu. Ungespeicherte Änderungen werden vorher gesichert; danach melden Sie sich wieder mit Ihrem Passwort an.',
-    confirmLabel: 'Aktualisieren',
-  } : still(info) ? {
-    title: `Auf Version ${info.version} aktualisieren?`,
-    text: `Kontovia lädt die neue Version herunter, prüft sie und installiert sie. Dafür schließt sich Kontovia kurz und startet danach von selbst wieder${info.angemeldetBleiben
-      ? ' – Sie bleiben angemeldet und müssen Ihr Passwort nicht erneut eingeben' : ''}. Ungespeicherte Änderungen werden vorher gesichert.${info.admin
-      ? ' Weil Kontovia für alle Benutzer dieses Rechners installiert ist, fragt Windows dabei nach Administratorrechten.' : ''}`,
-    confirmLabel: 'Aktualisieren',
-  } : {
-    title: `Version ${info.version} installieren?`,
-    text: 'Kontovia lädt das Installationsprogramm herunter, prüft es und startet es dann. Kontovia wird dabei beendet – ungespeicherte Änderungen werden vorher gesichert.',
-    confirmLabel: 'Herunterladen',
-  });
-  if (!yes) return;
+/** Die Schritte des Ablaufs, damit sichtbar bleibt, wo man gerade ist. */
+function schritte(info, aktiv) {
+  const namen = WEB
+    ? ['Herunterladen', 'Prüfen', 'Neu laden']
+    : still(info)
+      ? ['Herunterladen', 'Prüfen', 'Installieren und neu starten']
+      : ['Herunterladen', 'Prüfen', 'Installationsprogramm starten'];
+  return `<ol class="upd-steps">${namen.map((n, i) => `<li class="${i < aktiv ? 'done' : i === aktiv ? 'now' : ''}">${n}</li>`).join('')}</ol>`;
+}
 
+/**
+ * Das letzte Bild vor dem Neustart. Es füllt das ganze Fenster, damit nichts
+ * mehr anzuklicken ist, und sieht aus wie der Startbildschirm, der nach dem
+ * Neustart folgt: Das Fenster verschwindet, kommt wieder, und beide Male steht
+ * dasselbe Logo da.
+ */
+function neustartBild(info) {
+  const text = WEB
+    ? `Version ${esc(info.version)} ist geladen. Die Seite lädt sich gleich neu. Danach geben Sie einmal Ihr Passwort ein.`
+    : `Version ${esc(info.version)} wird installiert. Dieses Fenster schließt sich gleich und öffnet sich nach ${NEUSTART_DAUER} von selbst wieder.
+       ${info.angemeldetBleiben ? 'Sie bleiben angemeldet.' : 'Danach geben Sie einmal Ihr Passwort ein.'}
+       Bitte starten Sie Kontovia in der Zeit nicht selbst.${info.admin ? ' Windows fragt eventuell nach Administratorrechten.' : ''}`;
+  const o = document.createElement('div');
+  o.className = 'gate upd-vollbild';
+  o.setAttribute('role', 'alert');
+  o.innerHTML = `<div class="gate-card">
+      <div class="gate-logo">K</div>
+      <h2>${WEB ? 'Kontovia wird neu geladen' : 'Kontovia wird aktualisiert'}</h2>
+      <p class="lead">${text}</p>
+      <div class="bar-track upd-warten"><div class="bar-fill"></div></div>
+      ${schritte(info, 2)}
+    </div>`;
+  document.getElementById('overlays').append(o);
+  return o;
+}
+
+async function runUpdate(info, box) {
   const btn = box.querySelector('#uGo');
   const prog = box.querySelector('#uProgress');
   btn.disabled = true;
+  // Wer das Fenster jetzt vertagt, bricht den Vorgang nicht ab: Er läuft hier
+  // weiter und würde Kontovia unerwartet neu starten. Deshalb ist der Knopf aus.
+  const spaeter = box.querySelector('[data-later]');
+  if (spaeter) spaeter.disabled = true;
+
+  const zeige = (aktiv, inhalt) => { prog.innerHTML = schritte(info, aktiv) + inhalt; };
   const balken = (received, total) => {
     const pct = total ? Math.min(100, Math.round((received / total) * 100)) : 0;
-    prog.innerHTML = `<div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:var(--accent)"></div></div>
-      <div class="tiny muted mt8">${received ? bytes(received) : 'Verbindung wird aufgebaut …'}${total && received ? ` von ${bytes(total)} · ${pct} %` : ''}</div>`;
+    // Voll angekommen: Jetzt wird die Prüfsumme gerechnet, der Server meldet erst danach.
+    if (total && received >= total) {
+      zeige(1, '<div class="tiny muted mt8">Die Datei wird geprüft …</div>');
+      return;
+    }
+    zeige(0, `<div class="bar-track mt8"><div class="bar-fill" style="width:${pct}%;background:var(--accent)"></div></div>
+      <div class="tiny muted mt8">${received ? bytes(received) : 'Verbindung wird aufgebaut …'}${total && received ? ` von ${bytes(total)} · ${pct} %` : ''}</div>`);
   };
   balken(0, 0);
-  // Im Fenster stehen darüber die Versionshinweise – der Fortschritt soll trotzdem zu sehen sein.
+  // Im Fenster stehen darüber die Versionshinweise, der Fortschritt soll trotzdem zu sehen sein.
   prog.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   // Die Größe aus der Versionsdatei gilt; der Hauptprozess meldet sie mit.
   const off = api.on.updateProgress((p) => balken(p.received, p.total || info.size || 0));
 
+  let bild = null;
   try {
     if (store.dirty) await saveNow();
     const file = await api.update.download(info);
     off();
-    prog.innerHTML = WEB
-      ? '<div class="notice ok">Alles vollständig angekommen. Kontovia wird neu geladen …</div>'
-      : still(info)
-        ? `<div class="notice ok">Geprüft und vollständig. Kontovia schließt sich jetzt, installiert Version ${esc(info.version)} und
-           startet danach von selbst wieder – meist in weniger als einer Minute. Bitte öffnen Sie Kontovia in der Zeit nicht selbst.</div>`
-        : '<div class="notice ok">Geprüft und vollständig. Das Installationsprogramm wird gestartet …</div>';
+    // Während des Ladens vertagt oder weggeklickt: nichts mehr gegen den Willen starten.
+    if (!box.isConnected) {
+      toast('Update heruntergeladen', 'Es wurde noch nicht installiert. Sie finden es weiterhin unter „Version verfügbar“.', 'warn', 8000);
+      return;
+    }
     // Was während des Downloads noch eingetragen wurde, kommt mit.
     if (store.dirty) await saveNow();
-    // Einen Moment zum Lesen, bevor sich das Fenster schließt.
-    if (still(info)) await new Promise((r) => setTimeout(r, 2500));
+    if (WEB || still(info)) {
+      bild = neustartBild(info);
+      // Einen Moment zum Lesen, bevor sich das Fenster schließt.
+      await new Promise((r) => setTimeout(r, WEB ? 1200 : 2500));
+    } else {
+      zeige(2, '<div class="notice ok mt8">Geprüft und vollständig. Das Installationsprogramm wird gestartet, und Kontovia schließt sich dabei.</div>');
+    }
     await api.update.install(file.path);
   } catch (e) {
     off();
+    bild?.remove();
     btn.disabled = false;
+    if (spaeter) spaeter.disabled = false;
     prog.innerHTML = html`<div class="notice danger">${e.message}</div>`;
   }
 }

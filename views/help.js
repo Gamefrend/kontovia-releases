@@ -40,11 +40,11 @@ function anleitung(root) {
         <h3 class="mt0">In fünf Minuten startklar</h3>
         <ol>
           <li><strong>Konto anlegen.</strong> Unter <a data-go="master">Stammdaten → Zahlungskonten</a> tragen Sie
-              Ihr Geschäftskonto mit dem Anfangsbestand ein – dem Saldo an dem Tag, ab dem Sie
-              mit Kontovia buchen. Sonst stimmen die Kontostände nicht.</li>
+              Ihr Geschäftskonto mit dem Anfangsbestand ein. Das ist der Kontostand an dem Tag,
+              ab dem Sie mit Kontovia buchen. Sonst stimmen die Kontostände nicht.</li>
           <li><strong>Erste Ausgabe erfassen.</strong> <kbd>${MOD}</kbd>+<kbd>N</kbd> öffnet den Dialog.
-              Beschreibung, Datum, Kategorie, Betrag – fertig. Den Beleg ziehen Sie einfach
-              per Maus ins Fenster.</li>
+              Beschreibung, Datum, Kategorie, Betrag, fertig. Den Beleg ziehen Sie einfach
+              mit der Maus ins Fenster.</li>
           <li><strong>Rechnungen stellen.</strong> Eine Einnahme mit gesetzter Fälligkeit und ohne
               Zahldatum gilt als offene Forderung und taucht in der Übersicht und im Kalender auf.</li>
           <li><strong>Auswerten.</strong> Unter <a data-go="reports">Auswertungen</a> sehen Sie Gewinn,
@@ -55,15 +55,16 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Die zwei Weichen, die alles bestimmen</h3>
+        <h3 class="mt0">Zwei Einstellungen, auf die es ankommt</h3>
         <p><strong>Zahlungsfluss oder Rechnungsdatum.</strong> In der Einnahmen-Überschuss-Rechnung
-        zählt eine Buchung erst dann, wenn das Geld tatsächlich geflossen ist (§ 11 EStG).
-        Eine im Dezember gestellte, im Januar bezahlte Rechnung gehört also ins neue Jahr – das gilt
-        für die Anlage EÜR immer, und genauso zählen Übersicht, Buchungsliste und Gewinn &amp; Verlust:
-        Eine im Zeitraum bezahlte Rechnung steht dort auch dann, wenn ihr Datum außerhalb liegt. Bei der Umsatzsteuer gibt es die Wahl: Nach dem Gesetz entsteht sie
-        mit der Leistung, also zum Rechnungsdatum (Soll-Versteuerung); auf Antrag nach § 20 UStG erst
-        mit dem Zahlungseingang (Ist-Versteuerung). Was für Sie gilt, steht im Fragebogen zur
-        steuerlichen Erfassung oder im Bescheid.
+        zählt eine Buchung erst, wenn das Geld geflossen ist (§ 11 EStG).
+        Eine im Dezember gestellte und im Januar bezahlte Rechnung gehört also ins neue Jahr.
+        Das gilt für die Anlage EÜR immer. Übersicht, Buchungsliste und Gewinn &amp; Verlust
+        richten sich ebenfalls danach: Eine im Zeitraum bezahlte Rechnung steht dort auch dann,
+        wenn ihr Datum außerhalb liegt. Bei der Umsatzsteuer haben Sie die Wahl. Nach dem Gesetz
+        entsteht sie mit der Leistung, also zum Rechnungsdatum (Soll-Versteuerung). Auf Antrag
+        nach § 20 UStG entsteht sie erst mit dem Zahlungseingang (Ist-Versteuerung). Was für Sie
+        gilt, steht im Fragebogen zur steuerlichen Erfassung oder im Bescheid.
         Bei Ihnen ist eingestellt: <strong>${s.taxMode === 'kleinunternehmer' ? 'nach Zahlungsfluss' : s.accountingBasis === 'ist' ? 'Umsatzsteuer nach Zahlungseingang (Ist-Versteuerung)' : 'Umsatzsteuer nach Rechnungsdatum (Soll-Versteuerung)'}</strong>.</p>
         <p><strong>Regelbesteuerung oder Kleinunternehmer.</strong> Als Kleinunternehmer nach § 19 UStG
         rechnen Sie durchgehend brutto, weisen keine Umsatzsteuer aus und ziehen keine Vorsteuer.
@@ -71,12 +72,12 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Belege – der häufigste Streitpunkt mit dem Finanzamt</h3>
+        <h3 class="mt0">Belege</h3>
         <p>Keine Betriebsausgabe ohne Beleg. Kontovia speichert jede Rechnung verschlüsselt im
         Tresor und merkt sich eine Prüfsumme, mit der sich später nachweisen lässt,
         dass die Datei unverändert ist. Auf der Übersicht sehen Sie Ihre Belegquote.</p>
-        <p>Bei Bewirtungskosten gehört der betriebliche Anlass und die Teilnehmerliste dazu –
-        schreiben Sie beides ins Notizfeld. Kontovia zieht davon automatisch nur 70 % ab.</p>
+        <p>Bei Bewirtungskosten gehören der betriebliche Anlass und die Teilnehmerliste dazu.
+        Schreiben Sie beides ins Notizfeld. Kontovia zieht davon automatisch nur 70 % ab.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -88,14 +89,14 @@ function anleitung(root) {
         der Anlage EÜR ein.</p>
         <ul>
           <li><strong>Computer, Notebooks, Tablets, Drucker und Software</strong> dürfen mit einem Jahr
-              Nutzungsdauer voll im Jahr der Anschaffung abgezogen werden (BMF-Schreiben vom 22.02.2022) –
-              Abschreibung „1 Jahr“.</li>
+              Nutzungsdauer voll im Jahr der Anschaffung abgezogen werden (BMF-Schreiben vom
+              22.02.2022). Wählen Sie dafür die Abschreibung „1 Jahr“.</li>
           <li><strong>Degressiv</strong> geht für bewegliche Wirtschaftsgüter, die vom 01.07.2025 bis
               31.12.2027 angeschafft werden: höchstens das Dreifache der linearen Rate und höchstens 30 %
               vom Restwert (§ 7 Abs. 2 EStG). Das bringt in den ersten Jahren mehr Abzug; Kontovia wechselt
               von selbst zur linearen Rate, sobald sie höher ist.</li>
-          <li>Bis 800 € netto ist ein Wirtschaftsgut geringwertig und sofort voll abziehbar – dafür genügt
-              eine gewöhnliche Ausgabe.</li>
+          <li>Bis 800 € netto ist ein Wirtschaftsgut geringwertig und sofort voll abziehbar. Dafür
+              genügt eine gewöhnliche Ausgabe.</li>
         </ul>
       </div></div>
 
@@ -104,8 +105,8 @@ function anleitung(root) {
         <p>Seit 2025 muss jedes Unternehmen E-Rechnungen annehmen können. Ziehen Sie die XML-Datei oder
         das ZUGFeRD-PDF einfach als Beleg in die Buchung: Kontovia erkennt die Rechnung und bietet an,
         <strong>Rechnungsnummer, Datum, Fälligkeit, Betrag, Steuersatz und Kontakt zu übernehmen</strong>.
-        In der Belegvorschau erscheint die Rechnung lesbar – mit Positionen, Steuer und Bankverbindung –
-        statt als XML-Text.</p>
+        In der Belegvorschau sehen Sie die Rechnung lesbar, mit Positionen, Steuer und
+        Bankverbindung, statt als XML-Text.</p>
         <p class="small">Aufbewahrt wird die Originaldatei, unverändert und mit Prüfsumme. Bei Rechnungen mit
         mehreren Steuersätzen legen Sie je Satz eine Buchung an.</p>
       </div></div>
@@ -114,39 +115,39 @@ function anleitung(root) {
         <h3 class="mt0">Wiederkehrende Buchungen und Steuertermine</h3>
         <p><strong>Miete, Telefon, Abos:</strong> Beim Erfassen unter <em>Weitere Angaben → Wiederholen</em>
         einen Turnus wählen. Sobald die nächste Buchung fällig ist, bietet Kontovia sie nach dem Entsperren
-        zum Anlegen an – jede wird eine gewöhnliche Buchung, an die Sie den Beleg hängen. Verwalten unter
-        <a data-go="master">Stammdaten → Wiederkehrend</a>.</p>
+        zum Anlegen an. Jede wird eine gewöhnliche Buchung, an die Sie den Beleg hängen. Verwalten
+        können Sie das unter <a data-go="master">Stammdaten → Wiederkehrend</a>.</p>
         <p><strong>Steuertermine:</strong> Übersicht und Kalender zeigen, wann die nächste
         Umsatzsteuer-Voranmeldung fällig ist (samt der Zahllast nach heutigem Stand) und bis wann die
-        Jahreserklärungen abzugeben sind – auf den nächsten Werktag verschoben, wenn die Frist auf ein
-        Wochenende oder einen Feiertag fällt. Die Dauerfristverlängerung stellen Sie unter
+        Jahreserklärungen abzugeben sind. Fällt eine Frist auf ein Wochenende oder einen Feiertag,
+        rutscht sie auf den nächsten Werktag. Die Dauerfristverlängerung stellen Sie unter
         <a data-go="settings">Einstellungen</a> ein.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Anzahlungen und der Ort der Leistung</h3>
-        <p>Bei einer Einnahme lässt sich der <strong>Ort</strong> festhalten – wo die Leistung
+        <p>Bei einer Einnahme können Sie den <strong>Ort</strong> festhalten, also wo die Leistung
         erbracht wurde. Bereits verwendete Orte schlägt das Feld vor, und in der
-        <a data-go="transactions">Buchungsliste</a> filtern Sie danach – über den Trichter im
+        <a data-go="transactions">Buchungsliste</a> filtern Sie danach über den Trichter im
         Kopf der Spalte <em>Beschreibung</em>.</p>
         <p>Wird nur ein Teil im Voraus bezahlt, setzen Sie das Häkchen bei
-        <strong>Anzahlung</strong> und tragen den Termin der Veranstaltung – bei einer Hochzeit
-        das Hochzeitsdatum – sowie den Anteil in Prozent ein. Aus Anzahlung und Anteil
+        <strong>Anzahlung</strong> und tragen den Termin der Veranstaltung ein (bei einer Hochzeit
+        das Hochzeitsdatum) sowie den Anteil in Prozent. Aus Anzahlung und Anteil
         errechnet Kontovia den vereinbarten Gesamtbetrag und den Restbetrag und legt auf Wunsch
         gleich die offene Restzahlung zum Veranstaltungstag an. Der Termin erscheint im
         <a data-go="calendar">Kalender</a>.</p>
         <p class="small">Steuerlich zählt die Anzahlung bei der Einnahmen-Überschuss-Rechnung im
-        Jahr des Zuflusses – also dann, wenn das Geld eingeht, nicht erst zur Veranstaltung.</p>
+        Jahr des Zuflusses, also wenn das Geld eingeht und nicht erst zur Veranstaltung.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Termine und Rechnungen zusammenhalten</h3>
+        <h3 class="mt0">Termine und Rechnungen verknüpfen</h3>
         <p>Im <a data-go="calendar">Kalender</a> verknüpfen Sie einen Termin mit einer oder mehreren
-        Buchungen – etwa den Montagetermin mit der Rechnung dazu. Zusätzlich blendet der
-        Kalender die Fälligkeiten offener Rechnungen ein.</p>
+        Buchungen, zum Beispiel den Montagetermin mit der dazugehörigen Rechnung. Außerdem zeigt der
+        Kalender die Fälligkeiten offener Rechnungen.</p>
         <p><strong>Aufgaben:</strong> Unter <a data-go="todos">Aufgaben</a> notieren Sie, was zu tun ist,
-        und haken es ab. Eine Aufgabe kann zu einem Termin gehören, muss aber nicht – ohne eigenes
-        Datum gilt dann der Termin als Frist. Im Termin selbst stehen seine Aufgaben zum Abhaken
+        und haken es ab. Eine Aufgabe kann zu einem Termin gehören, muss aber nicht. Hat sie kein
+        eigenes Datum, gilt der Termin als Frist. Im Termin selbst stehen seine Aufgaben zum Abhaken
         und Ergänzen.</p>
         ${WEB ? raw(`<p><strong>Mit anderen Kalendern abgleichen:</strong> Über <em>Abgleich</em> oben im
         Kalender exportieren Sie alle Termine als Kalenderdatei (.ics) für Google, Apple oder Outlook
@@ -154,7 +155,7 @@ function anleitung(root) {
         der Windows-Fassung.</p>`) : raw(`<p><strong>Google Kalender:</strong> Unter <em>Abgleich</em> oben im
         Kalender oder unter Einstellungen → Kalender-Abgleich verbinden Sie Kontovia mit Ihrem
         Google-Konto. Kontovia legt dort einen eigenen Kalender „Kontovia“ an und gleicht in beide
-        Richtungen ab – auf dem Telefon sehen Sie Ihre Termine in der Google-Kalender-App, und was
+        Richtungen ab. Auf dem Telefon sehen Sie Ihre Termine in der Google-Kalender-App, und was
         Sie dort im Kalender „Kontovia“ eintragen, erscheint hier. Ihre übrigen Kalender bezieht
         Kontovia nur ein, wenn Sie das ausdrücklich einschalten. Beträge, Buchungen und Kontakte
         gehen nie an Google. Ohne Google-Konto geht es per Kalenderdatei (.ics).</p>`)}
@@ -163,30 +164,30 @@ function anleitung(root) {
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Zeitraum wählen und filtern</h3>
         <p><strong>Zeitraum.</strong> Oben rechts steht der gewählte Zeitraum, etwa „Jahr ${String(new Date().getFullYear())}“.
-        Die Pfeile daneben blättern um genau diese Länge weiter – vom März zum April, vom
-        2. zum 3. Quartal, von einem Jahr ins nächste. Ein Klick auf den Zeitraum öffnet die
+        Die Pfeile daneben blättern um genau diese Länge weiter, vom März zum April, vom
+        2. zum 3. Quartal oder von einem Jahr ins nächste. Ein Klick auf den Zeitraum öffnet die
         Schnellwahl (dieser Monat, letztes Quartal …), ein Raster zum direkten Anklicken von
         Jahr, Quartal oder Monat und darunter zwei Felder für einen eigenen Zeitraum.</p>
         <p><strong>Filter in den Spaltenköpfen.</strong> In der <a data-go="transactions">Buchungsliste</a>
         filtern Sie dort, wo die Werte stehen: über den kleinen Trichter im Kopf der Spalten
         <em>Kategorie</em>, <em>Kontakt</em>, <em>Status</em> (offen, bezahlt, überfällig, dazu stornierte und
         nicht gelistete Buchungen), <em>Brutto</em> (nur Einnahmen oder nur Ausgaben), im Kopf der
-        Belegspalte (mit oder ohne Beleg) und – sobald Orte erfasst sind – bei <em>Beschreibung</em>.
+        Belegspalte (mit oder ohne Beleg) und, sobald Orte erfasst sind, bei <em>Beschreibung</em>.
         Neben jeder Möglichkeit steht, wie viele Buchungen sie ergibt. Ein Klick auf den
         Spaltennamen sortiert.</p>
         <p>Was gerade gefiltert ist, steht als Chip über der Liste; das Kreuz im Chip hebt den
         Filter auf, „Alle Filter zurücksetzen“ alle zusammen. Ein gesetzter Filter färbt außerdem
         seinen Trichter ein.</p>
-        <p><strong>Sortieren.</strong> Alle Listen – Buchungen, Kategorien, Kontakte, Konten,
-        Anlagen, offene Posten, die Kategorien der Gewinn- und Verlustrechnung, die Monatstabelle
-        und das Änderungsjournal – lassen sich nach jeder Spalte sortieren: ein Klick auf den
-        Spaltennamen mit dem Doppelpfeil sortiert, ein zweiter kehrt die Richtung um; der farbige
+        <p><strong>Sortieren.</strong> Jede Liste lässt sich nach jeder Spalte sortieren: Buchungen,
+        Kategorien, Kontakte, Konten, Anlagen, offene Posten, die Kategorien der Gewinn- und
+        Verlustrechnung, die Monatstabelle und das Änderungsjournal. Ein Klick auf den
+        Spaltennamen mit dem Doppelpfeil sortiert, ein zweiter kehrt die Richtung um. Der farbige
         Pfeil zeigt, wonach gerade sortiert ist. Über größeren Listen nennt der Knopf
-        <em>Sortieren</em> die Sortierung in Worten („Datum: neueste zuerst“) und bietet Spalte und
-        Richtung zur Wahl – praktisch auf dem Telefon, wo nicht alle Spalten ins Bild passen.
+        <em>Sortieren</em> die Sortierung in Worten („Datum: neueste zuerst“) und lässt Spalte und
+        Richtung wählen. Das hilft auf dem Telefon, wo nicht alle Spalten ins Bild passen.
         Kontovia merkt sich die Sortierung jeder Liste auf diesem Gerät. Aufstellungen mit fester
-        Reihenfolge wie die Zeilen der Anlage EÜR oder die Kontenblätter mit laufendem Saldo
-        bleiben bewusst unsortiert.</p>
+        Reihenfolge, etwa die Zeilen der Anlage EÜR oder die Kontenblätter mit laufendem Saldo,
+        bleiben unsortiert.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -197,29 +198,29 @@ function anleitung(root) {
         ausblenden. Ausgeblendete Module und zusätzliche wie <em>Letzte Buchungen</em>,
         <em>Durchschnittswerte</em> oder <em>Kontostände heute</em> holen Sie über die Knöpfe oben im
         Anpassen-Modus zurück. „Voreinstellung“ stellt die ursprüngliche Anordnung wieder her.</p>
-        <p class="small">Die Anordnung gilt für dieses Gerät – am Telefon passt oft eine andere als am
-        großen Bildschirm. In den Tresor und den Cloud-Abgleich geht sie nicht.</p>
+        <p class="small">Die Anordnung gilt nur für dieses Gerät. Am Telefon passt oft eine andere als
+        am großen Bildschirm. In den Tresor und den Cloud-Abgleich geht sie nicht.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Diagramme und Durchschnittswerte</h3>
         <p>In der <a data-go="dashboard">Übersicht</a> und unter <a data-go="reports">Auswertungen</a>
-        schalten Sie die Darstellung mit den Knöpfen im Kopf jeder Karte um – unabhängig vom
-        Zeitraum oben: den Verlauf als <strong>Säulen</strong>, <strong>Linien</strong>,
+        schalten Sie die Darstellung mit den Knöpfen im Kopf jeder Karte um. Das geht unabhängig
+        vom Zeitraum oben. Den Verlauf zeigen Sie als <strong>Säulen</strong>, <strong>Linien</strong>,
         <strong>aufgelaufene Summen</strong> oder <strong>Tabelle</strong>, die Aufteilung nach
         Kategorien als <strong>Balken</strong> oder <strong>Torte</strong>. Die Wahl merkt sich
         Kontovia auf diesem Gerät.</p>
         <p>Durchschnittswerte stehen unter den Kennzahlen (Ø je Monat), als gestrichelte Linie im
-        Verlauf und in der Karte <em>Durchschnittswerte</em> der Gewinn- und Verlustrechnung – dort
-        auch je Buchung sowie bester und schwächster Monat. Gemittelt wird über die Monate, die
-        schon begonnen haben; im laufenden Jahr also nicht über zwölf.</p>
+        Verlauf und in der Karte <em>Durchschnittswerte</em> der Gewinn- und Verlustrechnung. Dort
+        finden Sie auch den Wert je Buchung sowie den besten und schwächsten Monat. Gemittelt wird
+        über die Monate, die schon begonnen haben, im laufenden Jahr also nicht über zwölf.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Nicht gelistete Buchungen</h3>
-        <p>Im Buchungsdialog lässt sich eine Buchung als <strong>nicht gelistet</strong> kennzeichnen –
-        für Vorgänge, die Sie für die eigene Übersicht festhalten wollen, die steuerlich aber nicht
-        zum Betrieb gehören. Nicht gelistete Buchungen fehlen in allen Unterlagen für Finanzamt und
+        <p>Im Buchungsdialog können Sie eine Buchung als <strong>nicht gelistet</strong> kennzeichnen.
+        Das ist für Vorgänge gedacht, die Sie für die eigene Übersicht festhalten wollen, die
+        steuerlich aber nicht zum Betrieb gehören. Nicht gelistete Buchungen fehlen in allen Unterlagen für Finanzamt und
         Steuerkanzlei: EÜR, Umsatzsteuer, DATEV-Stapel, Prüfungsordner, Buchungsjournal.</p>
         <p>In Übersicht und Auswertungen zählen sie nur mit, wenn Sie dort oben den Schalter
         <strong>„Nicht gelistete einbeziehen“</strong> setzen. Die Zahl daneben nennt, wie viele es
@@ -227,7 +228,7 @@ function anleitung(root) {
         gilt bis zum Sperren. In der Buchungsliste zeigt ein Abzeichen, welche Buchung nicht
         gelistet ist, und der Filter im Kopf der Spalte <em>Status</em> blendet sie ein oder aus.</p>
         <p class="small">Wichtig: Betriebliche Einnahmen und Ausgaben müssen vollständig erklärt werden
-        (§ 146 Abs. 1 AO). Das Änderungsjournal bleibt deshalb vollständig – es verzeichnet auch
+        (§ 146 Abs. 1 AO). Das Änderungsjournal bleibt deshalb vollständig. Es verzeichnet auch
         Änderungen an nicht gelisteten Buchungen, sonst wäre seine Prüfsummenkette unterbrochen.</p>
       </div></div>
 
@@ -239,7 +240,7 @@ function anleitung(root) {
           <li><strong>Umsatzsteuer-Voranmeldung:</strong> die Kennzahlen 81, 86, 66, 83 und weitere.</li>
           <li><strong>DATEV-Buchungsstapel:</strong> eine Datei, die Ihre Steuerkanzlei direkt einliest.</li>
           <li><strong>GoBD-Prüfungsordner:</strong> alle Daten maschinell auswertbar samt
-              <code>index.xml</code> – das, was bei einer Betriebsprüfung verlangt wird.</li>
+              <code>index.xml</code>, so wie es bei einer Betriebsprüfung verlangt wird.</li>
         </ul>
         <p class="small">Kontovia übermittelt <strong>nichts</strong> an die Finanzverwaltung.</p>
       </div></div>
@@ -291,18 +292,18 @@ function cloud(root) {
             ? 'Kontovia leitet Sie zu Google weiter. Nach der Anmeldung kommen Sie zurück und entsperren Kontovia einmal mit Ihrem Passwort.'
             : 'Ihr Browser öffnet sich mit der Anmeldeseite von Google. Nach der Anmeldung kommt Kontovia von selbst wieder nach vorn.'}</li>
         </ol>
-        <p>Ab dann gleicht Kontovia von selbst ab – nach jeder Änderung, beim Start und in
+        <p>Ab dann gleicht Kontovia von selbst ab: nach jeder Änderung, beim Start und in
         regelmäßigen Abständen.</p>
         <div class="notice ok mb0"><strong>Ihre Daten bleiben verschlüsselt.</strong> In die Cloud geht
-        nur Ihre bereits verschlüsselte Buchhaltung. Lesen kann sie nur, wer Ihr Passwort kennt –
-        weder Google noch der Hersteller von Kontovia.</div>
+        nur Ihre bereits verschlüsselte Buchhaltung. Lesen kann sie nur, wer Ihr Passwort kennt.
+        Das sind weder Google noch der Hersteller von Kontovia.</div>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Zweites Gerät anschließen</h3>
         <p>Installieren Sie Kontovia dort und klicken Sie beim ersten Start auf
         <strong>Mit Google anmelden</strong>. Kontovia findet Ihre Buchhaltung im Konto und
-        lädt sie, sobald Sie ihr Passwort eingeben – das Passwort des ersten Geräts. Ab da
+        lädt sie, sobald Sie das Passwort eingeben (das Passwort des ersten Geräts). Ab da
         arbeiten beide Geräte auf demselben Bestand; die Belege kommen beim ersten Abgleich nach.</p>
         <p class="small muted mb0">Haben Sie dort schon einen Tresor angelegt: unter
         <a data-go="settings">Einstellungen → Cloud-Abgleich</a> verbinden. Kontovia erkennt die
@@ -318,8 +319,8 @@ function cloud(root) {
         <ul>
           <li><strong>Wiederherstellen</strong> unter <a data-go="settings">Einstellungen →
               Cloud-Abgleich → Sicherungen ansehen</a>. Der gewählte Stand ersetzt den Bestand
-              dieses Geräts und gilt nach dem nächsten Abgleich auch auf den anderen –
-              auch Buchungen, die dort inzwischen gelöscht wurden, kommen zurück.</li>
+              dieses Geräts und gilt nach dem nächsten Abgleich auch auf den anderen. Auch
+              Buchungen, die dort inzwischen gelöscht wurden, kommen zurück.</li>
           <li>Belege, die nicht mehr gebraucht werden, bleiben noch 90 Tage in der Cloud,
               damit die Sicherungen vollständig wiederherstellbar sind.</li>
           <li>Eine Sicherung aus der Zeit vor einem Passwortwechsel öffnet sich ohne
@@ -335,11 +336,11 @@ function cloud(root) {
         <p>Kontovia vergleicht jeden einzelnen Eintrag mit dem letzten Stand, den beide Geräte
         gemeinsam hatten. Daraus ergibt sich:</p>
         <ul>
-          <li>Änderung nur auf einer Seite → sie wird übernommen, ohne Nachfrage.</li>
-          <li>Änderung auf beiden Seiten → die zuletzt bearbeitete Fassung gilt, die andere
-              wird unter <em>Einstellungen → Cloud-Abgleich → Konflikte ansehen</em> zum Nachlesen
-              abgelegt.</li>
-          <li>Auf einem Gerät gelöscht, auf dem anderen geändert → der Eintrag
+          <li>Nur auf einer Seite geändert: Die Änderung wird ohne Nachfrage übernommen.</li>
+          <li>Auf beiden Seiten geändert: Es gilt die zuletzt bearbeitete Fassung. Die andere
+              finden Sie unter <em>Einstellungen → Cloud-Abgleich → Konflikte ansehen</em> zum
+              Nachlesen.</li>
+          <li>Auf einem Gerät gelöscht, auf dem anderen geändert: Der Eintrag
               <strong>bleibt erhalten</strong>. Eine Buchung verschwindet nie stillschweigend,
               nur weil ein anderes Gerät sie gelöscht hat.</li>
           <li>Belege werden nie verändert, nur ergänzt.</li>
@@ -360,9 +361,9 @@ function cloud(root) {
         weitere Kalender dazu.</p>
         <ul>
           <li><strong>Was an Google geht:</strong> Titel, Zeit, Ort und Wiederholung Ihrer Termine, die
-              Notiz nur, wenn Sie das einschalten – anders als beim Cloud-Abgleich unverschlüsselt,
-              sonst könnte Google die Termine nicht anzeigen. Beträge, Buchungen, Kontakte und Belege
-              gehen nie an Google.</li>
+              Notiz nur, wenn Sie das einschalten. Anders als beim Cloud-Abgleich ist das
+              unverschlüsselt, sonst könnte Google die Termine nicht anzeigen. Beträge, Buchungen,
+              Kontakte und Belege gehen nie an Google.</li>
           <li><strong>Hinweis von Google:</strong> Beim Verbinden kann „Google hat diese App nicht
               überprüft“ erscheinen. Über <em>Erweitert</em> und den Link darunter geht es weiter.</li>
           <li><strong>Trennen</strong> unter Einstellungen → Kalender-Abgleich. Ihre Termine in
@@ -406,7 +407,7 @@ function neu(root) {
   const aelter = VERSIONEN.slice(NEU_OFFEN);
   root.innerHTML = html`
     <div class="content narrow" style="padding:0">
-      <p class="small muted mt0 mb16">Was sich in Kontovia geändert hat – die neueste Version zuerst.</p>
+      <p class="small muted mt0 mb16">Was sich in Kontovia geändert hat, die neueste Version zuerst.</p>
       ${raw(offen.map((v) => versionsBlock(v, { karte: true })).join(''))}
       ${aelter.length ? raw(`<div class="card"><div class="card-body">
         <details class="versionen-aelter">
@@ -445,7 +446,7 @@ function recht(root) {
           <li><strong>Cloud-Abgleich:</strong> Übertragen wird nur Ihre bereits verschlüsselte
               Buchhaltung. Für die Anmeldung speichert Google zusätzlich Ihre E-Mail-Adresse.</li>
           ${WEB ? '' : raw(`<li><strong>Google Kalender:</strong> Titel, Zeit und Ort Ihrer Termine gehen
-              unverschlüsselt an Google, damit der Kalender sie anzeigen kann – Beträge, Buchungen,
+              unverschlüsselt an Google, damit der Kalender sie anzeigen kann. Beträge, Buchungen,
               Kontakte und Belege nie.</li>`)}
         </ul>
         <button class="btn" id="btnDatenschutz">${icon('file', 15)} Datenschutzhinweise lesen</button>
@@ -464,7 +465,7 @@ function recht(root) {
 
       <div class="card mt16" id="recht-export"><div class="card-body">
         <h3 class="mt0">Darf ich die Exporte beim Finanzamt verwenden?</h3>
-        <p><strong>Ja – als Arbeitshilfe, so wie die Ausgaben jedes anderen Buchhaltungsprogramms.</strong>
+        <p><strong>Ja, als Arbeitshilfe, so wie die Ausgaben jedes anderen Buchhaltungsprogramms.</strong>
         Beim Finanzamt kommt nicht der Export an, sondern Ihre Erklärung, die Sie in „Mein ELSTER“
         abgeben. Für deren Richtigkeit sind Sie verantwortlich, gleich mit welchem Programm oder ob
         von Hand vorbereitet. Eine Zulassung oder Zertifizierung von Buchhaltungsprogrammen gibt es
@@ -472,7 +473,7 @@ function recht(root) {
         <p><strong>Ein KI-Hinweis ist nicht nötig.</strong> Die Werte in den Exporten entstehen nach
         festen Rechenregeln aus Ihren Buchungen; künstliche Intelligenz wirkt dabei nicht mit. Die
         Kennzeichnungspflichten der KI-Verordnung (Art. 50, seit 2. August 2026) betreffen Inhalte, die
-        ein KI-System erzeugt – das ist Kontovia nicht. Auch das Steuerrecht kennt keine Pflicht,
+        ein KI-System erzeugt. Das ist Kontovia nicht. Auch das Steuerrecht kennt keine Pflicht,
         anzugeben, womit eine Erklärung vorbereitet wurde. Freiwillig und zur Transparenz trägt jeder
         Bericht einen Herkunftsvermerk.</p>
         <p><strong>Wer lieber selbst zusammenstellt,</strong> kann das: Die Tabellen unter
@@ -502,14 +503,14 @@ function recht(root) {
         benennen. Es besteht keine geschäftliche Verbindung zu den Inhabern, keine Empfehlung
         und keine Zertifizierung durch sie.</p>
         <ul class="mb0">
-          <li><strong>DATEV</strong> – DATEV eG. Kontovia erzeugt eine Datei im DATEV-Importformat.
-              Die Kontenrahmen SKR03 und SKR04 stammen von der DATEV eG; Kontovia hinterlegt
-              einzelne Kontonummern als frei änderbare Vorschläge, um den Import zu ermöglichen.</li>
-          <li><strong>ELSTER</strong> – Marke der deutschen Finanzverwaltung. Kontovia bereitet
+          <li><strong>DATEV</strong> ist eine Marke der DATEV eG. Kontovia erzeugt eine Datei im
+              DATEV-Importformat. Die Kontenrahmen SKR03 und SKR04 stammen von der DATEV eG; Kontovia
+              hinterlegt einzelne Kontonummern als frei änderbare Vorschläge, damit der Import klappt.</li>
+          <li><strong>ELSTER</strong> ist eine Marke der deutschen Finanzverwaltung. Kontovia bereitet
               Werte zur Eingabe auf und übermittelt selbst nichts.</li>
-          <li><strong>Google</strong>, <strong>Google Drive</strong> und <strong>Firebase</strong> – Google LLC.</li>
-          <li><strong>Windows</strong> und <strong>Excel</strong> – Microsoft Corporation.</li>
-          <li><strong>LibreOffice</strong> – The Document Foundation.</li>
+          <li><strong>Google</strong>, <strong>Google Drive</strong> und <strong>Firebase</strong> sind Marken von Google LLC.</li>
+          <li><strong>Windows</strong> und <strong>Excel</strong> sind Marken der Microsoft Corporation.</li>
+          <li><strong>LibreOffice</strong> ist eine Marke von The Document Foundation.</li>
         </ul>
       </div></div>
 

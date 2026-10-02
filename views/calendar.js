@@ -61,7 +61,7 @@ function eventEntries(from, to) {
       txId: t.id,
       occurrence: dep.eventDate,
       title: `${t.description}${t.location ? ' · ' + t.location : ''}`
-        + (dep.remaining > 0 ? ` – Restbetrag ${money(dep.remaining)} €` : ''),
+        + (dep.remaining > 0 ? ` · Restbetrag ${money(dep.remaining)} €` : ''),
       allDay: true,
     });
   }
@@ -236,7 +236,7 @@ function cellHtml(date, monthRef, items) {
   return `<div class="${cls}" data-day="${date}" tabindex="0" role="button" aria-label="${esc(fmtDate(date))}, neuer Termin">
     <div class="cal-day">${Number(date.slice(8, 10))}</div>
     ${shown.map((e) => e.isTax
-      ? `<div class="cal-ev cal-tax" ${taxAttrs(e)} title="${esc(`${e.title} – ${e.hinweis}`)}">§ ${esc(e.title)}</div>`
+      ? `<div class="cal-ev cal-tax" ${taxAttrs(e)} title="${esc(`${e.title}: ${e.hinweis}`)}">§ ${esc(e.title)}</div>`
       : e.isDue
       ? `<div class="cal-ev" style="background:var(--warn-soft);color:var(--warn);border-left-color:var(--warn)" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(money(e.amount))} € ${esc(e.type === 'income' ? '↓' : '↑')}</div>`
       : e.isEvent
@@ -489,7 +489,7 @@ export function openAppointmentDialog(id, preset = {}) {
         <div class="field">
           <label>Kontakt</label>
           <select id="t_contactId">
-            <option value="">– keiner –</option>
+            <option value="">Keiner</option>
             ${raw(sel.contacts().map((c) => `<option value="${esc(c.id)}" ${a.contactId === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join(''))}
           </select>
         </div>
@@ -657,7 +657,7 @@ export function openAppointmentDialog(id, preset = {}) {
     collect();
     if (!a.title) { warn('Bitte einen Titel eintragen'); return; }
     if (!a.allDay && a.startTime && a.endTime && a.endTime < a.startTime) {
-      warn('Ende liegt vor dem Beginn', 'Bitte die Uhrzeiten prüfen – ein Termin über Mitternacht lässt sich als ganztägig eintragen.');
+      warn('Ende liegt vor dem Beginn', 'Bitte die Uhrzeiten prüfen. Ein Termin über Mitternacht lässt sich als ganztägig eintragen.');
       form.querySelector('#t_end')?.focus();
       return;
     }

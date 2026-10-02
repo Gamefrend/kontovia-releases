@@ -24,7 +24,7 @@ const enc = (s) => encodeURIComponent(s);
 export function anmeldungUngueltig(err) {
   if (!/INVALID_REFRESH_TOKEN|TOKEN_EXPIRED|USER_DISABLED|USER_NOT_FOUND|invalid_grant|expired or revoked/i.test(String(err?.message))) return err;
   return Object.assign(
-    new Error('Die Anmeldung bei Google gilt nicht mehr – etwa weil der Zugriff im Google-Konto entfernt wurde. Bitte neu anmelden; Ihre Daten bleiben dabei, wie sie sind.'),
+    new Error('Die Anmeldung bei Google gilt nicht mehr, etwa weil der Zugriff im Google-Konto entfernt wurde. Bitte neu anmelden; Ihre Daten bleiben dabei, wie sie sind.'),
     { code: 'NEU_ANMELDEN' },
   );
 }
@@ -56,7 +56,7 @@ export class FirebaseBackend {
       scopes: ['openid', 'email', 'profile'],
       zeigeCode: this.cfg.zeigeCode,
     });
-    if (!google.idToken) throw new Error('Google hat kein Identitätsmerkmal geliefert – bitte erneut anmelden.');
+    if (!google.idToken) throw new Error('Google hat die Anmeldung nicht bestätigt. Bitte erneut anmelden.');
     const res = await this.mitIdToken(google.idToken, google.email);
     this.state.googleRefreshToken = google.refreshToken || '';
     return res;

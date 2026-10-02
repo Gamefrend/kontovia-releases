@@ -42,7 +42,7 @@ function validateManifest(manifest, currentVersion) {
     throw new Error('Die Versionsdatei enthält keine gültige Download-Adresse.');
   }
   if (!/^[a-f0-9]{128}$/i.test(String(setup.sha512 || ''))) {
-    throw new Error('Die Versionsdatei enthält keine gültige SHA-512-Prüfsumme – Abbruch.');
+    throw new Error('Die Versionsdatei enthält keine gültige Prüfsumme. Das Update wurde abgebrochen.');
   }
   return {
     configured: true,

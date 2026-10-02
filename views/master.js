@@ -78,7 +78,7 @@ function categories(root) {
     <div class="notice mb16">
       Die Kategorie einer Buchung entscheidet, in welche Zeile der Anlage EÜR und auf welches
       Konto im DATEV-Export sie fließt. Die mitgelieferte Zuordnung folgt der Anlage EÜR
-      (Vordruck ${formYear(new Date().getFullYear())}) und dem ${store.db.settings.chartOfAccounts || 'SKR03'} – prüfen Sie sie einmal mit Ihrer Steuerberatung
+      (Vordruck ${formYear(new Date().getFullYear())}) und dem ${store.db.settings.chartOfAccounts || 'SKR03'}. Prüfen Sie sie einmal mit Ihrer Steuerberatung
       und passen Sie sie hier an, wenn sich das Formular ändert.
     </div>
     <div class="card" id="catCard"></div>`;
@@ -214,7 +214,7 @@ function accounts(root) {
   root.innerHTML = html`
     <div class="notice mb16">
       Zahlungskonten bilden Ihre Bankkonten und Ihre Bargeldkasse ab. Der Anfangsbestand
-      ist der Saldo an dem Tag, ab dem Sie mit Kontovia buchen – damit stimmen die
+      ist der Saldo an dem Tag, ab dem Sie mit Kontovia buchen. Nur dann stimmen die
       Kontostände in der Übersicht.
     </div>
     <div class="card">
@@ -255,7 +255,7 @@ function assets(root) {
   root.innerHTML = html`
     <div class="notice mb16">
       Wirtschaftsgüter über 800 € netto werden nicht sofort abgezogen, sondern über
-      ihre Nutzungsdauer verteilt (§ 7 EStG) – linear, degressiv (Anschaffung 07/2025 bis 12/2027)
+      ihre Nutzungsdauer verteilt (§ 7 EStG): linear, degressiv (Anschaffung 07/2025 bis 12/2027)
       oder bei Computern und Software mit einem Jahr. Kontovia rechnet monatsgenau ab dem
       Anschaffungsmonat und übernimmt den Betrag automatisch in Ihre Betriebsausgaben und in
       Zeile ${formLine(EUER.afaBeweglich, year)} der Anlage EÜR ${formYear(year)}.
@@ -302,7 +302,7 @@ function recurring(root) {
   root.innerHTML = html`
     <div class="notice mb16">
       Miete, Telefon, Versicherungen, Software-Abos: Eine wiederkehrende Buchung entsteht beim Erfassen
-      (Weitere Angaben → Wiederholen). Sobald die nächste fällig ist, bietet Kontovia sie zum Anlegen an –
+      (Weitere Angaben → Wiederholen). Sobald die nächste fällig ist, bietet Kontovia sie zum Anlegen an,
       nach dem Entsperren oder über „Jetzt anlegen“. Jede wird eine gewöhnliche Buchung mit eigenem Beleg.
     </div>
     ${faellig ? raw(`<div class="notice warn mb16 row between wrap" style="gap:8px"><span>${int(faellig)} fällig.</span>
@@ -322,7 +322,7 @@ function showPlan(id) {
   }
   let rest = a.cost;
   const m = modal({
-    title: `Abschreibungsplan – ${a.name}`,
+    title: `Abschreibungsplan: ${a.name}`,
     body: html`
       <p class="mt0 small muted">Anschaffungskosten ${money(a.cost)} € · ${AFA_METHODE[afaMethod(a)]}${afaMethod(a) === 'sofort' ? ''
         : ` · ${a.usefulLifeYears} Jahre${afaMethod(a) === 'degressiv' ? ` · ${String(Math.round(degressivSatz(a.usefulLifeYears) * 1000) / 10).replace('.', ',')} % vom Restwert` : ''}`}
@@ -350,7 +350,7 @@ function wireRowButtons(root, collection, usageField, label) {
     const id = b.dataset.del;
     const eintrag = (store.db[collection] || []).find((x) => x.id === id);
     if (collection === 'assets' && anlageGesperrt(eintrag)) {
-      err('Festgeschrieben', 'Die Anschaffung liegt im festgeschriebenen Zeitraum – ihre Abschreibung ist erklärt und bleibt stehen.');
+      err('Festgeschrieben', 'Die Anschaffung liegt im festgeschriebenen Zeitraum. Ihre Abschreibung ist erklärt und bleibt stehen.');
       return;
     }
     const used = sel.transactions().filter((t) => t[usageField] === id).length;
@@ -409,11 +409,11 @@ function categoryForm(c) {
   // Zeilen des aktuellen Formulars; eine abweichende eigene Zuordnung bleibt wählbar.
   const zeilen = { ...EUER_ZEILEN };
   delete zeilen[EUER.summeEinnahmen]; delete zeilen[EUER.summeAusgaben]; delete zeilen[EUER.gewinn];
-  if (c.euerLine !== null && c.euerLine !== undefined && c.euerLine !== '' && !zeilen[c.euerLine]) zeilen[c.euerLine] = '(keine Eingabezeile im Formular 2025 – bitte ändern)';
+  if (c.euerLine !== null && c.euerLine !== undefined && c.euerLine !== '' && !zeilen[c.euerLine]) zeilen[c.euerLine] = '(keine Eingabezeile im Formular 2025, bitte ändern)';
   // Angezeigt wird die Nummer im Vordruck des laufenden Jahres; gespeichert bleibt die Zuordnung nach 2025.
   const jahr = new Date().getFullYear();
   const lineOptions = Object.entries(zeilen)
-    .map(([k, v]) => `<option value="${k}" ${String(c.euerLine) === k ? 'selected' : ''}>${esc(formLine(k, jahr))} – ${esc(v)}</option>`).join('');
+    .map(([k, v]) => `<option value="${k}" ${String(c.euerLine) === k ? 'selected' : ''}>${esc(formLine(k, jahr))} · ${esc(v)}</option>`).join('');
 
   baseDialog({
     title: isNew ? 'Neue Kategorie' : 'Kategorie bearbeiten',
@@ -439,7 +439,7 @@ function categoryForm(c) {
         <div class="field full">
           <label>Zeile der Anlage EÜR</label>
           <select id="f_euerLine">
-            <option value="">– keine Zuordnung (nicht steuerwirksam) –</option>
+            <option value="">Keine Zuordnung (nicht steuerwirksam)</option>
             ${raw(lineOptions)}
           </select>
           <span class="hint">Bestimmt, wo der Betrag in der EÜR-Auswertung erscheint. Nummern nach dem Vordruck ${formYear(jahr)}; für andere Jahre rechnet Kontovia um.</span>
@@ -449,14 +449,14 @@ function categoryForm(c) {
         <div class="field full">
           <label>Abziehbarer Anteil</label>
           <select id="f_deductibleRate">
-            <option value="1" ${!c.deductibleRate || c.deductibleRate === 1 ? 'selected' : ''}>100 % – voll abziehbar</option>
-            <option value="0.7" ${c.deductibleRate === 0.7 ? 'selected' : ''}>70 % – Bewirtungskosten</option>
+            <option value="1" ${!c.deductibleRate || c.deductibleRate === 1 ? 'selected' : ''}>100 % (voll abziehbar)</option>
+            <option value="0.7" ${c.deductibleRate === 0.7 ? 'selected' : ''}>70 % (Bewirtungskosten)</option>
             <option value="0.5" ${c.deductibleRate === 0.5 ? 'selected' : ''}>50 %</option>
-            <option value="0" ${c.deductibleRate === 0 ? 'selected' : ''}>0 % – nicht abziehbar</option>
+            <option value="0" ${c.deductibleRate === 0 ? 'selected' : ''}>0 % (nicht abziehbar)</option>
           </select>
         </div>
         <div class="field full">
-          <label class="check"><input type="checkbox" id="f_private" ${c.private ? 'checked' : ''}> Privatvorgang (Entnahme/Einlage – wirkt nicht auf den Gewinn)</label>
+          <label class="check"><input type="checkbox" id="f_private" ${c.private ? 'checked' : ''}> Privatvorgang (Entnahme oder Einlage, wirkt nicht auf den Gewinn)</label>
           <label class="check mt8"><input type="checkbox" id="f_active" ${c.active !== false ? 'checked' : ''}> in der Auswahl anzeigen</label>
         </div>
       </div>`,

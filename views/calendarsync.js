@@ -75,7 +75,7 @@ export async function renderCalendarCard(el) {
               <div class="notice ok">
                 <strong>Verbunden</strong> mit ${st.email || 'Ihrem Google-Konto'} · Kalender
                 „${st.calendarName || 'Kontovia'}“<br>
-                <span class="small">${calState.running ? 'Abgleich läuft …' : (st.lastSyncAt ? `Zuletzt abgeglichen ${fmtDateTime(st.lastSyncAt)}` : 'Noch nicht abgeglichen')}${calState.lastSummary ? ` – ${calState.lastSummary}` : ''}</span>
+                <span class="small">${calState.running ? 'Abgleich läuft …' : (st.lastSyncAt ? `Zuletzt abgeglichen ${fmtDateTime(st.lastSyncAt)}` : 'Noch nicht abgeglichen')}${calState.lastSummary ? ` · ${calState.lastSummary}` : ''}</span>
               </div>
               ${st.lastError || calState.lastError ? raw(`<div class="notice danger mt8">${esc(calState.lastError || st.lastError)}</div>`) : ''}
               <div class="row wrap mt16" style="gap:8px">
@@ -86,14 +86,14 @@ export async function renderCalendarCard(el) {
               ${raw(weitereAbschnitt(st, cfg))}`) : raw(html`
               <p class="small mt0" style="line-height:1.6">Kontovia legt in Ihrem Google-Konto einen eigenen
               Kalender <strong>„Kontovia“</strong> an und gleicht Ihre Termine in beide Richtungen damit
-              ab – auf dem Telefon sehen Sie sie in der Google-Kalender-App, und was Sie dort im Kalender
+              ab. Auf dem Telefon sehen Sie sie in der Google-Kalender-App, und was Sie dort im Kalender
               „Kontovia“ eintragen, erscheint hier. Auf Wunsch kommen Ihre übrigen Kalender dazu, etwa
-              der Hauptkalender – ebenfalls in beide Richtungen.</p>
+              der Hauptkalender, ebenfalls in beide Richtungen.</p>
               ${st?.lastError ? raw(`<div class="notice warn mb8">${esc(st.lastError)}</div>`) : ''}
               <button class="btn primary" data-cal="connect">${icon('calendar', 15)} Mit Google Kalender verbinden</button>`)}
           </div>
           <div>
-            <p class="small mt0" style="line-height:1.6"><strong>Kalenderdatei (.ics)</strong> – für
+            <p class="small mt0" style="line-height:1.6"><strong>Kalenderdatei (.ics):</strong> für
             Apple Kalender, Outlook, ein zweites Google-Konto oder die Web-Fassung. Der Export enthält
             alle Termine; beim Import werden bereits übernommene Termine erkannt und aktualisiert
             statt doppelt angelegt.</p>
@@ -140,7 +140,7 @@ function weitereAbschnitt(st, cfg) {
     return `<hr class="sep">
       <strong style="font-size:13px">Weitere Google-Kalender</strong>
       <p class="small mt8" style="line-height:1.6">Termine aus Ihrem Hauptkalender und anderen Kalendern
-      in Kontovia sehen und bearbeiten – Änderungen und Löschungen gehen in beide Richtungen.
+      in Kontovia sehen und bearbeiten. Änderungen und Löschungen gehen in beide Richtungen.
       Dafür braucht Kontovia einmal zusätzlich Ihre Freigabe bei Google.</p>
       ${namen.length ? `<div class="notice warn small mb8">Ausgewählt sind ${esc(namen.join(', '))}, auf diesem Gerät
         fehlt aber noch die Freigabe.</div>` : ''}
@@ -159,7 +159,7 @@ async function freigebenWeitere() {
   const ja = await confirmDialog({
     title: 'Weitere Kalender einbeziehen?',
     text: 'Kontovia fragt bei Google zusätzlich das Recht an, Ihre Kalender aufzulisten und Termine darin zu lesen und zu ändern. '
-      + 'Abgeglichen werden danach nur die Kalender, die Sie anschließend auswählen – in beide Richtungen: Was Sie dort ändern oder löschen, '
+      + 'Abgeglichen werden danach nur die Kalender, die Sie anschließend auswählen, und zwar in beide Richtungen: Was Sie dort ändern oder löschen, '
       + 'ändert sich hier, und umgekehrt. Es öffnet sich Ihr Browser mit der Anmeldung bei Google; Kontovia kommt danach von selbst wieder nach vorn.',
     confirmLabel: 'Weiter zu Google',
   });
@@ -276,9 +276,9 @@ function connectDialog() {
         <strong>„Kontovia“</strong> an und gleicht Ihre Termine in beide Richtungen damit ab. Auf Ihre
         übrigen Kalender greift Kontovia nur zu, wenn Sie das unten ankreuzen.</p>
         <div class="notice warn">
-          <strong>Was dafür an Google geht – unverschlüsselt,</strong> sonst könnte Google die Termine
-          nicht anzeigen: Titel, Datum, Uhrzeit, Ort und Wiederholung Ihrer Termine, auf Wunsch auch
-          die Notiz. <strong>Nicht</strong> übertragen werden Beträge, Buchungen, Kontakte und Belege.
+          <strong>Was dafür an Google geht:</strong> Titel, Datum, Uhrzeit, Ort und Wiederholung Ihrer
+          Termine, auf Wunsch auch die Notiz. Das geschieht unverschlüsselt, sonst könnte Google die
+          Termine nicht anzeigen. <strong>Nicht</strong> übertragen werden Beträge, Buchungen, Kontakte und Belege.
           Stehen Namen von Kunden im Titel, gibt Kontovia sie damit an Google weiter; für die
           geschäftliche Nutzung ist ein Google-Konto mit Auftragsverarbeitungsvertrag
           (Google Workspace) die saubere Lösung.
@@ -287,7 +287,7 @@ function connectDialog() {
           <label class="check"><input type="checkbox" id="g_events" ${cfg.includeEvents ? 'checked' : ''}> Veranstaltungstermine aus Anzahlungen mit übertragen (ohne Beträge)</label>
           <label class="check"><input type="checkbox" id="g_due" ${cfg.includeDue ? 'checked' : ''}> Fälligkeiten offener Rechnungen mit übertragen (ohne Beträge)</label>
           <label class="check"><input type="checkbox" id="g_notes" ${cfg.sendNotes ? 'checked' : ''}> Notizen der Termine mit übertragen</label>
-          <label class="check"><input type="checkbox" id="g_andere"> Auch meine anderen Google-Kalender einbeziehen (z. B. den Hauptkalender) – in beide Richtungen, welche, wählen Sie danach</label>
+          <label class="check"><input type="checkbox" id="g_andere"> Auch meine anderen Google-Kalender einbeziehen (z. B. den Hauptkalender), in beide Richtungen. Welche, wählen Sie danach</label>
         </div>
         <p class="small muted mt16 mb0" style="line-height:1.6">Es öffnet sich Ihr Browser mit der
         Anmeldung bei Google; danach kommt Kontovia von selbst wieder nach vorn. Erscheint dort der
@@ -400,7 +400,7 @@ export async function disconnectGoogle() {
 export async function exportIcs() {
   const cfg = calendarSettings();
   const derived = derivedEntries(store.db, { events: cfg.includeEvents, due: cfg.includeDue });
-  const text = toIcs(sel.appointments(), { derived, name: store.db.settings.companyName ? `Kontovia – ${store.db.settings.companyName}` : 'Kontovia' });
+  const text = toIcs(sel.appointments(), { derived, name: store.db.settings.companyName ? `Kontovia: ${store.db.settings.companyName}` : 'Kontovia' });
   try {
     const p = await api.file.save({
       defaultName: `Kontovia-Termine_${todayISO()}.ics`,

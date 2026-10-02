@@ -90,7 +90,7 @@ function scopeWarning() {
   const st = unlistedStats(store.db, period.from, period.to);
   if (!st.count) return '';
   return `<div class="notice warn mb16"><strong>Enthält ${st.count === 1 ? 'eine nicht gelistete Buchung' : `${int(st.count)} nicht gelistete Buchungen`}.</strong>
-    Für ELSTER gelten die Werte ohne sie – entfernen Sie dafür oben das Häkchen, oder nehmen Sie die
+    Für ELSTER gelten die Werte ohne sie. Entfernen Sie dafür oben das Häkchen oder nehmen Sie die
     Unterlagen unter „Export &amp; Finanzamt“, die nicht gelistete Buchungen nie enthalten.</div>`;
 }
 
@@ -195,7 +195,7 @@ function guv(root, db) {
             ${raw(kpi('Ausgabe je Buchung', avg.perExpense === null ? '–' : `${esc(money(avg.perExpense))} €`, `${int(current.countExpense)} Ausgaben, ohne Abschreibung`))}
             ${raw(kpi('Bester / schwächster Monat', avg.best ? `<span class="small">${monat(avg.best)}</span>` : '–', avg.worst ? monat(avg.worst) : ''))}
           </div>
-          <p class="tiny muted mt16 mb0">Gemittelt wird über die Monate des Zeitraums, die schon begonnen haben –
+          <p class="tiny muted mt16 mb0">Gemittelt wird über die Monate des Zeitraums, die schon begonnen haben,
           im laufenden Jahr also nicht über zwölf. Die Tabelle beim Verlauf (Knopf „Tabelle“) zeigt jeden Monat einzeln.</p>
         </div>
       </div>
@@ -225,11 +225,11 @@ function guv(root, db) {
               <tr><td class="muted">davon steuerlich abziehbar (nach Kürzung, z. B. Bewirtung 70 %)</td><td class="num muted">${esc(money(current.expenseDeductible))} €</td></tr>
               <tr><td><strong>Steuerliches Ergebnis</strong></td><td class="num"><strong>${esc(money(current.taxableProfit))} €</strong></td></tr>`) : ''}
             ${current.privateIn || current.privateOut ? raw(`
-              <tr><td colspan="2" class="muted small" style="padding-top:14px">Nachrichtlich – wirkt sich nicht auf den Gewinn aus:</td></tr>
+              <tr><td colspan="2" class="muted small" style="padding-top:14px">Nachrichtlich, wirkt sich nicht auf den Gewinn aus:</td></tr>
               <tr><td class="muted">Privateinlagen</td><td class="num muted">${esc(money(current.privateIn))} €</td></tr>
               <tr><td class="muted">Privatentnahmen</td><td class="num muted">${esc(money(current.privateOut))} €</td></tr>`) : ''}
             ${current.vatRemitted || current.vatRefunded ? raw(`
-              <tr><td colspan="2" class="muted small" style="padding-top:14px">Umsatzsteuer-Verrechnung mit dem Finanzamt – kein Aufwand, sondern Ausgleich des Steuerkontos:</td></tr>
+              <tr><td colspan="2" class="muted small" style="padding-top:14px">Umsatzsteuer-Verrechnung mit dem Finanzamt (kein Aufwand, sondern Ausgleich des Steuerkontos):</td></tr>
               <tr><td class="muted">im Zeitraum an das Finanzamt gezahlt</td><td class="num muted">${esc(money(current.vatRemitted))} €</td></tr>
               ${current.vatRefunded ? `<tr><td class="muted">vom Finanzamt erstattet</td><td class="num muted">${esc(money(current.vatRefunded))} €</td></tr>` : ''}
               <tr><td class="muted">danach noch offene Zahllast des Zeitraums</td><td class="num muted">${esc(money(current.vatOutstanding))} €</td></tr>`) : ''}
@@ -321,12 +321,12 @@ function euer(root, db) {
 
   root.innerHTML = html`
     ${raw(scopeWarning())}
-    ${jahr > F.jahr ? raw(`<div class="notice warn mb16">Für ${jahr} ist in dieser Fassung noch kein eigener Vordruck hinterlegt. Die Zeilennummern folgen dem Vordruck ${F.jahr} – bitte gegen das Formular ${jahr} prüfen.</div>`) : ''}
+    ${jahr > F.jahr ? raw(`<div class="notice warn mb16">Für ${jahr} ist in dieser Fassung noch kein eigener Vordruck hinterlegt. Die Zeilennummern folgen dem Vordruck ${F.jahr}. Bitte gegen das Formular ${jahr} prüfen.</div>`) : ''}
     <div class="notice mb16">
       <strong>Was Sie hier sehen.</strong> Ihre Buchungen, zusammengefasst nach den Zeilen der
       amtlichen Anlage EÜR (Vordruck ${F.jahr}), immer nach Zahlungsfluss (§ 11 EStG). Sie können die
       Beträge direkt in „Mein ELSTER“ übertragen. Die Zeilennummern des Formulars ändern sich fast
-      jährlich – bitte einmal gegen das Formular des jeweiligen Jahres prüfen. Die Zuordnung jeder
+      jährlich. Bitte einmal gegen das Formular des jeweiligen Jahres prüfen. Die Zuordnung jeder
       Kategorie lässt sich unter Stammdaten anpassen.
     </div>
 
@@ -354,7 +354,7 @@ function euer(root, db) {
         <p class="small muted mt0">In der Einnahmen-Überschuss-Rechnung läuft die Umsatzsteuer als
         Betriebseinnahme und Betriebsausgabe mit. Die vereinnahmte Umsatzsteuer erhöht den EÜR-Gewinn
         so lange, bis Sie sie an das Finanzamt überweisen und diese Zahlung als Ausgabe erfassen.
-        Über das ganze Jahr gleicht sich das aus – die Umsatzsteuer kostet Sie keinen Cent Gewinn.</p>
+        Über das ganze Jahr gleicht sich das aus. Die Umsatzsteuer kostet Sie keinen Cent Gewinn.</p>
         <table class="data">
           <tbody>
             <tr><td>Ergebnis ohne Umsatzsteuer (wie in der Gewinn- und Verlustrechnung)</td><td class="num">${esc(money(e.reconciliation.netResult))} €</td></tr>
@@ -367,7 +367,7 @@ function euer(root, db) {
         </table>
         ${!e.reconciliation.vatRemitted ? `<div class="notice warn mt16">Sie haben im Zeitraum noch keine
         Umsatzsteuer-Vorauszahlung als Ausgabe erfasst. Sobald Sie an das Finanzamt überweisen, buchen Sie
-        das mit der Kategorie „An Finanzamt gezahlte Umsatzsteuer“ – dann stimmt der EÜR-Gewinn.</div>` : ''}
+        das mit der Kategorie „An Finanzamt gezahlte Umsatzsteuer“. Dann stimmt der EÜR-Gewinn.</div>` : ''}
       </div>
     </div>`) : ''}
 
@@ -486,7 +486,7 @@ function bilanz(root, db) {
     <div class="notice mb16">
       <strong>Vermögensübersicht statt Bilanz.</strong> Bei einer Einnahmen-Überschuss-Rechnung
       besteht keine Bilanzierungspflicht. Diese Gegenüberstellung zeigt trotzdem, was dem
-      Betrieb zum Stichtag gehört und was er schuldet – die Differenz ist Ihr Reinvermögen.
+      Betrieb zum Stichtag gehört und was er schuldet. Die Differenz ist Ihr Reinvermögen.
       Sie folgt nicht der Gliederung des § 266 HGB.
     </div>
 
@@ -602,8 +602,8 @@ function opos(root, db) {
       ${raw(aging(o.receivableAging, 'Altersstruktur Forderungen'))}
       ${raw(aging(o.payableAging, 'Altersstruktur Verbindlichkeiten'))}
     </div>
-    ${raw(liste('opos-forderungen', o.receivables, 'Forderungen – Kunden schulden Ihnen Geld', 'pos'))}
-    <div class="mt16">${raw(liste('opos-verbindlichkeiten', o.payables, 'Verbindlichkeiten – Sie schulden noch Geld', 'neg'))}</div>`;
+    ${raw(liste('opos-forderungen', o.receivables, 'Forderungen: Kunden schulden Ihnen Geld', 'pos'))}
+    <div class="mt16">${raw(liste('opos-verbindlichkeiten', o.payables, 'Verbindlichkeiten: Sie schulden noch Geld', 'neg'))}</div>`;
 }
 
 /* -------------------------------------------------------------------------- */

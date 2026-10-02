@@ -8,7 +8,7 @@
   prüfen lassen. Rechtsberatung ist das hier nicht.
 -->
 
-Stand: 2. Oktober 2026, Programmversion 1.12.0
+Stand: 2. Oktober 2026, Programmversion 1.13.0
 
 ---
 
@@ -31,7 +31,7 @@ Versionen läuft nur mit Ihrer Zustimmung.
 Sie geben Ihre Buchhaltung ein: Beträge, Belege, Kategorien, Termine und die
 Kontaktdaten Ihrer Kunden und Lieferanten. Darunter sind personenbezogene Daten
 Dritter. Verantwortlich für diese Verarbeitung sind **Sie als Betrieb**, nicht
-der Anbieter des Programms – an ihn fließt nichts.
+der Anbieter des Programms. An ihn fließt nichts.
 
 Alle Daten liegen verschlüsselt in einer einzigen Datei unter
 `%APPDATA%\Kontovia\daten\`. Die Verschlüsselung erfolgt mit AES-256-GCM; der
@@ -48,25 +48,25 @@ Arbeitsspeicher, solange das Programm entsperrt ist.
 
 Kontovia baut von sich aus keine Verbindung ins Internet auf. Die einzigen
 Verbindungen, die das Programm überhaupt aufbauen kann, sind die unten
-genannten – der Cloud-Abgleich, der Abgleich mit Google Kalender und die Suche
+genannten: der Cloud-Abgleich, der Abgleich mit Google Kalender und die Suche
 nach einer neuen Programmversion. Alle drei laufen erst, wenn Sie ihnen
 ausdrücklich zustimmen.
 
 ## Cloud-Abgleich (freiwillig)
 
-Der Abgleich ist ausgeschaltet, bis Sie ihn einrichten – in den Einstellungen
+Der Abgleich ist ausgeschaltet, bis Sie ihn einrichten. Das geht in den Einstellungen
 oder beim ersten Start über „Mit Google anmelden“. Übertragen wird
 ausschließlich der **bereits verschlüsselte** Tresor sowie die einzeln
 verschlüsselten Belegdateien.
 
 **Sicherungen:** Zusätzlich legt Kontovia höchstens einmal am Tag sowie vor
-jedem Überschreiben und jeder Wiederherstellung eine Kopie des – ebenso
-verschlüsselten – Tresors ab und hält die 30 neuesten vor. Belege, die Ihr
+jedem Überschreiben und jeder Wiederherstellung eine Kopie des ebenso
+verschlüsselten Tresors ab und hält die 30 neuesten vor. Belege, die Ihr
 Bestand nicht mehr braucht, bleiben noch 90 Tage gespeichert, damit diese
 Sicherungen vollständig wiederherstellbar sind.
 
 **Was der Betreiber der Ablage sehen kann:** Dateigröße, Änderungszeitpunkt und
-die Identität des angemeldeten Kontos. **Nicht** den Inhalt – dafür wäre Ihr
+die Identität des angemeldeten Kontos. **Nicht** den Inhalt. Dafür wäre Ihr
 Tresorpasswort nötig, und das verlässt Ihren Rechner nie.
 
 **Rechtsgrundlage:** Art. 6 Abs. 1 lit. b und f DSGVO (Durchführung der eigenen
@@ -80,8 +80,8 @@ Gespeichert werden:
 
 * der verschlüsselte Tresor und die verschlüsselten Belege im Cloud Storage
   (Standort: Europäische Union, Rechenzentren in Finnland und den Niederlanden)
-* über Firebase Authentication Ihre E-Mail-Adresse und eine Kontokennung –
-  diese liegen unverschlüsselt vor und dienen allein dazu, Ihnen beim Anmelden
+* über Firebase Authentication Ihre E-Mail-Adresse und eine Kontokennung.
+  Diese liegen unverschlüsselt vor und dienen allein dazu, Ihnen beim Anmelden
   Ihren eigenen Bereich zuzuordnen
 
 Für die Kontodaten aus Firebase Authentication ist kein Speicherort wählbar;
@@ -105,7 +105,7 @@ nicht erlangen.
 **Auftragsverarbeitung:** Für den gewerblichen Einsatz brauchen Sie einen
 Auftragsverarbeitungsvertrag mit Google. Bei Google Workspace und im
 Firebase-Projekt ist er verfügbar; bei einem privaten Google-Konto in der
-Drive-Variante besteht keiner – in dem Fall ist der gewerbliche Einsatz
+Drive-Variante besteht keiner. In dem Fall ist der gewerbliche Einsatz
 datenschutzrechtlich problematisch.
 
 **Widerruf:** In den Einstellungen unter „Verbindung trennen“. Das Gerät meldet
@@ -130,14 +130,14 @@ und erhält zunächst nur auf diesen Kalender Zugriff (Bereich
 zusätzlich das Recht, Ihre Kalender aufzulisten und Termine darin zu lesen und
 zu ändern (Bereiche `calendar.readonly` und `calendar.events`). Abgeglichen
 werden nur die Kalender, die Sie auswählen, in beide Richtungen: Termine daraus
-werden – ab gut einem Jahr zurück – in Ihrem verschlüsselten Tresor gespeichert
+werden (ab gut einem Jahr zurück) in Ihrem verschlüsselten Tresor gespeichert
 und gehen mit dem Cloud-Abgleich verschlüsselt auf Ihre anderen Geräte;
 Änderungen und Löschungen in Kontovia gehen an diese Kalender zurück.
 
-**Was übertragen wird – anders als beim Cloud-Abgleich unverschlüsselt**, weil
+**Was übertragen wird (anders als beim Cloud-Abgleich unverschlüsselt)**, weil
 Google die Termine sonst nicht anzeigen könnte: Titel, Datum, Uhrzeit, Ort und
 Wiederholung Ihrer Termine, sofern eingeschaltet die Notiz, auf Wunsch außerdem
-Veranstaltungstermine aus Anzahlungen und Fälligkeiten offener Rechnungen –
+Veranstaltungstermine aus Anzahlungen und Fälligkeiten offener Rechnungen,
 jeweils **ohne Beträge**. Buchungen, Beträge, Kontakte und Belege werden nicht
 übertragen. Umgekehrt übernimmt Kontovia Termine, die Sie in Google im Kalender
 „Kontovia“ anlegen oder ändern.
@@ -153,7 +153,7 @@ Kontovia erhält dabei keine Daten.
 
 **Widerruf:** *Trennen* zieht die Freigabe bei Google zurück; auf Wunsch wird
 der Kalender „Kontovia“ in Google gelöscht. Die Termine in Kontovia bleiben
-erhalten. Google zieht dabei die Freigabe des ganzen Kontos zurück – ist Google
+erhalten. Google zieht dabei die Freigabe des ganzen Kontos zurück. Ist Google
 Kalender auch auf einem anderen Gerät verbunden, muss er dort neu verbunden
 werden.
 
@@ -187,7 +187,7 @@ wieder abschalten.
 
 **Angemeldet bleiben beim Update (Windows):** Installieren Sie ein Update aus
 dem entsperrten Programm heraus, legt Kontovia den Schlüssel Ihrer Buchhaltung
-für den Neustart ab – verschlüsselt durch Windows für Ihr Benutzerkonto, gültig
+für den Neustart ab, verschlüsselt durch Windows für Ihr Benutzerkonto und gültig
 nur für die neue Version und höchstens zehn Minuten. Beim Start wird er sofort
 gelöscht; wer zwischendurch sperrt, verwirft ihn. Das Gerät verlässt er nie.
 
@@ -206,7 +206,7 @@ sie gilt alles oben Gesagte mit folgenden Abweichungen:
   Betreiber des Servers Ihre IP-Adresse und den Zeitpunkt; Angaben aus Ihrer
   Buchhaltung werden nie übertragen.
 * **Speicherort.** Statt in einem Ordner liegen Tresor und Belege im Speicher
-  des Browsers (IndexedDB) – in derselben Verschlüsselung wie oben beschrieben.
+  des Browsers (IndexedDB), in derselben Verschlüsselung wie oben beschrieben.
   Browser dürfen solche Daten bei Platzmangel räumen. Kontovia bittet deshalb um
   dauerhafte Speicherung und zeigt unter *Einstellungen* an, ob der Browser sie
   gewährt hat. Auf iPhone und iPad ist der Cloud-Abgleich oder eine regelmäßige
@@ -219,7 +219,7 @@ sie gilt alles oben Gesagte mit folgenden Abweichungen:
 ## Speicherdauer
 
 Sie bestimmen sie. Das Programm löscht von sich aus nichts. Beachten Sie die
-steuerlichen Aufbewahrungspflichten nach § 147 AO – Buchungsbelege acht Jahre,
+steuerlichen Aufbewahrungspflichten nach § 147 AO: Buchungsbelege acht Jahre,
 Bücher und Abschlüsse zehn Jahre. Ein Löschverlangen nach Art. 17 DSGVO tritt
 für diese Zeit hinter die Aufbewahrungspflicht zurück (Art. 17 Abs. 3 lit. b
 DSGVO). Praktisch: Kontaktdaten dürfen Sie bereinigen, die Buchung selbst nicht.
@@ -227,7 +227,7 @@ DSGVO). Praktisch: Kontaktdaten dürfen Sie bereinigen, die Buchung selbst nicht
 ## Rechte betroffener Personen
 
 Personen, deren Daten in Ihrer Buchhaltung stehen, haben Ihnen gegenüber die
-Rechte aus Art. 15 bis 21 DSGVO – Auskunft, Berichtigung, Löschung im Rahmen der
+Rechte aus Art. 15 bis 21 DSGVO: Auskunft, Berichtigung, Löschung im Rahmen der
 gesetzlichen Grenzen, Einschränkung, Datenübertragbarkeit und Widerspruch. Für
 die Auskunft hilft der Kontakt-Export unter „Export → Rohdaten".
 

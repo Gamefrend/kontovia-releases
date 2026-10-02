@@ -1,7 +1,7 @@
 {
-  "name": "Kontovia – Buchhaltung",
+  "name": "Kontovia Buchhaltung",
   "short_name": "Kontovia",
-  "description": "Buchhaltung, die auf dem eigenen Gerät bleibt – verschlüsselt, offline, ohne Konto beim Hersteller.",
+  "description": "Buchhaltung, die auf dem eigenen Gerät bleibt: verschlüsselt, offline, ohne Konto beim Hersteller.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
@@ -16,7 +16,7 @@
     "business",
     "productivity"
   ],
-  "version": "1.12.0",
+  "version": "1.13.0",
   "icons": [
     {
       "src": "icons/icon-192.png",

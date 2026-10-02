@@ -252,7 +252,7 @@ function listSpec() {
     emptyHtml: () => (sel.transactions().length
       ? emptyState('Keine Buchungen im Zeitraum', 'Wählen Sie oben rechts einen anderen Zeitraum.',
         '<button class="btn mt16" data-period-reset>Zurück zum laufenden Jahr</button>').__raw
-      : emptyState('Noch keine Buchungen', 'Erfassen Sie Ihre erste Einnahme oder Ausgabe – oben rechts.',
+      : emptyState('Noch keine Buchungen', 'Erfassen Sie Ihre erste Einnahme oder Ausgabe über den Knopf oben rechts.',
         '<button class="btn primary mt16" data-first>Erste Buchung anlegen</button>').__raw),
     onRender: wireRows,
   };
@@ -277,7 +277,7 @@ function summaryHtml(rows) {
     <span><span class="muted">Eingänge</span> <strong class="amount pos">${money(sumIncome)} €</strong></span>
     <span><span class="muted">Ausgänge</span> <strong class="amount neg">${money(sumExpense)} €</strong></span>
     <span><span class="muted">Saldo</span> <strong class="amount ${sumIncome - sumExpense >= 0 ? 'pos' : 'neg'}">${money(sumIncome - sumExpense)} €</strong></span>
-    ${offen.length ? raw(`<span class="badge warn" title="Noch nicht bezahlt – zählt erst am Zahlungstag">${offen.length} offen${offenText ? ': ' + esc(offenText) : ''}</span>`) : ''}
+    ${offen.length ? raw(`<span class="badge warn" title="Noch nicht bezahlt, zählt erst am Zahlungstag">${offen.length} offen${offenText ? ': ' + esc(offenText) : ''}</span>`) : ''}
     ${unlistedCount ? raw(`<span class="badge unlisted" title="In den Summen enthalten, in Finanzamt-Unterlagen nicht">${unlistedCount} nicht gelistet</span>`) : ''}
   </div>`;
 }
@@ -288,7 +288,7 @@ function summaryHtml(rows) {
  */
 function dateCell(t) {
   if (gebuchtIm(t) || !bezahltIm(t)) return esc(fmtDate(t.date));
-  return `<span class="muted" title="Gebucht am ${esc(fmtDate(t.date))}, bezahlt am ${esc(fmtDate(t.paidDate))} – zählt im gewählten Zeitraum">${esc(fmtDate(t.date))}</span>
+  return `<span class="muted" title="Gebucht am ${esc(fmtDate(t.date))}, bezahlt am ${esc(fmtDate(t.paidDate))}. Zählt im gewählten Zeitraum">${esc(fmtDate(t.date))}</span>
     <div class="tiny" style="color:var(--accent)">Zahlung ${esc(fmtDateShort(t.paidDate))}</div>`;
 }
 
@@ -438,7 +438,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
 
     form.innerHTML = html`
       ${locked ? raw(`<div class="notice warn mb16">Diese Buchung liegt im festgeschriebenen Zeitraum (bis ${esc(fmtDate(lockedUntil()))}). Sie kann nicht mehr geändert, sondern nur noch storniert werden.${zahlungOffen
-        ? ' Die Zahlung lässt sich weiterhin eintragen – mit einem Datum nach der Festschreibung, zusammen mit dem Zahlungskonto.' : ''}</div>`) : ''}
+        ? ' Die Zahlung lässt sich weiterhin eintragen: mit einem Datum nach der Festschreibung, zusammen mit dem Zahlungskonto.' : ''}</div>`) : ''}
       ${tx.voided ? raw(`<div class="notice danger mb16">Diese Buchung wurde${tx.voidedAt ? ` am ${esc(fmtDate(tx.voidedAt.slice(0, 10)))}` : ''} storniert${tx.voidReason ? ` (${esc(tx.voidReason)})` : ''}.
         Eine Gegenbuchung hebt sie auf; beide bleiben unverändert erhalten und lassen sich weder bearbeiten noch löschen.</div>`) : ''}
       ${tx.isReversal ? raw('<div class="notice mb16">Das ist die Gegenbuchung zu einem Storno. Sie hebt die stornierte Buchung auf und lässt sich weder bearbeiten noch löschen.</div>') : ''}
@@ -461,7 +461,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         <div class="field">
           <label>Kategorie *</label>
           <select id="i_categoryId">
-            <option value="">– bitte wählen –</option>
+            <option value="">Bitte wählen</option>
             ${raw(cats.map((c) => `<option value="${esc(c.id)}" ${tx.categoryId === c.id ? 'selected' : ''}>${esc(c.name)}${c.euerLine ? ` · EÜR ${formLine(c.euerLine, new Date().getFullYear())}` : ''}</option>`).join(''))}
           </select>
         </div>
@@ -470,7 +470,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
           <label>${tx.type === 'income' ? 'Kunde' : 'Lieferant'}</label>
           <div class="row" style="gap:6px">
             <select id="i_contactId" style="flex:1">
-              <option value="">– keiner –</option>
+              <option value="">Keiner</option>
               ${raw(sel.contacts().map((c) => `<option value="${esc(c.id)}" ${tx.contactId === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join(''))}
             </select>
             <button class="btn sm" id="btnNewContact" title="Neuen Kontakt anlegen">${icon('plus', 14)}</button>
@@ -479,7 +479,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         <div class="field">
           <label>Zahlungskonto</label>
           <select id="i_accountId">
-            <option value="">– keins –</option>
+            <option value="">Keins</option>
             ${raw(sel.accounts().map((a) => `<option value="${esc(a.id)}" ${tx.accountId === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join(''))}
           </select>
         </div>
@@ -496,7 +496,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         <div class="card-body">
           <div class="row between mb8">
             <strong style="font-size:13px">Betrag</strong>
-            ${klein ? raw('<span class="badge">Kleinunternehmer – keine Umsatzsteuer</span>') : raw(`
+            ${klein ? raw('<span class="badge">Kleinunternehmer, keine Umsatzsteuer</span>') : raw(`
               <div class="seg">
                 <button data-mode="gross" class="${inputMode === 'gross' ? 'active' : ''}">Brutto eingeben</button>
                 <button data-mode="net" class="${inputMode === 'net' ? 'active' : ''}">Netto eingeben</button>
@@ -579,13 +579,13 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       <div class="mt8">
         <label class="check" title="Erscheint nicht in Export &amp; Finanzamt, EÜR, Umsatzsteuer und DATEV">
           <input type="checkbox" id="i_unlisted" ${tx.unlisted ? 'checked' : ''}>
-          <span>Nicht gelistet <span class="muted">– nur zur eigenen Übersicht, nicht in Finanzamt-Unterlagen</span></span>
+          <span>Nicht gelistet <span class="muted">(nur zur eigenen Übersicht, nicht in Finanzamt-Unterlagen)</span></span>
         </label>
         <div class="notice warn mt8" id="unlistedHint" ${tx.unlisted ? '' : raw('style="display:none"')}>
           Diese Buchung fehlt in allen Exporten für Finanzamt und Steuerkanzlei (EÜR, Umsatzsteuer,
           DATEV, Betriebsprüfung). In Übersicht und Auswertungen zählt sie nur, wenn dort
           <strong>„Nicht gelistete Buchungen einbeziehen“</strong> gesetzt ist. Gedacht für Vorgänge,
-          die steuerlich nicht zum Betrieb gehören – betriebliche Einnahmen und Ausgaben müssen
+          die steuerlich nicht zum Betrieb gehören. Betriebliche Einnahmen und Ausgaben müssen
           vollständig erklärt werden (§ 146 Abs. 1 AO).
         </div>
       </div>
@@ -699,7 +699,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     const fehlt = partner?.name && !passenderKontakt(partner);
     box.innerHTML = html`
       <div class="notice ok erech-hinweis mb8">
-        <strong>E-Rechnung erkannt</strong> (${r.format}) – ${partner?.name || 'ohne Namen'}${r.nummer ? ` · Nr. ${r.nummer}` : ''}
+        <strong>E-Rechnung erkannt</strong> (${r.format}): ${partner?.name || 'ohne Namen'}${r.nummer ? ` · Nr. ${r.nummer}` : ''}
         · ${money(r.brutto ?? r.zahlbetrag ?? 0)} € vom ${fmtDate(r.datum)}
         ${saetze.length > 1 ? raw(`<div class="small mt8">Die Rechnung enthält mehrere Steuersätze (${esc(saetze.map((s) => `${s} %`).join(', '))}). Übernommen werden Datum, Nummer und Kontakt; die Beträge bitte je Steuersatz als eigene Buchung erfassen.</div>`) : ''}
         <div class="row wrap mt8">
@@ -737,7 +737,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       if (!cats.some((c) => c.id === tx.categoryId)) tx.categoryId = cats[0]?.id || '';
     }
     const partner = gegenseite(r);
-    if (!tx.description) tx.description = [partner?.name, r.nummer ? `Rechnung ${r.nummer}` : ''].filter(Boolean).join(' – ').slice(0, 200);
+    if (!tx.description) tx.description = [partner?.name, r.nummer ? `Rechnung ${r.nummer}` : ''].filter(Boolean).join(', ').slice(0, 200);
     if (r.datum) tx.date = r.datum;
     if (r.faellig) tx.dueDate = r.faellig;
     // Eine neu erfasste Rechnung, deren Fälligkeit noch aussteht, ist in aller Regel noch nicht bezahlt.
@@ -760,8 +760,8 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       inputMode = 'net';
     } else if (saetze.length <= 1) {
       warn('Betrag nicht übernommen', saetze.length
-        ? `Die Rechnung nennt ${saetze[0]} % – bitte Betrag und Satz selbst eintragen.`
-        : 'Die Rechnung schlüsselt die Umsatzsteuer nicht auf – bitte Betrag und Satz selbst eintragen.');
+        ? `Die Rechnung nennt ${saetze[0]} %. Bitte Betrag und Satz selbst eintragen.`
+        : 'Die Rechnung schlüsselt die Umsatzsteuer nicht auf. Bitte Betrag und Satz selbst eintragen.');
     }
     draw();
     ok('Werte übernommen', 'Bitte prüfen, Kategorie wählen und die Buchung anlegen.');
@@ -890,7 +890,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       ...splitFromGross(dep.remaining, klein ? 0 : tx.vatRate),
     };
     m.close();
-    ok('Anzahlung gespeichert', 'Der Restbetrag ist vorbereitet – bitte noch prüfen und anlegen.');
+    ok('Anzahlung gespeichert', 'Der Restbetrag ist vorbereitet. Bitte noch prüfen und anlegen.');
     refresh();
     setTimeout(() => openTransactionDialog(rest), 60);
   }
@@ -900,14 +900,14 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     if (!attachments.length) {
       list.innerHTML = tx.type === 'income'
         ? '<p class="muted tiny mb0">Noch kein Beleg hinterlegt. Auch von Ausgangsrechnungen gehört eine Kopie in die Unterlagen (§ 14b UStG, § 147 AO).</p>'
-        : '<p class="muted tiny mb0">Noch kein Beleg hinterlegt. Ohne Beleg keine Betriebsausgabe – das prüft das Finanzamt zuerst.</p>';
+        : '<p class="muted tiny mb0">Noch kein Beleg hinterlegt. Ohne Beleg keine Betriebsausgabe, das prüft das Finanzamt zuerst.</p>';
       return;
     }
     list.innerHTML = attachments.map((a) => `
       <div class="attach" data-att="${esc(a.id)}">
         <div class="thumb">${a.recovered ? '?' : esc((a.fileName.split('.').pop() || '?').slice(0, 4).toUpperCase())}</div>
         <div class="name" title="${esc(a.fileName)}">${esc(a.fileName)}<div class="tiny muted">${a.recovered
-          ? 'aus einer älteren Fassung wiederhergestellt – Name und Prüfsumme fehlen'
+          ? 'aus einer älteren Fassung wiederhergestellt, Name und Prüfsumme fehlen'
           : `${esc(bytes(a.size))} · Prüfsumme ${esc(String(a.sha256 || '').slice(0, 10))}…`}</div></div>
         <button class="btn sm ghost" data-view-att="${esc(a.id)}" title="Ansehen">${icon('eye', 14).__raw}</button>
         <button class="btn sm ghost" data-save-att="${esc(a.id)}" title="Speichern unter">${icon('save', 14).__raw}</button>

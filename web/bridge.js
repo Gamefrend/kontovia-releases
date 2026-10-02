@@ -233,7 +233,7 @@ function zeigeCode({ code, url, gueltigBis }) {
     size: 'slim',
     body: `
       <ol style="padding-left:20px;line-height:1.7;margin-top:0">
-        <li>Öffnen Sie <strong>${url.replace(/^https:\/\//, '').replace(/[<>&"]/g, '')}</strong> – hier oder auf einem anderen Gerät.</li>
+        <li>Öffnen Sie <strong>${url.replace(/^https:\/\//, '').replace(/[<>&"]/g, '')}</strong>, hier oder auf einem anderen Gerät.</li>
         <li>Melden Sie sich mit Ihrem Google-Konto an und geben Sie diesen Code ein:</li>
       </ol>
       <div style="font:600 28px/1.2 var(--mono);letter-spacing:.12em;text-align:center;padding:14px;border:1px dashed var(--border-strong);border-radius:10px;user-select:all" id="kvCode">${code.replace(/[<>&"]/g, '')}</div>
@@ -328,7 +328,7 @@ const api = {
       deviceName: device.name,
     }), { needsUnlock: false }),
     openDataFolder: handle(async () => {
-      throw new Error('Die Web-Fassung legt ihre Daten im Speicher des Browsers ab – einen Ordner dafür gibt es nicht.');
+      throw new Error('Die Web-Fassung legt ihre Daten im Speicher des Browsers ab, einen Ordner dafür gibt es nicht.');
     }, { needsUnlock: false }),
     openLicense: handle(async () => {
       throw new Error('Die Web-Fassung läuft in Ihrem Browser; es gelten dessen Lizenzbedingungen.');
@@ -407,7 +407,7 @@ const api = {
     read: handle(async () => kopie(fuerOberflaeche(vault.db))),
     write: handle(async (db) => {
       if (!db || typeof db !== 'object' || !Array.isArray(db.transactions)) {
-        throw new Error('Ungültiger Datenbestand – Speichern abgebrochen.');
+        throw new Error('Ungültiger Datenbestand. Speichern abgebrochen.');
       }
       const neu = kopie(db);
       // Der Cloud-Block wird ausschließlich hier geführt (wie im Hauptprozess);
@@ -525,7 +525,7 @@ const api = {
     }),
     commit: handle(async (db) => {
       if (!db || typeof db !== 'object' || !Array.isArray(db.transactions)) {
-        throw new Error('Ungültiger Datenbestand – Abgleich abgebrochen.');
+        throw new Error('Ungültiger Datenbestand. Abgleich abgebrochen.');
       }
       return cloud.commit(kopie(db), (p) => send('cloudProgress', p));
     }),
@@ -628,7 +628,7 @@ async function voraussetzungen() {
   try {
     await A.lesen('dateien', 'geraet');
   } catch {
-    return 'Der Browser erlaubt Kontovia nicht, Daten abzulegen – das ist im privaten Modus üblich. Bitte in einem normalen Fenster öffnen.';
+    return 'Der Browser erlaubt Kontovia nicht, Daten abzulegen. Das ist im privaten Modus üblich. Bitte in einem normalen Fenster öffnen.';
   }
   return null;
 }

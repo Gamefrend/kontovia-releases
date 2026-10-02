@@ -76,7 +76,7 @@ export function eRechnungHtml(r) {
  */
 export function zeigeERechnung(r, { titel = '', onUebernehmen = null } = {}) {
   const m = modal({
-    title: titel || `${r.gutschrift ? 'Gutschrift' : 'Rechnung'} ${r.nummer || ''} – ${r.verkaeufer?.name || 'E-Rechnung'}`,
+    title: titel || `${r.gutschrift ? 'Gutschrift' : 'Rechnung'} ${r.nummer || ''}, ${r.verkaeufer?.name || 'E-Rechnung'}`,
     size: 'wide',
     body: `${eRechnungHtml(r)}
       <p class="tiny muted mt16 mb0">Lesbare Darstellung der strukturierten Rechnungsdaten (${esc(r.syntax)}).

@@ -22,7 +22,7 @@
 import { compareVersions } from './updateinfo.js';
 
 /** Wird beim Bauen eingesetzt (scripts/build-web.js). */
-export const VERSION = '1.12.0';
+export const VERSION = '1.13.0';
 
 const META = 'kontovia-meta';
 const PREFIX = 'kontovia-app-';
@@ -61,7 +61,7 @@ export function manifestPruefen(m) {
     if (!p || p.startsWith('/') || p.includes('..') || p.includes('\\') || /^[a-z]+:/i.test(p)) {
       throw new Error(`Unzulässiger Pfad in der Versionsdatei: ${p.slice(0, 80)}`);
     }
-    if (!HEX64.test(String(f.sha256 || ''))) throw new Error(`Für ${p} fehlt eine gültige Prüfsumme – Abbruch.`);
+    if (!HEX64.test(String(f.sha256 || ''))) throw new Error(`Für ${p} fehlt eine gültige Prüfsumme. Das Update wurde abgebrochen.`);
     return { path: p, sha256: String(f.sha256), size: Number(f.size) || 0 };
   });
   if (!files.some((f) => f.path === 'index.html')) throw new Error('Die Versionsdatei nennt keine Startseite.');
