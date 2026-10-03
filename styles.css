@@ -404,7 +404,7 @@ hr.sep { border: 0; border-top: 1px solid var(--border); margin: 16px 0; }
 .modal-backdrop {
   position: fixed; inset: 0; background: rgba(8, 11, 15, .55);
   backdrop-filter: blur(3px);
-  display: grid; place-items: center; z-index: 200; padding: 24px;
+  display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; z-index: 200; padding: 24px;
   animation: fade .12s ease;
 }
 @keyframes fade { from { opacity: 0; } }
@@ -827,6 +827,10 @@ table.data tbody tr.empty-row:hover { background: none; }
 }
 @container (max-width: 560px) {
   .dash-item.w-4, .dash-item.w-6, .dash-item.w-8, .dash-item.w-9 { grid-column: span 12; }
+}
+/* Auf dem Telefon bekommt auch ein Viertel die ganze Breite: Zahl und Erläuterung bleiben lesbar. */
+@container (max-width: 430px) {
+  .dash-item.w-3 { grid-column: span 12; }
 }
 /* Anklickbare Zahlen und Zeilen der Übersicht */
 .dash .card.klickbar { cursor: pointer; }

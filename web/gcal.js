@@ -24,6 +24,15 @@
  *
  * Im Tresor (Cloud-Block, nur dieses Gerät) stehen wie früher unter Windows
  * Konto, Kalender und der Merkzettel des Abgleichs, aber kein Schlüssel.
+ *
+ * Rückfallweg: Wo ein zweites Fenster nicht zuverlässig mit der App sprechen
+ * kann (die auf dem Home-Bildschirm abgelegte App auf iPhone und iPad) oder
+ * der Browser es blockiert, geht Kontovia stattdessen für einen Moment ganz zu
+ * Google und kommt von dort zurück, so wie bei der Anmeldung zur Cloud
+ * (weiterleitung.js). Dabei lädt die Seite neu und der Tresor ist wieder
+ * gesperrt; was zur Anfrage gehört, überbrückt den Neustart im localStorage
+ * und ist nach 15 Minuten wertlos. Das Zugriffstoken selbst bleibt im
+ * Arbeitsspeicher und wird nach dem Entsperren übernommen (rueckmeldung).
  */
 
 import { requestJson, form } from './netz.js';
@@ -49,6 +58,8 @@ const ABBRUCH = ['BESTAETIGEN', 'NICHT_VERBUNDEN', 'SCHNITTSTELLE_AUS', 'KEINE_B
 const PRAEFIX = 'kal.';
 const KANAL = 'kontovia-google';
 const FENSTER_MS = 5 * 60 * 1000;
+const MERKZETTEL = 'kontovia.kal.weiterleitung';
+const GUELTIG_MS = 15 * 60 * 1000;
 
 const enc = (s) => encodeURIComponent(String(s));
 
@@ -58,6 +69,46 @@ function zufall() {
 
 function fehler(text, code) {
   return Object.assign(new Error(text), { code });
+}
+
+/** Die Adresse bei Google; für das Fenster und für die Weiterleitung dieselbe. */
+function anfrageAdresse({ clientId, scopes, loginHint = '', prompt = '', href, state, nonce }) {
+  return `${AUTH}?${form({
+    client_id: clientId,
+    redirect_uri: rueckAdresse(href),
+    response_type: 'token id_token',
+    scope: scopes.join(' '),
+    include_granted_scopes: 'true',
+    state,
+    nonce,
+    login_hint: loginHint,
+    prompt,
+  })}`;
+}
+
+/** Gerät von Apple? Dort gilt die App auf dem Home-Bildschirm als eigener Browser. */
+export function istApple({ ua = globalThis.navigator?.userAgent || '', plattform = globalThis.navigator?.platform || '', beruehrung = globalThis.navigator?.maxTouchPoints || 0 } = {}) {
+  return /iPhone|iPad|iPod/.test(ua) || (plattform === 'MacIntel' && beruehrung > 1);
+}
+
+/** localStorage kann im privaten Modus oder bei gesperrten Daten schon beim Zugriff werfen. */
+function lokalerSpeicher() {
+  try { return globalThis.localStorage; } catch { return null; }
+}
+
+function merkzettelLesen(speicher, jetzt = Date.now()) {
+  try {
+    const m = JSON.parse(speicher?.getItem(MERKZETTEL) || 'null');
+    return m && typeof m.state === 'string' && jetzt - Number(m.ts) < GUELTIG_MS ? m : null;
+  } catch { return null; }
+}
+
+/** Nur diese Angaben der Oberfläche überleben die Weiterleitung, klein und ohne Verschachtelung. */
+function sauberesMerk(m) {
+  const out = {};
+  if (!m || typeof m !== 'object') return out;
+  for (const k of ['includeEvents', 'includeDue', 'sendNotes', 'andere', 'nurFreigabe']) if (typeof m[k] === 'boolean') out[k] = m[k];
+  return out;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -74,9 +125,11 @@ function fehler(text, code) {
  * Kanal derselben Adresse, falls der Browser die Verbindung zum öffnenden
  * Fenster unterwegs gekappt hat. Beides erreicht nur Seiten von Kontovia.
  */
-export function antwortWeiterreichen({ loc = location, hist = history, opener = globalThis.opener, Kanal = globalThis.BroadcastChannel } = {}) {
+export function antwortWeiterreichen({ loc = location, hist = history, opener = globalThis.opener, Kanal = globalThis.BroadcastChannel, speicher = lokalerSpeicher() } = {}) {
   const p = new URLSearchParams(String(loc.hash || '').replace(/^#/, ''));
   if (!String(p.get('state') || '').startsWith(PRAEFIX)) return false;
+  // Gehört die Antwort zu einer Weiterleitung dieses Fensters? Dann ist es kein Hilfsfenster.
+  if (merkzettelLesen(speicher)?.state === p.get('state')) return false;
   const nachricht = { typ: KANAL, hash: String(loc.hash) };
   try { hist.replaceState(null, '', loc.pathname + loc.search); } catch { /* egal */ }
   try { opener?.postMessage(nachricht, loc.origin); } catch { /* der Kanal reicht */ }
@@ -114,6 +167,29 @@ export function antwortLesen(hash, { state, nonce }, jetzt = Date.now()) {
 }
 
 /**
+ * Beim Start: Kam gerade eine Antwort von Google, nachdem Kontovia selbst zu
+ * Google weitergeleitet hatte? Holt sie aus der Adresse, entfernt sie dort
+ * sofort und löscht den Merkzettel.
+ * @returns {null | {zweck:string, merk:object, auth?:object, fehler?:string, abgebrochen?:boolean}}
+ */
+export function rueckkehrAusAdresse({ speicher = lokalerSpeicher(), loc = location, hist = history, jetzt = Date.now() } = {}) {
+  const hash = String(loc.hash || '');
+  const p = new URLSearchParams(hash.replace(/^#/, ''));
+  if (!String(p.get('state') || '').startsWith(PRAEFIX)) return null;
+  const m = merkzettelLesen(speicher, jetzt);
+  if (!m || m.state !== p.get('state')) return null;
+  try { speicher.removeItem(MERKZETTEL); } catch { /* egal */ }
+  try { hist.replaceState(null, '', loc.pathname + loc.search); } catch { /* egal */ }
+  const basis = { zweck: m.zweck === 'bestaetigen' ? 'bestaetigen' : 'verbinden', merk: sauberesMerk(m.merk) };
+  try {
+    const auth = antwortLesen(hash, { state: m.state, nonce: m.nonce }, jetzt);
+    return auth ? { ...basis, auth } : null;
+  } catch (e) {
+    return { ...basis, fehler: e.message, abgebrochen: e.code === 'ABGEBROCHEN' };
+  }
+}
+
+/**
  * Öffnet das Fenster bei Google und wartet auf die Antwort. Muss direkt aus
  * einem Tipp heraus aufgerufen werden, sonst blockiert der Browser das Fenster.
  * @returns {{ergebnis: Promise<object>, abbrechen: () => void}}
@@ -124,17 +200,7 @@ export function fensterOeffnen({ clientId, scopes, loginHint = '', prompt = '' }
 } = {}) {
   if (!clientId) throw new Error('Für Google Kalender ist kein Client hinterlegt.');
   const erwartet = { state: PRAEFIX + zufall(), nonce: zufall() };
-  const url = `${AUTH}?${form({
-    client_id: clientId,
-    redirect_uri: rueckAdresse(href),
-    response_type: 'token id_token',
-    scope: scopes.join(' '),
-    include_granted_scopes: 'true',
-    state: erwartet.state,
-    nonce: erwartet.nonce,
-    login_hint: loginHint,
-    prompt,
-  })}`;
+  const url = anfrageAdresse({ clientId, scopes, loginHint, prompt, href, ...erwartet });
   const w = oeffnen(url, 'kontovia-google', 'popup,width=520,height=680');
   if (!w) {
     throw fehler('Der Browser hat das Fenster für Google blockiert. Bitte erlauben Sie Pop-ups für Kontovia und versuchen Sie es erneut.', 'FENSTER_BLOCKIERT');
@@ -194,14 +260,24 @@ export function fensterOeffnen({ clientId, scopes, loginHint = '', prompt = '' }
 export class GoogleCalendar {
   /**
    * @param {import('./tresor.js').Vault} vault
-   * @param {{clientId:string, fenster?:Function, anfrage?:Function}} opts
+   * @param {{clientId:string, fenster?:Function, anfrage?:Function, umgebung?:object}} opts
    *   fenster und anfrage ersetzen in Prüfungen das Fenster bei Google und das Netz.
+   *   umgebung: { weiterleiten: () => boolean, navigieren: (url) => void, speicher, href }
    */
-  constructor(vault, { clientId, fenster = fensterOeffnen, anfrage = requestJson } = {}) {
+  constructor(vault, { clientId, fenster = fensterOeffnen, anfrage = requestJson, umgebung = {} } = {}) {
     this.vault = vault;
     this.clientId = clientId;
     this.fenster = fenster;
     this.anfrage = anfrage;
+    this.umgebung = {
+      // Standard: nur die App auf dem Home-Bildschirm von iPhone und iPad.
+      weiterleiten: () => istApple() && (matchMedia('(display-mode: standalone)').matches || navigator.standalone === true),
+      navigieren: (url) => location.assign(url),
+      speicher: lokalerSpeicher(),
+      href: globalThis.location?.href,
+      ...umgebung,
+    };
+    this.eingang = null; // Antwort von Google nach einer Weiterleitung, bis sie übernommen ist
     this.token = null; // { accessToken, expiresAt, scope } – nur im Arbeitsspeicher
     this.offen = null; // das Fenster bei Google, solange es offen ist
   }
@@ -221,6 +297,7 @@ export class GoogleCalendar {
   /** Gesperrt heißt: auch der Zugriff auf Google ist weg. */
   vergessen() {
     this.token = null;
+    this.eingang = null;
     this.abbrechen();
   }
 
@@ -254,28 +331,59 @@ export class GoogleCalendar {
   /* Anmeldung                                                               */
   /* ---------------------------------------------------------------------- */
 
-  /** Holt ein Zugriffstoken über das Fenster bei Google. */
-  async anfordern({ weitere = false, loginHint = '', prompt = '' } = {}) {
+  /**
+   * Holt ein Zugriffstoken: aus der Rückkehr von Google, über das Fenster bei
+   * Google oder, wenn beides nicht geht, über eine Weiterleitung (dann kehrt
+   * der Aufruf nie zurück; die Seite verlässt Kontovia).
+   * @param {{weitere?:boolean, loginHint?:string, prompt?:string, zweck?:'verbinden'|'bestaetigen', merk?:object, umleiten?:boolean}} p
+   *   umleiten: gleich über die Seite selbst, etwa nachdem der Browser das Fenster blockiert hat
+   */
+  async anfordern({ weitere = false, loginHint = '', prompt = '', zweck = 'verbinden', merk = null, umleiten = false } = {}) {
     this.abbrechen();
     const scopes = ['openid', 'email', SCOPE, ...(weitere ? [SCOPE_EVENTS, SCOPE_LISTE] : [])];
+    // Eben von Google zurück: die Antwort gilt, ein zweiter Gang erübrigt sich.
+    const da = this.eingang;
+    if (da?.auth && da.zweck === zweck && scopes.every((x) => String(da.auth.scope || '').split(/\s+/).includes(x) || x === 'openid' || x === 'email')) {
+      this.eingang = null;
+      return this.angenommen(da.auth);
+    }
+    if (umleiten || this.umgebung.weiterleiten()) return this.weiterleiten({ scopes, loginHint, prompt, zweck, merk });
     const offen = this.fenster({ clientId: this.clientId, scopes, loginHint, prompt });
     this.offen = offen;
     try {
-      const auth = await offen.ergebnis;
-      // Den Kalender im Google-Dialog abgewählt? Kein Widerruf: Google
-      // widerriefe die ganze Freigabe des Kontos, auch die anderer Geräte.
-      if (auth.scope && !auth.scope.split(/\s+/).includes(SCOPE)) {
-        throw new Error('Der Zugriff auf den Kalender wurde im Google-Dialog nicht erlaubt. Bitte erneut verbinden und das Häkchen beim Kalender setzen.');
-      }
-      return auth;
+      return this.angenommen(await offen.ergebnis);
     } finally {
       if (this.offen === offen) this.offen = null;
     }
   }
 
-  async connect({ calendarIdHint = '', timeZone = 'Europe/Berlin', weitere = false } = {}) {
+  /** Geht für einen Moment zu Google; die Antwort kommt über rueckkehrAusAdresse() zurück. */
+  weiterleiten({ scopes, loginHint, prompt, zweck, merk }) {
+    const { speicher, href } = this.umgebung;
+    if (!this.clientId) throw new Error('Für Google Kalender ist kein Client hinterlegt.');
+    const erwartet = { state: PRAEFIX + zufall(), nonce: zufall() };
+    try {
+      speicher.setItem(MERKZETTEL, JSON.stringify({ ...erwartet, zweck, merk: sauberesMerk(merk), ts: Date.now() }));
+    } catch {
+      throw new Error('Der Browser erlaubt Kontovia gerade nicht, sich den Weg zu Google zu merken (privater Modus?). Bitte in einem normalen Fenster erneut versuchen.');
+    }
+    this.umgebung.navigieren(anfrageAdresse({ clientId: this.clientId, scopes, loginHint, prompt, href, ...erwartet }));
+    return new Promise(() => {});
+  }
+
+  /** Prüft eine Antwort von Google auf die Bereiche, die Kontovia braucht. */
+  angenommen(auth) {
+    // Den Kalender im Google-Dialog abgewählt? Kein Widerruf: Google
+    // widerriefe die ganze Freigabe des Kontos, auch die anderer Geräte.
+    if (auth.scope && !auth.scope.split(/\s+/).includes(SCOPE)) {
+      throw new Error('Der Zugriff auf den Kalender wurde im Google-Dialog nicht erlaubt. Bitte erneut verbinden und das Häkchen beim Kalender setzen.');
+    }
+    return auth;
+  }
+
+  async connect({ calendarIdHint = '', timeZone = 'Europe/Berlin', weitere = false, merk = null, umleiten = false } = {}) {
     const g = this.state();
-    const auth = await this.anfordern({ weitere, prompt: 'select_account' });
+    const auth = await this.anfordern({ weitere, prompt: 'select_account', zweck: 'verbinden', merk, umleiten });
     const vorher = g.calendarId;
     this.token = { accessToken: auth.accessToken, expiresAt: auth.expiresAt, scope: auth.scope };
     let cal;
@@ -304,12 +412,49 @@ export class GoogleCalendar {
     };
   }
 
+  /** Merkt sich die Antwort einer Weiterleitung (beim Start, der Tresor ist noch gesperrt). */
+  rueckkehr(antwort) {
+    this.eingang = antwort || null;
+  }
+
+  /**
+   * Nach dem Entsperren, einmalig: Was ist bei der Rückkehr von Google passiert?
+   * Eine Bestätigung wird hier übernommen; eine Verbindung vollendet die
+   * Oberfläche mit connect(), das die gemerkte Antwort verwendet.
+   * @returns {Promise<null | {zweck:string, merk:object, fehler?:string, abgebrochen?:boolean, bereit?:boolean}>}
+   */
+  async rueckmeldung() {
+    const e = this.eingang;
+    if (!e) return null;
+    if (e.fehler) {
+      this.eingang = null;
+      return { zweck: e.zweck, merk: e.merk, fehler: e.fehler, abgebrochen: !!e.abgebrochen };
+    }
+    if (e.zweck === 'bestaetigen') {
+      this.eingang = null;
+      try {
+        this.angenommen(e.auth);
+        await this.uebernehmen(e.auth);
+        return { zweck: 'bestaetigen', merk: e.merk, bereit: true };
+      } catch (err) {
+        return { zweck: 'bestaetigen', merk: e.merk, fehler: err.message };
+      }
+    }
+    return { zweck: 'verbinden', merk: e.merk, bereit: true };
+  }
+
   /** Neues Zugriffstoken für eine bestehende Verbindung, nach einem Tipp. */
-  async bestaetigen() {
+  async bestaetigen({ umleiten = false } = {}) {
     const g = this.state();
     if (!(g.calendarId && g.linkedAt)) throw fehler('Google Kalender ist auf diesem Gerät nicht verbunden.', 'NICHT_VERBUNDEN');
     const weitere = String(g.scope || '').split(/\s+/).includes(SCOPE_EVENTS);
-    const auth = await this.anfordern({ weitere, loginHint: g.email || '' });
+    const auth = await this.anfordern({ weitere, loginHint: g.email || '', zweck: 'bestaetigen', umleiten });
+    return this.uebernehmen(auth);
+  }
+
+  /** Setzt das neue Zugriffstoken einer Bestätigung ein, wenn es zum verbundenen Konto gehört. */
+  async uebernehmen(auth) {
+    const g = this.state();
     if (g.email && auth.email && auth.email.toLowerCase() !== g.email.toLowerCase()) {
       throw new Error(`Bitte mit dem Google-Konto ${g.email} bestätigen. Für ein anderes Konto Google Kalender erst trennen und neu verbinden.`);
     }

@@ -158,18 +158,33 @@ function weitereAbschnitt(st, cfg) {
     <button class="btn" data-cal="weitere-waehlen">${icon('calendar', 15).__raw} Kalender auswählen</button>`;
 }
 
+/**
+ * Der Browser hat das kleine Fenster von Google blockiert. Statt zu scheitern
+ * bietet Kontovia an, für einen Moment ganz zu Google zu wechseln.
+ */
+async function umleitenFragen(e) {
+  if (e?.code !== 'FENSTER_BLOCKIERT') return false;
+  return confirmDialog({
+    title: 'Fenster blockiert',
+    text: 'Ihr Browser hat das kleine Fenster von Google blockiert. Kontovia kann stattdessen für einen Moment '
+      + 'zu Google wechseln und danach hierher zurückkehren. Sie entsperren Kontovia dann mit Ihrem Passwort, '
+      + 'und es geht dort weiter, wo Sie waren. Möchten Sie das?',
+    confirmLabel: 'Zu Google wechseln',
+  });
+}
+
 /** Holt die zusätzliche Freigabe für weitere Kalender – ein neuer Gang zu Google. */
-async function freigebenWeitere() {
+async function freigebenWeitere(umleiten = false) {
   const ja = await confirmDialog({
     title: 'Weitere Kalender einbeziehen?',
     text: 'Kontovia fragt bei Google zusätzlich das Recht an, Ihre Kalender aufzulisten und Termine darin zu lesen und zu ändern. '
       + 'Abgeglichen werden danach nur die Kalender, die Sie anschließend auswählen, und zwar in beide Richtungen: Was Sie dort ändern oder löschen, '
-      + 'ändert sich hier, und umgekehrt. Es öffnet sich ein kleines Fenster von Google; danach geht es hier weiter.',
+      + 'ändert sich hier, und umgekehrt. Es öffnet sich die Anmeldung bei Google; danach geht es hier weiter.',
     confirmLabel: 'Weiter zu Google',
   });
   if (!ja) return false;
   try {
-    const res = await api.gcal.connect({ calendarIdHint: calendarSettings().calendarId, timeZone: timeZone(), weitere: true });
+    const res = await api.gcal.connect({ calendarIdHint: calendarSettings().calendarId, timeZone: timeZone(), weitere: true, merk: { nurFreigabe: true, andere: true }, umleiten });
     await refreshCalendarStatus();
     if (!res.weitereErlaubt) {
       warn('Nicht freigegeben', 'Im Google-Dialog wurde der Zugriff auf die übrigen Kalender nicht erlaubt. Der Kalender „Kontovia“ wird weiter abgeglichen.');
@@ -177,6 +192,7 @@ async function freigebenWeitere() {
     }
     return true;
   } catch (e) {
+    if (await umleitenFragen(e)) return freigebenWeitere(true);
     if (e.code !== 'ABGEBROCHEN') err('Freigabe fehlgeschlagen', e.message);
     return false;
   }
@@ -262,12 +278,13 @@ export function openCalendarSyncDialog() {
  * Web-Fassung: neuer Zugriff für eine Stunde. Muss direkt aus einem Tipp
  * kommen, sonst blockiert der Browser das Fenster von Google.
  */
-export async function bestaetigen() {
+export async function bestaetigen(umleiten = false) {
   try {
-    await api.gcal.bestaetigen();
+    await api.gcal.bestaetigen({ umleiten });
     await refreshCalendarStatus();
     return true;
   } catch (e) {
+    if (await umleitenFragen(e)) return bestaetigen(true);
     if (e.code !== 'ABGEBROCHEN') err('Bestätigung bei Google fehlgeschlagen', e.message);
     return false;
   }
@@ -313,8 +330,9 @@ function connectDialog() {
           <label class="check"><input type="checkbox" id="g_notes" ${cfg.sendNotes ? 'checked' : ''}> Notizen der Termine mit übertragen</label>
           <label class="check"><input type="checkbox" id="g_andere"> Auch meine anderen Google-Kalender einbeziehen (z. B. den Hauptkalender), in beide Richtungen. Welche, wählen Sie danach</label>
         </div>
-        <p class="small muted mt16 mb0" style="line-height:1.6">Es öffnet sich ein kleines Fenster mit der
-        Anmeldung bei Google; danach geht es hier weiter. Erscheint dort der
+        <p class="small muted mt16 mb0" style="line-height:1.6">Es öffnet sich die Anmeldung bei Google,
+        meist in einem kleinen Fenster; auf manchen Telefonen wechselt dafür die ganze Seite, und Sie
+        entsperren Kontovia danach mit Ihrem Passwort. Dann geht es hier weiter. Erscheint dort der
         Hinweis „Google hat diese App nicht überprüft“, geht es über <em>Erweitert</em> und den Link
         darunter weiter. Die Verbindung lässt sich jederzeit unter Einstellungen → Kalender-Abgleich
         trennen.</p>`,
@@ -339,25 +357,65 @@ function connectDialog() {
 export async function connectGoogle() {
   const wahl = await connectDialog();
   if (!wahl) return false;
-  const hinweis = modal({
+  return verbindenMit(wahl);
+}
+
+/**
+ * Nach einer Weiterleitung zu Google (Web-Fassung, wo ein zweites Fenster nicht
+ * geht): Seite und Tresor sind neu geladen, die Antwort von Google liegt bereit.
+ * Läuft nach dem Entsperren, vor dem Start des Abgleichs.
+ */
+export async function nachWeiterleitung(rm) {
+  if (!rm) return;
+  const bestaetigung = rm.zweck === 'bestaetigen';
+  if (rm.fehler) {
+    if (rm.abgebrochen) {
+      warn('Bei Google abgebrochen', bestaetigung ? 'Der Kalenderabgleich wartet weiter auf Ihre Bestätigung.' : 'Google Kalender wurde nicht verbunden.');
+    } else {
+      err(bestaetigung ? 'Bestätigung bei Google fehlgeschlagen' : 'Verbinden fehlgeschlagen', rm.fehler);
+    }
+    return;
+  }
+  if (bestaetigung) {
+    await refreshCalendarStatus();
+    ok('Bei Google bestätigt', 'Der Kalenderabgleich läuft weiter.');
+    return;
+  }
+  await verbindenMit(rm.merk || {}, { zurueck: true });
+}
+
+/**
+ * Verbinden, nachdem im Dialog gewählt wurde. `zurueck`: Der Gang zu Google ist
+ * schon geschehen (Weiterleitung), connect() nimmt die gemerkte Antwort.
+ */
+async function verbindenMit(wahl, { zurueck = false, umleiten = false } = {}) {
+  const hinweis = zurueck || umleiten ? null : modal({
     title: 'Anmeldung bei Google',
     size: 'slim',
-    body: `<p class="mt0" style="line-height:1.6">Bitte melden Sie sich im Fenster von Google an und
+    body: `<p class="mt0" style="line-height:1.6">Bitte melden Sie sich bei Google an und
       erlauben Sie den Zugriff auf den Kalender. Dieser Hinweis schließt sich danach von selbst.</p>
       <p class="small muted mb0">Nach fünf Minuten ohne Anmeldung bricht Kontovia den Versuch ab.</p>`,
     foot: '<button class="btn" data-stop>Abbrechen</button><button class="btn" data-x>Ausblenden</button>',
   });
-  hinweis.root.querySelector('[data-x]').addEventListener('click', () => hinweis.close());
+  hinweis?.root.querySelector('[data-x]').addEventListener('click', () => hinweis.close());
   // Wer das Browserfenster geschlossen hat, soll nicht fünf Minuten warten müssen.
-  hinweis.root.querySelector('[data-stop]').addEventListener('click', () => {
+  hinweis?.root.querySelector('[data-stop]').addEventListener('click', () => {
     hinweis.close();
     api.gcal.cancel().catch(() => {});
   });
-  const { andere, ...einstellungen } = wahl;
+  const { andere, nurFreigabe, ...einstellungen } = wahl;
   try {
-    const res = await api.gcal.connect({ calendarIdHint: calendarSettings().calendarId, timeZone: timeZone(), weitere: andere });
+    const res = await api.gcal.connect({ calendarIdHint: calendarSettings().calendarId, timeZone: timeZone(), weitere: andere, merk: wahl, umleiten });
+    // Nur die Freigabe für weitere Kalender nachgeholt: die Einstellungen bleiben, wie sie sind.
+    if (nurFreigabe) {
+      await refreshCalendarStatus();
+      if (res.weitereErlaubt) await openKalenderAuswahl();
+      else warn('Nicht freigegeben', 'Im Google-Dialog wurde der Zugriff auf die übrigen Kalender nicht erlaubt. Der Kalender „Kontovia“ wird weiter abgeglichen.');
+      refresh();
+      return true;
+    }
     await saveCalendarSettings({ ...einstellungen, calendarId: res.calendarId, account: res.email });
-    hinweis.close();
+    hinweis?.close();
     ok('Google Kalender verbunden', `${res.email} · Kalender „${res.calendarName}“${res.created ? ' angelegt' : ''}`);
     const r = await syncCalendar({ reason: 'erstverbindung' }).catch((e) => { err('Erster Abgleich fehlgeschlagen', e.message); return null; });
     if (r?.summary) ok('Kalender abgeglichen', r.summary);
@@ -367,7 +425,8 @@ export async function connectGoogle() {
     refresh();
     return true;
   } catch (e) {
-    hinweis.close();
+    hinweis?.close();
+    if (await umleitenFragen(e)) return verbindenMit(wahl, { umleiten: true });
     if (e.code !== 'ABGEBROCHEN') err('Verbinden fehlgeschlagen', e.message);
     return false;
   }

@@ -387,8 +387,10 @@ function cloud(root) {
               überprüft“ erscheinen. Über <em>Erweitert</em> und den Link darunter geht es weiter.</li>
           <li><strong>Trennen</strong> unter Einstellungen → Kalender-Abgleich. Ihre Termine in
               Kontovia bleiben, auf Wunsch wird der Kalender „Kontovia“ in Google gelöscht.</li>
-          <li><strong>Anmeldung:</strong> Es öffnet sich ein kleines Fenster von Google. Blockiert der
-              Browser es, erlauben Sie Pop-ups für Kontovia. Der Zugriff auf den Kalender gilt jeweils
+          <li><strong>Anmeldung:</strong> Es öffnet sich ein kleines Fenster von Google. Wo das nicht
+              geht (etwa in der App auf dem iPhone), wechselt Kontovia für einen Moment zu Google und
+              kommt danach zurück. Blockiert der Browser das Fenster, fragt Kontovia vorher. Sie entsperren Kontovia dann einmal
+              mit Ihrem Passwort, und es geht dort weiter, wo Sie waren. Der Zugriff auf den Kalender gilt jeweils
               eine Stunde. Danach wartet der Abgleich, bis Sie kurz bestätigen: ein Tipp auf
               <em>Bestätigen und abgleichen</em>, meist ohne erneute Anmeldung.</li>
         </ul>

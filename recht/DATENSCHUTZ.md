@@ -8,7 +8,7 @@
   prüfen lassen. Rechtsberatung ist das hier nicht.
 -->
 
-Stand: 4. Oktober 2026, Programmversion 2.1.0
+Stand: 4. Oktober 2026, Programmversion 2.2.0
 
 ---
 
@@ -150,6 +150,12 @@ Anmeldung, `www.googleapis.com` für die Termine). Google erteilt dort nur einen
 liegt nur im Arbeitsspeicher des Browsers, nie im Tresor oder im
 Browser-Speicher, und verfällt, sobald Kontovia sich sperrt. Danach wartet der
 Abgleich, bis Sie ihn mit einem Tipp erneut bestätigen.
+
+Wo ein zweites Fenster nicht geht (etwa in der App auf dem iPhone), wechselt
+Kontovia stattdessen kurz selbst zu Google. Bis zur Rückkehr, höchstens 15
+Minuten, merkt es sich dafür im Browser-Speicher nur den Zweck, eine
+Zufallskennung und Ihre Häkchen aus dem Verbindungsdialog; die Berechtigung von
+Google steht dort nicht. Die Kennung wird bei der Rückkehr sofort gelöscht.
 
 Ohne Google-Konto lassen sich Termine als Kalenderdatei (.ics) exportieren und
 importieren; dabei entsteht keine Verbindung ins Netz.

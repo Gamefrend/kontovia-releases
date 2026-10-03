@@ -1,12 +1,12 @@
 {
-  "version": "2.1.0",
-  "released": "2026-10-03T22:43:03.694Z",
-  "notes": "Übersicht zum Anklicken, Zurück-Taste und PDF am Telefon\n\n- In der Übersicht führt jede Zahl zu den Buchungen oder Auswertungen dahinter, auch ein Monat im Verlauf oder eine Kategorie.\n- Die Breite eines Moduls lässt sich jetzt auch auf drei Viertel stellen. So füllt es mit einem Viertel zusammen eine ganze Zeile.\n- Die Zurück-Taste des Browsers geht jetzt einen Schritt in Kontovia zurück, schließt ein offenes Fenster oder bleibt in der Übersicht, statt die Seite zu verlassen.\n- Auf Telefon und Tablet gibt es keinen Druckknopf mehr. PDF-Dateien werden gespeichert und nicht an einen Drucker geschickt.",
+  "version": "2.2.0",
+  "released": "2026-10-03T23:29:26.523Z",
+  "notes": "Besser am Telefon, Installieren auf Android, verlässlicherer Google Kalender\n\n- Auf Android lässt sich Kontovia jetzt mit einem Tipp als App installieren: Der Knopf „App installieren“ steht im Menü und auf dem Anmeldebildschirm.\n- Am Telefon sind Fenster nicht mehr zu breit, die Kennzahlen stehen untereinander, und die Zeile mit Zeitraum und Neu-Knöpfen klappt beim Hinunterscrollen weg.\n- Im Monatskalender zeigen kleine Striche die Termine. Gelesen werden sie in der Liste darunter.\n- Google Kalender: Wo ein zweites Fenster nicht geht, etwa in der App auf dem iPhone, wechselt Kontovia kurz zu Google und kommt danach zurück. Blockiert der Browser das Fenster, fragt Kontovia vorher.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "b95319ebbc2c13a40fade42b84d66e824c565117ae5efa915e2228a0386b9e54",
-      "size": 59082
+      "sha256": "4d479aafe1ff63a0c4275e34dd50296b5c8eebab80561625ae54164a0fe5bf19",
+      "size": 59669
     },
     {
       "path": "icons/apple-touch-icon.png",
@@ -160,8 +160,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "8280009c486d1a6602c072a9f2d3a3bd8a38b7ab2bcfde176905b1023c690ccf",
-      "size": 14082
+      "sha256": "59a72aa60ada5852db333e299857ea25e799a440416f022fab1c3eeafcbc7498",
+      "size": 14898
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -170,18 +170,18 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "d3b986b4673bb5a22814d7f3ae145a94adaf4082b914f4ddfa0d88c3acad6d86",
+      "sha256": "4f760415619f08f26925181a0a8cc14112d6bdc76e3a2c4381bad8dff9f01eb2",
       "size": 879
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "9d05a7b5e96b10ca08caf3aa8ec1d7e0fb4db30d145e974ba0ee3d0ec7ca1aef",
-      "size": 13054
+      "sha256": "2ee96b2c51eee5007bc9ccbd453a02895fb1919efe44a6df22419cef48d87ead",
+      "size": 13438
     },
     {
       "path": "styles.css",
-      "sha256": "e7d7eba03a67f97be274b32eb87d78cb4dd1d872c9eefca565baab7cca961748",
-      "size": 50225
+      "sha256": "358b27add4d7a3f20802d4709f191daaabe3664e23548ef190bd046396630a9c",
+      "size": 50444
     },
     {
       "path": "views/anlageform.js",
@@ -195,8 +195,8 @@
     },
     {
       "path": "views/calendarsync.js",
-      "sha256": "803445470c431a0d7ed1c19e673de140c2b32af9c2f9410f3ce226bcc5502bbf",
-      "size": 26123
+      "sha256": "a7ec5fdc216ed6531be3375c11248d2e92f29d62dd86fe9a7065d2d8f6e99b98",
+      "size": 28845
     },
     {
       "path": "views/cloudpanel.js",
@@ -220,8 +220,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "48d7e5ff14c76057953d8987719c5ca25001fd6b2f34209ccbabe7cbb6717776",
-      "size": 38017
+      "sha256": "95a211ca1308d4dae12c079b481b53d3848facb93b72fb9dcab4cb73143012f0",
+      "size": 38260
     },
     {
       "path": "views/master.js",
@@ -265,7 +265,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "84208c0e6b170e5b566db72442fb6116e1950140d706ca733af1768a2d202372",
+      "sha256": "b5034acfc5ed740e9e4b91fd24975f2ae4024a976f501ecd7690571349c1380a",
       "size": 6905
     },
     {
@@ -275,8 +275,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "f30bd2a0422968b93b3c854aed05dd2200a6558410bfa8db05aacddb3cc45ce7",
-      "size": 39226
+      "sha256": "1976666a5b32bb223075792dd1426df5dc7576499cdfa98b8a1bf06ed435f779",
+      "size": 39850
     },
     {
       "path": "web/cloud.js",
@@ -305,8 +305,13 @@
     },
     {
       "path": "web/gcal.js",
-      "sha256": "19a02482799d1620d9b5281570e9897fff5c656c8d5b872aa78b096deb9c430e",
-      "size": 27105
+      "sha256": "13c57a4233c38f45fa34ce8a3bb97ce3f86b07ca37a8691ec6b3ade962e8cea7",
+      "size": 34542
+    },
+    {
+      "path": "web/installation.js",
+      "sha256": "064f966c0460daab9436041f6e68b7685f1421f6c3e658feb53729860d7ccdb7",
+      "size": 5327
     },
     {
       "path": "web/kern.js",
@@ -315,8 +320,8 @@
     },
     {
       "path": "web/mobil.js",
-      "sha256": "0c62fa62fb4572c1c4eb6ebba8e777b4ba82a5201effead00c7f732ccc8f3ed2",
-      "size": 1634
+      "sha256": "8ac728ebce56a0d0c118dd0a1cb143cac93b7b3a722eb828e21f62721b65c9d4",
+      "size": 3488
     },
     {
       "path": "web/netz.js",
@@ -360,8 +365,8 @@
     },
     {
       "path": "web/web.css",
-      "sha256": "6c5c7c8595ab8ea51562ca8587e72be603bac4739689a9ff0fc9f5db9a574d47",
-      "size": 6962
+      "sha256": "2bb58e2c8631f58ad64ed8d0cd52fe37f8ad52194a407bc01dc67e867a2c30f9",
+      "size": 8554
     },
     {
       "path": "web/weiterleitung.js",

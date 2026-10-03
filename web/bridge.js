@@ -26,16 +26,24 @@ import { makeSeed } from './seed.js';
 import { fuerOberflaeche } from './zugang.js';
 import { modal, toast } from '../lib/ui.js';
 import './mobil.js';
+import * as I from './installation.js';
 
 /* Läuft diese Seite nur als kleines Fenster für Google Kalender? Dann reicht
    sie die Antwort an das eigentliche Kontovia-Fenster weiter und schließt
    sich (gcal.js). Das geschieht vor allem anderen, auch vor der Anmeldung
    per Weiterleitung, die sonst die Antwort für sich hielte. */
 const nurGoogleFenster = G.antwortWeiterreichen();
+/* Kam die Antwort von Google, nachdem Kontovia selbst dorthin weitergeleitet hatte? Auch diese
+   Antwort verlässt die Adresse sofort; sonst hielte die Anmeldung zur Cloud sie für ihre. */
+const googleRueckkehr = nurGoogleFenster ? null : G.rueckkehrAusAdresse();
+
+/* Android und Chrome: das Angebot, Kontovia zu installieren, früh festhalten. */
+if (!nurGoogleFenster) I.starten({ toast });
 
 const vault = new Vault(U.VERSION);
 const cloud = new Cloud(vault, { zeigeCode });
 const gcal = new G.GoogleCalendar(vault, { clientId: BUILTIN.googleWeb?.clientId || '' });
+gcal.rueckkehr(googleRueckkehr);
 
 /* Zurück von einer Anmeldung per Weiterleitung? Die Antwort von Google steht
    im Anker der Adresse; sie wird sofort entfernt und im Hintergrund bei
@@ -742,9 +750,10 @@ const api = {
   gcal: {
     status: handle(async () => (vault.isLocked ? { available: true, linked: false } : gcal.status()), { needsUnlock: false }),
     connect: handle(async (opts = {}) => gcal.connect({
-      calendarIdHint: str(opts.calendarIdHint, 300), timeZone: str(opts.timeZone, 80), weitere: !!opts.weitere,
+      calendarIdHint: str(opts.calendarIdHint, 300), timeZone: str(opts.timeZone, 80), weitere: !!opts.weitere, merk: opts.merk, umleiten: !!opts.umleiten,
     })),
-    bestaetigen: handle(async () => gcal.bestaetigen()),
+    bestaetigen: handle(async (opts = {}) => gcal.bestaetigen({ umleiten: !!opts?.umleiten })),
+    rueckmeldung: handle(async () => kopie(await gcal.rueckmeldung())),
     cancel: handle(async () => gcal.abbrechen(), { needsUnlock: false }),
     disconnect: handle(async (opts = {}) => gcal.disconnect({ deleteCalendar: !!opts.deleteCalendar })),
     pull: handle(async (opts = {}) => kopie(await gcal.pull({ timeZone: str(opts.timeZone, 80) }))),

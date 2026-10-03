@@ -69,11 +69,19 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   #topActions .period-btn { flex: 1; min-width: 0; }
   .page-head .scope-toggle { white-space: normal; }
 
+  /* Beim Hinunterscrollen klappt die Aktionszeile (Zeitraum, Neu-Knöpfe) weg
+     und gibt den Platz dem Inhalt; beim Hinaufscrollen ist sie sofort wieder da. */
+  #topActions { transition: opacity .15s ease; }
+  .shell.kv-kompakt .topbar { min-height: calc(48px + env(safe-area-inset-top)); }
+  .shell.kv-kompakt #topActions { display: none; }
+
   .content { padding: 14px 12px calc(40px + env(safe-area-inset-bottom)); }
   .page-head { flex-wrap: wrap; }
 
   .grid.c2, .grid.c3, .grid.side { grid-template-columns: 1fr; }
   .grid.c4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .content .row { flex-wrap: wrap; }
+  .page-head .badge, .card-head .badge { white-space: normal; max-width: 100%; }
   .form-grid, .form-grid.c3 { grid-template-columns: 1fr; }
   .stat .value { font-size: 21px; }
 
@@ -116,6 +124,31 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   .gate { padding-left: 12px; padding-right: 12px; }
   .gate-card { padding: 22px 18px; }
   .preview-frame { height: 60dvh; }
+}
+
+/* Schmale Telefone: Kennzahlen untereinander statt in zwei engen Spalten, in
+   denen Zahl und Erläuterung mehrfach umbrechen. */
+@media (max-width: 430px) {
+  .grid.c4 { grid-template-columns: minmax(0, 1fr); }
+  .stat { padding: 14px 16px; }
+  .stat .value { font-size: 23px; }
+  .card-head { padding: 12px 14px; }
+  .card-body { padding: 14px; }
+}
+
+/* Monatsraster auf dem Telefon: Die Termine sind Striche in ihrer Farbe statt
+   abgeschnittener Schrift ("09:00 …"). Gelesen wird in der Liste darunter;
+   ein Tipp auf den Tag öffnet ihn. */
+@media (max-width: 560px) {
+  .cal-cell { min-height: 56px; padding: 3px 3px 4px; }
+  .cal-ev {
+    font-size: 0; line-height: 0; height: 5px; min-height: 0; padding: 0; margin-bottom: 3px;
+    border: 0 !important; border-radius: 3px; background: currentColor !important; opacity: .85;
+  }
+  .cal-ev.done { opacity: .35; }
+  .agenda-item .truncate { white-space: normal; overflow: visible; }
+  .cal-more { padding-left: 1px; font-size: 10px; line-height: 1.2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .cal-more::first-line { font-size: 10px; }
 }
 
 /* Buchungsliste auf dem Telefon: Karten statt Spalten. Beschreibung und

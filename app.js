@@ -832,6 +832,16 @@ async function afterUnlock() {
   sicherungsHinweis().catch(() => {});
   try { await startAutoSync(); } catch (e) { console.error("Cloud-Automatik:", e); }
   onSync(updateStatus);
+  // Eben von Google zurück (Weiterleitung statt kleinem Fenster)? Das erst abschließen, dann abgleichen.
+  try {
+    const rm = await api.gcal?.rueckmeldung?.();
+    if (rm) {
+      const fertig = import('./views/calendarsync.js').then((m) => m.nachWeiterleitung(rm));
+      // Das Verbinden fragt weiter nach (Kalenderauswahl) und startet den Abgleich selbst.
+      if (rm.zweck === 'verbinden' && !rm.fehler) fertig.catch((e) => console.error('Verbinden nach Weiterleitung:', e));
+      else await fertig;
+    }
+  } catch (e) { console.error('Rückkehr von Google Kalender:', e); }
   // Der Kalenderabgleich läuft nur, wenn auf diesem Gerät ein Google-Konto verbunden ist.
   startCalendarSync().catch((e) => console.error('Kalenderabgleich:', e));
   await setupUpdateWatch();

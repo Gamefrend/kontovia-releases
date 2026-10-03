@@ -33,6 +33,48 @@ function einsetzen() {
     if (e.target.closest('[data-view], #lockBtn, #updateBtn')) zu();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') zu(); });
+  kopfzeileBeobachten();
+}
+
+/**
+ * Die Aktionszeile der Kopfleiste (Zeitraum, Neu-Knöpfe) nimmt auf dem Telefon
+ * ein Fünftel des Bildschirms ein. Beim Hinunterscrollen wird sie ausgeblendet,
+ * beim Hinaufscrollen oder ganz oben ist sie wieder da. Nur bei langen Seiten:
+ * Sonst würde der gewonnene Platz die Seite so kurz machen, dass sie nicht mehr
+ * scrollt und die Zeile hin und her springt.
+ */
+function kopfzeileBeobachten() {
+  const shell = document.querySelector('.shell');
+  const inhalt = shell?.querySelector('.content');
+  if (!inhalt || inhalt.dataset.kvScroll) return;
+  inhalt.dataset.kvScroll = '1';
+  let letzte = 0;
+  let sperre = false;
+  inhalt.addEventListener('scroll', () => {
+    if (sperre) return;
+    const y = inhalt.scrollTop;
+    const delta = y - letzte;
+    const eng = matchMedia('(max-width: 820px)').matches;
+    const lang = inhalt.scrollHeight - inhalt.clientHeight > 320;
+    const kompakt = shell.classList.contains('kv-kompakt');
+    if (!eng || !lang || y < 24) {
+      if (kompakt) shell.classList.remove('kv-kompakt');
+    } else if (!kompakt && delta > 10 && y > 90) {
+      shell.classList.add('kv-kompakt');
+      sperre = true; // Die Höhenänderung löst selbst ein Scroll-Ereignis aus.
+      setTimeout(() => { sperre = false; letzte = inhalt.scrollTop; }, 120);
+    } else if (kompakt && delta < -10) {
+      shell.classList.remove('kv-kompakt');
+      sperre = true;
+      setTimeout(() => { sperre = false; letzte = inhalt.scrollTop; }, 120);
+    }
+    letzte = y;
+  }, { passive: true });
+  // Eine andere Ansicht (kürzer, oben beginnend) bringt die Zeile zurück.
+  new MutationObserver(() => {
+    if (inhalt.scrollTop < 24 || inhalt.scrollHeight - inhalt.clientHeight <= 320) shell.classList.remove('kv-kompakt');
+    letzte = inhalt.scrollTop;
+  }).observe(inhalt, { childList: true });
 }
 
 const app = document.getElementById('app');
