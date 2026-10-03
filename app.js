@@ -110,6 +110,10 @@ async function boot() {
   // Web-Fassung: zurück von einer Anmeldung per Weiterleitung zu Google?
   const rm = await api.cloud.rueckmeldung?.().catch(() => null);
   if (rm?.fehler && !rm.abgebrochen) err('Anmeldung bei Google', rm.fehler);
+  // Web-Fassung mit Ordner auf dem Gerät: Ohne Zugriff kein Tresor, und ein
+  // fehlender Ordner ist kein Grund, still eine neue Buchhaltung anzufangen.
+  if (status.speicher?.art === 'ordner' && status.speicher.zugriff !== 'granted') { renderOrdnerZugriff(status.speicher); return; }
+  if (status.speicher?.art === 'ordner' && !status.exists) { renderOrdnerFehlt(status.speicher); return; }
   if (!status.exists) { renderSetup(); return; }
   // Eben aus dem Programm heraus aktualisiert: weiter ohne Passwort. Der
   // Startbildschirm sagt schon vorher, was gerade geschieht.
@@ -231,6 +235,14 @@ function renderSetup() {
   let wartet = false;
   let abgebrochen = false;
 
+  /** Chrome und Edge: eine Buchhaltung öffnen, die schon in einem Ordner liegt (etwa von Windows). */
+  let ordnerMoeglich = false;
+  const ordnerKasten = () => (step !== 0 || !ordnerMoeglich || anmeldung ? '' : `<div class="signin-box mb16">
+      <div><strong>Buchhaltung in einem Ordner?</strong>
+      <div class="small muted">Haben Sie Kontovia unter Windows oder schon in einem Ordner auf diesem Gerät
+      benutzt? Öffnen Sie diesen Ordner; Kontovia arbeitet dann direkt darin.</div></div>
+      <button class="btn" id="o_oeffnen">${icon('folder', 15).__raw} Ordner öffnen</button></div>`);
+
   const anmeldeKasten = () => {
     if (anmeldung && !anmeldung.vorhanden) {
       return `<div class="signin-box ok mb16">
@@ -263,7 +275,8 @@ function renderSetup() {
   function kastenZeichnen() {
     const box = $('#g_box');
     if (!box) return;
-    box.innerHTML = anmeldeKasten();
+    box.innerHTML = anmeldeKasten() + ordnerKasten();
+    $('#o_oeffnen', box)?.addEventListener('click', () => vorhandenenOrdnerOeffnen());
     $('#g_anmelden', box)?.addEventListener('click', () => anmelden());
     $('#g_code', box)?.addEventListener('click', () => anmelden({ mitCode: true }));
     $('#g_abbrechen', box)?.addEventListener('click', () => {
@@ -490,6 +503,7 @@ function renderSetup() {
   }
 
   draw();
+  api.speicher?.status().then((sp) => { ordnerMoeglich = !!sp?.moeglich; kastenZeichnen(); }).catch(() => {});
   // Ob sich diese Fassung bei Google anmelden kann, steht erst nach der Abfrage fest.
   api.cloud.signinStatus?.().then((st) => {
     anmeldenMoeglich = !!st?.moeglich;
@@ -586,6 +600,120 @@ function renderCloudLaden(st, { neu }) {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Speicherort: Ordner auf dem Gerät (Web-Fassung)                             */
+/* -------------------------------------------------------------------------- */
+
+/** Unter Windows liegt der Datenordner hier; der Browser gibt ihn nicht direkt frei. */
+const WINDOWS_ORDNER = '%APPDATA%\\Kontovia\\daten';
+
+/**
+ * Einen Ordner wählen, in dem schon eine Buchhaltung liegt, und mit ihm
+ * weiterarbeiten. Aus der Einrichtung und aus den Hinweisen zu einem
+ * fehlenden Ordner.
+ */
+async function vorhandenenOrdnerOeffnen() {
+  let wahl;
+  try {
+    wahl = await api.speicher.ordnerWaehlen({ zweck: 'oeffnen' });
+  } catch (e) {
+    err('Ordner nicht geöffnet', e.message);
+    return;
+  }
+  if (!wahl) return;
+  if (!wahl.tresor) {
+    toast('Keine Buchhaltung gefunden', `Im Ordner „${wahl.pfad}“ liegt keine Kontovia-Buchhaltung. Unter Windows liegt sie im Ordner ${WINDOWS_ORDNER}. `
+      + 'Den gibt der Browser nicht direkt frei: Kopieren Sie ihn zum Beispiel in Ihre Dokumente und wählen Sie dann die Kopie.', 'err', 20000);
+    return;
+  }
+  try {
+    const sp = await api.speicher.ordnerOeffnen();
+    renderUnlock(`Die Buchhaltung im Ordner „${sp.name}“ ist bereit. Entsperren Sie sie mit ihrem Passwort. `
+      + 'Arbeitet Kontovia unter Windows mit demselben Ordner, öffnen Sie bitte nie beide gleichzeitig.');
+  } catch (e) {
+    toast('Ordner nicht übernommen', e.message, 'err', 15000);
+  }
+}
+
+/** Nach einem Neustart fragt der Browser, ob Kontovia wieder auf den Ordner zugreifen darf. */
+function renderOrdnerZugriff(sp) {
+  app.innerHTML = html`
+    <div class="gate">
+      <div class="gate-card">
+        <div class="gate-logo">K</div>
+        <h2>Zugriff auf Ihren Ordner</h2>
+        <p class="lead">Ihre Buchhaltung liegt im Ordner <strong>„${sp.name}“</strong> auf diesem Gerät.
+        Der Browser fragt nach einem Neustart, ob Kontovia wieder darauf zugreifen darf.</p>
+        ${sp.zugriff === 'denied' ? raw(`<div class="notice warn mb16">Der Zugriff wurde abgelehnt. Ohne ihn kann
+          Kontovia die Buchhaltung nicht öffnen. Erlauben Sie ihn, oder setzen Sie die Berechtigung in den
+          Website-Einstellungen des Browsers zurück.</div>`) : ''}
+        <div class="err small mb16" id="ordnerErr"></div>
+        <button class="btn primary lg block" id="ordnerErlauben">${icon('folder', 16)} Zugriff erlauben</button>
+        <p class="tiny muted mt16" style="text-align:center">Wählen Sie im Browser „Bei jedem Besuch zulassen“,
+        wenn er es anbietet. Dann entfällt die Frage künftig.</p>
+        <details class="forgot small mt8">
+          <summary>Ordner verschoben oder anderen verwenden?</summary>
+          <p>Wurde der Ordner verschoben oder umbenannt, wählen Sie ihn neu aus.</p>
+          <div class="row wrap" style="gap:8px">
+            <button type="button" class="btn sm" id="ordnerNeu">Ordner neu wählen</button>
+            <button type="button" class="btn sm ghost" id="ordnerWeg">Ordner nicht mehr verwenden</button>
+          </div>
+        </details>
+      </div>
+    </div>`;
+  $('#ordnerErlauben').addEventListener('click', async () => {
+    const z = await api.speicher.zugriffErlauben().catch(() => 'denied');
+    if (z === 'granted') boot();
+    else $('#ordnerErr').textContent = 'Ohne Zugriff kann Kontovia die Buchhaltung nicht öffnen.';
+  });
+  ordnerAuswegeVerdrahten(sp);
+}
+
+/** Der gemerkte Ordner ist erreichbar, aber ohne Buchhaltung: verschoben, umbenannt oder geleert. */
+function renderOrdnerFehlt(sp) {
+  app.innerHTML = html`
+    <div class="gate">
+      <div class="gate-card">
+        <div class="gate-logo">K</div>
+        <h2>Buchhaltung nicht gefunden</h2>
+        <p class="lead">Kontovia speichert Ihre Buchhaltung im Ordner <strong>„${sp.name}“</strong>, aber dort
+        liegt sie nicht mehr. Wurde der Ordner verschoben, umbenannt oder geleert?</p>
+        <div class="row wrap mt16" style="gap:8px">
+          <button class="btn primary" id="ordnerNeu">${icon('folder', 15)} Ordner neu wählen</button>
+          <button class="btn ghost" id="ordnerWeg">Ordner nicht mehr verwenden</button>
+        </div>
+        <p class="small muted mt16 mb0">Ohne Ordner beginnt Kontovia mit dem leeren Speicher dieses Browsers.
+        Dort lässt sich eine Vollsicherung einspielen oder die Buchhaltung aus der Cloud laden.</p>
+      </div>
+    </div>`;
+  ordnerAuswegeVerdrahten(sp);
+}
+
+function ordnerAuswegeVerdrahten(sp) {
+  $('#ordnerNeu')?.addEventListener('click', async () => {
+    try { await api.speicher.ordnerVergessen(); } catch (e) { err('Ordner', e.message); return; }
+    await vorhandenenOrdnerOeffnen();
+    const st = await api.speicher.status().catch(() => null);
+    if (st?.art !== 'ordner') boot();
+  });
+  $('#ordnerWeg')?.addEventListener('click', async () => {
+    const m = modal({
+      title: 'Ordner nicht mehr verwenden?',
+      size: 'slim',
+      body: html`<p class="mt0">Kontovia vergisst den Ordner „${sp.name}“. Die Dateien darin bleiben unberührt;
+        Sie können den Ordner später wieder öffnen.</p>
+        <p class="mb0">Danach startet Kontovia mit dem Speicher dieses Browsers.</p>`,
+      foot: '<button class="btn" data-nein>Abbrechen</button><button class="btn primary" data-ja>Nicht mehr verwenden</button>',
+    });
+    m.root.querySelector('[data-nein]').addEventListener('click', () => m.close());
+    m.root.querySelector('[data-ja]').addEventListener('click', async () => {
+      m.close();
+      try { await api.speicher.ordnerVergessen(); } catch (e) { err('Ordner', e.message); return; }
+      boot();
+    });
+  });
+}
+
+/* -------------------------------------------------------------------------- */
 /* Entsperren                                                                  */
 /* -------------------------------------------------------------------------- */
 
@@ -676,6 +804,33 @@ export function setCloudVerbunden(wert) {
   updateStatus();
 }
 
+/**
+ * Web-Fassung: Liegt die Buchhaltung nur im Speicher des Browsers, ohne
+ * Cloud-Sicherung und ohne Vollsicherung im letzten Monat, erinnert Kontovia
+ * höchstens einmal je Woche daran. Den Speicher darf der Browser räumen.
+ */
+async function sicherungsHinweis() {
+  if (!WEB) return;
+  const tag = 864e5;
+  const jetzt = Date.now();
+  if (jetzt - (Date.parse(store.db?.createdAt || '') || 0) < 7 * tag) return;
+  const sp = await api.speicher?.status().catch(() => null);
+  if (sp?.art !== 'browser') return;
+  const st = await api.cloud.status().catch(() => ({}));
+  if (st.linked) return;
+  let zuletzt = 0;
+  let gezeigt = 0;
+  try {
+    zuletzt = Number(localStorage.getItem('kontovia.vollsicherung')) || 0;
+    gezeigt = Number(localStorage.getItem('kontovia.sicherungshinweis')) || 0;
+  } catch { return; }
+  if (jetzt - zuletzt < 30 * tag || jetzt - gezeigt < 7 * tag) return;
+  try { localStorage.setItem('kontovia.sicherungshinweis', String(jetzt)); } catch { /* egal */ }
+  toast('Ihre Buchhaltung liegt nur in diesem Browser',
+    `Den Speicher darf der Browser bei Platzmangel räumen. ${sp.moeglich ? 'Verschieben Sie sie in einen Ordner, schalten' : 'Schalten'} Sie die Cloud-Sicherung ein oder legen Sie eine Vollsicherung an. Hier klicken.`,
+    'warn', 15000)?.addEventListener('click', () => navigate('settings', { abschnitt: 'speicher' }));
+}
+
 /** Läuft nach jedem erfolgreichen Entsperren. */
 async function afterUnlock() {
   api.cloud.status().then((st) => setCloudVerbunden(st.configured ? !!st.linked : null)).catch(() => {});
@@ -685,6 +840,9 @@ async function afterUnlock() {
   }).catch(() => {});
   announceMigrations().catch((e) => console.error('Hinweise der Schemapflege:', e));
   neuigkeitenHinweis();
+  sicherungsHinweis().catch(() => {});
+  // Letzte Windows-Fassung: der Umzug in den Browser.
+  import('./views/umzug.js').then((m) => m.umzugHinweis()).catch((e) => console.error('Umzug:', e));
   try { await startAutoSync(); } catch (e) { console.error("Cloud-Automatik:", e); }
   onSync(updateStatus);
   // Der Kalenderabgleich läuft nur, wenn auf diesem Gerät ein Google-Konto verbunden ist.
@@ -983,7 +1141,7 @@ api.on.locked(async ({ reason }) => {
   clearDb();
   const texts = {
     inaktiv: 'Kontovia wurde wegen Inaktivität gesperrt.',
-    standby: 'Der Rechner ging in den Ruhezustand, deshalb wurde Kontovia gesperrt.',
+    standby: 'Das Gerät war im Ruhezustand, deshalb wurde Kontovia gesperrt.',
     bildschirmsperre: 'Der Bildschirm wurde gesperrt, deshalb wurde auch Kontovia gesperrt.',
     hintergrund: 'Kontovia war einige Minuten im Hintergrund und wurde deshalb gesperrt.',
     'anderes-fenster': 'Kontovia wurde in einem anderen Fenster geöffnet und hier gesperrt. Laden Sie diese Seite neu, um hier weiterzuarbeiten.',

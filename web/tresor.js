@@ -1,7 +1,7 @@
 /**
  * Kontovia – Tresorverwaltung der Web-Fassung.
- * Gegenstück zu src/main/vault.js; statt Dateien im Datenordner liegen die
- * verschlüsselten Blöcke im Speicher des Browsers (siehe ablage.js).
+ * Gegenstück zu src/main/vault.js; die verschlüsselten Blöcke liegen im
+ * Speicher des Browsers oder in einem Ordner auf dem Gerät (siehe ablage.js).
  */
 
 import * as K from './kern.js';
@@ -47,7 +47,7 @@ export class Vault {
   }
 
   async create(password, initialDb) {
-    if (await this.exists()) throw new Error('Es existiert bereits ein Tresor in diesem Browser.');
+    if (await this.exists()) throw new Error('Am Speicherort liegt bereits eine Buchhaltung.');
     const { buffer, dek, header } = await K.createContainer(password, initialDb, {
       app: 'Kontovia',
       appVersion: this.appVersion || '1.0.0',
@@ -59,15 +59,30 @@ export class Vault {
 
   async unlock(password) {
     const buf = await A.lesen('dateien', TRESOR);
-    if (!buf) throw new Error('In diesem Browser liegt kein Tresor.');
+    if (!buf) throw new Error('Am Speicherort liegt keine Buchhaltung.');
     const { data, dek, header } = await K.openContainer(password, buf);
+    await this._adopt(dek, header, data);
+    return data;
+  }
+
+  /** Entsperren mit dem Schlüssel aus der Übergabe nach einer Aktualisierung (uebergabe.js). */
+  async unlockWithKey(dek) {
+    const buf = await A.lesen('dateien', TRESOR);
+    if (!buf) throw new Error('Am Speicherort liegt keine Buchhaltung.');
+    const { header, headerBuf, body } = K.unpackContainer(buf);
+    let data;
+    try {
+      data = await K.openBody(dek, body, headerBuf);
+    } catch {
+      throw Object.assign(new Error('Der Schlüssel passt nicht zu diesem Tresor.'), { code: 'BAD_KEY' });
+    }
     await this._adopt(dek, header, data);
     return data;
   }
 
   /** Übernimmt einen Tresor aus der Cloud als ersten Tresor – geschrieben wird erst, wenn das Passwort passt. */
   async adoptContainer(bytes, password) {
-    if (await this.exists()) throw new Error('Es existiert bereits ein Tresor in diesem Browser.');
+    if (await this.exists()) throw new Error('Am Speicherort liegt bereits eine Buchhaltung.');
     const { data, dek, header } = await K.openContainer(String(password ?? ''), bytes);
     await A.schreiben('dateien', TRESOR, bytes);
     await this._adopt(dek, header, data);
@@ -230,6 +245,26 @@ export class Vault {
       }
     }
     return removed;
+  }
+
+  /**
+   * Prüft eine Kopie beim Umzug des Speicherorts mit dem Schlüssel des offenen
+   * Tresors: Tresordatei, Abgleichbasis und Belege müssen sich entschlüsseln
+   * lassen, Sicherungen (womöglich mit einem älteren Passwort) wenigstens als
+   * Kontovia-Datei lesen. Wirft, wenn nicht.
+   */
+  async kopiePruefen(store, key, bytes) {
+    this.assertUnlocked();
+    if (store === 'dateien' && key === TRESOR) {
+      const { headerBuf, body } = K.unpackContainer(bytes);
+      await K.openBody(this.dek, body, headerBuf);
+    } else if (store === 'dateien' && key === 'sync-basis.bin') {
+      await K.open(this.dek, bytes, K.utf8('kontovia/sync-basis'));
+    } else if (store === 'belege') {
+      await K.open(this.attachKey, bytes, attachAad(this._id(key)));
+    } else if (store === 'sicherungen') {
+      K.unpackContainer(bytes);
+    }
   }
 
   async storageStats() {

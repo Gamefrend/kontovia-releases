@@ -2,10 +2,11 @@
  * Kontovia – Kalender mit Google und anderen Programmen abgleichen.
  *
  * Zwei Wege:
- *   Google Kalender  laufender Abgleich in beide Richtungen, nur in der
- *                    Windows-Fassung (siehe src/web/bridge.js, warum) – mit
- *                    dem eigenen Kalender „Kontovia“ und auf Wunsch mit
- *                    weiteren Kalendern des Kontos (Hauptkalender usw.)
+ *   Google Kalender  laufender Abgleich in beide Richtungen, mit dem
+ *                    eigenen Kalender „Kontovia“ und auf Wunsch mit weiteren
+ *                    Kalendern des Kontos (Hauptkalender usw.). In der
+ *                    Web-Fassung gilt der Zugriff eine Stunde und wird dann
+ *                    mit einem Tipp bestätigt (src/web/gcal.js).
  *   .ics-Datei       Export und Import von Hand, überall – auch für Apple
  *                    Kalender und Outlook
  */
@@ -31,6 +32,7 @@ const WEB = api.platform === 'web';
 export function statusText(st = calState.status) {
   if (calState.running) return 'Google: Abgleich läuft …';
   if (!st?.linked) return '';
+  if (st.bestaetigen) return 'Google: bitte kurz bestätigen';
   if (calState.lastError || st.lastError) return 'Google: Fehler beim Abgleich';
   const at = calState.lastAt || st.lastSyncAt;
   return at ? `Google: abgeglichen ${fmtDateTime(at)}` : 'Google: verbunden';
@@ -67,19 +69,22 @@ export async function renderCalendarCard(el) {
       <div class="card-body">
         <div class="grid c2">
           <div>
-            ${WEB || st?.available === false ? raw(`
+            ${st?.available === false ? raw(`
               <div class="notice">
-                <strong>Google Kalender gibt es nur in der Windows-Fassung.</strong> Hier übertragen
-                Sie Termine als Kalenderdatei (.ics).
+                <strong>Google Kalender ist gerade nicht erreichbar.</strong> Termine lassen sich
+                weiterhin als Kalenderdatei (.ics) übertragen.
               </div>`) : st?.linked ? raw(html`
               <div class="notice ok">
                 <strong>Verbunden</strong> mit ${st.email || 'Ihrem Google-Konto'} · Kalender
                 „${st.calendarName || 'Kontovia'}“<br>
                 <span class="small">${calState.running ? 'Abgleich läuft …' : (st.lastSyncAt ? `Zuletzt abgeglichen ${fmtDateTime(st.lastSyncAt)}` : 'Noch nicht abgeglichen')}${calState.lastSummary ? ` · ${calState.lastSummary}` : ''}</span>
               </div>
-              ${st.lastError || calState.lastError ? raw(`<div class="notice danger mt8">${esc(calState.lastError || st.lastError)}</div>`) : ''}
+              ${st.bestaetigen ? raw(`<div class="notice warn mt8">Der Abgleich wartet auf eine kurze Bestätigung
+                bei Google. Im Browser gilt der Zugriff auf den Kalender jeweils eine Stunde; danach genügt ein
+                Tipp, meist ohne erneute Anmeldung.</div>`) : ''}
+              ${!st.bestaetigen && (st.lastError || calState.lastError) ? raw(`<div class="notice danger mt8">${esc(calState.lastError || st.lastError)}</div>`) : ''}
               <div class="row wrap mt16" style="gap:8px">
-                <button class="btn primary" data-cal="sync">${icon('refresh', 15)} Jetzt abgleichen</button>
+                <button class="btn primary" data-cal="sync">${icon('refresh', 15)} ${st.bestaetigen ? 'Bestätigen und abgleichen' : 'Jetzt abgleichen'}</button>
                 <button class="btn danger" data-cal="disconnect">Trennen</button>
               </div>
               ${raw(optionen)}
@@ -94,7 +99,7 @@ export async function renderCalendarCard(el) {
           </div>
           <div>
             <p class="small mt0" style="line-height:1.6"><strong>Kalenderdatei (.ics):</strong> für
-            Apple Kalender, Outlook, ein zweites Google-Konto oder die Web-Fassung. Der Export enthält
+            Apple Kalender, Outlook oder ein zweites Google-Konto. Der Export enthält
             alle Termine; beim Import werden bereits übernommene Termine erkannt und aktualisiert
             statt doppelt angelegt.</p>
             <div class="row wrap" style="gap:8px">
@@ -160,7 +165,9 @@ async function freigebenWeitere() {
     title: 'Weitere Kalender einbeziehen?',
     text: 'Kontovia fragt bei Google zusätzlich das Recht an, Ihre Kalender aufzulisten und Termine darin zu lesen und zu ändern. '
       + 'Abgeglichen werden danach nur die Kalender, die Sie anschließend auswählen, und zwar in beide Richtungen: Was Sie dort ändern oder löschen, '
-      + 'ändert sich hier, und umgekehrt. Es öffnet sich Ihr Browser mit der Anmeldung bei Google; Kontovia kommt danach von selbst wieder nach vorn.',
+      + 'ändert sich hier, und umgekehrt. '
+      + (WEB ? 'Es öffnet sich ein kleines Fenster von Google; danach geht es hier weiter.'
+        : 'Es öffnet sich Ihr Browser mit der Anmeldung bei Google; Kontovia kommt danach von selbst wieder nach vorn.'),
     confirmLabel: 'Weiter zu Google',
   });
   if (!ja) return false;
@@ -180,6 +187,7 @@ async function freigebenWeitere() {
 
 /** Auswahl der weiteren Kalender, die abgeglichen werden. */
 export async function openKalenderAuswahl() {
+  if (calState.status?.bestaetigen && !await bestaetigen()) return false;
   let liste;
   try {
     liste = await api.gcal.calendars();
@@ -253,10 +261,29 @@ export function openCalendarSyncDialog() {
 /* Verbinden, trennen, abgleichen                                              */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Web-Fassung: neuer Zugriff für eine Stunde. Muss direkt aus einem Tipp
+ * kommen, sonst blockiert der Browser das Fenster von Google.
+ */
+export async function bestaetigen() {
+  try {
+    await api.gcal.bestaetigen();
+    await refreshCalendarStatus();
+    return true;
+  } catch (e) {
+    if (e.code !== 'ABGEBROCHEN') err('Bestätigung bei Google fehlgeschlagen', e.message);
+    return false;
+  }
+}
+
 export async function manualSync() {
   try {
+    if (calState.status?.bestaetigen && !await bestaetigen()) return null;
     const r = await syncCalendar({ reason: 'manuell' });
-    if (r.skipped) warn('Kein Abgleich', r.skipped === 'nicht-verbunden' ? 'Google Kalender ist nicht verbunden.' : r.skipped);
+    if (r.skipped) {
+      warn('Kein Abgleich', r.skipped === 'nicht-verbunden' ? 'Google Kalender ist nicht verbunden.'
+        : r.skipped === 'bestaetigen' ? 'Der Abgleich wartet auf eine kurze Bestätigung bei Google.' : r.skipped);
+    }
     else ok('Kalender abgeglichen', r.summary);
     return r;
   } catch (e) {
@@ -289,8 +316,9 @@ function connectDialog() {
           <label class="check"><input type="checkbox" id="g_notes" ${cfg.sendNotes ? 'checked' : ''}> Notizen der Termine mit übertragen</label>
           <label class="check"><input type="checkbox" id="g_andere"> Auch meine anderen Google-Kalender einbeziehen (z. B. den Hauptkalender), in beide Richtungen. Welche, wählen Sie danach</label>
         </div>
-        <p class="small muted mt16 mb0" style="line-height:1.6">Es öffnet sich Ihr Browser mit der
-        Anmeldung bei Google; danach kommt Kontovia von selbst wieder nach vorn. Erscheint dort der
+        <p class="small muted mt16 mb0" style="line-height:1.6">${WEB
+          ? 'Es öffnet sich ein kleines Fenster mit der Anmeldung bei Google; danach geht es hier weiter.'
+          : 'Es öffnet sich Ihr Browser mit der Anmeldung bei Google; danach kommt Kontovia von selbst wieder nach vorn.'} Erscheint dort der
         Hinweis „Google hat diese App nicht überprüft“, geht es über <em>Erweitert</em> und den Link
         darunter weiter. Die Verbindung lässt sich jederzeit unter Einstellungen → Kalender-Abgleich
         trennen.</p>`,
@@ -318,8 +346,8 @@ export async function connectGoogle() {
   const hinweis = modal({
     title: 'Anmeldung bei Google',
     size: 'slim',
-    body: `<p class="mt0" style="line-height:1.6">Bitte melden Sie sich im geöffneten Browserfenster an und
-      erlauben Sie den Zugriff auf den Kalender. Dieses Fenster schließt sich danach von selbst.</p>
+    body: `<p class="mt0" style="line-height:1.6">Bitte melden Sie sich im ${WEB ? 'Fenster von Google' : 'geöffneten Browserfenster'} an und
+      erlauben Sie den Zugriff auf den Kalender. Dieser Hinweis schließt sich danach von selbst.</p>
       <p class="small muted mb0">Nach fünf Minuten ohne Anmeldung bricht Kontovia den Versuch ab.</p>`,
     foot: '<button class="btn" data-stop>Abbrechen</button><button class="btn" data-x>Ausblenden</button>',
   });
@@ -327,7 +355,8 @@ export async function connectGoogle() {
   // Wer das Browserfenster geschlossen hat, soll nicht fünf Minuten warten müssen.
   hinweis.root.querySelector('[data-stop]').addEventListener('click', () => {
     hinweis.close();
-    api.cloud.signinCancel?.().catch(() => {});
+    if (WEB) api.gcal.cancel?.().catch(() => {});
+    else api.cloud.signinCancel?.().catch(() => {});
   });
   const { andere, ...einstellungen } = wahl;
   try {
@@ -378,6 +407,9 @@ export async function disconnectGoogle() {
   const wahl = await disconnectDialog();
   if (!wahl) return false;
   const loeschen = wahl.loeschen;
+  // Web-Fassung: Für das Zurückziehen der Freigabe (und das Löschen des
+  // Kalenders) braucht es einen gültigen Zugriff. Ohne ihn wird nur hier getrennt.
+  if (calState.status?.bestaetigen) await api.gcal.bestaetigen?.().catch(() => {});
   try {
     stopCalendarSync();
     const res = await api.gcal.disconnect({ deleteCalendar: loeschen });

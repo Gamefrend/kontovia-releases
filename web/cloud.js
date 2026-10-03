@@ -18,9 +18,8 @@ import * as K from './kern.js';
 import * as A from './ablage.js';
 import { TRESOR } from './tresor.js';
 import { FirebaseBackend } from './firebase.js';
-import { DriveBackend } from './googledrive.js';
 import BUILTIN from './cloudconfig.js';
-import { journalNachEinspielen, fuerSicherung } from './zugang.js';
+import { journalNachEinspielen, fuerSicherung, altlastenEntfernen } from './zugang.js';
 import * as W from './weiterleitung.js';
 
 const BASIS = 'sync-basis.bin';
@@ -30,9 +29,7 @@ const attachAad = (id) => K.utf8(`kontovia/attachment/${id}`);
 const SICHERUNG_ABSTAND_MS = 20 * 60 * 60 * 1000;
 const SICHERUNG_BEHALTEN = 30;
 const BELEG_FRIST_MS = 90 * 24 * 60 * 60 * 1000;
-/** Die Web-Fassung führt ihre Client-Felder unter eigenen Namen (webClientId, webClientSecret). */
-const VERBINDUNG = ['provider', 'apiKey', 'bucket', 'clientId', 'clientSecret', 'webClientId', 'webClientSecret',
-  'autoSync', 'autoSyncMinutes', 'state', 'linkedAt'];
+const VERBINDUNG = ['provider', 'autoSync', 'autoSyncMinutes', 'state', 'linkedAt'];
 
 export function sicherungsName(anlass, jetzt = new Date()) {
   return `${jetzt.toISOString().slice(0, 19).replace(/:/g, '-')}Z_${anlass}.kv`;
@@ -72,31 +69,30 @@ export class Cloud {
     const db = this.vault.db;
     if (!db) throw new Error('Der Tresor ist gesperrt.');
     db.cloud ??= {};
-    db.cloud.provider ??= BUILTIN.provider;
+    if (altlastenEntfernen(db.cloud, BUILTIN.firebase)) this.backend = null;
+    db.cloud.provider = 'firebase';
     return db.cloud;
   }
 
   /**
-   * Die Web-Fassung meldet sich mit einem eigenen OAuth-Client an (Typ
-   * „Fernseher und Geräte mit eingeschränkter Eingabe“). Die Client-ID der
-   * Windows-Fassung taugt dafür nicht; sie steht deshalb in eigenen Feldern.
+   * Die mitgelieferten Zugangsdaten (cloudconfig.js). Die Web-Fassung meldet
+   * sich per Weiterleitung an (googleWeb) oder, als Rückfall, per Code mit
+   * einem eigenen OAuth-Client (googleGeraet); die Client-ID der
+   * Windows-Fassung taugt im Browser nicht.
    */
   effective() {
-    const c = this.cfg();
     return {
-      provider: c.provider,
-      apiKey: c.apiKey || BUILTIN.firebase.apiKey,
-      bucket: c.bucket || BUILTIN.firebase.bucket,
-      clientId: c.webClientId || BUILTIN.googleGeraet?.clientId || '',
-      clientSecret: c.webClientSecret || BUILTIN.googleGeraet?.clientSecret || '',
+      provider: 'firebase',
+      apiKey: BUILTIN.firebase.apiKey,
+      bucket: BUILTIN.firebase.bucket,
+      clientId: BUILTIN.googleGeraet?.clientId || '',
+      clientSecret: BUILTIN.googleGeraet?.clientSecret || '',
     };
   }
 
-  baustein(provider, e, state) {
-    const zeigeCode = this.ui.zeigeCode;
-    return provider === 'drive'
-      ? new DriveBackend({ clientId: e.clientId, clientSecret: e.clientSecret, zeigeCode }, state)
-      : new FirebaseBackend({ apiKey: e.apiKey, bucket: e.bucket, clientId: e.clientId, clientSecret: e.clientSecret, zeigeCode }, state);
+  /** Erzeugt den Ablage-Baustein; die Prüfungen setzen hier einen nachgebildeten ein. */
+  baustein(_provider, e, state) {
+    return new FirebaseBackend({ apiKey: e.apiKey, bucket: e.bucket, clientId: e.clientId, clientSecret: e.clientSecret, zeigeCode: this.ui.zeigeCode }, state);
   }
 
   be() {
@@ -109,18 +105,13 @@ export class Cloud {
   }
 
   status() {
-    const c = this.vault.db?.cloud || {};
-    const provider = c.provider || 'firebase';
-    const state = c.state?.[provider] || {};
-    const builtinClient = BUILTIN.googleGeraet?.clientId || '';
-    const clientId = c.webClientId || builtinClient;
-    const apiKey = c.apiKey || BUILTIN.firebase.apiKey;
-    const bucket = c.bucket || BUILTIN.firebase.bucket;
+    const c = this.vault.db ? this.cfg() : {};
+    const state = c.state?.firebase || {};
     const weiterleitung = this.weiterleitungMoeglich();
-    const configured = provider === 'drive' ? !!clientId : !!(apiKey && bucket && (clientId || weiterleitung));
+    const configured = !!(BUILTIN.firebase.apiKey && BUILTIN.firebase.bucket && (BUILTIN.googleGeraet?.clientId || weiterleitung));
     return {
       weiterleitung,
-      provider,
+      provider: 'firebase',
       configured,
       linked: !!state.refreshToken,
       email: state.email || '',
@@ -130,29 +121,16 @@ export class Cloud {
       lastRemoteVersion: c.remoteVersion || null,
       lastCloudBackupAt: c.lastCloudBackupAt || null,
       cloudBackupError: c.cloudBackupError || null,
-      builtIn: {
-        apiKey: !!BUILTIN.firebase.apiKey,
-        bucket: !!BUILTIN.firebase.bucket,
-        clientId: !!builtinClient || weiterleitung,
-      },
-      missing: provider === 'drive'
-        ? (clientId ? [] : ['clientId'])
-        : [!apiKey && 'apiKey', !bucket && 'bucket', !(clientId || weiterleitung) && 'clientId'].filter(Boolean),
+      // Bis 1.13 auf Google Drive oder mit eigenen Zugangsdaten verbunden: neu verbinden.
+      umgestellt: !state.refreshToken && c.umgestellt?.grund ? c.umgestellt.grund : null,
       lastError: this.lastError,
       busy: this.busy,
-      clientKind: 'geraet',
     };
   }
 
-  /** Übernimmt die Einstellungen aus der Oberfläche. */
-  configure({ provider, apiKey, bucket, clientId, clientSecret, autoSync, autoSyncMinutes }) {
-    const str = (v) => String(v ?? '').slice(0, 200).trim();
+  /** Übernimmt die Einstellungen aus der Oberfläche: nur den zeitgesteuerten Abgleich. */
+  configure({ autoSync, autoSyncMinutes }) {
     const c = this.cfg();
-    if (provider !== undefined) c.provider = provider === 'drive' ? 'drive' : 'firebase';
-    if (apiKey !== undefined) c.apiKey = str(apiKey);
-    if (bucket !== undefined) c.bucket = str(bucket).replace(/^gs:\/\//, '');
-    if (clientId !== undefined) c.webClientId = str(clientId);
-    if (clientSecret !== undefined) c.webClientSecret = str(clientSecret);
     if (autoSync !== undefined) c.autoSync = !!autoSync;
     if (autoSyncMinutes !== undefined) {
       const m = Number(autoSyncMinutes);
@@ -164,6 +142,7 @@ export class Cloud {
   async connect() {
     const res = await this.be().connect();
     this.cfg().linkedAt = new Date().toISOString();
+    delete this.cfg().umgestellt;
     await this.vault.save(this.vault.db);
     return res;
   }
@@ -192,13 +171,13 @@ export class Cloud {
     const f = BUILTIN.firebase || {};
     const g = BUILTIN.googleGeraet || {};
     const weiterleitung = this.weiterleitungMoeglich();
-    const moeglich = BUILTIN.provider === 'drive' ? !!g.clientId : !!(f.apiKey && f.bucket && (g.clientId || weiterleitung));
+    const moeglich = !!(f.apiKey && f.bucket && (g.clientId || weiterleitung));
     const a = this.anmeldung;
     return {
       moeglich,
       weiterleitung,
-      code: BUILTIN.provider === 'drive' ? !!g.clientId : !!(f.apiKey && f.bucket && g.clientId),
-      provider: BUILTIN.provider,
+      code: !!(f.apiKey && f.bucket && g.clientId),
+      provider: 'firebase',
       angemeldet: !!a,
       email: a?.state.email || '',
       vorhanden: !!a?.meta.exists,
@@ -211,7 +190,7 @@ export class Cloud {
     if (await this.vault.exists()) throw new Error('In diesem Browser gibt es bereits eine Buchhaltung. Die Verbindung zu Google richten Sie in den Einstellungen ein.');
     if (!this.anmeldeStatus().moeglich) throw new Error('In dieser Fassung ist keine Anmeldung bei Google hinterlegt.');
     await this.anmeldungVerwerfen();
-    const provider = BUILTIN.provider === 'drive' ? 'drive' : 'firebase';
+    const provider = 'firebase';
     const state = {};
     const be = this.baustein(provider, {
       apiKey: BUILTIN.firebase.apiKey,
@@ -235,16 +214,9 @@ export class Cloud {
   /* Anmeldung per Weiterleitung (weiterleitung.js)                          */
   /* ---------------------------------------------------------------------- */
 
-  /**
-   * Geht der Weg ohne Code? Nur mit Firebase im mitgelieferten Projekt – der
-   * Client für die Weiterleitung gehört zu diesem Projekt. Wer ein eigenes
-   * eingetragen hat oder in Google Drive ablegt, meldet sich per Code an.
-   */
+  /** Geht der Weg ohne Code? Dafür braucht es den Client für die Weiterleitung. */
   weiterleitungMoeglich() {
-    const c = this.vault.db?.cloud || {};
-    const provider = c.provider || BUILTIN.provider;
-    return provider !== 'drive' && !c.apiKey && !c.bucket
-      && !!(BUILTIN.googleWeb?.clientId && BUILTIN.firebase?.apiKey && BUILTIN.firebase?.bucket);
+    return !!(BUILTIN.googleWeb?.clientId && BUILTIN.firebase?.apiKey && BUILTIN.firebase?.bucket);
   }
 
   /**

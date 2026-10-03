@@ -6,6 +6,7 @@ import { store } from '../lib/store.js';
 import { navigate } from '../lib/router.js';
 import { EUER, formLine } from '../lib/calc.js';
 import { VERSIONEN } from '../lib/versionen.js';
+import { umzugKarte, umzugKarteVerdrahten } from './umzug.js';
 import { markdownZuHtml } from '../lib/markdown.js';
 import { appInfo } from '../app.js';
 
@@ -149,10 +150,7 @@ function anleitung(root) {
         und haken es ab. Eine Aufgabe kann zu einem Termin gehören, muss aber nicht. Hat sie kein
         eigenes Datum, gilt der Termin als Frist. Im Termin selbst stehen seine Aufgaben zum Abhaken
         und Ergänzen.</p>
-        ${WEB ? raw(`<p><strong>Mit anderen Kalendern abgleichen:</strong> Über <em>Abgleich</em> oben im
-        Kalender exportieren Sie alle Termine als Kalenderdatei (.ics) für Google, Apple oder Outlook
-        und holen Termine von dort herein. Den laufenden Abgleich mit Google Kalender gibt es nur in
-        der Windows-Fassung.</p>`) : raw(`<p><strong>Google Kalender:</strong> Unter <em>Abgleich</em> oben im
+        ${raw(`<p><strong>Google Kalender:</strong> Unter <em>Abgleich</em> oben im
         Kalender oder unter Einstellungen → Kalender-Abgleich verbinden Sie Kontovia mit Ihrem
         Google-Konto. Kontovia legt dort einen eigenen Kalender „Kontovia“ an und gleicht in beide
         Richtungen ab. Auf dem Telefon sehen Sie Ihre Termine in der Google-Kalender-App, und was
@@ -280,6 +278,31 @@ function anleitung(root) {
 function cloud(root) {
   root.innerHTML = html`
     <div class="content narrow" style="padding:0">
+      ${WEB ? raw(`<div class="card mb16"><div class="card-body">
+        <h3 class="mt0">Wo Ihre Buchhaltung liegt</h3>
+        <p>Zunächst im Speicher dieses Browsers, verschlüsselt mit Ihrem Passwort. Den darf der
+        Browser bei Platzmangel räumen; auf iPhone und iPad gehört deshalb die Cloud-Sicherung oder
+        eine regelmäßige Vollsicherung dazu.</p>
+        <p><strong>In Chrome und Edge</strong> lässt sie sich unter <a data-go="settings">Einstellungen →
+        Sicherung und Speicherort</a> in einen <strong>Ordner auf dem Gerät</strong> verschieben. Dort liegen
+        Tresor, Belege und Sicherungen als Dateien, so wie in der Windows-Fassung, und Sie sichern sie mit
+        Ihren übrigen Dateien. Nach einem Neustart fragt der Browser einmal, ob Kontovia wieder auf den
+        Ordner zugreifen darf.</p>
+        <p class="mb0"><strong>Von Windows umziehen:</strong> Kopieren Sie den Ordner
+        <code>%APPDATA%\\Kontovia\\daten</code> zum Beispiel in Ihre Dokumente und öffnen Sie die Kopie beim
+        ersten Start mit <em>Ordner öffnen</em>. Den Originalordner gibt der Browser nicht frei. Alternativ:
+        Vollsicherung einspielen oder die Buchhaltung aus der Cloud laden.</p>
+      </div></div>
+      <div class="card mb16"><div class="card-body">
+        <h3 class="mt0">Wann Kontovia sich sperrt</h3>
+        <p>Nach der eingestellten Zeit ohne Eingabe, nach drei Minuten in einer anderen App oder einem
+        anderen Tab, nach dem Ruhezustand des Geräts und wenn Kontovia in einem zweiten Fenster geöffnet
+        wird. Sofort mit <kbd>${MOD}</kbd>+<kbd>L</kbd>.</p>
+        <p class="mb0">Dass der Bildschirm gesperrt wurde, melden nur Chrome und Edge, und nur mit Ihrer
+        Erlaubnis: unter <a data-go="settings">Einstellungen → Sicherheit</a>. Safari und Firefox melden es
+        nicht. Auf iPhone und iPad hält Safari Kontovia beim Sperren des Bildschirms an; nach dem Entsperren
+        gilt dann die Regel für den Hintergrund.</p>
+      </div></div>`) : ''}
       <div class="card"><div class="card-body">
         <h3 class="mt0">Cloud-Abgleich einschalten</h3>
         <p>Mit dem Cloud-Abgleich arbeiten Sie auf mehreren Geräten an derselben Buchhaltung, und
@@ -351,10 +374,7 @@ function cloud(root) {
 
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Google Kalender</h3>
-        ${WEB ? raw(`<p class="mb0">Den laufenden Abgleich mit Google Kalender gibt es nur in der
-        Windows-Fassung. Hier übertragen Sie Termine als Kalenderdatei (.ics): im
-        <a data-go="calendar">Kalender</a> über <em>Abgleich</em>. Die Datei öffnet Google Kalender,
-        Apple Kalender oder Outlook.</p>`) : raw(`<p>Im <a data-go="calendar">Kalender</a> über
+        ${raw(`<p>Im <a data-go="calendar">Kalender</a> über
         <em>Abgleich</em> oder unter <a data-go="settings">Einstellungen → Kalender-Abgleich</a>
         verbinden Sie Kontovia mit Google. Kontovia legt in Ihrem Konto einen eigenen Kalender
         „Kontovia“ an und gleicht in beide Richtungen ab. Auf Wunsch kommen Ihr Hauptkalender und
@@ -368,7 +388,15 @@ function cloud(root) {
               überprüft“ erscheinen. Über <em>Erweitert</em> und den Link darunter geht es weiter.</li>
           <li><strong>Trennen</strong> unter Einstellungen → Kalender-Abgleich. Ihre Termine in
               Kontovia bleiben, auf Wunsch wird der Kalender „Kontovia“ in Google gelöscht.</li>
-        </ul>`)}
+          ${WEB ? `<li><strong>Im Browser</strong> öffnet sich zur Anmeldung ein kleines Fenster von
+              Google. Blockiert der Browser es, erlauben Sie Pop-ups für Kontovia. Der Zugriff auf den
+              Kalender gilt hier jeweils eine Stunde. Danach wartet der Abgleich, bis Sie kurz
+              bestätigen: ein Tipp auf <em>Bestätigen und abgleichen</em>, meist ohne erneute
+              Anmeldung.</li>` : ''}
+        </ul>
+        <p class="small muted mb0">Ohne Google-Konto übertragen Sie Termine als Kalenderdatei (.ics):
+        im Kalender über <em>Abgleich</em>. Die Datei öffnet Google Kalender, Apple Kalender oder
+        Outlook.</p>`)}
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -407,6 +435,7 @@ function neu(root) {
   const aelter = VERSIONEN.slice(NEU_OFFEN);
   root.innerHTML = html`
     <div class="content narrow" style="padding:0">
+      ${raw(umzugKarte())}
       <p class="small muted mt0 mb16">Was sich in Kontovia geändert hat, die neueste Version zuerst.</p>
       ${raw(offen.map((v) => versionsBlock(v, { karte: true })).join(''))}
       ${aelter.length ? raw(`<div class="card"><div class="card-body">
@@ -416,6 +445,7 @@ function neu(root) {
         </details>
       </div></div>`) : ''}
     </div>`;
+  umzugKarteVerdrahten(root);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -445,7 +475,7 @@ function recht(root) {
               <a data-go="settings">Einstellungen → Programmaktualisierung</a>.</li>
           <li><strong>Cloud-Abgleich:</strong> Übertragen wird nur Ihre bereits verschlüsselte
               Buchhaltung. Für die Anmeldung speichert Google zusätzlich Ihre E-Mail-Adresse.</li>
-          ${WEB ? '' : raw(`<li><strong>Google Kalender:</strong> Titel, Zeit und Ort Ihrer Termine gehen
+          ${raw(`<li><strong>Google Kalender:</strong> Titel, Zeit und Ort Ihrer Termine gehen
               unverschlüsselt an Google, damit der Kalender sie anzeigen kann. Beträge, Buchungen,
               Kontakte und Belege nie.</li>`)}
         </ul>
@@ -508,7 +538,7 @@ function recht(root) {
               hinterlegt einzelne Kontonummern als frei änderbare Vorschläge, damit der Import klappt.</li>
           <li><strong>ELSTER</strong> ist eine Marke der deutschen Finanzverwaltung. Kontovia bereitet
               Werte zur Eingabe auf und übermittelt selbst nichts.</li>
-          <li><strong>Google</strong>, <strong>Google Drive</strong> und <strong>Firebase</strong> sind Marken von Google LLC.</li>
+          <li><strong>Google</strong>, <strong>Google Kalender</strong> und <strong>Firebase</strong> sind Marken von Google LLC.</li>
           <li><strong>Windows</strong> und <strong>Excel</strong> sind Marken der Microsoft Corporation.</li>
           <li><strong>LibreOffice</strong> ist eine Marke von The Document Foundation.</li>
         </ul>

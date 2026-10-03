@@ -46,14 +46,17 @@ export async function renderCloudCard(root) {
         <div class="notice mb16">
           <strong>Was dabei übertragen wird.</strong> Ausschließlich Ihre bereits
           verschlüsselte Buchhaltung. Ohne Ihr Passwort lässt sie sich nicht lesen, weder
-          von Google noch vom Hersteller von Kontovia.
-          ${status.provider === 'drive' ? raw(`Sie liegt in einem versteckten, für Kontovia
-          reservierten Bereich Ihres Google Drive; auf Ihre übrigen Dateien hat Kontovia
-          keinen Zugriff. Der Platz zählt auf Ihren Google-Speicher, Gebühren entstehen keine.`)
-          : raw(`Sie liegt im Cloud-Speicher von Kontovia bei Google, in einem Bereich, an den nur
-          Ihr Google-Konto herankommt. Kosten entstehen Ihnen keine.`)}
-          Daneben bleiben bis zu ${SICHERUNGEN_BEHALTEN} ältere Stände als Sicherung dort liegen.
+          von Google noch vom Hersteller von Kontovia. Sie liegt im Cloud-Speicher von
+          Kontovia bei Google, in einem Bereich, an den nur Ihr Google-Konto herankommt.
+          Kosten entstehen Ihnen keine. Daneben bleiben bis zu ${SICHERUNGEN_BEHALTEN} ältere
+          Stände als Sicherung dort liegen.
         </div>
+
+        ${status.umgestellt ? raw(`<div class="notice warn mb16">${status.umgestellt === 'drive'
+          ? 'Ihre Cloud-Sicherung lief bisher über Google Drive. Diesen Weg gibt es nicht mehr.'
+          : 'Ihre Cloud-Sicherung lief bisher über ein eigenes Google-Projekt. Das lässt sich nicht mehr einstellen.'}
+          Ihre Buchhaltung auf diesem ${WEB ? 'Gerät' : 'Rechner'} ist vollständig. Verbinden Sie die Cloud-Sicherung
+          bitte einmal neu, dann ist sie wieder auf dem aktuellen Stand.</div>`) : ''}
 
         ${!status.configured ? raw(`<div class="notice warn">In dieser Fassung ist kein Cloud-Abgleich
           verfügbar. Ihre Buchhaltung bleibt auf diesem ${WEB ? 'Gerät' : 'Rechner'}; sichern Sie sie
@@ -739,7 +742,7 @@ function schritte(info, aktiv) {
  */
 function neustartBild(info) {
   const text = WEB
-    ? `Version ${esc(info.version)} ist geladen. Die Seite lädt sich gleich neu. Danach geben Sie einmal Ihr Passwort ein.`
+    ? `Version ${esc(info.version)} ist geladen. Die Seite lädt sich gleich neu, und Sie bleiben angemeldet.`
     : `Version ${esc(info.version)} wird installiert. Dieses Fenster schließt sich gleich und öffnet sich nach ${NEUSTART_DAUER} von selbst wieder.
        ${info.angemeldetBleiben ? 'Sie bleiben angemeldet.' : 'Danach geben Sie einmal Ihr Passwort ein.'}
        Bitte starten Sie Kontovia in der Zeit nicht selbst.${info.admin ? ' Windows fragt eventuell nach Administratorrechten.' : ''}`;

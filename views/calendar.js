@@ -125,7 +125,7 @@ export async function render(root, params, { actions } = {}) {
   // ein paar Minuten zurückliegt – dann stimmt, was hier steht.
   const st = await refreshCalendarStatus();
   const zuletzt = Date.parse(calState.lastAt || st?.lastSyncAt || 0) || 0;
-  if (st?.linked && !calState.running && Date.now() - zuletzt > 3 * 60 * 1000) {
+  if (st?.linked && !st.bestaetigen && !calState.running && Date.now() - zuletzt > 3 * 60 * 1000) {
     syncCalendar({ reason: 'kalender' }).then((r) => { if (r?.summary && r.summary !== 'alles auf dem gleichen Stand' && root.isConnected) draw(root); }).catch(() => {});
   }
 }

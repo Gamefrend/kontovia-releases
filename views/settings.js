@@ -43,6 +43,7 @@ export async function render(root, params, { actions } = {}) {
   await draw(root);
   // Aus der Statusleiste („Cloud-Sicherung einrichten“) direkt zur Cloud-Karte.
   if (params?.abschnitt === 'cloud') $('#cloudCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  if (params?.abschnitt === 'speicher') $('#speicherCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
 async function draw(root) {
@@ -143,8 +144,11 @@ async function draw(root) {
               <select id="s_autoLockMinutes">
                 ${raw([0, 2, 5, 10, 15, 30, 60].map((v) => `<option value="${v}" ${Number(s.autoLockMinutes) === v ? 'selected' : ''}>${v === 0 ? 'nie (nicht empfohlen)' : v + ' Minuten Inaktivität'}</option>`).join(''))}
               </select>
-              <span class="hint">Beim Ruhezustand und bei gesperrtem Bildschirm sperrt Kontovia zusätzlich immer sofort.</span>
+              <span class="hint">${WEB
+                ? 'Nach dem Ruhezustand des Geräts und nach drei Minuten im Hintergrund sperrt Kontovia zusätzlich sofort.'
+                : 'Beim Ruhezustand und bei gesperrtem Bildschirm sperrt Kontovia zusätzlich immer sofort.'}</span>
             </div>
+            <div id="bildschirmBox"></div>
             <div class="row" style="gap:8px">
               <button class="btn" id="btnPw">${icon('key', 15)} Passwort ändern</button>
               <button class="btn" id="btnLock">${icon('lock', 15)} Jetzt sperren</button>
@@ -163,7 +167,7 @@ async function draw(root) {
       </div>
     </div>
 
-    <div class="card mt16">
+    <div class="card mt16" id="speicherCard">
       <div class="card-head"><h3>${icon('archive', 16)} Sicherung und Speicherort</h3></div>
       <div class="card-body">
         <div class="grid c2">
@@ -179,6 +183,7 @@ async function draw(root) {
               einem anderen Ort auf als den Arbeitsrechner. Eine defekte Festplatte
               nimmt sonst beides mit.
             </p>
+            ${WEB ? raw(speicherortBlock(storage?.speicher)) : ''}
           </div>
           <div>
             ${storage ? raw(`<table class="data compact">
@@ -347,6 +352,36 @@ function askLeave() {
   });
 }
 
+/**
+ * Web-Fassung: Sperren bei gesperrtem Bildschirm. Chrome und Edge melden das
+ * nur mit Erlaubnis; die gilt für dieses Gerät, deshalb nicht im Tresor.
+ */
+async function bildschirmKasten(el) {
+  if (!el || !api.app.bildschirmsperre) return;
+  const st = await api.app.bildschirmsperre().catch(() => null);
+  if (!st) return;
+  if (!st.moeglich) {
+    el.innerHTML = '<p class="hint mb8">Eine Bildschirmsperre kann dieser Browser nicht melden. Dafür gelten die Sperre nach Inaktivität, '
+      + 'nach dem Ruhezustand und nach drei Minuten im Hintergrund.</p>';
+    return;
+  }
+  const an = st.an && st.erlaubnis === 'granted';
+  el.innerHTML = html`
+    <label class="check mb8"><input type="checkbox" id="bildschirmsperre" ${an ? 'checked' : ''}>
+      Auch sperren, sobald der Bildschirm gesperrt wird</label>
+    <p class="hint mt0 mb8">Gilt für diesen Browser. Er fragt dafür einmal, ob Kontovia erkennen darf, wann das Gerät
+      benutzt wird.${st.an && st.erlaubnis === 'denied' ? ' Die Erlaubnis wurde verweigert; sie lässt sich in den Website-Einstellungen des Browsers geben.' : ''}</p>`;
+  el.querySelector('#bildschirmsperre').addEventListener('change', async (e) => {
+    try {
+      await api.app.bildschirmsperreSetzen(e.target.checked);
+      ok(e.target.checked ? 'Sperre bei Bildschirmsperre an' : 'Sperre bei Bildschirmsperre aus');
+    } catch (x) {
+      e.target.checked = false;
+      err('Nicht eingeschaltet', x.message);
+    }
+  });
+}
+
 async function apply(root, { neuZeichnen = true } = {}) {
   const val = (id) => $('#s_' + id, root)?.value ?? '';
   await commit('einstellungen.aendern', (db) => {
@@ -372,8 +407,100 @@ async function apply(root, { neuZeichnen = true } = {}) {
   if (neuZeichnen) refresh();
 }
 
+/**
+ * Web-Fassung: Wo die Buchhaltung liegt. Im Speicher des Browsers darf der
+ * Browser bei Platzmangel räumen; in Chrome und Edge lässt sie sich deshalb in
+ * einen Ordner auf dem Gerät verschieben, sonst bleibt der Rat zu Cloud und
+ * Vollsicherung.
+ */
+function speicherortBlock(sp) {
+  if (!sp) return '';
+  if (sp.art === 'ordner') {
+    return `<div class="notice ok mt16 mb8"><strong>Ihre Buchhaltung liegt im Ordner „${esc(sp.name)}“ auf diesem Gerät.</strong>
+      Tresor, Belege und Sicherungen stehen dort als Dateien, verschlüsselt wie immer. Sichern Sie den Ordner
+      mit Ihren übrigen Dateien.</div>
+      <button class="btn sm" id="btnInBrowser">${icon('refresh', 14).__raw} Zurück in den Browser …</button>`;
+  }
+  if (sp.moeglich) {
+    return `<div class="notice mt16 mb8"><strong>Ihre Buchhaltung liegt im Speicher dieses Browsers.</strong>
+      Den darf der Browser bei Platzmangel räumen. Sicherer liegt sie in einem Ordner auf diesem Gerät: Dort
+      sehen Sie die Dateien und sichern sie mit Ihren übrigen Dateien.</div>
+      <button class="btn sm" id="btnInOrdner">${icon('folder', 14).__raw} In einen Ordner verschieben …</button>`;
+  }
+  return `<div class="notice warn mt16 mb0"><strong>Ihre Buchhaltung liegt im Speicher dieses Browsers</strong>, und
+    den darf der Browser bei Platzmangel räumen. Schalten Sie deshalb die Cloud-Sicherung ein oder legen Sie
+    regelmäßig eine Vollsicherung an. In Chrome oder Edge lässt sich die Buchhaltung stattdessen in einem
+    Ordner auf dem Gerät speichern.</div>`;
+}
+
+/** Fortschritt eines Umzugs im Hinweis; gibt eine Funktion zum Abmelden zurück. */
+function umzugAnzeigen(titel) {
+  const node = toast(titel, 'Kopiere …', '', 600000);
+  const d = node?.querySelector('.d');
+  const ab = api.on.speicher?.((p) => { if (d) d.textContent = `${p.fertig} von ${p.gesamt} Dateien kopiert und geprüft`; });
+  return () => { ab?.(); node?.click(); };
+}
+
+async function inOrdnerVerschieben() {
+  let wahl;
+  try {
+    wahl = await api.speicher.ordnerWaehlen({ zweck: 'umziehen' });
+  } catch (e) {
+    err('Ordner nicht geöffnet', e.message);
+    return;
+  }
+  if (!wahl) return;
+  if (wahl.tresor) {
+    err('Dort liegt schon eine Buchhaltung', `Im Ordner „${wahl.pfad}“ liegt bereits eine Kontovia-Buchhaltung. Wählen Sie einen anderen Ordner.`);
+    return;
+  }
+  const yes = await confirmDialog({
+    title: 'In den Ordner verschieben?',
+    text: `Kontovia kopiert Ihre Buchhaltung samt Belegen und Sicherungen nach „${wahl.pfad}“, liest jede Datei zur Kontrolle zurück und `
+      + 'löscht erst danach den Speicher im Browser. Ab dann arbeitet Kontovia in diesem Ordner. Nach einem Neustart des Browsers '
+      + 'fragt er einmal, ob Kontovia wieder darauf zugreifen darf.',
+    confirmLabel: 'Verschieben',
+  });
+  if (!yes) return;
+  if (store.dirty) await saveNow();
+  const fertig = umzugAnzeigen('Buchhaltung wird verschoben');
+  try {
+    const res = await api.speicher.inOrdner();
+    fertig();
+    ok('Buchhaltung verschoben', `${int(res.dateien)} Dateien liegen jetzt in „${res.pfad}“.`);
+  } catch (e) {
+    fertig();
+    err('Nicht verschoben', `${e.message} Ihre Buchhaltung liegt unverändert im Browser.`);
+  }
+  refresh();
+}
+
+async function zurueckInDenBrowser() {
+  const st = await api.speicher.status().catch(() => null);
+  const yes = await confirmDialog({
+    title: 'Zurück in den Browser?',
+    text: `Kontovia kopiert die Buchhaltung aus dem Ordner „${st?.name || ''}“ in den Speicher dieses Browsers und prüft jede Datei. `
+      + 'Die Dateien im Ordner bleiben liegen. Arbeiten Sie danach nicht mehr mit ihnen, sonst gibt es zwei Stände; löschen Sie den Ordner, wenn Sie ihn nicht mehr brauchen.',
+    confirmLabel: 'Zurück in den Browser',
+  });
+  if (!yes) return;
+  if (store.dirty) await saveNow();
+  const fertig = umzugAnzeigen('Buchhaltung wird zurückgeholt');
+  try {
+    const res = await api.speicher.inBrowser();
+    fertig();
+    ok('Buchhaltung im Browser', `${int(res.dateien)} Dateien kopiert. Der Ordner „${res.name}“ wird nicht mehr verwendet.`);
+  } catch (e) {
+    fertig();
+    err('Nicht zurückgeholt', `${e.message} Ihre Buchhaltung liegt unverändert im Ordner.`);
+  }
+  refresh();
+}
+
 function wire(root) {
   $('#btnApply', root).addEventListener('click', () => apply(root));
+  $('#btnInOrdner', root)?.addEventListener('click', () => inOrdnerVerschieben());
+  $('#btnInBrowser', root)?.addEventListener('click', () => zurueckInDenBrowser());
   feldHinweis($('#s_taxNumber', root), steuernummerHinweis);
   feldHinweis($('#s_vatId', root), ustIdHinweis);
 
@@ -388,6 +515,7 @@ function wire(root) {
   });
 
   $('#btnLock', root).addEventListener('click', () => lockNow());
+  bildschirmKasten($('#bildschirmBox', root));
   $('#btnFolder', root)?.addEventListener('click', () => api.app.openDataFolder());
 
   $('#btnPw', root).addEventListener('click', async () => {
@@ -501,7 +629,11 @@ export async function runBackup() {
   toast('Sicherung wird erstellt …', 'Bei vielen Belegen kann das einen Moment dauern.');
   try {
     const res = await api.backup.export(pw);
-    if (res) ok('Sicherung erstellt', `${bytes(res.bytes)} · ${res.path}`);
+    if (res) {
+      ok('Sicherung erstellt', `${bytes(res.bytes)} · ${res.path}`);
+      // Für den Hinweis nach dem Entsperren (app.js): wann zuletzt gesichert wurde, je Gerät.
+      try { localStorage.setItem('kontovia.vollsicherung', String(Date.now())); } catch { /* ohne Gedächtnis eben nicht */ }
+    }
   } catch (e) {
     err('Sicherung fehlgeschlagen', e.message);
   }

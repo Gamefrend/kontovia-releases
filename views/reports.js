@@ -16,6 +16,7 @@ import {
 } from '../lib/prefs.js';
 import { defaultPeriod, periodControl, periodLabel, setPeriod } from '../lib/period.js';
 import * as R from '../lib/reports.js';
+import { pdfSpeichern, pdfZeigen, drucken } from '../lib/pdfausgabe.js';
 import { table, mountTables } from '../lib/table.js';
 import { openTransactionDialog } from './transactions.js';
 import { checkNotice, wireCheckLinks } from './spruenge.js';
@@ -41,11 +42,13 @@ export async function render(root, params, { actions } = {}) {
   if (params?.period?.from && params?.period?.to) setPeriod(period, params.period.from, params.period.to);
   actions.innerHTML = html`
     <div id="rpPeriod"></div>
+    ${api.platform === 'web' ? raw(`<button class="btn" id="btnPrint">${icon('print', 16).__raw} Drucken</button>`) : ''}
     <button class="btn" id="btnPreview">${icon('eye', 16)} Vorschau</button>
     <button class="btn primary" id="btnPdf">${icon('pdf', 16)} Als PDF</button>`;
   periodCtl = periodControl($('#rpPeriod', actions), period, () => draw(root));
-  actions.querySelector('#btnPdf').addEventListener('click', () => exportPdf(false));
-  actions.querySelector('#btnPreview').addEventListener('click', () => exportPdf(true));
+  actions.querySelector('#btnPdf').addEventListener('click', () => exportPdf('speichern'));
+  actions.querySelector('#btnPreview').addEventListener('click', () => exportPdf('zeigen'));
+  actions.querySelector('#btnPrint')?.addEventListener('click', () => exportPdf('drucken'));
   draw(root);
 }
 
@@ -687,7 +690,10 @@ function anlagen(root, db) {
 /* PDF                                                                         */
 /* -------------------------------------------------------------------------- */
 
-async function exportPdf(preview) {
+/**
+ * @param {'speichern'|'zeigen'|'drucken'} wie
+ */
+async function exportPdf(wie) {
   // Das PDF zeigt, was die Ansicht zeigt – samt Vermerk, falls nicht
   // gelistete Buchungen darin stecken.
   const db = scopeDb(store.db, scope.includeUnlisted);
@@ -701,15 +707,19 @@ async function exportPdf(preview) {
     konten: () => [R.accountsPdf(db, period), `Kontenblaetter_${period.from}_${period.to}.pdf`],
     anlagen: () => [R.assetsPdf(db, period), `Anlagenverzeichnis_${period.to}.pdf`],
   };
-  let [doc, name] = (makers[tab] || makers.guv)();
+  const [doc, name] = (makers[tab] || makers.guv)();
   if (st.count) {
-    doc = doc.replace('</body>', `<div class="note"><strong>Enthält ${st.count} nicht gelistete Buchung${st.count === 1 ? '' : 'en'}.</strong>
-      Diese Aufstellung ist nur für den eigenen Gebrauch; für das Finanzamt gelten die Werte ohne sie.</div></body>`);
+    doc.bloecke.push({
+      art: 'hinweis',
+      inhalt: [{ t: `Enthält ${st.count} nicht gelistete Buchung${st.count === 1 ? '' : 'en'}.`, fett: true },
+        { t: ' Diese Aufstellung ist nur für den eigenen Gebrauch; für das Finanzamt gelten die Werte ohne sie.' }],
+    });
   }
   try {
-    const res = await api.pdf.create({ html: doc, defaultName: name, preview });
-    if (res?.path) ok('PDF gespeichert', res.path);
-    else if (res?.previewed) ok('Vorschau geöffnet', 'Die Datei wird beim Beenden von Kontovia gelöscht.');
+    if (wie === 'drucken') { await drucken(doc, name); return; }
+    if (wie === 'zeigen') { await pdfZeigen(doc, name); return; }
+    const pfad = await pdfSpeichern(doc, name);
+    if (pfad) ok('PDF gespeichert', pfad);
   } catch (e) {
     err('PDF konnte nicht erstellt werden', e.message);
   }

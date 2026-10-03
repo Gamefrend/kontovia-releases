@@ -11,6 +11,7 @@ import { navigate } from '../lib/router.js';
 import { appInfo } from '../app.js';
 import * as X from '../lib/exports.js';
 import * as R from '../lib/reports.js';
+import { pdfSpeichern, pdfZeigen, pdfFuerPaket } from '../lib/pdfausgabe.js';
 
 const api = window.kontovia;
 /** Läuft Kontovia im Browser statt in Electron? (src/web/bridge.js) */
@@ -78,7 +79,7 @@ function draw(root) {
         body: `Ein Ordner mit allem, was für die Steuererklärung gebraucht wird:
           EÜR-Zeilen${klein ? '' : ', Umsatzsteuer-Kennzahlen'}, Buchungsjournal, offene Posten,
           Anlagenverzeichnis, DATEV-Stapel und eine Anleitung zum Übertragen nach ELSTER.
-          ${WEB ? 'Zusätzlich die vollständigen Berichte als druckfertige Seiten, die jeder Browser öffnet und als PDF sichert.' : 'Zusätzlich die vollständigen Berichte als PDF.'}`,
+          Zusätzlich die vollständigen Berichte als PDF.`,
         button: `<button class="btn primary" id="btnPackAll">${icon('export', 16).__raw} ${WEB ? 'Paket erstellen' : 'Ordner erstellen'}</button>
                  <button class="btn" id="btnPackCsv">Nur Tabellen (CSV)</button>`,
       }))}
@@ -190,11 +191,7 @@ function wire(root, db, rows) {
       [R.journalPdf(db, period), `Buchungsjournal_${y}.pdf`],
     ];
     if (!isKleinunternehmer(db)) pdfs.splice(2, 0, [R.ustvaPdf(db, period), `UStVA_${y}.pdf`]);
-    for (const [doc, name] of pdfs) {
-      const res = await api.pdf.create({ html: doc, defaultName: name, returnBase64: true });
-      // Die Web-Fassung liefert eine druckfertige HTML-Seite statt einer PDF-Datei.
-      if (res?.dataBase64) files.push({ name: res.fileName || name, dataBase64: res.dataBase64 });
-    }
+    for (const [doc, name] of pdfs) files.push(await pdfFuerPaket(doc, name));
     const res = await api.file.saveMany({ folderLabel: 'Zielordner für die Finanzamt-Unterlagen', files });
     if (res) {
       ok('Unterlagen erstellt', `${res.written.length} Dateien in ${res.dir}`);
@@ -203,15 +200,12 @@ function wire(root, db, rows) {
   }));
 
   $('#btnPackPdf', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
-    const res = await api.pdf.create({
-      html: R.yearPackPdf(db, period),
-      defaultName: `Jahresunterlagen_${period.from.slice(0, 4)}.pdf`,
-    });
-    if (res?.path) ok('PDF erstellt', res.path);
+    const pfad = await pdfSpeichern(R.yearPack(db, period), `Jahresunterlagen_${period.from.slice(0, 4)}.pdf`);
+    if (pfad) ok('PDF erstellt', pfad);
   }));
 
   $('#btnPackPdfPreview', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
-    await api.pdf.create({ html: R.yearPackPdf(db, period), defaultName: 'Jahresunterlagen.pdf', preview: true });
+    await pdfZeigen(R.yearPack(db, period), `Jahresunterlagen_${period.from.slice(0, 4)}.pdf`);
   }));
 
   $('#btnDatev', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
@@ -309,8 +303,8 @@ function wire(root, db, rows) {
       journal: [R.journalPdf(db, period), `Buchungsjournal_${y}.pdf`],
     };
     const [doc, name] = map[b.dataset.pdf];
-    const res = await api.pdf.create({ html: doc, defaultName: name });
-    if (res?.path) ok('PDF gespeichert', res.path);
+    const pfad = await pdfSpeichern(doc, name);
+    if (pfad) ok('PDF gespeichert', pfad);
   })));
 }
 

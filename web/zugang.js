@@ -91,7 +91,48 @@ function journalNachEinspielen(aktuell, ausSicherung) {
     || String(x.device).localeCompare(String(y.device)) || (x.seq - y.seq));
 }
 
-module.exports = { ohneZugangsdaten, fuerOberflaeche, fuerSicherung, cloudNachEinspielen, journalNachEinspielen };
+/**
+ * Bis 1.13 ließ sich die Cloud-Ablage auf Google Drive umstellen, und jedes
+ * Zugangsdatum war überschreibbar (eigenes Projekt). Beides gibt es nicht mehr.
+ * Hier wird ein Cloud-Block aus dieser Zeit aufgeräumt: Wer auf Drive oder mit
+ * einem anderen Firebase-Projekt verbunden war, ist danach nicht mehr verbunden
+ * und bekommt in der Cloud-Karte einen Hinweis (`umgestellt`). Widerrufen wird
+ * dabei nichts, die Buchhaltung bleibt, wie sie ist.
+ *
+ * @param {object} c  der Cloud-Block
+ * @param {{apiKey:string, bucket:string}} mitgeliefert  das eingebaute Projekt
+ * @returns {boolean} ob etwas geändert wurde
+ */
+const ALTLASTEN = ['apiKey', 'bucket', 'clientId', 'clientSecret', 'webClientId', 'webClientSecret'];
+
+function altlastenEntfernen(c, mitgeliefert) {
+  if (!c || typeof c !== 'object') return false;
+  const drive = c.provider === 'drive';
+  // Ein anderes Projekt erkennt man an Schlüssel oder Speicherort; eine
+  // eigene Client-ID allein ändert an der Sitzung nichts.
+  const anderesProjekt = !!((c.apiKey && c.apiKey !== mitgeliefert.apiKey)
+    || (c.bucket && String(c.bucket).replace(/^gs:\/\//, '') !== mitgeliefert.bucket));
+  const etwasDa = drive || !!c.state?.drive || ALTLASTEN.some((k) => c[k] !== undefined)
+    || (c.provider !== undefined && c.provider !== 'firebase');
+  if (!etwasDa) return false;
+  const warVerbunden = drive ? !!c.state?.drive?.refreshToken : (anderesProjekt && !!c.state?.firebase?.refreshToken);
+  for (const k of ALTLASTEN) delete c[k];
+  if (c.state && typeof c.state === 'object') {
+    delete c.state.drive;
+    // Die Sitzung eines anderen Projekts gilt in diesem nicht.
+    if (anderesProjekt || drive) delete c.state.firebase;
+  }
+  c.provider = 'firebase';
+  if (warVerbunden) {
+    c.umgestellt = { grund: drive ? 'drive' : 'eigenes-projekt', am: new Date().toISOString() };
+    delete c.remoteVersion;
+    delete c.lastSyncAt;
+    delete c.linkedAt;
+  }
+  return true;
+}
+
+module.exports = { ohneZugangsdaten, fuerOberflaeche, fuerSicherung, cloudNachEinspielen, journalNachEinspielen, altlastenEntfernen };
 
 })(module, module.exports);
-export const { ohneZugangsdaten, fuerOberflaeche, fuerSicherung, cloudNachEinspielen, journalNachEinspielen } = module.exports;
+export const { ohneZugangsdaten, fuerOberflaeche, fuerSicherung, cloudNachEinspielen, journalNachEinspielen, altlastenEntfernen } = module.exports;

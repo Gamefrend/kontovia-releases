@@ -25,7 +25,8 @@ import { requestJson, form } from './netz.js';
 const DEVICE_ENDPOINT = 'https://oauth2.googleapis.com/device/code';
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 const REVOKE_ENDPOINT = 'https://oauth2.googleapis.com/revoke';
-export const DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.appdata', 'openid', 'email'];
+/** Ohne Angabe: nur die Identität. */
+const STANDARD_SCOPES = ['openid', 'email'];
 
 const schlafen = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -63,7 +64,7 @@ export async function authorize({ clientId, clientSecret, scopes, zeigeCode }) {
     start = await requestJson(DEVICE_ENDPOINT, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: form({ client_id: clientId, scope: (scopes || DRIVE_SCOPES).join(' ') }),
+      body: form({ client_id: clientId, scope: (scopes || STANDARD_SCOPES).join(' ') }),
       timeoutMs: 30000,
     });
   } catch (err) {

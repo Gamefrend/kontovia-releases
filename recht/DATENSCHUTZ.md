@@ -8,7 +8,7 @@
   prüfen lassen. Rechtsberatung ist das hier nicht.
 -->
 
-Stand: 2. Oktober 2026, Programmversion 1.13.0
+Stand: 3. Oktober 2026, Programmversion 1.18.0
 
 ---
 
@@ -72,7 +72,7 @@ Tresorpasswort nötig, und das verlässt Ihren Rechner nie.
 **Rechtsgrundlage:** Art. 6 Abs. 1 lit. b und f DSGVO (Durchführung der eigenen
 Buchhaltung, berechtigtes Interesse an einer Datensicherung).
 
-### Bei der Ablage in Firebase
+### Wo die Daten liegen
 
 Empfänger ist [Anbieter eintragen] als Betreiber des Firebase-Projekts sowie
 Google Ireland Limited beziehungsweise Google LLC als Auftragsverarbeiter.
@@ -89,24 +89,10 @@ sie liegen in der globalen Infrastruktur von Google. Grundlage für die
 Übermittlung in die USA ist das EU-US Data Privacy Framework, unter dem Google
 zertifiziert ist.
 
-### Bei der Ablage in Google Drive
-
-Ziel ist ein versteckter, der Anwendung vorbehaltener Bereich
-(`appDataFolder`) **Ihres eigenen** Google-Drive-Kontos. Der Anbieter der
-Anwendung erhält dabei überhaupt keine Daten. Empfänger ist allein Google als
-Ihr Speicheranbieter.
-
-Kontovia fragt allein den Bereich `drive.appdata` an. Auf Ihre übrigen Dateien
-in Google Drive hat das Programm keinen Zugriff und kann ihn technisch auch
-nicht erlangen.
-
-### Für beide Varianten
-
-**Auftragsverarbeitung:** Für den gewerblichen Einsatz brauchen Sie einen
-Auftragsverarbeitungsvertrag mit Google. Bei Google Workspace und im
-Firebase-Projekt ist er verfügbar; bei einem privaten Google-Konto in der
-Drive-Variante besteht keiner. In dem Fall ist der gewerbliche Einsatz
-datenschutzrechtlich problematisch.
+**Auftragsverarbeitung:** Für den Cloud-Speicher besteht zwischen dem Betreiber
+des Firebase-Projekts und Google ein Auftragsverarbeitungsvertrag. Setzen Sie
+Kontovia gewerblich ein, regelt [Anbieter eintragen] mit Ihnen, in welcher Rolle
+er Ihre verschlüsselten Daten speichert.
 
 **Widerruf:** In den Einstellungen unter „Verbindung trennen“. Das Gerät meldet
 sich dann von der Cloud ab; Ihre anderen Geräte bleiben verbunden. Im selben
@@ -115,7 +101,7 @@ Sicherungen in der Cloud gelöscht werden soll. Die Freigabe für Kontovia in
 Ihrem Google-Konto entfernen Sie unter *Sicherheit → Verbindungen zu
 Drittanbieter-Apps* (myaccount.google.com/connections).
 
-## Google Kalender (freiwillig, nur Windows-Fassung)
+## Google Kalender (freiwillig)
 
 Auf Wunsch gleicht Kontovia Ihre Termine mit Ihrem Google-Kalender ab. Das
 geschieht erst, nachdem Sie unter *Einstellungen → Kalender-Abgleich* (oder im
@@ -157,6 +143,13 @@ erhalten. Google zieht dabei die Freigabe des ganzen Kontos zurück. Ist Google
 Kalender auch auf einem anderen Gerät verbunden, muss er dort neu verbunden
 werden.
 
+**In der Web-Fassung** spricht Ihr Browser dafür direkt mit Google
+(`accounts.google.com` für die Anmeldung, `www.googleapis.com` für die
+Termine). Google erteilt dort nur einen Zugriff für jeweils eine Stunde. Er
+liegt nur im Arbeitsspeicher des Browsers, nie im Tresor oder im
+Browser-Speicher, und verfällt, sobald Kontovia sich sperrt. Danach wartet der
+Abgleich, bis Sie ihn mit einem Tipp erneut bestätigen.
+
 Ohne Google-Konto lassen sich Termine als Kalenderdatei (.ics) exportieren und
 importieren; dabei entsteht keine Verbindung ins Netz.
 
@@ -191,6 +184,13 @@ für den Neustart ab, verschlüsselt durch Windows für Ihr Benutzerkonto und g�
 nur für die neue Version und höchstens zehn Minuten. Beim Start wird er sofort
 gelöscht; wer zwischendurch sperrt, verwirft ihn. Das Gerät verlässt er nie.
 
+**Angemeldet bleiben beim Update (Web-Fassung):** Lädt Kontovia im Browser eine
+neue Fassung, wird der Schlüssel Ihrer Buchhaltung für das Neuladen geteilt
+abgelegt: umhüllt im Speicher des Browsers, der passende Gegenschlüssel nur im
+geöffneten Tab. Beides gilt höchstens zwei Minuten und nur für die neue
+Fassung, wird beim Start sofort gelöscht und beim Sperren verworfen. Das Gerät
+verlässt es nie.
+
 ## Web-Fassung (Browser, iPhone, iPad)
 
 Kontovia gibt es zusätzlich als Web-App, die im Browser läuft und sich auf
@@ -205,12 +205,15 @@ sie gilt alles oben Gesagte mit folgenden Abweichungen:
   Steuerdatei `sw.js` geändert hat. Bei jedem dieser Abrufe erfährt der
   Betreiber des Servers Ihre IP-Adresse und den Zeitpunkt; Angaben aus Ihrer
   Buchhaltung werden nie übertragen.
-* **Speicherort.** Statt in einem Ordner liegen Tresor und Belege im Speicher
-  des Browsers (IndexedDB), in derselben Verschlüsselung wie oben beschrieben.
-  Browser dürfen solche Daten bei Platzmangel räumen. Kontovia bittet deshalb um
-  dauerhafte Speicherung und zeigt unter *Einstellungen* an, ob der Browser sie
-  gewährt hat. Auf iPhone und iPad ist der Cloud-Abgleich oder eine regelmäßige
-  Vollsicherung dringend zu empfehlen.
+* **Speicherort.** Tresor und Belege liegen zunächst im Speicher des Browsers
+  (IndexedDB), in derselben Verschlüsselung wie oben beschrieben. Browser dürfen
+  solche Daten bei Platzmangel räumen. Kontovia bittet deshalb um dauerhafte
+  Speicherung und zeigt unter *Einstellungen* an, ob der Browser sie gewährt hat.
+  In Chrome und Edge lässt sich die Buchhaltung stattdessen in einem Ordner auf
+  Ihrem Gerät speichern, den Sie selbst wählen; Kontovia liest und schreibt dann
+  nur in diesem Ordner, und der Browser fragt nach einem Neustart, ob er das darf.
+  Auf iPhone und iPad ist der Cloud-Abgleich oder eine regelmäßige Vollsicherung
+  dringend zu empfehlen.
 * **Anmeldung bei Google.** Für den Cloud-Abgleich leitet die Web-Fassung zu
   Google weiter und nach der Anmeldung zurück; ersatzweise zeigt sie einen kurzen
   Code für `google.com/device`. Angefragt werden nur Name und E-Mail-Adresse. Was

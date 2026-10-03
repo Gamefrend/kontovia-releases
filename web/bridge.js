@@ -18,6 +18,10 @@ import * as A from './ablage.js';
 import { Vault, MAX_ATTACHMENT_BYTES } from './tresor.js';
 import { Cloud } from './cloud.js';
 import * as W from './weiterleitung.js';
+import * as G from './gcal.js';
+import * as Z from './sperre.js';
+import * as UE from './uebergabe.js';
+import BUILTIN from './cloudconfig.js';
 import * as D from './dateien.js';
 import { drucken } from './druck.js';
 import * as U from './aktualisierung.js';
@@ -26,8 +30,15 @@ import { fuerOberflaeche } from './zugang.js';
 import { modal, toast } from '../lib/ui.js';
 import './mobil.js';
 
+/* Läuft diese Seite nur als kleines Fenster für Google Kalender? Dann reicht
+   sie die Antwort an das eigentliche Kontovia-Fenster weiter und schließt
+   sich (gcal.js). Das geschieht vor allem anderen, auch vor der Anmeldung
+   per Weiterleitung, die sonst die Antwort für sich hielte. */
+const nurGoogleFenster = G.antwortWeiterreichen();
+
 const vault = new Vault(U.VERSION);
 const cloud = new Cloud(vault, { zeigeCode });
+const gcal = new G.GoogleCalendar(vault, { clientId: BUILTIN.googleWeb?.clientId || '' });
 
 /* Zurück von einer Anmeldung per Weiterleitung? Die Antwort von Google steht
    im Anker der Adresse; sie wird sofort entfernt und im Hintergrund bei
@@ -39,6 +50,8 @@ const rueckkehrFertig = (() => {
 const device = { id: '', name: '' };
 
 let autoLockMinutes = 10;
+/** Tresorschlüssel aus der Übergabe nach einer Aktualisierung (uebergabe.js), nur für diesen Start. */
+let fortsetzen = null;
 let lockTimer = null;
 let failedUnlocks = 0;
 
@@ -49,7 +62,7 @@ const str = (v, max = 500) => String(v ?? '').slice(0, max);
 /* Ereignisse                                                                  */
 /* -------------------------------------------------------------------------- */
 
-const hoerer = { locked: new Set(), updateProgress: new Set(), cloudProgress: new Set(), cloudTick: new Set(), menu: new Set() };
+const hoerer = { locked: new Set(), updateProgress: new Set(), cloudProgress: new Set(), cloudTick: new Set(), menu: new Set(), speicher: new Set() };
 
 function send(kanal, payload) {
   for (const fn of hoerer[kanal]) {
@@ -149,10 +162,27 @@ function doLock(reason) {
 
 /** Was dem Sperren folgt – auch, wenn cloud.js beim Übernehmen schon gesperrt hat. */
 function nachSperre(reason) {
+  if (reason !== 'aktualisierung') UE.verwerfen().catch(() => {});
+  gcal.vergessen();
+  Z.bildschirmBeenden();
   if (lockTimer) clearTimeout(lockTimer);
   lockTimer = null;
   restartAutoSync();
   send('locked', { reason });
+}
+
+/* Ruhezustand und Bildschirmsperre (sperre.js). */
+function sperreBeobachten() {
+  Z.bildschirmBeobachten(() => doLock('bildschirmsperre'));
+}
+
+/** Startet erst mit Kontovia selbst, nicht im kleinen Fenster für Google. */
+function ruhezustandBeobachten() {
+  Z.zeitsprungWaechter(() => doLock('standby'));
+  // Legt der Browser die Seite auf Eis (Zurück-Speicher, eingefrorener Tab),
+  // kommt sie gesperrt wieder.
+  window.addEventListener('pagehide', (e) => { if (e.persisted) doLock('hintergrund'); });
+  document.addEventListener('freeze', () => doLock('hintergrund'));
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -307,6 +337,20 @@ function zipName(folderLabel, files) {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Speicherort: Browser oder Ordner                                            */
+/* -------------------------------------------------------------------------- */
+
+/** Der zuletzt gewählte Ordner, bis die Oberfläche bestätigt, was damit geschehen soll. */
+let gewaehlt = null;
+
+/** Wie der Speicherort heißt, für Einstellungen und „Über Kontovia“. */
+async function ortBeschreiben() {
+  const sp = await A.speicherort();
+  vault.dataDir = sp.art === 'ordner' ? `Ordner „${sp.name}“ auf diesem Gerät` : 'Speicher dieses Browsers';
+  return sp;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Die Brücke                                                                  */
 /* -------------------------------------------------------------------------- */
 
@@ -328,7 +372,7 @@ const api = {
       deviceName: device.name,
     }), { needsUnlock: false }),
     openDataFolder: handle(async () => {
-      throw new Error('Die Web-Fassung legt ihre Daten im Speicher des Browsers ab, einen Ordner dafür gibt es nicht.');
+      throw new Error('Einen Ordner öffnet der Browser nicht selbst. Wo Ihre Buchhaltung liegt, steht unter Einstellungen → Sicherung und Speicherort.');
     }, { needsUnlock: false }),
     openLicense: handle(async () => {
       throw new Error('Die Web-Fassung läuft in Ihrem Browser; es gelten dessen Lizenzbedingungen.');
@@ -341,6 +385,12 @@ const api = {
       return res.text();
     }, { needsUnlock: false }),
     activity: async () => { resetLockTimer(); return true; },
+    bildschirmsperre: handle(async () => Z.bildschirmStatus(), { needsUnlock: false }),
+    bildschirmsperreSetzen: handle(async (an) => {
+      if (an) await Z.bildschirmEinschalten(() => doLock('bildschirmsperre'));
+      else Z.bildschirmAusschalten();
+      return Z.bildschirmStatus();
+    }),
     setAutoLock: handle(async (minutes) => {
       const m = Number(minutes);
       autoLockMinutes = Number.isFinite(m) && m >= 0 && m <= 480 ? m : 10;
@@ -362,7 +412,10 @@ const api = {
   vault: {
     status: handle(async () => {
       await rueckkehrFertig;
-      return { exists: await vault.exists(), locked: vault.isLocked, autoLockMinutes };
+      const speicher = await ortBeschreiben();
+      // Ohne Zugriff auf den Ordner lässt sich nicht sagen, ob dort ein Tresor liegt.
+      const exists = speicher.art === 'ordner' && speicher.zugriff !== 'granted' ? null : await vault.exists();
+      return { exists, locked: vault.isLocked, autoLockMinutes, speicher, fortsetzen: !!fortsetzen };
     }, { needsUnlock: false }),
     create: handle(async (password, settings) => {
       if (typeof password !== 'string' || password.length < 10) throw new Error('Das Passwort muss mindestens 10 Zeichen haben.');
@@ -371,6 +424,7 @@ const api = {
       autoLockMinutes = db.settings.autoLockMinutes;
       resetLockTimer();
       A.dauerhaftAnfordern();
+      sperreBeobachten();
       // Wer sich beim Einrichten mit Google angemeldet hat, ist ab jetzt verbunden.
       if (await cloud.anmeldungEintragen().catch(() => false)) restartAutoSync();
       return kopie(fuerOberflaeche(vault.db));
@@ -392,6 +446,7 @@ const api = {
         await cloud.anmeldungVerbinden().catch((e) => console.error('Verbinden nach Weiterleitung:', e));
         restartAutoSync();
         A.dauerhaftAnfordern();
+        sperreBeobachten();
         // Die Anmeldemerkmale bleiben in der Web-Schicht (zugang.js).
         return kopie(fuerOberflaeche(vault.db));
       } catch (err) {
@@ -399,10 +454,29 @@ const api = {
         throw err;
       }
     }, { needsUnlock: false }),
-    // Angemeldet bleiben über eine Aktualisierung gibt es nur in der Windows-Fassung:
-    // Dort schützt die Datenschutz-API von Windows den Schlüssel über den Neustart
-    // (src/main/uebergabe.js). Der Browser hat nichts Vergleichbares.
-    resume: handle(async () => null, { needsUnlock: false }),
+    // Entsperren mit dem Schlüssel aus der Übergabe (uebergabe.js), einmal,
+    // direkt nach dem Neuladen in die neue Fassung. Sonst: Passwort wie immer.
+    resume: handle(async () => {
+      const dek = fortsetzen;
+      fortsetzen = null;
+      if (!dek) return null;
+      if (!vault.isLocked || anderesFenster) { K.wipe(dek); return null; }
+      let db;
+      try {
+        db = await vault.unlockWithKey(dek);
+      } catch (err) {
+        K.wipe(dek);
+        console.error('Anmeldung nach der Aktualisierung:', err.message);
+        return null;
+      }
+      failedUnlocks = 0;
+      autoLockMinutes = Number(db?.settings?.autoLockMinutes ?? 10);
+      resetLockTimer();
+      restartAutoSync();
+      A.dauerhaftAnfordern();
+      sperreBeobachten();
+      return kopie(fuerOberflaeche(vault.db));
+    }, { needsUnlock: false }),
     lock: handle(async () => { doLock('manuell'); return true; }, { needsUnlock: false }),
     read: handle(async () => kopie(fuerOberflaeche(vault.db))),
     write: handle(async (db) => {
@@ -422,7 +496,7 @@ const api = {
       if (typeof newPassword !== 'string' || newPassword.length < 10) throw new Error('Das neue Passwort muss mindestens 10 Zeichen haben.');
       return vault.changePassword(String(oldPassword ?? ''), newPassword);
     }),
-    storage: handle(async () => vault.storageStats(), { needsUnlock: false }),
+    storage: handle(async () => ({ ...(await vault.storageStats()), speicher: await ortBeschreiben() }), { needsUnlock: false }),
     backups: handle(async () => vault.listBackups(), { needsUnlock: false }),
   },
 
@@ -456,6 +530,11 @@ const api = {
     }),
     // Im Browser gibt es keinen Ordner, der sich zeigen ließe.
     reveal: handle(async () => true),
+    /** Eine erzeugte Datei anzeigen, etwa einen Bericht als PDF: im Browser ein neuer Tab. */
+    open: handle(async ({ dataBase64, defaultName, mime } = {}) => {
+      const name = str(defaultName, 180) || 'datei';
+      return D.oeffnen(K.fromBase64(String(dataBase64 || '')), name, str(mime, 80) || D.mimeFuer(name));
+    }),
     pickImport: handle(async (filters) => {
       const [f] = await D.waehlen({ multiple: false, filters: Array.isArray(filters) ? filters : [] });
       if (!f) return null;
@@ -484,12 +563,101 @@ const api = {
     }),
   },
 
+  /* Speicherort: im Browser (IndexedDB) oder in einem Ordner auf dem Gerät (ablage.js). */
+  speicher: {
+    status: handle(async () => ortBeschreiben(), { needsUnlock: false }),
+    /** Nach einem Neustart fragt der Browser erneut; braucht einen Klick unmittelbar davor. */
+    zugriffErlauben: handle(async () => {
+      const z = await A.zugriffErbitten();
+      await ortBeschreiben();
+      return z;
+    }, { needsUnlock: false }),
+    /**
+     * Lässt einen Ordner wählen (oder nimmt einen übergebenen, für den Selbsttest)
+     * und sagt, was darin liegt. Geschehen tut damit noch nichts.
+     * @param {{zweck?:'oeffnen'|'umziehen', ordner?:FileSystemDirectoryHandle}} opts
+     */
+    ordnerWaehlen: handle(async (opts = {}) => {
+      let dir = opts?.ordner;
+      if (!(typeof FileSystemDirectoryHandle !== 'undefined' && dir instanceof FileSystemDirectoryHandle)) {
+        if (!A.ordnerMoeglich()) throw new Error('Dieser Browser kann nicht in einen Ordner auf dem Gerät speichern. Das geht in Chrome und Edge.');
+        try {
+          dir = await window.showDirectoryPicker({ id: 'kontovia-speicher', mode: 'readwrite', startIn: 'documents' });
+        } catch (err) {
+          if (err?.name === 'AbortError') return null;
+          throw new Error(err?.name === 'SecurityError' || err?.name === 'NotAllowedError'
+            ? 'Diesen Ordner gibt der Browser nicht frei. Wählen Sie einen Ordner zum Beispiel unter Dokumente.'
+            : err?.message || 'Der Ordner ließ sich nicht öffnen.');
+        }
+      }
+      if ((await dir.requestPermission?.({ mode: 'readwrite' }) ?? 'granted') !== 'granted') {
+        throw new Error('Ohne Erlaubnis zum Schreiben kann Kontovia den Ordner nicht verwenden.');
+      }
+      const info = await A.ordnerPruefen(dir, { anlegen: opts?.zweck === 'umziehen' });
+      gewaehlt = info;
+      return { name: info.name, pfad: info.pfad, tresor: info.tresor };
+    }, { needsUnlock: false }),
+    /** Den eben gewählten Ordner mit seiner Buchhaltung verwenden (solange im Browser keine liegt). */
+    ordnerOeffnen: handle(async () => {
+      if (!gewaehlt?.tresor) throw new Error('Im gewählten Ordner liegt keine Kontovia-Buchhaltung.');
+      if (!vault.isLocked || await vault.exists()) {
+        throw new Error('In diesem Browser gibt es schon eine Buchhaltung. Ziehen Sie sie in den Einstellungen in einen Ordner um, oder öffnen Sie den Ordner in einem anderen Browser.');
+      }
+      await A.ordnerVerwenden(gewaehlt.handle);
+      gewaehlt = null;
+      return ortBeschreiben();
+    }, { needsUnlock: false }),
+    /** Die offene Buchhaltung samt Belegen und Sicherungen in den gewählten Ordner umziehen. */
+    inOrdner: handle(async () => {
+      if (!gewaehlt) throw new Error('Bitte zuerst einen Ordner wählen.');
+      if (gewaehlt.tresor) throw new Error(`Im Ordner „${gewaehlt.pfad}“ liegt schon eine Kontovia-Buchhaltung. Wählen Sie einen anderen Ordner.`);
+      await vault.saving?.catch(() => {});
+      const res = await A.inOrdnerUmziehen(gewaehlt.handle, { pruefen: (s, k, b) => vault.kopiePruefen(s, k, b), fortschritt: (p) => send('speicher', p) });
+      res.pfad = gewaehlt.pfad;
+      gewaehlt = null;
+      await ortBeschreiben();
+      return res;
+    }),
+    /** Zurück in den Speicher des Browsers; die Dateien im Ordner bleiben liegen. */
+    inBrowser: handle(async () => {
+      await vault.saving?.catch(() => {});
+      const res = await A.inBrowserUmziehen({ pruefen: (s, k, b) => vault.kopiePruefen(s, k, b), fortschritt: (p) => send('speicher', p) });
+      await ortBeschreiben();
+      return res;
+    }),
+    /** Den Ordner nicht mehr verwenden (nur gesperrt, etwa wenn er fehlt). Die Dateien darin bleiben. */
+    ordnerVergessen: handle(async () => {
+      if (!vault.isLocked) throw new Error('Bitte zuerst sperren.');
+      await A.ordnerVergessen();
+      return ortBeschreiben();
+    }, { needsUnlock: false }),
+  },
+
   update: {
-    check: handle(async (silent) => U.pruefen({ silent: !!silent }), { needsUnlock: false }),
+    check: handle(async (silent) => {
+      const info = await U.pruefen({ silent: !!silent });
+      // Als App installiert: ein Punkt am Symbol, solange eine neue Fassung wartet
+      // (wie der Fortschritt in der Windows-Taskleiste). Reiner Zusatz.
+      if (info?.reachable) {
+        try { await (info.available ? navigator.setAppBadge?.() : navigator.clearAppBadge?.()); } catch { /* nicht unterstützt */ }
+      }
+      return info;
+    }, { needsUnlock: false }),
     download: handle(async (info) => U.herunterladen(info, (p) => send('updateProgress', p)), { needsUnlock: false }),
     install: handle(async (version) => {
+      // Angemeldet bleiben: den Schlüssel für genau den nächsten Start übergeben.
+      if (!vault.isLocked) {
+        await vault.saving?.catch(() => {});
+        await UE.ablegen(vault.dek, { version: str(version, 20) }).catch((e) => console.error('Übergabe:', e));
+      }
       doLock('aktualisierung');
-      return U.installieren(version);
+      try { await navigator.clearAppBadge?.(); } catch { /* nicht unterstützt */ }
+      try {
+        return await U.installieren(version);
+      } catch (err) {
+        await UE.verwerfen();
+        throw err;
+      }
     }, { needsUnlock: false }),
   },
 
@@ -563,6 +731,7 @@ const api = {
         resetLockTimer();
         restartAutoSync();
         A.dauerhaftAnfordern();
+        sperreBeobachten();
         return kopie(fuerOberflaeche(db));
       } catch (err) {
         if (err?.code === 'BAD_PASSWORD') failedUnlocks++;
@@ -571,34 +740,28 @@ const api = {
     }, { needsUnlock: false }),
   },
 
-  /* Google Kalender: Die Web-Fassung meldet sich per Code an (RFC 8628), und
-     für diesen Weg lässt Google den Kalenderzugriff nicht zu – nur Anmeldung,
-     Drive-Dateien und YouTube. Deshalb gibt es den Abgleich nur in der
-     Windows-Fassung; hier helfen Kalenderdateien (.ics) in beide Richtungen. */
-  gcal: (() => {
-    const nurWindows = handle(async () => {
-      throw new Error('Den Abgleich mit Google Kalender gibt es nur in der Windows-Fassung. In der Web-Fassung lassen sich Termine als Kalenderdatei (.ics) übertragen.');
-    });
-    return {
-      status: handle(async () => ({ available: false, reason: 'web', linked: false }), { needsUnlock: false }),
-      connect: nurWindows, disconnect: nurWindows, pull: nurWindows, push: nurWindows, finish: nurWindows,
-      calendars: nurWindows, pullWeitere: nurWindows,
-    };
-  })(),
+  /* Google Kalender (gcal.js): derselbe Abgleich wie in der Windows-Fassung.
+     Die Anmeldung läuft über ein kleines Fenster bei Google, der Zugriff gilt
+     eine Stunde und wird danach mit einem Tipp erneuert (bestaetigen). */
+  gcal: {
+    status: handle(async () => (vault.isLocked ? { available: true, linked: false } : gcal.status()), { needsUnlock: false }),
+    connect: handle(async (opts = {}) => gcal.connect({
+      calendarIdHint: str(opts.calendarIdHint, 300), timeZone: str(opts.timeZone, 80), weitere: !!opts.weitere,
+    })),
+    bestaetigen: handle(async () => gcal.bestaetigen()),
+    cancel: handle(async () => gcal.abbrechen(), { needsUnlock: false }),
+    disconnect: handle(async (opts = {}) => gcal.disconnect({ deleteCalendar: !!opts.deleteCalendar })),
+    pull: handle(async (opts = {}) => kopie(await gcal.pull({ timeZone: str(opts.timeZone, 80) }))),
+    calendars: handle(async () => kopie(await gcal.kalenderListe())),
+    pullWeitere: handle(async (opts = {}) => kopie(await gcal.pullWeitere(opts))),
+    push: handle(async (ops) => kopie(await gcal.push(ops))),
+    finish: handle(async (opts = {}) => kopie(await gcal.finish(opts))),
+  },
 
+  /* Die PDF-Dateien entstehen in der Oberfläche (lib/pdfausgabe.js). Hier
+     bleibt der Druckdialog als Zusatzweg für die druckfertige Seite. */
   pdf: {
-    create: handle(async ({ html, defaultName, landscape, returnBase64 } = {}) => {
-      if (returnBase64) {
-        // Ohne Druckdialog lässt sich im Browser kein PDF erzeugen. Für Pakete
-        // mit vielen Berichten gehen sie deshalb als druckfertige HTML-Seiten
-        // mit – jeder Browser öffnet und druckt sie.
-        const name = String(defaultName || 'bericht.pdf').replace(/\.pdf$/i, '.html');
-        const bytes = K.utf8(String(html ?? ''));
-        return { dataBase64: K.toBase64(bytes), bytes: bytes.length, fileName: name };
-      }
-      toast('Druckansicht', D.istMobilesApple()
-        ? 'Im Druckfenster über „Teilen“ lässt sich der Bericht als PDF sichern.'
-        : 'Als Drucker „Als PDF speichern“ wählen, um eine PDF-Datei zu erhalten.', '', 6000);
+    create: handle(async ({ html, defaultName, landscape } = {}) => {
       await drucken(html, { landscape: !!landscape, titel: defaultName || 'Bericht' });
       return { printed: true };
     }),
@@ -610,6 +773,7 @@ const api = {
     cloudProgress: anmelden('cloudProgress'),
     cloudTick: anmelden('cloudTick'),
     menu: anmelden('menu'),
+    speicher: anmelden('speicher'),
   },
 };
 
@@ -642,12 +806,29 @@ function startFehler(text) {
     </div></div>`;
 }
 
-const fehlt = await voraussetzungen();
-if (fehlt) {
+const fehlt = nurGoogleFenster ? null : await voraussetzungen();
+if (nurGoogleFenster) {
+  // Fenster, die ein Skript geöffnet hat, darf es auch schließen. Bleibt es
+  // doch offen (etwa, wenn der Browser die Verbindung gekappt hat), steht hier,
+  // was zu tun ist.
+  document.getElementById('app').innerHTML = `
+    <div class="gate"><div class="gate-card">
+      <div class="gate-logo">K</div>
+      <h2>Fertig</h2>
+      <p class="lead">Kontovia hat die Antwort von Google erhalten. Sie können dieses Fenster schließen.</p>
+    </div></div>`;
+  setTimeout(() => window.close(), 50);
+} else if (fehlt) {
   startFehler(fehlt);
 } else {
   Object.assign(device, await geraetLaden());
+  await A.speicherortLaden().catch((e) => console.error('Speicherort:', e));
+  fortsetzen = await UE.abholen({ version: U.VERSION }).catch(() => null);
+  // Nur für den Start gedacht: wer nicht gleich weitermacht, braucht das Passwort.
+  if (fortsetzen) setTimeout(() => { if (fortsetzen) { K.wipe(fortsetzen); fortsetzen = null; } }, UE.GUELTIG_MS);
+  await ortBeschreiben().catch(() => {});
   einzigesFenster();
+  ruhezustandBeobachten();
   window.kontovia = Object.freeze(api);
 
   U.registrieren().then(() => U.aufraeumen());
