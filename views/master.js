@@ -26,6 +26,7 @@ const TABS = {
 };
 
 export async function render(root, params, { actions } = {}) {
+  if (params?.tab && TABS[params.tab]) tab = params.tab;
   actions.innerHTML = html`<button class="btn primary" id="btnNew">${icon('plus', 16)} Neu</button>`;
   actions.querySelector('#btnNew').addEventListener('click', () => {
     // Eine Wiederholung entsteht aus ihrer ersten Buchung.

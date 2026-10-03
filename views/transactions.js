@@ -57,7 +57,11 @@ export async function render(root, params = {}, { actions } = {}) {
   }
   // Aus der Übersicht heraus lässt sich gefiltert hierher springen,
   // etwa „12 Buchungen ohne Beleg anzeigen“.
+  // „neu“: alle bisherigen Filter und die Suche vergessen, damit die Liste genau das zeigt, wohin man gesprungen ist.
+  if (params.neu) { st.filters = {}; st.q = ''; auswahl = null; }
   if (params.receipt) st.filters.hasReceipt = params.receipt;
+  // Der Filter nach Finanzamt-Unterlagen besteht nur, wenn es nicht gelistete Buchungen gibt.
+  if (params.listing && sel.transactions().some((t) => t.unlisted)) st.filters.listing = params.listing;
   if (params.status) st.filters.status = params.status;
   if (params.categoryId) st.filters.categoryId = params.categoryId;
   if (params.type) st.filters.type = params.type;

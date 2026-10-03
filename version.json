@@ -1,12 +1,12 @@
 {
-  "version": "2.0.0",
-  "released": "2026-10-03T22:20:51.822Z",
-  "notes": "Kontovia gibt es jetzt nur noch im Browser\n\n- Kontovia läuft nur noch im Browser: auf dem Rechner genauso wie auf Telefon und Tablet, auch ohne Internet.\n- In Chrome und Edge lässt es sich als eigene App mit Symbol installieren und die Buchhaltung in einem Ordner auf dem Gerät führen. Das ersetzt die Windows-Fassung und die Fassung ohne Installation.\n- Was die Windows-Fassung konnte, gibt es auch hier: echte PDF-Dateien, Google Kalender, Sperre nach dem Ruhezustand und angemeldet bleiben nach einem Update.\n- Buchhaltungen, Vollsicherungen und Cloud-Stände aus der Windows-Fassung lassen sich weiter öffnen.",
+  "version": "2.1.0",
+  "released": "2026-10-03T22:43:03.694Z",
+  "notes": "Übersicht zum Anklicken, Zurück-Taste und PDF am Telefon\n\n- In der Übersicht führt jede Zahl zu den Buchungen oder Auswertungen dahinter, auch ein Monat im Verlauf oder eine Kategorie.\n- Die Breite eines Moduls lässt sich jetzt auch auf drei Viertel stellen. So füllt es mit einem Viertel zusammen eine ganze Zeile.\n- Die Zurück-Taste des Browsers geht jetzt einen Schritt in Kontovia zurück, schließt ein offenes Fenster oder bleibt in der Übersicht, statt die Seite zu verlassen.\n- Auf Telefon und Tablet gibt es keinen Druckknopf mehr. PDF-Dateien werden gespeichert und nicht an einen Drucker geschickt.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "8abda2af8b065e95f4007d19725ee01678b7f04aba8b84f4c70e2a796edb2b89",
-      "size": 58879
+      "sha256": "b95319ebbc2c13a40fade42b84d66e824c565117ae5efa915e2228a0386b9e54",
+      "size": 59082
     },
     {
       "path": "icons/apple-touch-icon.png",
@@ -95,8 +95,8 @@
     },
     {
       "path": "lib/pdfausgabe.js",
-      "sha256": "8ce0cdbaedd7dbe737603a4fc2c8da5a67b8f36cd1769ec21b054cc2df1170be",
-      "size": 1613
+      "sha256": "2d27853bcebc345315e85c004e36f00fe597ce2cd566f00cbd62eeabb3f00806",
+      "size": 2044
     },
     {
       "path": "lib/period.js",
@@ -110,8 +110,8 @@
     },
     {
       "path": "lib/prefs.js",
-      "sha256": "a48892afc324e230d4372cc3d5730418057dd34d93da8d9c91adabeb4597c2f5",
-      "size": 8166
+      "sha256": "323548f49f064d3b6d4acc444123a497b60e2b9d13dc756977b1a6893d10942b",
+      "size": 8206
     },
     {
       "path": "lib/reports.js",
@@ -120,8 +120,8 @@
     },
     {
       "path": "lib/router.js",
-      "sha256": "8601c3bb0d9b2b6a8e1a6c98254f0d48c66fb2b7cb979942c94c1e16477a7de1",
-      "size": 867
+      "sha256": "1fa0a225c1865be7bc467285de5311b268bb9ce5b41984d924e2e5e03746278a",
+      "size": 4723
     },
     {
       "path": "lib/store.js",
@@ -145,8 +145,8 @@
     },
     {
       "path": "lib/ui.js",
-      "sha256": "8bf36f6fe524cf794b315ded4d923bcae5cc701fa917a36216de456d49c46e9d",
-      "size": 41893
+      "sha256": "96905145f6ddcbce315af18e2eec01f336c9c4775d2404738d70f3eb76b32e47",
+      "size": 42731
     },
     {
       "path": "lib/updates.js",
@@ -160,8 +160,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "b81718d7bc9801f7c6189650ae86aa70a85a15fd19cbee9473ef677c575bcf33",
-      "size": 13346
+      "sha256": "8280009c486d1a6602c072a9f2d3a3bd8a38b7ab2bcfde176905b1023c690ccf",
+      "size": 14082
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -170,18 +170,18 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "812963bd59488a7e22b02736a1e66a28e58f8b28e88b9772551fdeeb98b8f219",
+      "sha256": "d3b986b4673bb5a22814d7f3ae145a94adaf4082b914f4ddfa0d88c3acad6d86",
       "size": 879
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "8cd0013dff39d7ad7659edf778d9dca4f6cb44a8ac09f2f9e936145c332a89f4",
+      "sha256": "9d05a7b5e96b10ca08caf3aa8ec1d7e0fb4db30d145e974ba0ee3d0ec7ca1aef",
       "size": 13054
     },
     {
       "path": "styles.css",
-      "sha256": "da0cbfaccc61402c34fca6a205ddbfbb44f41101caff289df7ab55289aad366e",
-      "size": 49333
+      "sha256": "e7d7eba03a67f97be274b32eb87d78cb4dd1d872c9eefca565baab7cca961748",
+      "size": 50225
     },
     {
       "path": "views/anlageform.js",
@@ -205,8 +205,8 @@
     },
     {
       "path": "views/dashboard.js",
-      "sha256": "c31de2110513ec793cb97258e4c52a3e71cdaf8942a09a2facc9a73534f16f2d",
-      "size": 31902
+      "sha256": "f47db3e15834918c9cfff737c72374f904386a8dcca37448f5fdf00f12192305",
+      "size": 39432
     },
     {
       "path": "views/erechnung.js",
@@ -220,18 +220,18 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "e61bf2f44a60fe227fed875457921d6f679582fbe2fa7768a7f25cba593df7d9",
-      "size": 37560
+      "sha256": "48d7e5ff14c76057953d8987719c5ca25001fd6b2f34209ccbabe7cbb6717776",
+      "size": 38017
     },
     {
       "path": "views/master.js",
-      "sha256": "602998162f30be68783f61c0a9da8c0a2d1d63e60f8bfbbe627246aaef504524",
-      "size": 30761
+      "sha256": "4323593443c8bb97ba66227c2df8e924e9a104c7e058689c4217bdfefd4245a0",
+      "size": 30818
     },
     {
       "path": "views/reports.js",
-      "sha256": "b9feb55842d8af0a0f8aee51e4952510844e7e017f6c90f9b23a6e9b70370c40",
-      "size": 42909
+      "sha256": "0f2e6dc7c35f406bfeb77bf0f24eccf8b575f9d224507cb91ac73f6defd2f304",
+      "size": 42967
     },
     {
       "path": "views/settings.js",
@@ -250,8 +250,8 @@
     },
     {
       "path": "views/transactions.js",
-      "sha256": "617898cbc7c80b1a6f9ec6818d6af812472cdbfd51a88fc1c7ee23ee154ca47c",
-      "size": 72210
+      "sha256": "98c6472902abd252111daa93d51dc75d39e4836abb80e52624f7296e6804f5fb",
+      "size": 72599
     },
     {
       "path": "views/wiederkehrend.js",
@@ -265,7 +265,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "ad79fdd58d327dc480e5798525d3d04318c056952f757df6a62fb881159957dc",
+      "sha256": "84208c0e6b170e5b566db72442fb6116e1950140d706ca733af1768a2d202372",
       "size": 6905
     },
     {
@@ -290,8 +290,8 @@
     },
     {
       "path": "web/dateien.js",
-      "sha256": "084614da5a1da9c8a28df6c72f3ef154e71d77a33ba4c8ba5d02da200282fd01",
-      "size": 7809
+      "sha256": "7d39e6c22d9c9a3c45dc579e5b4a1265e2dab85c0f21e618b75c65f025fe51f9",
+      "size": 8379
     },
     {
       "path": "web/druck.js",

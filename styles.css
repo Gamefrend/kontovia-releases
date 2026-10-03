@@ -817,16 +817,29 @@ table.data tbody tr.empty-row:hover { background: none; }
 .dash-item.w-4 { grid-column: span 4; }
 .dash-item.w-6 { grid-column: span 6; }
 .dash-item.w-8 { grid-column: span 8; }
+.dash-item.w-9 { grid-column: span 9; }
 .dash-body { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .dash-body > .card { flex: 1; }
 /* Wird es eng, rücken die Module zusammen: Viertel werden halb, der Rest ganz. */
 @container (max-width: 900px) {
   .dash-item.w-3, .dash-item.w-4 { grid-column: span 6; }
-  .dash-item.w-8 { grid-column: span 12; }
+  .dash-item.w-8, .dash-item.w-9 { grid-column: span 12; }
 }
 @container (max-width: 560px) {
-  .dash-item.w-4, .dash-item.w-6, .dash-item.w-8 { grid-column: span 12; }
+  .dash-item.w-4, .dash-item.w-6, .dash-item.w-8, .dash-item.w-9 { grid-column: span 12; }
 }
+/* Anklickbare Zahlen und Zeilen der Übersicht */
+.dash .card.klickbar { cursor: pointer; }
+.dash .card.klickbar:hover { border-color: var(--border-strong); }
+.dash [data-ziel], .dash [data-pick] { cursor: pointer; }
+.dash .stat .label[data-ziel]:hover, .dash .card-head h3[data-ziel]:hover { color: var(--accent); text-decoration: underline; }
+.dash .klick { border-radius: 6px; }
+.dash .klick:hover { background: var(--surface-2); }
+.dash [data-ziel]:focus-visible, .dash [data-pick]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+.dash .bar-row[data-pick]:hover { background: var(--surface-2); }
+.dash .pie-legend li[data-pick]:hover { background: var(--surface-2); }
+.dash .chart .hit[data-pick] { cursor: pointer; }
+.dash .chart .slice[data-pick] { cursor: pointer; }
 .list-row { padding: 5px 6px; margin: 0 -6px; border-radius: 6px; cursor: pointer; gap: 10px; }
 .list-row:hover { background: var(--surface-2); }
 .list-row:focus-visible, .agenda-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }

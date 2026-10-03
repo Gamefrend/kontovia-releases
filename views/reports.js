@@ -16,7 +16,7 @@ import {
 } from '../lib/prefs.js';
 import { defaultPeriod, periodControl, periodLabel, setPeriod } from '../lib/period.js';
 import * as R from '../lib/reports.js';
-import { pdfSpeichern, pdfZeigen, drucken } from '../lib/pdfausgabe.js';
+import { pdfSpeichern, pdfZeigen, drucken, druckenMoeglich } from '../lib/pdfausgabe.js';
 import { table, mountTables } from '../lib/table.js';
 import { openTransactionDialog } from './transactions.js';
 import { checkNotice, wireCheckLinks } from './spruenge.js';
@@ -42,7 +42,7 @@ export async function render(root, params, { actions } = {}) {
   if (params?.period?.from && params?.period?.to) setPeriod(period, params.period.from, params.period.to);
   actions.innerHTML = html`
     <div id="rpPeriod"></div>
-    <button class="btn" id="btnPrint">${icon('print', 16)} Drucken</button>
+    ${druckenMoeglich() ? raw(`<button class="btn" id="btnPrint">${icon('print', 16).__raw} Drucken</button>`) : ''}
     <button class="btn" id="btnPreview">${icon('eye', 16)} Vorschau</button>
     <button class="btn primary" id="btnPdf">${icon('pdf', 16)} Als PDF</button>`;
   periodCtl = periodControl($('#rpPeriod', actions), period, () => draw(root));

@@ -4,7 +4,7 @@
  */
 
 import { html, raw, esc, $, int, bytes, fmtDateTime, debounce, MOD, ustIdHinweis, steuernummerHinweis } from './lib/util.js';
-import { icon, toast, ok, err, warn, modal, passwordInput, wirePasswordToggles, feldHinweis } from './lib/ui.js';
+import { icon, toast, ok, err, warn, modal, passwordInput, wirePasswordToggles, feldHinweis, obersteSchliessen } from './lib/ui.js';
 import { store, setDb, clearDb, subscribe, saveNow, sel, lockedUntil, setDevice, commit } from './lib/store.js';
 import { startAutoSync, syncState, onSync, syncNow } from './lib/sync.js';
 import { updateState, onUpdate, startUpdateWatch, markNotified } from './lib/updates.js';
@@ -183,7 +183,7 @@ function eintreten(db) {
   setDb(db);
   applyTheme();
   renderShell();
-  navigate(db.settings.startView || 'dashboard');
+  navigate(db.settings.startView || 'dashboard', {}, { ersetzen: true });
   afterUnlock();
 }
 
@@ -467,7 +467,7 @@ function renderSetup() {
         setDb(db);
         applyTheme();
         renderShell();
-        navigate('dashboard');
+        navigate('dashboard', {}, { ersetzen: true });
         ohneNeuigkeiten = true;
         afterUnlock();
         toast('Tresor angelegt', 'Ihre Daten liegen verschlüsselt in ' + (appInfo.dataDir || 'Ihrem Benutzerordner')
@@ -566,7 +566,7 @@ function renderCloudLaden(st, { neu }) {
       setDb(db);
       applyTheme();
       renderShell();
-      navigate(db.settings?.startView || 'dashboard');
+      navigate(db.settings?.startView || 'dashboard', {}, { ersetzen: true });
       ohneNeuigkeiten = true;
       afterUnlock();
       toast('Buchhaltung geladen', 'Dieses Gerät ist jetzt mit Ihrem Google-Konto verbunden. Belege werden im Hintergrund geholt.', 'ok', 8000);
@@ -1079,6 +1079,9 @@ function updateStatus() {
 /* -------------------------------------------------------------------------- */
 /* Navigation                                                                  */
 /* -------------------------------------------------------------------------- */
+
+// Die Zurück-Taste des Browsers schließt zuerst ein offenes Fenster.
+router.vorZurueck = obersteSchliessen;
 
 onNavigate(async (view, params) => {
   const conf = VIEWS[view] || VIEWS.dashboard;

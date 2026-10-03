@@ -189,10 +189,14 @@ function anleitung(root) {
         <h3 class="mt0">Die Übersicht anpassen</h3>
         <p>Über <strong>Anpassen</strong> oben in der <a data-go="dashboard">Übersicht</a> ordnen Sie die
         Module so, wie Sie arbeiten: mit der Maus an einen anderen Platz ziehen oder mit den Pfeilen
-        verschieben, die Breite von einem Viertel bis zur ganzen Zeile wählen, Nicht-Benötigtes
+        verschieben, die Breite von einem Viertel bis zur ganzen Zeile wählen (auch drei Viertel, damit sich
+        mit einem Viertel immer eine volle Zeile ergibt), Nicht-Benötigtes
         ausblenden. Ausgeblendete Module und zusätzliche wie <em>Letzte Buchungen</em>,
         <em>Durchschnittswerte</em> oder <em>Kontostände heute</em> holen Sie über die Knöpfe oben im
         Anpassen-Modus zurück. „Voreinstellung“ stellt die ursprüngliche Anordnung wieder her.</p>
+        <p>Jede Zahl der Übersicht lässt sich anklicken: Die Einnahmen führen zu den Zahlungseingängen des Zeitraums,
+        der Gewinn zur Gewinn- und Verlustrechnung, eine Kategorie oder ein Monat zu den dazu passenden Buchungen.
+        Ein Klick auf die Überschrift eines Moduls oder auf eine freie Stelle in seiner Karte öffnet die zugehörige Ansicht.</p>
         <p class="small">Die Anordnung gilt nur für dieses Gerät. Am Telefon passt oft eine andere als
         am großen Bildschirm. In den Tresor und den Cloud-Abgleich geht sie nicht.</p>
       </div></div>
