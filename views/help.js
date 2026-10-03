@@ -6,13 +6,10 @@ import { store } from '../lib/store.js';
 import { navigate } from '../lib/router.js';
 import { EUER, formLine } from '../lib/calc.js';
 import { VERSIONEN } from '../lib/versionen.js';
-import { umzugKarte, umzugKarteVerdrahten } from './umzug.js';
 import { markdownZuHtml } from '../lib/markdown.js';
 import { appInfo } from '../app.js';
 
 const api = window.kontovia;
-/** Läuft Kontovia im Browser statt in Electron? (src/web/bridge.js) */
-const WEB = api.platform === 'web';
 let tab = 'anleitung';
 
 const TABS = { anleitung: 'Kurzanleitung', cloud: 'Cloud und Geräte', neu: 'Neuigkeiten', recht: 'Rechtliches' };
@@ -257,8 +254,8 @@ function anleitung(root) {
             <tr><td><kbd>F1</kbd> oder <kbd>?</kbd></td><td>Diese Hilfe</td></tr>
             <tr><td><kbd>Esc</kbd></td><td>Fenster schließen (fragt nach, wenn Eingaben offen sind)</td></tr>
             <tr><td><kbd>${MOD}</kbd>+<kbd>Enter</kbd></td><td>Im Fenster speichern</td></tr>
-            ${WEB ? raw(`<tr><td colspan="2" class="small muted">Im Browser sind einzelne Kürzel wie ${esc(MOD)}+N vom Browser selbst belegt;
-              dann helfen die Knöpfe oben rechts.</td></tr>`) : ''}
+            <tr><td colspan="2" class="small muted">Im Browser sind einzelne Kürzel wie ${MOD}+N vom Browser selbst belegt;
+              dann helfen die Knöpfe oben rechts.</td></tr>
           </tbody>
         </table>
       </div></div>
@@ -278,14 +275,14 @@ function anleitung(root) {
 function cloud(root) {
   root.innerHTML = html`
     <div class="content narrow" style="padding:0">
-      ${WEB ? raw(`<div class="card mb16"><div class="card-body">
+      <div class="card mb16"><div class="card-body">
         <h3 class="mt0">Wo Ihre Buchhaltung liegt</h3>
         <p>Zunächst im Speicher dieses Browsers, verschlüsselt mit Ihrem Passwort. Den darf der
         Browser bei Platzmangel räumen; auf iPhone und iPad gehört deshalb die Cloud-Sicherung oder
         eine regelmäßige Vollsicherung dazu.</p>
         <p><strong>In Chrome und Edge</strong> lässt sie sich unter <a data-go="settings">Einstellungen →
         Sicherung und Speicherort</a> in einen <strong>Ordner auf dem Gerät</strong> verschieben. Dort liegen
-        Tresor, Belege und Sicherungen als Dateien, so wie in der Windows-Fassung, und Sie sichern sie mit
+        Tresor, Belege und Sicherungen als Dateien, und Sie sichern sie mit
         Ihren übrigen Dateien. Nach einem Neustart fragt der Browser einmal, ob Kontovia wieder auf den
         Ordner zugreifen darf.</p>
         <p class="mb0"><strong>Von Windows umziehen:</strong> Kopieren Sie den Ordner
@@ -302,7 +299,7 @@ function cloud(root) {
         Erlaubnis: unter <a data-go="settings">Einstellungen → Sicherheit</a>. Safari und Firefox melden es
         nicht. Auf iPhone und iPad hält Safari Kontovia beim Sperren des Bildschirms an; nach dem Entsperren
         gilt dann die Regel für den Hintergrund.</p>
-      </div></div>`) : ''}
+      </div></div>
       <div class="card"><div class="card-body">
         <h3 class="mt0">Cloud-Abgleich einschalten</h3>
         <p>Mit dem Cloud-Abgleich arbeiten Sie auf mehreren Geräten an derselben Buchhaltung, und
@@ -311,9 +308,7 @@ function cloud(root) {
         <ol>
           <li>Öffnen Sie <a data-go="settings">Einstellungen → Cloud-Abgleich</a>.</li>
           <li>Klicken Sie auf <strong>Mit Google verbinden</strong>.</li>
-          <li>${WEB
-            ? 'Kontovia leitet Sie zu Google weiter. Nach der Anmeldung kommen Sie zurück und entsperren Kontovia einmal mit Ihrem Passwort.'
-            : 'Ihr Browser öffnet sich mit der Anmeldeseite von Google. Nach der Anmeldung kommt Kontovia von selbst wieder nach vorn.'}</li>
+          <li>Kontovia leitet Sie zu Google weiter. Nach der Anmeldung kommen Sie zurück und entsperren Kontovia einmal mit Ihrem Passwort.</li>
         </ol>
         <p>Ab dann gleicht Kontovia von selbst ab: nach jeder Änderung, beim Start und in
         regelmäßigen Abständen.</p>
@@ -388,11 +383,10 @@ function cloud(root) {
               überprüft“ erscheinen. Über <em>Erweitert</em> und den Link darunter geht es weiter.</li>
           <li><strong>Trennen</strong> unter Einstellungen → Kalender-Abgleich. Ihre Termine in
               Kontovia bleiben, auf Wunsch wird der Kalender „Kontovia“ in Google gelöscht.</li>
-          ${WEB ? `<li><strong>Im Browser</strong> öffnet sich zur Anmeldung ein kleines Fenster von
-              Google. Blockiert der Browser es, erlauben Sie Pop-ups für Kontovia. Der Zugriff auf den
-              Kalender gilt hier jeweils eine Stunde. Danach wartet der Abgleich, bis Sie kurz
-              bestätigen: ein Tipp auf <em>Bestätigen und abgleichen</em>, meist ohne erneute
-              Anmeldung.</li>` : ''}
+          <li><strong>Anmeldung:</strong> Es öffnet sich ein kleines Fenster von Google. Blockiert der
+              Browser es, erlauben Sie Pop-ups für Kontovia. Der Zugriff auf den Kalender gilt jeweils
+              eine Stunde. Danach wartet der Abgleich, bis Sie kurz bestätigen: ein Tipp auf
+              <em>Bestätigen und abgleichen</em>, meist ohne erneute Anmeldung.</li>
         </ul>
         <p class="small muted mb0">Ohne Google-Konto übertragen Sie Termine als Kalenderdatei (.ics):
         im Kalender über <em>Abgleich</em>. Die Datei öffnet Google Kalender, Apple Kalender oder
@@ -435,7 +429,6 @@ function neu(root) {
   const aelter = VERSIONEN.slice(NEU_OFFEN);
   root.innerHTML = html`
     <div class="content narrow" style="padding:0">
-      ${raw(umzugKarte())}
       <p class="small muted mt0 mb16">Was sich in Kontovia geändert hat, die neueste Version zuerst.</p>
       ${raw(offen.map((v) => versionsBlock(v, { karte: true })).join(''))}
       ${aelter.length ? raw(`<div class="card"><div class="card-body">
@@ -445,7 +438,6 @@ function neu(root) {
         </details>
       </div></div>`) : ''}
     </div>`;
-  umzugKarteVerdrahten(root);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -458,7 +450,7 @@ function recht(root) {
         <table class="data compact">
           <tbody>
             <tr><td class="muted">Programm</td><td>Kontovia ${appInfo.version || ''}</td></tr>
-            <tr><td class="muted">${WEB ? 'Ablage' : 'Datenordner'}</td><td class="tiny">${appInfo.dataDir || ''}</td></tr>
+            <tr><td class="muted">Ablage</td><td class="tiny">${appInfo.dataDir || ''}</td></tr>
             <tr><td class="muted">Verschlüsselung</td><td>AES-256, der Schlüssel entsteht aus Ihrem Passwort</td></tr>
           </tbody>
         </table>
@@ -467,7 +459,7 @@ function recht(root) {
       <div class="card mt16" id="recht-datenschutz"><div class="card-body">
         <h3 class="mt0">Datenschutz</h3>
         <p>Ohne Cloud-Abgleich, ohne Google Kalender und ohne Ihre Zustimmung zur Update-Suche
-        verlässt nichts ${WEB ? 'dieses Gerät' : 'diesen Rechner'}. Es gibt keine Telemetrie, keine
+        verlässt nichts dieses Gerät. Es gibt keine Telemetrie, keine
         Absturzberichte, keine Nutzungsstatistik und kein Benutzerkonto beim Hersteller.</p>
         <ul>
           <li><strong>Update-Suche:</strong> nur, wenn Sie zugestimmt haben. Dabei sieht der Server
@@ -515,15 +507,8 @@ function recht(root) {
 
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Lizenzen</h3>
-        ${WEB ? raw(`<p class="mb0">Kontovia selbst enthält keinen fremden Programmcode. Die Web-Fassung
-        läuft in Ihrem Browser; für ihn gelten dessen Lizenzbedingungen.</p>`) : raw(`<p>Kontovia selbst enthält
-        keinen fremden Programmcode. Mitgeliefert wird die Laufzeitumgebung Electron
-        ${esc(appInfo.electron || '')} (MIT-Lizenz) mit Chromium ${esc(appInfo.chrome || '')} (BSD-Lizenz und
-        weitere) und Node.js (MIT-Lizenz).</p>
-        <div class="row" style="gap:8px">
-          <button class="btn" data-lic="electron">${icon('file', 15).__raw} Electron-Lizenz öffnen</button>
-          <button class="btn" data-lic="chromium">${icon('file', 15).__raw} Chromium-Lizenzen öffnen</button>
-        </div>`)}
+        <p class="mb0">Kontovia selbst enthält keinen fremden Programmcode. Kontovia läuft in Ihrem
+        Browser; für ihn gelten dessen Lizenzbedingungen.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -552,13 +537,6 @@ function recht(root) {
       </div>
     </div>`;
 
-  $$('[data-lic]', root).forEach((b) => b.addEventListener('click', async () => {
-    try {
-      await api.app.openLicense(b.dataset.lic);
-    } catch (e) {
-      err('Lizenzdatei nicht gefunden', e.message);
-    }
-  }));
   $('#btnDatenschutz', root).addEventListener('click', () => zeigeDatenschutz());
   wireLinks(root);
 }

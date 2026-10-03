@@ -1,10 +1,9 @@
 /**
  * Kontovia – Ablage in Firebase, Web-Fassung.
  *
- * Gegenstück zu src/main/providers/firebase.js – dieselben Pfade, derselbe
- * Tresorname. Ein Konto, das am PC verbunden ist, sieht im Browser denselben
- * Zweig und denselben Tresor. Nur die Google-Anmeldung davor läuft anders
- * (siehe anmeldung.js).
+ * Dieselben Pfade und derselbe Tresorname wie früher in der Windows-Fassung:
+ * Cloud-Stände von dort lassen sich hier weiter abgleichen. Die
+ * Google-Anmeldung davor steht in weiterleitung.js und anmeldung.js.
  */
 
 import { requestJson, request, form } from './netz.js';
@@ -15,12 +14,12 @@ const SECURETOKEN = 'https://securetoken.googleapis.com/v1';
 const STORAGE = 'https://firebasestorage.googleapis.com/v0/b';
 
 export const VAULT_NAME = 'tresor.kv';
-/** Wie in der Windows-Fassung: 2026-10-01T08-30-00Z_auto.kv */
+/** Wie früher unter Windows: 2026-10-01T08-30-00Z_auto.kv */
 export const BACKUP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z_[a-z-]{1,30}\.kv$/;
 
 const enc = (s) => encodeURIComponent(s);
 
-/** Wie in der Windows-Fassung: abgelaufene oder widerrufene Sitzung → code NEU_ANMELDEN. */
+/** Wie früher unter Windows: abgelaufene oder widerrufene Sitzung → code NEU_ANMELDEN. */
 export function anmeldungUngueltig(err) {
   if (!/INVALID_REFRESH_TOKEN|TOKEN_EXPIRED|USER_DISABLED|USER_NOT_FOUND|invalid_grant|expired or revoked/i.test(String(err?.message))) return err;
   return Object.assign(
@@ -74,7 +73,7 @@ export class FirebaseBackend {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         postBody: form({ id_token: idToken, providerId: 'google.com' }),
-        // Wie in der Windows-Fassung. Beim Eintausch eines ID-Tokens gibt es
+        // Wie früher unter Windows. Beim Eintausch eines ID-Tokens gibt es
         // keine Umleitung; der Wert wird nur formal verlangt.
         requestUri: 'http://127.0.0.1',
         returnIdpCredential: true,

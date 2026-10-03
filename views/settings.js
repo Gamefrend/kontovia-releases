@@ -12,8 +12,6 @@ import { renderCalendarCard } from './calendarsync.js';
 import { table, mountTables } from '../lib/table.js';
 
 const api = window.kontovia;
-/** Läuft Kontovia im Browser statt in Electron? (src/web/bridge.js) */
-const WEB = api.platform === 'web';
 
 /** Felder, die erst mit „Einstellungen übernehmen“ gelten (das Erscheinungsbild wirkt sofort). */
 const FELDER = [
@@ -144,9 +142,7 @@ async function draw(root) {
               <select id="s_autoLockMinutes">
                 ${raw([0, 2, 5, 10, 15, 30, 60].map((v) => `<option value="${v}" ${Number(s.autoLockMinutes) === v ? 'selected' : ''}>${v === 0 ? 'nie (nicht empfohlen)' : v + ' Minuten Inaktivität'}</option>`).join(''))}
               </select>
-              <span class="hint">${WEB
-                ? 'Nach dem Ruhezustand des Geräts und nach drei Minuten im Hintergrund sperrt Kontovia zusätzlich sofort.'
-                : 'Beim Ruhezustand und bei gesperrtem Bildschirm sperrt Kontovia zusätzlich immer sofort.'}</span>
+              <span class="hint">Nach dem Ruhezustand des Geräts und nach drei Minuten im Hintergrund sperrt Kontovia zusätzlich sofort.</span>
             </div>
             <div id="bildschirmBox"></div>
             <div class="row" style="gap:8px">
@@ -175,7 +171,6 @@ async function draw(root) {
             <div class="row wrap" style="gap:8px">
               <button class="btn primary" id="btnBackup">${icon('save', 15)} Vollsicherung erstellen</button>
               <button class="btn" id="btnRestore">${icon('refresh', 15)} Sicherung wiederherstellen</button>
-              ${WEB ? '' : raw(`<button class="btn" id="btnFolder">${icon('folder', 15).__raw} Datenordner öffnen</button>`)}
             </div>
             <p class="small muted mt16">
               Die Vollsicherung enthält alle Buchungen <em>und</em> alle Belege in einer
@@ -183,7 +178,7 @@ async function draw(root) {
               einem anderen Ort auf als den Arbeitsrechner. Eine defekte Festplatte
               nimmt sonst beides mit.
             </p>
-            ${WEB ? raw(speicherortBlock(storage?.speicher)) : ''}
+            ${raw(speicherortBlock(storage?.speicher))}
           </div>
           <div>
             ${storage ? raw(`<table class="data compact">
@@ -191,7 +186,7 @@ async function draw(root) {
                 <tr><td class="muted">Tresordatei</td><td class="num">${esc(bytes(storage.vaultBytes))}</td></tr>
                 <tr><td class="muted">Belege</td><td class="num">${int(storage.attachments.count)} Dateien · ${esc(bytes(storage.attachments.bytes))}</td></tr>
                 <tr><td class="muted">Automatische Sicherungen</td><td class="num">${int(storage.backups.count)} · ${esc(bytes(storage.backups.bytes))}</td></tr>
-                <tr><td class="muted">${WEB ? 'Ort' : 'Ordner'}</td><td class="tiny">${esc(storage.dataDir)}</td></tr>
+                <tr><td class="muted">Ort</td><td class="tiny">${esc(storage.dataDir)}</td></tr>
                 ${storage.browser ? `<tr><td class="muted">Vor Räumen geschützt</td><td class="small">${storage.browser.persistent
                   ? 'ja' : 'nein, der Browser darf bei Platzmangel räumen, bitte Cloud-Abgleich nutzen'}</td></tr>` : ''}
               </tbody>
@@ -281,7 +276,7 @@ async function draw(root) {
   wire(root);
   trackChanges(root);
   // Cloud und Updates laden ihre Karten selbst nach – beide fragen den
-  // Hauptprozess und sollen die übrige Ansicht nicht aufhalten.
+  // Web-Schicht und sollen die übrige Ansicht nicht aufhalten.
   renderCloudCard($('#cloudCard', root));
   renderCalendarCard($('#calendarCard', root));
   renderUpdateCard($('#updateCard', root));
@@ -516,7 +511,6 @@ function wire(root) {
 
   $('#btnLock', root).addEventListener('click', () => lockNow());
   bildschirmKasten($('#bildschirmBox', root));
-  $('#btnFolder', root)?.addEventListener('click', () => api.app.openDataFolder());
 
   $('#btnPw', root).addEventListener('click', async () => {
     const oldPw = await askPassword({ title: 'Passwort ändern', text: 'Zuerst zur Sicherheit das aktuelle Passwort.', label: 'Aktuelles Passwort', confirmLabel: 'Weiter' });

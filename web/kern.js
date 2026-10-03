@@ -1,10 +1,10 @@
 /**
  * Kontovia – Sicherheitsschicht der Web-Fassung.
  *
- * Gegenstück zu src/main/secure.js: dasselbe Dateiformat, dieselben
- * Schlüssel, dieselben Zusatzdaten. Eine im Browser geschriebene Tresordatei
- * öffnet die Windows-Fassung und umgekehrt – sonst könnten beide nicht über
- * die Cloud abgleichen. scripts/check.js prüft das in beide Richtungen.
+ * Dasselbe Dateiformat, dieselben Schlüssel, dieselben Zusatzdaten wie die
+ * frühere Windows-Fassung: Deren Tresore, Cloud-Stände und Vollsicherungen
+ * bleiben lesbar. Geprüft gegen goldene Testdateien und eine unabhängige
+ * Nachbildung (scripts/pruefungen/format.test.js).
  *
  *   Passwort --scrypt--> KEK  --AES-256-GCM--> entpackt DEK (zufällig, 32 Byte)
  *   DEK --AES-256-GCM--> Tresordatei (gesamte Buchhaltung als JSON)

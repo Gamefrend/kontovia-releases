@@ -1,7 +1,7 @@
 /**
  * Kontovia – Tresorverwaltung der Web-Fassung.
- * Gegenstück zu src/main/vault.js; die verschlüsselten Blöcke liegen im
- * Speicher des Browsers oder in einem Ordner auf dem Gerät (siehe ablage.js).
+ * Die verschlüsselten Blöcke liegen im Speicher des Browsers oder in einem
+ * Ordner auf dem Gerät (siehe ablage.js).
  */
 
 import * as K from './kern.js';
@@ -292,7 +292,7 @@ export class Vault {
       kind: 'kontovia-vollsicherung',
       version: 1,
       exportedAt: new Date().toISOString(),
-      // Ohne Anmeldemerkmale, wie in der Windows-Fassung (src/main/zugang.js).
+      // Ohne Anmeldemerkmale (zugang.js).
       db: fuerSicherung(this.db),
       attachments,
     };
@@ -309,7 +309,7 @@ export class Vault {
       throw new Error('Die Datei ist keine Kontovia-Vollsicherung.');
     }
     this.assertUnlocked();
-    // Die Verbindungen dieses Geräts bleiben, wie sie sind; restoredAt wie in der Windows-Fassung.
+    // Die Verbindungen dieses Geräts bleiben, wie sie sind; restoredAt wie früher unter Windows.
     if (data.db && typeof data.db === 'object') {
       data.db.cloud = cloudNachEinspielen(this.db?.cloud, data.db.cloud);
       data.db.auditLog = journalNachEinspielen(this.db?.auditLog, data.db.auditLog);

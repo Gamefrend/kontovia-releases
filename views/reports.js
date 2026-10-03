@@ -42,7 +42,7 @@ export async function render(root, params, { actions } = {}) {
   if (params?.period?.from && params?.period?.to) setPeriod(period, params.period.from, params.period.to);
   actions.innerHTML = html`
     <div id="rpPeriod"></div>
-    ${api.platform === 'web' ? raw(`<button class="btn" id="btnPrint">${icon('print', 16).__raw} Drucken</button>`) : ''}
+    <button class="btn" id="btnPrint">${icon('print', 16)} Drucken</button>
     <button class="btn" id="btnPreview">${icon('eye', 16)} Vorschau</button>
     <button class="btn primary" id="btnPdf">${icon('pdf', 16)} Als PDF</button>`;
   periodCtl = periodControl($('#rpPeriod', actions), period, () => draw(root));

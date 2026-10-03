@@ -1,7 +1,7 @@
 /**
  * Kontovia – Anmeldung bei Google in der Web-Fassung.
  *
- * Die Windows-Fassung öffnet den Systembrowser und nimmt die Antwort über
+ * Die frühere Windows-Fassung öffnet den Systembrowser und nimmt die Antwort über
  * einen kurzlebigen Server auf 127.0.0.1 entgegen. Das geht im Browser nicht.
  * Eine Umleitung zurück in die Seite wäre die übliche Lösung – als App auf
  * dem Home-Bildschirm eines iPhones läuft sie aber in einem eigenen
@@ -124,7 +124,7 @@ export async function authorize({ clientId, clientSecret, scopes, zeigeCode }) {
         idToken: data.id_token || '',
       };
     }
-    // Wie in der Windows-Fassung: die Oberfläche zeigt dazu keine Fehlermeldung.
+    // Wie früher unter Windows: die Oberfläche zeigt dazu keine Fehlermeldung.
     throw Object.assign(new Error('Die Anmeldung wurde abgebrochen.'), { code: 'ABGEBROCHEN' });
   } finally {
     anzeige.schliessen();

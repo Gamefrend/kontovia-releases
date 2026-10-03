@@ -1,7 +1,7 @@
 /**
  * Kontovia – Ablage der Web-Fassung.
  *
- * Drei Bereiche, wie der Datenordner der Windows-Fassung:
+ * Drei Bereiche, wie der Datenordner der früheren Windows-Fassung:
  *   dateien     – kontovia.tresor, sync-basis.bin
  *   belege      – jeder Beleg einzeln verschlüsselt, Schlüssel = Kennung
  *   sicherungen – ältere Stände der Tresordatei

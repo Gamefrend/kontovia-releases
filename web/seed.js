@@ -1,7 +1,3 @@
-// Erzeugt aus src/main/seed.js – dort ändern, nicht hier.
-const module = { exports: {} };
-(function (module, exports) {
-'use strict';
 /**
  * Startbestand für einen frisch angelegten Tresor.
  *
@@ -135,7 +131,4 @@ function makeSeed(settings = {}) {
   };
 }
 
-module.exports = { makeSeed, EUER_FORM };
-
-})(module, module.exports);
-export const { makeSeed, EUER_FORM } = module.exports;
+export { makeSeed, EUER_FORM };

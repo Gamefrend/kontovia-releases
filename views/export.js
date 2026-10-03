@@ -14,8 +14,6 @@ import * as R from '../lib/reports.js';
 import { pdfSpeichern, pdfZeigen, pdfFuerPaket } from '../lib/pdfausgabe.js';
 
 const api = window.kontovia;
-/** Läuft Kontovia im Browser statt in Electron? (src/web/bridge.js) */
-const WEB = api.platform === 'web';
 const period = defaultPeriod();
 
 export async function render(root, params, { actions } = {}) {
@@ -80,7 +78,7 @@ function draw(root) {
           EÜR-Zeilen${klein ? '' : ', Umsatzsteuer-Kennzahlen'}, Buchungsjournal, offene Posten,
           Anlagenverzeichnis, DATEV-Stapel und eine Anleitung zum Übertragen nach ELSTER.
           Zusätzlich die vollständigen Berichte als PDF.`,
-        button: `<button class="btn primary" id="btnPackAll">${icon('export', 16).__raw} ${WEB ? 'Paket erstellen' : 'Ordner erstellen'}</button>
+        button: `<button class="btn primary" id="btnPackAll">${icon('export', 16).__raw} Paket erstellen</button>
                  <button class="btn" id="btnPackCsv">Nur Tabellen (CSV)</button>`,
       }))}
 

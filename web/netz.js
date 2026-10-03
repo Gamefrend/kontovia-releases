@@ -1,9 +1,9 @@
 /**
  * Kontovia – ausgehende Verbindungen der Web-Fassung.
  *
- * Gegenstück zu src/main/net.js. Im Browser gibt es keinen getrennten
- * Hauptprozess; die Liste der erlaubten Gegenstellen steht deshalb zweimal:
- * hier und in der Content-Security-Policy der Seite (connect-src). Was dort
+ * Die Liste der erlaubten Gegenstellen gilt zweimal: hier und in der
+ * Content-Security-Policy der Seite (connect-src, von scripts/build-web.js
+ * aus dieser Liste erzeugt). Was dort
  * nicht steht, lässt schon der Browser nicht hinaus – auch nicht über eine
  * Weiterleitung.
  */

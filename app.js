@@ -26,9 +26,6 @@ import * as viewHelp from './views/help.js';
 
 const api = window.kontovia;
 const app = document.getElementById('app');
-/** Läuft Kontovia im Browser statt in Electron? (src/web/bridge.js) */
-const WEB = api.platform === 'web';
-
 export let appInfo = { version: '1.0.0' };
 
 const VIEWS = {
@@ -133,9 +130,9 @@ async function boot() {
 }
 
 /**
- * Erster Start nach einer Aktualisierung aus dem Programm heraus: Der
- * Hauptprozess hat den Tresorschlüssel für genau diesen Start bekommen
- * (src/main/uebergabe.js). Klappt es nicht, bleibt die Passwortabfrage.
+ * Erster Start nach einer Aktualisierung aus dem Programm heraus: Die
+ * Web-Schicht hat den Tresorschlüssel für genau diesen Start bekommen
+ * (src/web/uebergabe.js). Klappt es nicht, bleibt die Passwortabfrage.
  */
 async function nachAktualisierung() {
   const db = await api.vault.resume().catch(() => null);
@@ -225,7 +222,7 @@ function renderSetup() {
 
   /* Anmeldung mit Google, bevor es einen Tresor gibt. Liegt im Konto schon
      eine Buchhaltung, wird sie geladen (renderCloudLaden); sonst verbindet
-     der Hauptprozess den neuen Tresor beim Anlegen mit dem Konto. */
+     die Web-Schicht den neuen Tresor beim Anlegen mit dem Konto. */
   let anmeldenMoeglich = false;
   /** Web-Fassung: Anmeldung per Weiterleitung statt Code möglich? */
   let weiterleitung = false;
@@ -256,8 +253,7 @@ function renderSetup() {
       return `<div class="signin-box mb16">
         <div><strong>${wartet === 'weiterleitung' ? 'Weiter zu Google …' : 'Warte auf die Anmeldung …'}</strong>
         <div class="small muted">${wartet === 'weiterleitung' ? 'Nach der Anmeldung kommen Sie hierher zurück.'
-          : WEB ? 'Geben Sie den angezeigten Code bei Google ein.'
-            : 'Melden Sie sich im Browserfenster bei Google an. Danach kommt Kontovia von selbst wieder nach vorn.'}</div></div>
+          : 'Geben Sie den angezeigten Code bei Google ein.'}</div></div>
         <button class="btn sm" id="g_abbrechen">Abbrechen</button></div>`;
     }
     return `<div class="signin-box mb16">
@@ -322,13 +318,10 @@ function renderSetup() {
   const bodies = [
     () => html`
       <h2>Willkommen bei Kontovia</h2>
-      ${WEB ? raw(`<p class="lead">Ihre Buchhaltung bleibt auf diesem Gerät, verschlüsselt mit
+      <p class="lead">Ihre Buchhaltung bleibt auf diesem Gerät, verschlüsselt mit
       Ihrem Passwort. Es gibt kein Benutzerkonto beim Hersteller und keine Telemetrie; Ihre
       Buchhaltung verlässt das Gerät nur, wenn Sie den Cloud-Abgleich einschalten. Zuerst ein
-      paar Angaben zu Ihrem Betrieb. Sie lassen sich später ändern.</p>`) : raw(`<p class="lead">Ihre Buchhaltung bleibt auf diesem Rechner, verschlüsselt mit Ihrem
-      Passwort. Es gibt kein Benutzerkonto beim Hersteller und keine Telemetrie; ohne Ihre
-      ausdrückliche Zustimmung baut Kontovia keine Verbindung auf. Zuerst ein paar Angaben
-      zu Ihrem Betrieb. Sie lassen sich später ändern.</p>`)}
+      paar Angaben zu Ihrem Betrieb. Sie lassen sich später ändern.</p>
       <div class="form-grid">
         <div class="field full"><label>Firma / Name des Betriebs</label><input id="f_companyName" value="${data.companyName}" placeholder="z. B. Musterbau GmbH oder Ihr Name"></div>
         <div class="field full"><label>Inhaber / Ansprechpartner</label><input id="f_ownerName" value="${data.ownerName}"></div>
@@ -404,7 +397,7 @@ function renderSetup() {
         <strong>Bitte notieren Sie das Passwort an einem sicheren Ort.</strong>
         Ein Passwortmanager oder ein Zettel im Safe ist besser, als sich aufs Gedächtnis
         zu verlassen. Legen Sie außerdem regelmäßig Vollsicherungen an
-        (Einstellungen → Sicherung und Speicherort${WEB ? '' : ' oder Datei → Vollsicherung erstellen'}).
+        (Einstellungen → Sicherung und Speicherort).
       </div>
       <div class="field mt16">
         <label>Soll Kontovia nach neuen Programmversionen suchen?</label>
@@ -740,11 +733,9 @@ function renderUnlock(message = '') {
           <p>Ohne Passwort lässt sich der Tresor nicht öffnen, auch nicht vom Hersteller. Das
           schützt Ihre Buchhaltung, falls jemand die Datei in die Hände bekommt.</p>
           <p>Haben Sie eine <strong>Vollsicherung (.kvbak)</strong>, deren Passwort Sie kennen:
-          ${WEB
-            ? raw('In den Einstellungen des Browsers die Website-Daten dieser Seite löschen, Kontovia neu laden, einen neuen Tresor anlegen und unter <em>Einstellungen → Sicherung wiederherstellen</em> einspielen.')
-            : raw('Den Datenordner umbenennen (zum Beispiel in „daten-alt“; nicht löschen, falls Ihnen das Passwort doch noch einfällt), Kontovia neu starten, einen neuen Tresor anlegen und unter <em>Einstellungen → Sicherung wiederherstellen</em> einspielen.')}</p>
+          In den Einstellungen des Browsers die Website-Daten dieser Seite löschen, Kontovia neu laden, einen neuen
+          Tresor anlegen und unter <em>Einstellungen → Sicherung wiederherstellen</em> einspielen.</p>
           <p class="muted">Die automatischen Sicherungen sind mit dem Tresorpasswort verschlüsselt, das zu ihrer Zeit galt.</p>
-          ${WEB ? '' : raw('<button type="button" class="btn sm" id="openData">Datenordner öffnen</button>')}
         </details>
       </div>
     </div>`;
@@ -752,7 +743,6 @@ function renderUnlock(message = '') {
   const pw = $('#pw');
   const errEl = $('#unlockerr');
   const btn = $('#unlock');
-  $('#openData')?.addEventListener('click', () => api.app.openDataFolder().catch((e) => err('Ordner nicht geöffnet', e.message)));
   wirePasswordToggles(app);
   pw.focus();
 
@@ -810,7 +800,6 @@ export function setCloudVerbunden(wert) {
  * höchstens einmal je Woche daran. Den Speicher darf der Browser räumen.
  */
 async function sicherungsHinweis() {
-  if (!WEB) return;
   const tag = 864e5;
   const jetzt = Date.now();
   if (jetzt - (Date.parse(store.db?.createdAt || '') || 0) < 7 * tag) return;
@@ -841,8 +830,6 @@ async function afterUnlock() {
   announceMigrations().catch((e) => console.error('Hinweise der Schemapflege:', e));
   neuigkeitenHinweis();
   sicherungsHinweis().catch(() => {});
-  // Letzte Windows-Fassung: der Umzug in den Browser.
-  import('./views/umzug.js').then((m) => m.umzugHinweis()).catch((e) => console.error('Umzug:', e));
   try { await startAutoSync(); } catch (e) { console.error("Cloud-Automatik:", e); }
   onSync(updateStatus);
   // Der Kalenderabgleich läuft nur, wenn auf diesem Gerät ein Google-Konto verbunden ist.
@@ -1255,9 +1242,8 @@ for (const evt of ['pointerdown', 'touchstart', 'keydown', 'wheel']) {
 /* Ungespeicherte Änderungen beim Schließen noch wegschreiben */
 window.addEventListener('beforeunload', (e) => {
   if (store.dirty) saveNow();
-  // Im Browser fragt die Seite vor dem Schließen, wenn Eingaben nicht übernommen
-  // sind. Nicht unter Electron: dort verhinderte das still das Beenden.
-  if (WEB && router.leaveGuard) { e.preventDefault(); e.returnValue = ''; }
+  // Die Seite fragt vor dem Schließen, wenn Eingaben nicht übernommen sind.
+  if (router.leaveGuard) { e.preventDefault(); e.returnValue = ''; }
 });
 document.addEventListener('visibilitychange', () => { if (document.hidden && store.dirty) saveNow(); });
 

@@ -20,8 +20,6 @@ import { regelAusBuchung, TURNUS } from '../lib/wiederkehrend.js';
 import { faelligeAnbieten } from './wiederkehrend.js';
 
 const api = window.kontovia;
-/** Läuft Kontovia im Browser statt in Electron? (src/web/bridge.js) */
-const WEB = api?.platform === 'web';
 
 /* Zeitraum der Buchungsliste; bleibt beim Ansichtswechsel erhalten. Suche,
    Filter und Sortierung hält der Tabellenbaustein (lib/table.js). */
@@ -1353,9 +1351,7 @@ export async function previewAttachment(id, metaHint = null) {
   m.root.querySelector('[data-ext]').addEventListener('click', async () => {
     const yes = await confirmDialog({
       title: 'Extern öffnen?',
-      text: WEB
-        ? 'Der Beleg wird entschlüsselt in einem neuen Browser-Tab geöffnet. Was der Browser nicht anzeigen kann, wird stattdessen zum Sichern angeboten.'
-        : 'Der Beleg wird dafür unverschlüsselt in den temporären Ordner geschrieben und dort beim Beenden von Kontovia wieder gelöscht.',
+      text: 'Der Beleg wird entschlüsselt in einem neuen Browser-Tab geöffnet. Was der Browser nicht anzeigen kann, wird stattdessen zum Sichern angeboten.',
       confirmLabel: 'Öffnen',
     });
     if (!yes) return;

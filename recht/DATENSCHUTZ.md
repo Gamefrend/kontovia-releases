@@ -8,7 +8,7 @@
   prüfen lassen. Rechtsberatung ist das hier nicht.
 -->
 
-Stand: 3. Oktober 2026, Programmversion 1.18.0
+Stand: 3. Oktober 2026, Programmversion 2.0.0
 
 ---
 
@@ -20,11 +20,12 @@ Stand: 3. Oktober 2026, Programmversion 1.18.0
 
 ## Kurzfassung
 
-Kontovia ist ein Programm, das auf Ihrem eigenen Rechner läuft. Es gibt kein
-Benutzerkonto beim Anbieter und keine Auswertung Ihrer Nutzung. Ohne den
-ausdrücklich eingerichteten Cloud-Abgleich und ohne verbundenen Google
-Kalender verlässt kein einziges Byte Ihren Rechner; die Suche nach neuen
-Versionen läuft nur mit Ihrer Zustimmung.
+Kontovia ist eine Web-App, die in Ihrem Browser auf Ihrem eigenen Gerät läuft
+und sich dort wie ein Programm installieren lässt. Es gibt kein Benutzerkonto
+beim Anbieter und keine Auswertung Ihrer Nutzung. Ohne den ausdrücklich
+eingerichteten Cloud-Abgleich und ohne verbundenen Google Kalender verlässt
+keine Angabe aus Ihrer Buchhaltung Ihr Gerät; die Suche nach neuen Versionen
+läuft nur mit Ihrer Zustimmung.
 
 ## Welche Daten das Programm verarbeitet
 
@@ -33,9 +34,10 @@ Kontaktdaten Ihrer Kunden und Lieferanten. Darunter sind personenbezogene Daten
 Dritter. Verantwortlich für diese Verarbeitung sind **Sie als Betrieb**, nicht
 der Anbieter des Programms. An ihn fließt nichts.
 
-Alle Daten liegen verschlüsselt in einer einzigen Datei unter
-`%APPDATA%\Kontovia\daten\`. Die Verschlüsselung erfolgt mit AES-256-GCM; der
-Schlüssel wird mit scrypt aus Ihrem Passwort abgeleitet und existiert nur im
+Alle Daten liegen verschlüsselt auf Ihrem Gerät: im Speicher des Browsers oder,
+wenn Sie das in Chrome oder Edge wählen, in einem Ordner Ihrer Wahl (siehe
+„Auslieferung und Speicherort“). Die Verschlüsselung erfolgt mit AES-256-GCM;
+der Schlüssel wird mit scrypt aus Ihrem Passwort abgeleitet und existiert nur im
 Arbeitsspeicher, solange das Programm entsperrt ist.
 
 ## Was das Programm nicht tut
@@ -67,7 +69,7 @@ Sicherungen vollständig wiederherstellbar sind.
 
 **Was der Betreiber der Ablage sehen kann:** Dateigröße, Änderungszeitpunkt und
 die Identität des angemeldeten Kontos. **Nicht** den Inhalt. Dafür wäre Ihr
-Tresorpasswort nötig, und das verlässt Ihren Rechner nie.
+Tresorpasswort nötig, und das verlässt Ihr Gerät nie.
 
 **Rechtsgrundlage:** Art. 6 Abs. 1 lit. b und f DSGVO (Durchführung der eigenen
 Buchhaltung, berechtigtes Interesse an einer Datensicherung).
@@ -143,9 +145,8 @@ erhalten. Google zieht dabei die Freigabe des ganzen Kontos zurück. Ist Google
 Kalender auch auf einem anderen Gerät verbunden, muss er dort neu verbunden
 werden.
 
-**In der Web-Fassung** spricht Ihr Browser dafür direkt mit Google
-(`accounts.google.com` für die Anmeldung, `www.googleapis.com` für die
-Termine). Google erteilt dort nur einen Zugriff für jeweils eine Stunde. Er
+Ihr Browser spricht dafür direkt mit Google (`accounts.google.com` für die
+Anmeldung, `www.googleapis.com` für die Termine). Google erteilt dort nur einen Zugriff für jeweils eine Stunde. Er
 liegt nur im Arbeitsspeicher des Browsers, nie im Tresor oder im
 Browser-Speicher, und verfällt, sobald Kontovia sich sperrt. Danach wartet der
 Abgleich, bis Sie ihn mit einem Tipp erneut bestätigen.
@@ -178,24 +179,17 @@ Kennungen Ihres Geräts und keine Angaben aus Ihrer Buchhaltung mitgesendet. Sie
 können die Prüfung jederzeit unter *Einstellungen → Programmaktualisierung*
 wieder abschalten.
 
-**Angemeldet bleiben beim Update (Windows):** Installieren Sie ein Update aus
-dem entsperrten Programm heraus, legt Kontovia den Schlüssel Ihrer Buchhaltung
-für den Neustart ab, verschlüsselt durch Windows für Ihr Benutzerkonto und gültig
-nur für die neue Version und höchstens zehn Minuten. Beim Start wird er sofort
-gelöscht; wer zwischendurch sperrt, verwirft ihn. Das Gerät verlässt er nie.
-
-**Angemeldet bleiben beim Update (Web-Fassung):** Lädt Kontovia im Browser eine
-neue Fassung, wird der Schlüssel Ihrer Buchhaltung für das Neuladen geteilt
+**Angemeldet bleiben beim Update:** Lädt Kontovia eine neue Fassung, wird der Schlüssel Ihrer Buchhaltung für das Neuladen geteilt
 abgelegt: umhüllt im Speicher des Browsers, der passende Gegenschlüssel nur im
 geöffneten Tab. Beides gilt höchstens zwei Minuten und nur für die neue
 Fassung, wird beim Start sofort gelöscht und beim Sperren verworfen. Das Gerät
 verlässt es nie.
 
-## Web-Fassung (Browser, iPhone, iPad)
+## Auslieferung und Speicherort
 
-Kontovia gibt es zusätzlich als Web-App, die im Browser läuft und sich auf
-iPhone, iPad und Mac „zum Home-Bildschirm“ bzw. „zum Dock“ hinzufügen lässt. Für
-sie gilt alles oben Gesagte mit folgenden Abweichungen:
+Kontovia läuft im Browser und lässt sich auf iPhone, iPad und Mac „zum
+Home-Bildschirm“ bzw. „zum Dock“ hinzufügen, in Chrome und Edge als App
+installieren.
 
 * **Auslieferung.** Die Programmdateien kommen von einem Webserver
   (GitHub Pages der GitHub, Inc., USA). Beim
@@ -209,12 +203,15 @@ sie gilt alles oben Gesagte mit folgenden Abweichungen:
   (IndexedDB), in derselben Verschlüsselung wie oben beschrieben. Browser dürfen
   solche Daten bei Platzmangel räumen. Kontovia bittet deshalb um dauerhafte
   Speicherung und zeigt unter *Einstellungen* an, ob der Browser sie gewährt hat.
+  Ihre Gerätekennung und, für höchstens zwei Minuten während einer
+  Aktualisierung, die Übergabe aus „Angemeldet bleiben beim Update“ liegen immer
+  im Browser.
   In Chrome und Edge lässt sich die Buchhaltung stattdessen in einem Ordner auf
   Ihrem Gerät speichern, den Sie selbst wählen; Kontovia liest und schreibt dann
   nur in diesem Ordner, und der Browser fragt nach einem Neustart, ob er das darf.
   Auf iPhone und iPad ist der Cloud-Abgleich oder eine regelmäßige Vollsicherung
   dringend zu empfehlen.
-* **Anmeldung bei Google.** Für den Cloud-Abgleich leitet die Web-Fassung zu
+* **Anmeldung bei Google.** Für den Cloud-Abgleich leitet Kontovia zu
   Google weiter und nach der Anmeldung zurück; ersatzweise zeigt sie einen kurzen
   Code für `google.com/device`. Angefragt werden nur Name und E-Mail-Adresse. Was
   dabei an Google und Firebase geht, entspricht dem oben Beschriebenen.
@@ -238,15 +235,15 @@ die Auskunft hilft der Kontakt-Export unter „Export → Rohdaten".
 
 * Verschlüsselung im Ruhezustand: AES-256-GCM, authentifiziert
 * Schlüsselableitung: scrypt mit N = 2¹⁷, r = 8 (rund 134 MiB je Versuch)
-* automatische Sperre bei Inaktivität, im Ruhezustand und bei
-  Bildschirmsperre
+* automatische Sperre bei Inaktivität, nach einigen Minuten im Hintergrund,
+  nach dem Ruhezustand und, in Chrome und Edge auf Wunsch, bei Bildschirmsperre
 * Belegdateien einzeln verschlüsselt, Dateinamen ohne Aussagekraft
 * verkettetes Änderungsjournal zum Nachweis der Unveränderbarkeit
-* Anmeldemerkmale für Google und Firebase bleiben im Programmkern; sie stehen
+* Anmeldemerkmale für Google und Firebase bleiben in der Verbindungsschicht; sie stehen
   weder im JSON-Gesamtexport noch in einer Vollsicherung noch in der Cloud
 * Verschlüsselung vor jeder Übertragung in die Cloud
-* Schlüsselübergabe beim Update nur über die Windows-Datenschutzschnittstelle,
-  für höchstens zehn Minuten und genau einen Start
+* Schlüsselübergabe beim Update nur geteilt (umhüllt im Browser-Speicher,
+  Gegenschlüssel nur im Tab), für höchstens zwei Minuten und genau einen Start
 
 ## Änderungen
 

@@ -1,9 +1,9 @@
 /**
  * Kontovia – angemeldet bleiben über eine Aktualisierung, Web-Fassung.
  *
- * Gegenstück zu src/main/uebergabe.js. Dort schützt die Datenschutz-API von
- * Windows den Tresorschlüssel über den Neustart. Der Browser hat nichts
- * Vergleichbares; deshalb wird der Schlüssel geteilt:
+ * Die frühere Windows-Fassung schützte den Tresorschlüssel über den Neustart
+ * mit der Datenschutz-API von Windows. Der Browser hat nichts Vergleichbares;
+ * deshalb wird der Schlüssel geteilt:
  *
  *   - Ein frischer Zufallsschlüssel umhüllt den Tresorschlüssel. Das Ergebnis
  *     liegt mit Ablaufzeit (zwei Minuten) in der Ablage des Browsers.

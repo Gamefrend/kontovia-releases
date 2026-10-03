@@ -1,16 +1,13 @@
 /**
  * Kontovia – Brücke der Web-Fassung.
  *
- * Stellt `window.kontovia` bereit: dieselbe feste Liste benannter Funktionen
- * wie src/preload/preload.js in der Windows-Fassung. Die Oberfläche merkt
- * nicht, ob hinter ihr Electron oder der Browser arbeitet – sie ist in beiden
- * Fassungen dieselbe, jede Neuerung dort kommt in beiden an.
- *
- * Was in Electron der Hauptprozess erledigt, geschieht hier in derselben
- * Seite: Verschlüsselung (kern.js), Ablage (ablage.js, tresor.js),
- * Cloud-Abgleich (cloud.js), Dateien (dateien.js), Druck (druck.js) und
- * Aktualisierung (aktualisierung.js). Die Oberfläche bekommt – wie über die
- * IPC-Grenze – nur Kopien der Daten, nie die Objekte selbst.
+ * Stellt `window.kontovia` bereit: eine feste Liste benannter Funktionen,
+ * über die die Oberfläche (src/renderer) alles erreicht, was nicht reine
+ * Darstellung ist: Verschlüsselung (kern.js), Ablage (ablage.js, tresor.js),
+ * Cloud-Abgleich (cloud.js), Google Kalender (gcal.js), Dateien (dateien.js),
+ * Druck (druck.js), Sperre (sperre.js) und Aktualisierung (aktualisierung.js,
+ * uebergabe.js). Die Oberfläche bekommt nur Kopien der Daten, nie die Objekte
+ * selbst, und nie die Anmeldemerkmale (zugang.js).
  */
 
 import * as K from './kern.js';
@@ -76,7 +73,7 @@ const anmelden = (kanal) => (cb) => { hoerer[kanal].add(cb); return () => hoerer
 /* -------------------------------------------------------------------------- */
 
 /**
- * Wie `handle` im Hauptprozess: gesperrt heißt gesperrt, und die Oberfläche
+ * Einheitlich für jede Funktion: gesperrt heißt gesperrt, und die Oberfläche
  * bekommt eine Meldung mit Code statt eines Stacktraces.
  */
 function handle(fn, { needsUnlock = true } = {}) {
@@ -110,7 +107,7 @@ function geraeteName() {
 }
 
 /**
- * Jede Installation bekommt eine zufällige Kennung – sie steht wie in der
+ * Jede Installation bekommt eine zufällige Kennung – sie steht wie in der früheren
  * Windows-Fassung im Klartext und verrät nichts über den Inhalt. Gebraucht
  * wird sie, damit das Änderungsjournal geräteweise prüfbar bleibt.
  */
@@ -218,7 +215,7 @@ function einzigesFenster() {
 let anderesFenster = false;
 
 /* -------------------------------------------------------------------------- */
-/* Tastenkürzel (in Electron über das Anwendungsmenü)                          */
+/* Tastenkürzel                                                               */
 /* -------------------------------------------------------------------------- */
 
 document.addEventListener('keydown', (e) => {
@@ -355,7 +352,6 @@ async function ortBeschreiben() {
 /* -------------------------------------------------------------------------- */
 
 const api = {
-  platform: 'web',
   app: {
     info: handle(async () => ({
       version: U.VERSION,
@@ -484,7 +480,7 @@ const api = {
         throw new Error('Ungültiger Datenbestand. Speichern abgebrochen.');
       }
       const neu = kopie(db);
-      // Der Cloud-Block wird ausschließlich hier geführt (wie im Hauptprozess);
+      // Der Cloud-Block wird ausschließlich hier geführt;
       // die Kopie der Oberfläche darf ihn nicht überschreiben.
       neu.cloud = vault.db?.cloud || neu.cloud || {};
       const res = await vault.save(neu);
@@ -740,7 +736,7 @@ const api = {
     }, { needsUnlock: false }),
   },
 
-  /* Google Kalender (gcal.js): derselbe Abgleich wie in der Windows-Fassung.
+  /* Google Kalender (gcal.js): Abgleich in beide Richtungen.
      Die Anmeldung läuft über ein kleines Fenster bei Google, der Zugriff gilt
      eine Stunde und wird danach mit einem Tipp erneuert (bestaetigen). */
   gcal: {

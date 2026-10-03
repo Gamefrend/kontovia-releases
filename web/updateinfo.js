@@ -1,11 +1,7 @@
-// Erzeugt aus src/main/updateinfo.js – dort ändern, nicht hier.
-const module = { exports: {} };
-(function (module, exports) {
-'use strict';
 /**
  * Kontovia – Auswertung der Versionsdatei.
  *
- * Bewusst ohne jede Abhängigkeit zu Electron: Das hier ist die einzige Stelle,
+ * Bewusst ohne jede Abhängigkeit: Das hier ist die einzige Stelle,
  * an der Kontovia entscheidet, ob fremder Code heruntergeladen und ausgeführt
  * wird. Als reine Funktion lässt sie sich ohne Fenster und ohne Netz prüfen –
  * und genau das tut scripts/check.js.
@@ -62,7 +58,4 @@ function validateManifest(manifest, currentVersion) {
   };
 }
 
-module.exports = { compareVersions, validateManifest };
-
-})(module, module.exports);
-export const { compareVersions, validateManifest } = module.exports;
+export { compareVersions, validateManifest };

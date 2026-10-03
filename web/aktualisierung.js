@@ -1,8 +1,7 @@
 /**
  * Kontovia – Programmaktualisierung der Web-Fassung.
  *
- * Gleiches Versprechen wie in der Windows-Fassung (src/main/updater.js):
- * nachgesehen wird nur mit Zustimmung, geladen und gewechselt nur nach
+ * Das Versprechen: nachgesehen wird nur mit Zustimmung, geladen und gewechselt nur nach
  * ausdrücklicher Bestätigung, und jede Datei wird vorher gegen die
  * Prüfsumme aus der Versionsdatei geprüft.
  *
@@ -22,7 +21,7 @@
 import { compareVersions } from './updateinfo.js';
 
 /** Wird beim Bauen eingesetzt (scripts/build-web.js). */
-export const VERSION = '1.18.0';
+export const VERSION = '2.0.0';
 
 const META = 'kontovia-meta';
 const PREFIX = 'kontovia-app-';

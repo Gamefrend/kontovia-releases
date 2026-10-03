@@ -11,7 +11,7 @@
  */
 
 /**
- * Obergrenze wie im Hauptprozess (SCRYPT_MAXMEM). Die Parameter stehen im
+ * Obergrenze für den Speicher. Die Parameter stehen im
  * Klartext-Kopf der Tresordatei; ohne Grenze könnte eine manipulierte Datei
  * den Browser mit einer riesigen Speicheranforderung lahmlegen.
  */

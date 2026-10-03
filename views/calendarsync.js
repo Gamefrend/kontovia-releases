@@ -23,7 +23,6 @@ import {
 import { refresh } from '../lib/router.js';
 
 const api = window.kontovia;
-const WEB = api.platform === 'web';
 
 /* -------------------------------------------------------------------------- */
 /* Kurzstatus für Kalenderansicht                                              */
@@ -165,9 +164,7 @@ async function freigebenWeitere() {
     title: 'Weitere Kalender einbeziehen?',
     text: 'Kontovia fragt bei Google zusätzlich das Recht an, Ihre Kalender aufzulisten und Termine darin zu lesen und zu ändern. '
       + 'Abgeglichen werden danach nur die Kalender, die Sie anschließend auswählen, und zwar in beide Richtungen: Was Sie dort ändern oder löschen, '
-      + 'ändert sich hier, und umgekehrt. '
-      + (WEB ? 'Es öffnet sich ein kleines Fenster von Google; danach geht es hier weiter.'
-        : 'Es öffnet sich Ihr Browser mit der Anmeldung bei Google; Kontovia kommt danach von selbst wieder nach vorn.'),
+      + 'ändert sich hier, und umgekehrt. Es öffnet sich ein kleines Fenster von Google; danach geht es hier weiter.',
     confirmLabel: 'Weiter zu Google',
   });
   if (!ja) return false;
@@ -316,9 +313,8 @@ function connectDialog() {
           <label class="check"><input type="checkbox" id="g_notes" ${cfg.sendNotes ? 'checked' : ''}> Notizen der Termine mit übertragen</label>
           <label class="check"><input type="checkbox" id="g_andere"> Auch meine anderen Google-Kalender einbeziehen (z. B. den Hauptkalender), in beide Richtungen. Welche, wählen Sie danach</label>
         </div>
-        <p class="small muted mt16 mb0" style="line-height:1.6">${WEB
-          ? 'Es öffnet sich ein kleines Fenster mit der Anmeldung bei Google; danach geht es hier weiter.'
-          : 'Es öffnet sich Ihr Browser mit der Anmeldung bei Google; danach kommt Kontovia von selbst wieder nach vorn.'} Erscheint dort der
+        <p class="small muted mt16 mb0" style="line-height:1.6">Es öffnet sich ein kleines Fenster mit der
+        Anmeldung bei Google; danach geht es hier weiter. Erscheint dort der
         Hinweis „Google hat diese App nicht überprüft“, geht es über <em>Erweitert</em> und den Link
         darunter weiter. Die Verbindung lässt sich jederzeit unter Einstellungen → Kalender-Abgleich
         trennen.</p>`,
@@ -346,7 +342,7 @@ export async function connectGoogle() {
   const hinweis = modal({
     title: 'Anmeldung bei Google',
     size: 'slim',
-    body: `<p class="mt0" style="line-height:1.6">Bitte melden Sie sich im ${WEB ? 'Fenster von Google' : 'geöffneten Browserfenster'} an und
+    body: `<p class="mt0" style="line-height:1.6">Bitte melden Sie sich im Fenster von Google an und
       erlauben Sie den Zugriff auf den Kalender. Dieser Hinweis schließt sich danach von selbst.</p>
       <p class="small muted mb0">Nach fünf Minuten ohne Anmeldung bricht Kontovia den Versuch ab.</p>`,
     foot: '<button class="btn" data-stop>Abbrechen</button><button class="btn" data-x>Ausblenden</button>',
@@ -355,8 +351,7 @@ export async function connectGoogle() {
   // Wer das Browserfenster geschlossen hat, soll nicht fünf Minuten warten müssen.
   hinweis.root.querySelector('[data-stop]').addEventListener('click', () => {
     hinweis.close();
-    if (WEB) api.gcal.cancel?.().catch(() => {});
-    else api.cloud.signinCancel?.().catch(() => {});
+    api.gcal.cancel().catch(() => {});
   });
   const { andere, ...einstellungen } = wahl;
   try {

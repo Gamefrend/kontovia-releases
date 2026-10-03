@@ -1,13 +1,13 @@
 /**
  * Kontovia – Verbindung zu Google Kalender, Web-Fassung.
  *
- * Gegenstück zu src/main/gcal.js, mit demselben Abgleich: Kontovia legt im
+ * Kontovia legt im
  * Google-Konto einen eigenen Kalender „Kontovia“ an (Bereich
  * `calendar.app.created`) und nimmt auf Wunsch weitere Kalender dazu
  * (`calendar.events` und `calendar.readonly`). Was zu tun ist, entscheidet
  * die Oberfläche (renderer/lib/gcal.js); hier wird es geprüft und ausgeführt.
  *
- * Anders ist nur die Anmeldung. Die Windows-Fassung hält einen dauerhaften
+ * Anders ist nur die Anmeldung. Die frühere Windows-Fassung hält einen dauerhaften
  * Schlüssel (Refresh-Token) und fragt damit jederzeit neue Zugriffstoken an.
  * Im Browser gibt Google ohne Client-Schlüssel keinen solchen Schlüssel
  * heraus, und die Anmeldung per Code (anmeldung.js) lässt den Kalender nicht
@@ -22,7 +22,7 @@
  * Fenster öffnen darf eine Seite nur auf einen Tipp hin, deshalb geschieht
  * das nicht von selbst.
  *
- * Im Tresor (Cloud-Block, nur dieses Gerät) stehen wie in der Windows-Fassung
+ * Im Tresor (Cloud-Block, nur dieses Gerät) stehen wie früher unter Windows
  * Konto, Kalender und der Merkzettel des Abgleichs, aber kein Schlüssel.
  */
 
@@ -395,7 +395,7 @@ export class GoogleCalendar {
     }
   }
 
-  /** Findet den Kontovia-Kalender oder legt ihn an (wie in der Windows-Fassung). */
+  /** Findet den Kontovia-Kalender oder legt ihn an (wie früher unter Windows). */
   async ensureCalendar({ hint, timeZone }) {
     if (hint) {
       try {

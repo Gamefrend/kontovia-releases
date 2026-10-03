@@ -10,9 +10,7 @@ import { appInfo, setCloudVerbunden } from '../app.js';
 import { table, mountTables } from '../lib/table.js';
 
 const api = window.kontovia;
-/** Läuft Kontovia im Browser statt in Electron? (src/web/bridge.js) */
-const WEB = api.platform === 'web';
-/** Wie SICHERUNG_BEHALTEN in src/main/cloud.js und src/web/cloud.js. */
+/** Wie SICHERUNG_BEHALTEN in src/web/cloud.js. */
 const SICHERUNGEN_BEHALTEN = 30;
 
 /* -------------------------------------------------------------------------- */
@@ -55,28 +53,24 @@ export async function renderCloudCard(root) {
         ${status.umgestellt ? raw(`<div class="notice warn mb16">${status.umgestellt === 'drive'
           ? 'Ihre Cloud-Sicherung lief bisher über Google Drive. Diesen Weg gibt es nicht mehr.'
           : 'Ihre Cloud-Sicherung lief bisher über ein eigenes Google-Projekt. Das lässt sich nicht mehr einstellen.'}
-          Ihre Buchhaltung auf diesem ${WEB ? 'Gerät' : 'Rechner'} ist vollständig. Verbinden Sie die Cloud-Sicherung
+          Ihre Buchhaltung auf diesem Gerät ist vollständig. Verbinden Sie die Cloud-Sicherung
           bitte einmal neu, dann ist sie wieder auf dem aktuellen Stand.</div>`) : ''}
 
         ${!status.configured ? raw(`<div class="notice warn">In dieser Fassung ist kein Cloud-Abgleich
-          verfügbar. Ihre Buchhaltung bleibt auf diesem ${WEB ? 'Gerät' : 'Rechner'}; sichern Sie sie
+          verfügbar. Ihre Buchhaltung bleibt auf diesem Gerät; sichern Sie sie
           regelmäßig mit einer Vollsicherung.</div>`) : ''}
 
         ${status.configured && !status.linked ? raw(`
           <div class="row wrap" style="gap:8px">
             <button class="btn primary" id="btnConnect">${icon('key', 15).__raw} Mit Google verbinden</button>
-            ${WEB && status.weiterleitung ? '<button class="btn ghost" id="btnConnectCode">Stattdessen mit Code</button>' : ''}
+            ${status.weiterleitung ? '<button class="btn ghost" id="btnConnectCode">Stattdessen mit Code</button>' : ''}
           </div>
-          <p class="small muted mt16 mb0">${WEB && status.weiterleitung
+          <p class="small muted mt16 mb0">${status.weiterleitung
             ? `Sie werden zu Google weitergeleitet und kommen nach der Anmeldung hierher zurück. Kontovia
           ist dann gesperrt. Entsperren Sie es einmal mit Ihrem Passwort, dann steht die Verbindung.`
-            : WEB
-              ? `Kontovia zeigt einen kurzen Code, den Sie auf google.com/device eingeben, auf
+            : `Kontovia zeigt einen kurzen Code, den Sie auf google.com/device eingeben, auf
           diesem oder einem anderen Gerät. Dort sehen Sie in der Adresszeile, dass Sie Ihr
-          Passwort bei Google eingeben und nicht bei Kontovia.`
-              : `Es öffnet sich Ihr normaler Browser mit der Anmeldeseite von Google; danach kommt
-          Kontovia von selbst wieder nach vorn. Ein Anmeldefenster in Kontovia selbst lässt Google
-          nicht zu. Im Browser sehen Sie in der Adresszeile, wo Sie Ihr Passwort eingeben.`} Ihre Buchhaltung bleibt dabei, wie sie ist. Ist das
+          Passwort bei Google eingeben und nicht bei Kontovia.`} Ihre Buchhaltung bleibt dabei, wie sie ist. Ist das
           Konto noch leer, wird sie hochgeladen; liegt dort schon eine, fragt Kontovia, welche gelten soll.</p>`) : ''}
 
         ${status.linked ? raw(`
@@ -136,16 +130,10 @@ function wireCloud(root, status) {
   const verbinden = async (e, { mitCode = false } = {}) => {
     const btn = e.target.closest('button');
     btn.disabled = true;
-    const weiter = WEB && status.weiterleitung && !mitCode;
-    btn.textContent = weiter ? 'Weiter zu Google …' : WEB ? 'Warte auf die Anmeldung …' : 'Warte auf den Browser …';
+    const weiter = status.weiterleitung && !mitCode;
+    btn.textContent = weiter ? 'Weiter zu Google …' : 'Warte auf die Anmeldung …';
     // Die Weiterleitung verlässt die Seite – vorher alles speichern.
     if (weiter && store.dirty) await saveNow();
-    // Wer das Browserfenster schließt, soll nicht fünf Minuten warten müssen.
-    const stop = document.createElement('button');
-    stop.className = 'btn ghost';
-    stop.textContent = 'Abbrechen';
-    stop.addEventListener('click', () => api.cloud.signinCancel?.().catch(() => {}));
-    if (!WEB) btn.after(stop);
     try {
       const res = await api.cloud.connect({ mitCode });
       ok('Mit Google verbunden', res.email);
@@ -218,7 +206,7 @@ function askUnlink() {
       size: 'slim',
       body: html`
         <p class="mt0" style="line-height:1.6">Dieses Gerät meldet sich von der Cloud ab. Ihre
-        Buchhaltung bleibt vollständig auf diesem ${WEB ? 'Gerät' : 'Rechner'}, und Ihre anderen
+        Buchhaltung bleibt vollständig auf diesem Gerät, und Ihre anderen
         Geräte bleiben verbunden.</p>
         <label class="check mt16"><input type="checkbox" id="unlinkDelete"> Tresor, Belege und
         Sicherungen auch in der Cloud löschen</label>
@@ -411,7 +399,7 @@ async function decideForeign(root, begin) {
     if (!yes) { renderCloudCard(root); return; }
     try {
       await api.cloud.adoptRemote();
-      // Der Hauptprozess sperrt danach – die Anmeldemaske erscheint von selbst.
+      // Die Web-Schicht sperrt danach – die Anmeldemaske erscheint von selbst.
     } catch (e) {
       err('Übernahme fehlgeschlagen', e.message);
       renderCloudCard(root);
@@ -563,10 +551,8 @@ function zeigeVerworfen(c) {
 /* -------------------------------------------------------------------------- */
 
 export async function renderUpdateCard(root) {
-  // Die Update-Adresse ist eingebaut und gehört nicht in die Einstellungen.
-  // Nur wer früher eine eigene eingetragen hat, sieht sie – mit dem Weg zurück.
-  const feed = WEB ? '' : store.db.settings.updateFeedUrl || '';
-  const wirksam = feed || appInfo.defaultUpdateFeed || '';
+  // Die Update-Adresse ist eingebaut (version.json neben der App).
+  const wirksam = appInfo.defaultUpdateFeed || '';
   root.innerHTML = html`
     <div class="card">
       <div class="card-head">
@@ -575,12 +561,9 @@ export async function renderUpdateCard(root) {
         <span class="badge">Version ${appInfo.version || ''}</span>
       </div>
       <div class="card-body">
-        ${WEB ? raw(`<p class="small mt0" style="color:var(--text-2);line-height:1.6">Die Web-Fassung
-          liegt vollständig auf diesem Gerät und läuft auch ohne Netz. Eine neue Version wird erst
-          geladen, wenn Sie es hier bestätigen.</p>`) : ''}
-        ${feed ? raw(`<div class="notice warn mb16 small">Kontovia sucht Updates an einer eigenen Adresse:
-          <span style="word-break:break-all">${esc(feed)}</span>
-          <div class="mt8"><button class="btn sm" id="uReset">Mitgelieferte Adresse verwenden</button></div></div>`) : ''}
+        <p class="small mt0" style="color:var(--text-2);line-height:1.6">Kontovia liegt vollständig
+          auf diesem Gerät und läuft auch ohne Netz. Eine neue Version wird erst geladen, wenn Sie es
+          hier bestätigen.</p>
         <div class="row wrap" style="gap:8px">
           <button class="btn primary" id="uCheck" ${wirksam ? '' : 'disabled'}>${icon('refresh', 15)} Nach Updates suchen</button>
           <label class="check"><input type="checkbox" id="uAuto" ${store.db.settings.updateCheckOnStart === true ? 'checked' : ''}> regelmäßig von selbst suchen</label>
@@ -594,12 +577,6 @@ export async function renderUpdateCard(root) {
       </div>
     </div>`;
 
-  $('#uReset', root)?.addEventListener('click', async () => {
-    await commit('einstellung.update', (db) => { db.settings.updateFeedUrl = ''; }, { silent: true });
-    await saveNow();
-    ok('Mitgelieferte Adresse wird verwendet');
-    renderUpdateCard(root);
-  });
   $('#uNeu', root).addEventListener('click', () => navigate('help', { tab: 'neu' }));
 
   $('#uAuto', root).addEventListener('change', async (e) => {
@@ -615,31 +592,14 @@ export async function renderUpdateCard(root) {
   $('#uCheck', root).addEventListener('click', () => checkForUpdate($('#uResult', root)));
 }
 
-/**
- * Wird ohne Assistenten installiert? (src/main/updater.js, installMode) Dann
- * läuft alles in Kontovia ab: herunterladen, prüfen, neu starten.
- */
-const still = (info) => !WEB && info.modus === 'still';
-const knopf = (info) => (WEB || still(info) ? 'Jetzt aktualisieren' : 'Herunterladen und installieren');
-
-/** Dauer des Neustarts in Worten. Gemessen gut zehn Sekunden, auf langsameren Rechnern mehr. */
-const NEUSTART_DAUER = 'rund einer halben Minute';
+const knopf = () => 'Jetzt aktualisieren';
 
 /**
  * Was vor dem Klick gesagt wird: Wer weiß, dass das Fenster verschwindet und
  * wann es wiederkommt, hält es nicht für einen Absturz.
  */
-function vorabText(info) {
-  if (WEB) {
-    return 'Kontovia lädt die neue Version, prüft sie und lädt sich dann neu. Ihre Daten bleiben, wie sie sind. Danach geben Sie einmal Ihr Passwort ein.';
-  }
-  if (still(info)) {
-    return `Kontovia lädt die neue Version herunter, prüft sie und installiert sie von selbst. Das Fenster schließt sich dabei und öffnet sich nach ${NEUSTART_DAUER} wieder. `
-      + (info.angemeldetBleiben ? 'Sie bleiben angemeldet. ' : 'Danach geben Sie einmal Ihr Passwort ein. ')
-      + 'Ihre Daten bleiben, wie sie sind.'
-      + (info.admin ? ' Weil Kontovia für alle Benutzer dieses Rechners installiert ist, fragt Windows zwischendurch nach Administratorrechten.' : '');
-  }
-  return 'Kontovia lädt das Installationsprogramm herunter und prüft es. Danach schließt sich Kontovia, und der Installationsassistent öffnet sich. Ihre Daten bleiben, wie sie sind.';
+function vorabText() {
+  return 'Kontovia lädt die neue Version, prüft sie und lädt sich dann neu. Ihre Daten bleiben, wie sie sind, und Sie bleiben angemeldet.';
 }
 
 /**
@@ -726,11 +686,7 @@ export async function checkForUpdate(box, { silent = false } = {}) {
 
 /** Die Schritte des Ablaufs, damit sichtbar bleibt, wo man gerade ist. */
 function schritte(info, aktiv) {
-  const namen = WEB
-    ? ['Herunterladen', 'Prüfen', 'Neu laden']
-    : still(info)
-      ? ['Herunterladen', 'Prüfen', 'Installieren und neu starten']
-      : ['Herunterladen', 'Prüfen', 'Installationsprogramm starten'];
+  const namen = ['Herunterladen', 'Prüfen', 'Neu laden'];
   return `<ol class="upd-steps">${namen.map((n, i) => `<li class="${i < aktiv ? 'done' : i === aktiv ? 'now' : ''}">${n}</li>`).join('')}</ol>`;
 }
 
@@ -741,17 +697,13 @@ function schritte(info, aktiv) {
  * dasselbe Logo da.
  */
 function neustartBild(info) {
-  const text = WEB
-    ? `Version ${esc(info.version)} ist geladen. Die Seite lädt sich gleich neu, und Sie bleiben angemeldet.`
-    : `Version ${esc(info.version)} wird installiert. Dieses Fenster schließt sich gleich und öffnet sich nach ${NEUSTART_DAUER} von selbst wieder.
-       ${info.angemeldetBleiben ? 'Sie bleiben angemeldet.' : 'Danach geben Sie einmal Ihr Passwort ein.'}
-       Bitte starten Sie Kontovia in der Zeit nicht selbst.${info.admin ? ' Windows fragt eventuell nach Administratorrechten.' : ''}`;
+  const text = `Version ${esc(info.version)} ist geladen. Die Seite lädt sich gleich neu, und Sie bleiben angemeldet.`;
   const o = document.createElement('div');
   o.className = 'gate upd-vollbild';
   o.setAttribute('role', 'alert');
   o.innerHTML = `<div class="gate-card">
       <div class="gate-logo">K</div>
-      <h2>${WEB ? 'Kontovia wird neu geladen' : 'Kontovia wird aktualisiert'}</h2>
+      <h2>Kontovia wird neu geladen</h2>
       <p class="lead">${text}</p>
       <div class="bar-track upd-warten"><div class="bar-fill"></div></div>
       ${schritte(info, 2)}
@@ -783,7 +735,7 @@ async function runUpdate(info, box) {
   balken(0, 0);
   // Im Fenster stehen darüber die Versionshinweise, der Fortschritt soll trotzdem zu sehen sein.
   prog.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  // Die Größe aus der Versionsdatei gilt; der Hauptprozess meldet sie mit.
+  // Die Größe aus der Versionsdatei gilt; die Web-Schicht meldet sie mit.
   const off = api.on.updateProgress((p) => balken(p.received, p.total || info.size || 0));
 
   let bild = null;
@@ -798,13 +750,9 @@ async function runUpdate(info, box) {
     }
     // Was während des Downloads noch eingetragen wurde, kommt mit.
     if (store.dirty) await saveNow();
-    if (WEB || still(info)) {
-      bild = neustartBild(info);
-      // Einen Moment zum Lesen, bevor sich das Fenster schließt.
-      await new Promise((r) => setTimeout(r, WEB ? 1200 : 2500));
-    } else {
-      zeige(2, '<div class="notice ok mt8">Geprüft und vollständig. Das Installationsprogramm wird gestartet, und Kontovia schließt sich dabei.</div>');
-    }
+    bild = neustartBild(info);
+    // Einen Moment zum Lesen, bevor die Seite neu lädt.
+    await new Promise((r) => setTimeout(r, 1200));
     await api.update.install(file.path);
   } catch (e) {
     off();

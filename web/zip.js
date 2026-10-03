@@ -1,7 +1,7 @@
 /**
  * Kontovia – ZIP-Archive ohne Fremdbibliothek.
  *
- * Die Windows-Fassung schreibt „Alles für das Finanzamt“ und die
+ * Die frühere Windows-Fassung schreibt „Alles für das Finanzamt“ und die
  * Prüfungsdaten in einen Ordner. Safari und das iPhone kennen keine
  * Ordnerauswahl; dort kommt derselbe Inhalt als ein ZIP-Archiv heraus, das
  * die Dateien-App und jedes Betriebssystem von selbst öffnen.

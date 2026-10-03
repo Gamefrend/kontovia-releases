@@ -1,7 +1,7 @@
 /**
  * Kontovia – Sperre bei Ruhezustand und Bildschirmsperre, Web-Fassung.
  *
- * Die Windows-Fassung erfährt beides vom Betriebssystem. Ein Browser sagt es
+ * Die frühere Windows-Fassung erfährt beides vom Betriebssystem. Ein Browser sagt es
  * einer Seite nicht direkt, deshalb zwei Wege:
  *
  * Ruhezustand: Ein Zeitgeber tickt alle paar Sekunden. Schläft das Gerät,

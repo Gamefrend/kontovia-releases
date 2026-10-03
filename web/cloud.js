@@ -1,7 +1,7 @@
 /**
  * Kontovia – Abgleich mit der Cloud, Web-Fassung.
  *
- * Gegenstück zu src/main/cloud.js, mit demselben Ablauf in drei Schritten
+ * Der Ablauf in drei Schritten
  * (begin – Oberfläche führt zusammen – commit). Hochgeladen wird nur, was
  * bereits verschlüsselt ist; der Schlüssel bleibt auf dem Gerät.
  *
@@ -10,8 +10,8 @@
  * zweite Ort, an dem die Buchhaltung noch liegt.
  *
  * Sicherungen in der Cloud, die Anmeldung vor dem ersten Tresor und das
- * Mitnehmen der Geräteverbindung beim Übernehmen laufen wie in der
- * Windows-Fassung; die Begründungen stehen dort.
+ * Mitnehmen der Geräteverbindung beim Übernehmen laufen wie in der früheren
+ * früheren Windows-Fassung.
  */
 
 import * as K from './kern.js';
@@ -28,7 +28,7 @@ const attachAad = (id) => K.utf8(`kontovia/attachment/${id}`);
 
 const SICHERUNG_ABSTAND_MS = 20 * 60 * 60 * 1000;
 const SICHERUNG_BEHALTEN = 30;
-const BELEG_FRIST_MS = 90 * 24 * 60 * 60 * 1000;
+export const BELEG_FRIST_MS = 90 * 24 * 60 * 60 * 1000;
 const VERBINDUNG = ['provider', 'autoSync', 'autoSyncMinutes', 'state', 'linkedAt'];
 
 export function sicherungsName(anlass, jetzt = new Date()) {
@@ -152,7 +152,7 @@ export class Cloud {
     if (!keepRemote) {
       try { await be.removeAll(); } catch { /* auch dann wird lokal getrennt */ }
     }
-    // Wie in der Windows-Fassung (src/main/cloud.js): abmelden, nicht widerrufen.
+    // Abmelden, nicht widerrufen: Google widerriefe die Freigabe aller Geräte.
     await be.disconnect({ widerrufen: false });
     const c = this.cfg();
     delete c.remoteVersion;
@@ -490,7 +490,7 @@ export class Cloud {
     return { hochgeladen: up, heruntergeladen: down, entfernt: removed };
   }
 
-  /** Wie in der Windows-Fassung: ohne Anmeldemerkmale in die Cloud. */
+  /** Wie früher unter Windows: ohne Anmeldemerkmale in die Cloud. */
   async verpacken(db) {
     const header = { ...this.vault.header, savedAt: new Date().toISOString() };
     return K.packContainer(header, await K.sealBody(this.vault.dek, fuerSicherung(db), header));

@@ -1,11 +1,8 @@
 /**
  * Kontovia – Berichte drucken und als PDF sichern, Web-Fassung.
  *
- * Die Windows-Fassung rendert den Bericht in einem unsichtbaren Fenster und
- * schreibt die PDF-Datei selbst. Einen PDF-Erzeuger hat ein Browser nicht –
- * aber jeder Druckdialog kann „Als PDF sichern“, auf dem iPhone über das
- * Teilen-Menü im Druckfenster. Das Ergebnis ist ein echtes PDF mit
- * markierbarem Text, kein Bildschirmfoto.
+ * Die PDF-Dateien schreibt Kontovia selbst (renderer/lib/pdf.js). Der
+ * Druckdialog bleibt als Zusatzweg für die druckfertige Seite.
  *
  * Gedruckt wird die Seite selbst: der Bericht wird in einen Schattenbaum
  * eingesetzt, damit sich seine Formatierung und die der Anwendung nicht

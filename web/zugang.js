@@ -1,13 +1,9 @@
-// Erzeugt aus src/main/zugang.js – dort ändern, nicht hier.
-const module = { exports: {} };
-(function (module, exports) {
-'use strict';
 /**
  * Kontovia – was von den Zugangsdaten die Oberfläche und die Sicherungen sehen.
  *
  * Der Cloud-Block im Bestand hält die Anmeldemerkmale für den Cloud-Abgleich
  * und für Google Kalender. Gebraucht werden sie nur dort, wo die Verbindungen
- * laufen: im Hauptprozess bzw. in der Web-Schicht. Die Oberfläche bekommt eine
+ * laufen: in der Web-Schicht. Die Oberfläche bekommt eine
  * Kopie ohne sie – was sie nicht hat, kann auch in keinem Export landen. Bis
  * Fassung 1.7 stand das Aktualisierungsmerkmal von Google im Klartext im
  * JSON-Gesamtexport, und jede Vollsicherung trug es mit.
@@ -132,7 +128,4 @@ function altlastenEntfernen(c, mitgeliefert) {
   return true;
 }
 
-module.exports = { ohneZugangsdaten, fuerOberflaeche, fuerSicherung, cloudNachEinspielen, journalNachEinspielen, altlastenEntfernen };
-
-})(module, module.exports);
-export const { ohneZugangsdaten, fuerOberflaeche, fuerSicherung, cloudNachEinspielen, journalNachEinspielen, altlastenEntfernen } = module.exports;
+export { ohneZugangsdaten, fuerOberflaeche, fuerSicherung, cloudNachEinspielen, journalNachEinspielen, altlastenEntfernen };
