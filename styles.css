@@ -1047,6 +1047,48 @@ html[data-theme="dark"] .re-blatt { border-color: transparent; }
 .re-bildfeld img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .re-regler { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); }
 .re-regler input { width: 120px; accent-color: var(--accent); }
+.btn.sm.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.danger-text { color: var(--neg, #c2410c); }
+.re-vorschau-kopf { align-items: center; margin-bottom: -6px; }
+
+/* Bilder einer Rechnung */
+.re-bilderliste { display: flex; flex-direction: column; gap: 12px; }
+.re-rbild { display: flex; gap: 12px; align-items: center; }
+.re-rbild .re-bildfeld { width: 96px; height: 64px; }
+.re-rbild-knoepfe { display: flex; flex-direction: column; }
+
+/* Gestalter */
+.re-gestaltung { grid-template-columns: minmax(0, .9fr) minmax(360px, 1.1fr); }
+.re-werkzeuge { padding: 10px 12px; display: flex; flex-direction: column; gap: 10px; }
+.re-werkzeuge-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.re-werkzeuge .icon-btn:disabled { opacity: .35; cursor: default; }
+.re-auswahl-tipp { display: flex; gap: 8px; align-items: flex-start; }
+.re-auswahl-tipp svg { flex: none; margin-top: 2px; }
+.re-auswahl { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--border); padding-top: 10px; }
+.re-auswahl-kopf { display: flex; align-items: center; gap: 8px; }
+.re-auswahl-felder { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.re-auswahl textarea { min-height: 60px; font-size: 13px; }
+.re-platzhalter { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.re-chip { border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-2); border-radius: 999px; padding: 1px 8px; font-size: 11.5px; cursor: pointer; font-family: inherit; }
+.re-chip:hover { border-color: var(--accent); color: var(--accent); }
+.re-farbfeld { width: 44px; min-width: 44px; height: 32px; padding: 2px; cursor: pointer; }
+.re-gestalter-blatt { position: relative; }
+.re-ziele { position: absolute; inset: 0; }
+.re-ziel { position: absolute; border: 1px dashed transparent; border-radius: 2px; cursor: move; outline: none; }
+.re-gestalter-blatt:hover .re-ziel { border-color: rgba(52, 70, 224, .35); }
+.re-ziel:hover, .re-ziel:focus-visible { border-color: var(--accent) !important; background: rgba(52, 70, 224, .05); }
+.re-ziel.aktiv { border: 1.5px solid var(--accent) !important; background: rgba(52, 70, 224, .06); touch-action: none; }
+.re-ziel.leer { background: repeating-linear-gradient(45deg, rgba(52, 70, 224, .06) 0 6px, transparent 6px 12px); border-color: rgba(52, 70, 224, .5); }
+.re-ziel-name { position: absolute; left: -1px; top: -18px; font-size: 10.5px; line-height: 16px; padding: 0 6px; border-radius: 4px 4px 0 0; background: var(--accent); color: #fff; white-space: nowrap; opacity: 0; pointer-events: none; }
+.re-ziel.aktiv .re-ziel-name, .re-ziel:hover .re-ziel-name { opacity: 1; }
+.re-griff { position: absolute; right: -6px; bottom: -6px; width: 12px; height: 12px; border-radius: 3px; background: #fff; border: 1.5px solid var(--accent); cursor: nwse-resize; display: none; touch-action: none; }
+.re-ziel.aktiv .re-griff { display: block; }
+.re-reihe { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.re-reihe li { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.re-reihe li:last-child { border-bottom: 0; }
+.re-reihe-nr { width: 20px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.re-reihe-name { flex: 1; }
+.re-reihe .icon-btn:disabled { opacity: .3; cursor: default; }
 
 @media (max-width: 1240px) {
   .re-editor { grid-template-columns: minmax(0, 1fr) minmax(280px, .8fr); }
@@ -1055,6 +1097,7 @@ html[data-theme="dark"] .re-blatt { border-color: transparent; }
   .re-editor { grid-template-columns: 1fr; }
   .re-seitenspalte { position: static; max-height: none; overflow: visible; }
   .re-vorschau { max-width: 640px; }
+  .re-gestaltung .re-gestalter { order: -1; }
 }
 @media (max-width: 640px) {
   .re-pos-zahlen { grid-template-columns: repeat(2, minmax(0, 1fr)); }

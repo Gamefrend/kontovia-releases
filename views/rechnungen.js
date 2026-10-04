@@ -15,24 +15,23 @@
 
 import { esc, $, $$, money, moneyInput, parseMoney, fmtDate, todayISO, uid, int, sum } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, err, statCard } from '../lib/ui.js';
-import { store, sel, commit, deleteEntity, saveNow } from '../lib/store.js';
+import { store, sel, commit, deleteEntity } from '../lib/store.js';
 import { router, navigate, refresh } from '../lib/router.js';
 import { openMenu } from '../lib/popover.js';
 import { mountTable } from '../lib/table.js';
 import {
-  EINHEITEN, LAENDER, berechnen, zustand, ZUSTAENDE, faelligkeit, neueRechnung, profil as profilAus, design as designAus,
-  PROFIL_VORGABE, DESIGN_VORGABE, verkaeuferAus, einheitText, einheitAusText, betragText, satzText, titel as titelVon, ibanGueltig,
-  neuePosition,
+  EINHEITEN, berechnen, zustand, ZUSTAENDE, faelligkeit, neueRechnung, einheitText, einheitAusText, betragText, satzText, titel as titelVon,
 } from '../lib/rechnung.js';
 import {
   stornieren, alsBezahlt, kopieAlsEntwurf, ausVorlage, alsVorlage, versandVermerken, produktSpeichern, rechnungSpeichern,
 } from '../lib/rechnungsaktionen.js';
 import {
-  vorschauSvg, pdfSpeichern, pdfZeigen, xmlSpeichern, bildAblegen, bildWaehlen, bilderLaden, base64ZuBytes,
+  vorschauSvg, pdfSpeichern, pdfZeigen, xmlSpeichern, base64ZuBytes,
 } from '../lib/rechnungsdateien.js';
 import { eRechnungAusDatei } from '../lib/erechnung.js';
 import { zeigeERechnung } from './erechnung.js';
 import { editorZeigen } from './rechnungseditor.js';
+import { gestaltungZeigen } from './rechnungsgestalter.js';
 import { openTransactionDialog } from './transactions.js';
 
 const api = window.kontovia;
@@ -735,221 +734,9 @@ function vorlagen(root) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Gestaltung und Angaben                                                      */
+/* Gestaltung und Angaben (views/rechnungsgestalter.js)                        */
 /* -------------------------------------------------------------------------- */
 
-const FARBEN = ['#3446e0', '#0f766e', '#b45309', '#be123c', '#7c3aed', '#1f2937', '#0369a1', '#4d7c0f'];
-
-/** Eine Musterrechnung für die Vorschau, wenn es noch keine echte gibt. */
-function musterRechnung() {
-  const s = store.db.settings;
-  const letzte = [...sel.invoices()].filter((r) => r.richtung !== 'eingang').sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)))[0];
-  if (letzte) return { ...structuredClone(letzte), status: 'entwurf' };
-  const r = neueRechnung(s, {
-    nummer: `${new Date().getFullYear()}-0001`,
-    betreff: 'Beispiel für Ihre Rechnung',
-    kaeufer: { kontaktId: '', name: 'Muster GmbH', zusatz: 'z. Hd. Frau Beispiel', strasse: 'Hauptstraße 1', plz: '12345', ort: 'Musterstadt', land: 'DE', ustId: '', email: '', leitwegId: '', kundennummer: 'K-1001' },
-  });
-  r.positionen = [
-    neuePosition(s, { name: 'Beratung', beschreibung: 'Erstgespräch und Konzept', menge: 3, einheit: 'HUR', preis: 9500 }),
-    neuePosition(s, { name: 'Umsetzung', menge: 1, einheit: 'LS', preis: 120000 }),
-  ];
-  return r;
-}
-
-async function gestaltung(root, params = {}) {
-  const s = store.db.settings;
-  const d = designAus(s);
-  const p = profilAus(s);
-  const v = verkaeuferAus(s);
-  const fehlt = [!v.name && 'Firmenname', !(v.strasse && v.plz && v.ort) && 'Anschrift', !(v.ustId || v.steuernummer) && 'Steuernummer oder USt-IdNr.'].filter(Boolean);
-  const bilder = await bilderLaden(d);
-  const auswahl = (name, paare, wert) => `<div class="seg sm" role="group" data-seg="${name}">${paare.map(([k, t]) => `<button type="button" data-wert="${esc(k)}" class="${String(wert) === String(k) ? 'active' : ''}">${esc(t)}</button>`).join('')}</div>`;
-
-  root.innerHTML = `
-    <div class="re-editor re-gestaltung">
-      <div class="re-form">
-        <section class="card">
-          <div class="card-head"><h3>${icon('layout', 16).__raw} Aussehen</h3><span class="sub">gilt für alle neuen Rechnungen</span></div>
-          <div class="card-body">
-            <div class="field"><label>Stil</label>${auswahl('layout', [['klassisch', 'Klassisch'], ['modern', 'Modern'], ['schlicht', 'Schlicht']], d.layout)}</div>
-            <div class="field"><label>Akzentfarbe</label>
-              <div class="row wrap re-farben">
-                ${FARBEN.map((f) => `<button type="button" class="re-farbe ${f === d.akzent ? 'active' : ''}" data-farbe="${f}" style="background:${f}" aria-label="Farbe ${f}"></button>`).join('')}
-                <label class="re-farbe-eigen" title="Eigene Farbe"><input type="color" id="gs_farbe" value="${esc(d.akzent)}" aria-label="Eigene Farbe"></label>
-              </div>
-            </div>
-            <div class="field"><label>Logo</label>
-              <div class="re-bildwahl">
-                <div class="re-bildfeld">${bilder.logo ? `<img src="${esc(bilder.logo.url)}" alt="Logo">` : '<span class="small muted">kein Logo</span>'}</div>
-                <div class="stack">
-                  <div class="row wrap"><button type="button" class="btn sm" id="gs_logo">${icon('plus', 13).__raw} ${bilder.logo ? 'Anderes Logo' : 'Logo hochladen'}</button>
-                    ${bilder.logo ? `<button type="button" class="btn sm ghost" id="gs_logoWeg">${icon('trash', 13).__raw} Entfernen</button>` : ''}</div>
-                  ${bilder.logo ? `<div class="row wrap">${auswahl('logoPosition', [['links', 'Links'], ['mitte', 'Mitte'], ['rechts', 'Rechts']], d.logoPosition)}
-                    <label class="re-regler">Breite <input type="range" min="15" max="80" step="1" id="gs_logoBreite" value="${esc(d.logoBreite)}"> <span id="gs_logoBreiteW">${esc(d.logoBreite)} mm</span></label></div>` : '<span class="hint">PNG, JPG oder SVG. Ohne Logo steht Ihr Firmenname im Kopf.</span>'}
-                </div>
-              </div>
-            </div>
-            <div class="field"><label>Zusätzliches Bild</label>
-              <div class="re-bildwahl">
-                <div class="re-bildfeld">${bilder.bild ? `<img src="${esc(bilder.bild.url)}" alt="Zusatzbild">` : '<span class="small muted">kein Bild</span>'}</div>
-                <div class="stack">
-                  <div class="row wrap"><button type="button" class="btn sm" id="gs_bild">${icon('plus', 13).__raw} ${bilder.bild ? 'Anderes Bild' : 'Bild hochladen'}</button>
-                    ${bilder.bild ? `<button type="button" class="btn sm ghost" id="gs_bildWeg">${icon('trash', 13).__raw} Entfernen</button>` : ''}</div>
-                  ${bilder.bild ? `<div class="row wrap">${auswahl('bildPosition', [['schluss', 'Unter dem Text'], ['fuss', 'Über der Fußzeile']], d.bildPosition)}
-                    <label class="re-regler">Breite <input type="range" min="15" max="120" step="1" id="gs_bildBreite" value="${esc(d.bildBreite)}"> <span id="gs_bildBreiteW">${esc(d.bildBreite)} mm</span></label></div>` : '<span class="hint">Etwa Ihre Unterschrift, ein Siegel oder Partnerlogos.</span>'}
-                </div>
-              </div>
-            </div>
-            <div class="form-grid">
-              <div class="field"><label for="gs_groesse">Schriftgröße</label><select id="gs_groesse">
-                ${[[8.5, 'Klein'], [9.5, 'Normal'], [10.5, 'Groß']].map(([g, t]) => `<option value="${g}" ${Number(d.schriftgroesse) === g ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
-            </div>
-            <label class="check"><input type="checkbox" id="gs_kopf" ${d.tabellenkopfFarbig ? 'checked' : ''}> Tabellenkopf in der Akzentfarbe</label>
-            <label class="check"><input type="checkbox" id="gs_fuss" ${d.fusszeile ? 'checked' : ''}> Fußzeile mit Kontakt, Bank und Steuernummer</label>
-            <label class="check"><input type="checkbox" id="gs_falz" ${d.falzmarken ? 'checked' : ''}> Falzmarken für den Fensterumschlag</label>
-            <label class="check"><input type="checkbox" id="gs_hinweis" ${d.hinweisERechnung ? 'checked' : ''}> Hinweis auf die enthaltene E-Rechnung</label>
-            <p class="small muted mb0 mt8">Die Gestaltung ändert nur die Ansicht. Die Rechnungsdaten im PDF bleiben immer eine gültige, maschinenlesbare E-Rechnung.</p>
-          </div>
-        </section>
-
-        <section class="card" id="gsAngaben">
-          <div class="card-head"><h3>${icon('building', 16).__raw} Ihre Angaben auf Rechnungen</h3></div>
-          <div class="card-body">
-            ${fehlt.length ? `<div class="notice warn mb16">In den Einstellungen fehlen noch: ${esc(fehlt.join(', '))}. Diese Angaben müssen auf jeder Rechnung stehen.
-              <a href="#" class="check-link" id="gs_zuEinst">Zu den Firmendaten</a></div>`
-              : `<div class="notice mb16">Name, Anschrift und Steuernummer kommen aus den Einstellungen: <strong>${esc(v.name)}</strong>, ${esc([v.strasse, `${v.plz} ${v.ort}`].join(', '))}.
-              <a href="#" class="check-link" id="gs_zuEinst">Firmendaten ändern</a></div>`}
-            <div class="form-grid">
-              <div class="field full"><label for="gp_iban">IBAN</label><input id="gp_iban" value="${esc(p.iban)}" placeholder="DE00 0000 0000 0000 0000 00" autocomplete="off"><span class="hint" id="gp_ibanHinweis"></span></div>
-              <div class="field"><label for="gp_bic">BIC</label><input id="gp_bic" value="${esc(p.bic)}"></div>
-              <div class="field"><label for="gp_bank">Bank</label><input id="gp_bank" value="${esc(p.bank)}"></div>
-              <div class="field"><label for="gp_inhaber">Kontoinhaber</label><input id="gp_inhaber" value="${esc(p.kontoinhaber)}" placeholder="${esc(v.name || '')}"></div>
-              <div class="field"><label for="gp_land">Land Ihres Betriebs</label><select id="gp_land">
-                ${Object.entries(LAENDER).map(([c, l]) => `<option value="${c}" ${c === p.land ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select></div>
-              <div class="field"><label for="gp_register">Handelsregister</label><input id="gp_register" value="${esc(p.register)}" placeholder="z. B. Amtsgericht München HRB 12345"></div>
-              <div class="field"><label for="gp_gf">Geschäftsführung</label><input id="gp_gf" value="${esc(p.geschaeftsfuehrung)}" placeholder="bei GmbH und UG Pflicht"></div>
-              <div class="field full"><label for="gp_web">Website</label><input id="gp_web" value="${esc(p.web)}"></div>
-            </div>
-          </div>
-        </section>
-
-        <section class="card">
-          <div class="card-head"><h3>${icon('settings', 16).__raw} Voreinstellungen für neue Rechnungen</h3></div>
-          <div class="card-body">
-            <div class="form-grid">
-              <div class="field"><label for="gp_praefix">Vor der Nummer</label><input id="gp_praefix" value="${esc(p.praefix)}" placeholder="z. B. RE-"><span class="hint" id="gp_nummerBeispiel"></span></div>
-              <div class="field"><label for="gp_ziel">Zahlungsziel in Tagen</label><input id="gp_ziel" type="number" min="0" max="365" value="${esc(p.zahlungszielTage)}"></div>
-              <div class="field full"><label for="gp_kopf">Text vor den Positionen</label><textarea id="gp_kopf" rows="3">${esc(p.kopftext)}</textarea></div>
-              <div class="field full mb0"><label for="gp_schluss">Text am Ende</label><textarea id="gp_schluss" rows="3">${esc(p.schlusstext)}</textarea></div>
-            </div>
-          </div>
-        </section>
-        <div class="row end"><button class="btn primary" id="gsSpeichern">${icon('save', 15).__raw} Übernehmen</button></div>
-      </div>
-      <aside class="re-seitenspalte">
-        <div class="small muted mb8">Vorschau${sel.invoices().some((r) => r.richtung !== 'eingang') ? ' mit Ihrer zuletzt bearbeiteten Rechnung' : ' mit einer Beispielrechnung'}</div>
-        <div class="re-vorschau" id="reVorschau"></div>
-      </aside>
-    </div>`;
-
-  // Entwurf der Einstellungen; erst „Übernehmen“ schreibt.
-  const entwurf = { design: { ...d }, profil: { ...p } };
-  const muster = musterRechnung();
-  let gespeichert = JSON.stringify(entwurf);
-  router.leaveGuard = async () => {
-    if (JSON.stringify(entwurf) === gespeichert) return true;
-    return confirmDialog({ title: 'Änderungen verwerfen?', text: 'Die Gestaltung ist noch nicht übernommen.', confirmLabel: 'Verwerfen', cancelLabel: 'Weiter bearbeiten', danger: true });
-  };
-
-  const vorschau = async () => {
-    const svgs = await vorschauSvg(muster, { v: { ...verkaeuferAus({ ...s, rechnung: entwurf }) }, d: { ...DESIGN_VORGABE, ...entwurf.design } });
-    const host = $('#reVorschau', root);
-    if (host) host.innerHTML = svgs.map((svg) => `<div class="re-blatt">${svg}</div>`).join('');
-  };
-  let zeitgeber = null;
-  const neu = () => { clearTimeout(zeitgeber); zeitgeber = setTimeout(vorschau, 200); };
-
-  $$('[data-seg]', root).forEach((g) => g.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-wert]');
-    if (!b) return;
-    entwurf.design[g.dataset.seg] = b.dataset.wert;
-    $$('[data-wert]', g).forEach((x) => x.classList.toggle('active', x === b));
-    neu();
-  }));
-  $$('[data-farbe]', root).forEach((b) => b.addEventListener('click', () => {
-    entwurf.design.akzent = b.dataset.farbe;
-    $('#gs_farbe', root).value = b.dataset.farbe;
-    $$('[data-farbe]', root).forEach((x) => x.classList.toggle('active', x === b));
-    neu();
-  }));
-  $('#gs_farbe', root).addEventListener('input', (e) => {
-    entwurf.design.akzent = e.target.value;
-    $$('[data-farbe]', root).forEach((x) => x.classList.toggle('active', x.dataset.farbe === e.target.value));
-    neu();
-  });
-  const regler = (id, feld) => {
-    const el = $(id, root);
-    el?.addEventListener('input', () => { entwurf.design[feld] = Number(el.value); $(`${id}W`, root).textContent = `${el.value} mm`; neu(); });
-  };
-  regler('#gs_logoBreite', 'logoBreite');
-  regler('#gs_bildBreite', 'bildBreite');
-  $('#gs_groesse', root).addEventListener('change', (e) => { entwurf.design.schriftgroesse = Number(e.target.value); neu(); });
-  for (const [id, feld] of [['#gs_kopf', 'tabellenkopfFarbig'], ['#gs_fuss', 'fusszeile'], ['#gs_falz', 'falzmarken'], ['#gs_hinweis', 'hinweisERechnung']]) {
-    $(id, root).addEventListener('change', (e) => { entwurf.design[feld] = e.target.checked; neu(); });
-  }
-  const profilFelder = { '#gp_iban': 'iban', '#gp_bic': 'bic', '#gp_bank': 'bank', '#gp_inhaber': 'kontoinhaber', '#gp_land': 'land', '#gp_register': 'register', '#gp_gf': 'geschaeftsfuehrung', '#gp_web': 'web', '#gp_praefix': 'praefix', '#gp_ziel': 'zahlungszielTage', '#gp_kopf': 'kopftext', '#gp_schluss': 'schlusstext' };
-  const ibanHinweis = () => {
-    const iban = entwurf.profil.iban.replace(/\s/g, '');
-    $('#gp_ibanHinweis', root).textContent = iban && !ibanGueltig(iban) ? 'Diese IBAN ist ungültig. Bitte auf Zahlendreher prüfen.' : '';
-    const nr = `${entwurf.profil.praefix || ''}${new Date().getFullYear()}-0001`;
-    $('#gp_nummerBeispiel', root).textContent = `Erste Nummer: ${nr}`;
-  };
-  for (const [id, feld] of Object.entries(profilFelder)) {
-    const el = $(id, root);
-    el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
-      entwurf.profil[feld] = feld === 'zahlungszielTage' ? Math.max(0, Math.round(Number(el.value) || 0)) : el.value;
-      ibanHinweis();
-      neu();
-    });
-  }
-  ibanHinweis();
-  $('#gs_zuEinst', root).addEventListener('click', (e) => { e.preventDefault(); navigate('settings'); });
-
-  const speichern = async ({ still = false } = {}) => {
-    await commit('einstellungen.rechnung', (db) => {
-      db.settings.rechnung = {
-        profil: { ...PROFIL_VORGABE, ...entwurf.profil, iban: entwurf.profil.iban.replace(/\s/g, '').toUpperCase(), bic: entwurf.profil.bic.replace(/\s/g, '').toUpperCase() },
-        design: { ...DESIGN_VORGABE, ...entwurf.design },
-      };
-      db.settings.updatedAt = new Date().toISOString();
-    }, { entity: 'einstellungen', summary: 'Rechnungsgestaltung und -angaben geändert' });
-    await saveNow();
-    gespeichert = JSON.stringify(entwurf);
-    if (!still) ok('Übernommen', 'Gilt für alle Rechnungen, die Sie ab jetzt ausstellen.');
-  };
-  $('#gsSpeichern', root).addEventListener('click', () => speichern());
-
-  const bildSetzen = async (feld) => {
-    const datei = await bildWaehlen();
-    if (!datei) return;
-    try {
-      const meta = await bildAblegen(datei);
-      entwurf.design[feld] = meta.id;
-      await commit('beleg.bild', (db) => { db.attachments.push(meta); }, { silent: true });
-      await speichern({ still: true });
-      ok(feld === 'logoId' ? 'Logo übernommen' : 'Bild übernommen');
-      refresh();
-    } catch (e) {
-      err('Bild nicht übernommen', e.message);
-    }
-  };
-  $('#gs_logo', root).addEventListener('click', () => bildSetzen('logoId'));
-  $('#gs_bild', root).addEventListener('click', () => bildSetzen('bildId'));
-  // Das alte Bild bleibt im Tresor: Ausgestellte Rechnungen zeigen es weiterhin.
-  $('#gs_logoWeg', root)?.addEventListener('click', async () => { entwurf.design.logoId = ''; await speichern({ still: true }); refresh(); });
-  $('#gs_bildWeg', root)?.addEventListener('click', async () => { entwurf.design.bildId = ''; await speichern({ still: true }); refresh(); });
-
-  vorschau();
-  if (params.abschnitt === 'angaben') setTimeout(() => $('#gsAngaben', root)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+function gestaltung(root, params = {}) {
+  return gestaltungZeigen(root, params);
 }

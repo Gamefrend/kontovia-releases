@@ -1,7 +1,7 @@
 {
-  "version": "2.4.0",
-  "released": "2026-10-04T09:29:31.455Z",
-  "notes": "Neu: Rechnungen schreiben\n\n- Im neuen Bereich „Rechnungen“ schreiben Sie E-Rechnungen, die den gesetzlichen Vorgaben entsprechen: als PDF mit eingebetteten Rechnungsdaten und als XRechnung für Behörden.\n- Kunden und Positionen wählen Sie aus Kontakten und Produkten oder tragen sie frei ein, mit Einheiten wie Stunden, Tage oder Pauschale. Rechts sehen Sie die fertige Seite.\n- Fehlende Pflichtangaben zeigt Kontovia als Liste. Speichern geht immer, ausstellen nach einer Rückfrage auch dann, wenn noch etwas fehlt.\n- Logo, Farbe, Stil und ein Zusatzbild wie Ihre Unterschrift lassen sich frei wählen. Häufige Rechnungen speichern Sie als Vorlage.\n- Beim Ausstellen entsteht die offene Einnahme von selbst. Erhaltene E-Rechnungen legen Sie unter „Eingang“ ab und buchen sie mit einem Klick.",
+  "version": "2.4.1",
+  "released": "2026-10-04T12:07:14.546Z",
+  "notes": "Rechnungen frei gestalten\n\n- Im Gestalter verschieben Sie die Bausteine Ihrer Rechnung per Hand und fügen eigene Texte, Bilder, Flächen und Linien hinzu. Auch Briefpapier, Tabellenstil und Spalten lassen sich anpassen, ein Schritt zurück geht immer.\n- Die Fälligkeit setzen Sie mit einem Klick auf „Sofort“, „+14 Tage“ oder „+30 Tage“. Fälligkeit und Zahlungsziel bleiben dabei im Gleichklang.\n- Bilder können Sie für jede Rechnung einzeln wählen. Ein Hinweis erinnert Sie daran, Rechnungen zehn Jahre aufzubewahren.\n- Bei Schlussrechnungen werden Anzahlungen samt Umsatzsteuer abgezogen. Gutschriften bucht Kontovia als Minusbetrag.\n- Steuernummer, Anschrift und Register bleiben auf dem PDF, auch wenn Sie die Fußzeile ausschalten. Eine USt-IdNr. ohne Länderkürzel zeigt Kontovia jetzt als fehlende Angabe.",
   "files": [
     {
       "path": "app.js",
@@ -65,8 +65,8 @@
     },
     {
       "path": "lib/erechnung-schreiben.js",
-      "sha256": "90e70d5c781cb042c8b1119fc0296124f362906f5ec1b3093fa68d33410de5e9",
-      "size": 12323
+      "sha256": "2351f3ffe9d370ce600054f2fb13fa2bc55e18724aa5facae0e58f3a23ad20a2",
+      "size": 13069
     },
     {
       "path": "lib/erechnung.js",
@@ -150,23 +150,23 @@
     },
     {
       "path": "lib/rechnung.js",
-      "sha256": "8c233f892bc1c698a1d5350ae39aa6a18758606f66d57559854c76aecca9d0ed",
-      "size": 29559
+      "sha256": "b3bac553f6e9a458e2cb7ce09b7d7bc0d7b0e9122b4b7e1e7fe04ad21db6f97c",
+      "size": 35174
     },
     {
       "path": "lib/rechnungsaktionen.js",
-      "sha256": "3c0e902ad946c42bf6767325086c12fb6cea7b40bd04b48881d8f888fff20e74",
-      "size": 12185
+      "sha256": "d6e2eba2309478c41ee75804604c142d81e9653773ca61f109b395404ca8dbf0",
+      "size": 11953
     },
     {
       "path": "lib/rechnungsdateien.js",
-      "sha256": "d2649e74aaacdc14cdefb2edf32f8927422ca5635284fd05c5cdba4a146f87dc",
-      "size": 6741
+      "sha256": "141df113c94a86261f83dff63842f8297eca85924eabcd120e059f4d829d0e4e",
+      "size": 7952
     },
     {
       "path": "lib/rechnungsdruck.js",
-      "sha256": "a6e3ef8a286282abbf70a77e2ea38cea6f0013accd9c5d0405703d0024dab28d",
-      "size": 20653
+      "sha256": "919cb48cc1a3b953929638a9f2dfb2394d67f708152cf339fad47597297abe58",
+      "size": 33758
     },
     {
       "path": "lib/reports.js",
@@ -200,8 +200,8 @@
     },
     {
       "path": "lib/ui.js",
-      "sha256": "7603b500ddad7024e3dd5dbdd7931552b38445373277cc35132b7b09ad355775",
-      "size": 42790
+      "sha256": "68b0d4078fddf3966cdfac88108bc233036e3f7161f33ba3be66980a1e85fe15",
+      "size": 43184
     },
     {
       "path": "lib/updates.js",
@@ -215,8 +215,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "300f1155218f93ff08d4759cee72375cfddab106585299a6f45ccf5d9cb81f5a",
-      "size": 16602
+      "sha256": "3dda9be9d130d5f4d1ef1fef30e43b68731cd5de6dd79a913135da895aaa010b",
+      "size": 17559
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -225,18 +225,18 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "501dbd095d1144c8282a2ea6d35197b2fe55ee449c9356bcafa9abe7d2817344",
+      "sha256": "26f843af2e5544984a101091d416d18411b066e7ba2e5317b6df4e74796874fa",
       "size": 879
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "622ded6a800a163801212a806141cc7ca12264519dfd041d74a9e75c2ce53b3d",
+      "sha256": "811e97245eaae448eec4eb9f3b3b023a5b99679d98d83be22fddc5e3e9f5197f",
       "size": 13438
     },
     {
       "path": "styles.css",
-      "sha256": "6d081cb9e45eb6226dfec1953ec08936292d85bb99eed43d71c57ce417f8d62e",
-      "size": 59562
+      "sha256": "ccae111abaaefe7b8cd3f3b16d6e0f904a538070d085fca9205853c424622835",
+      "size": 63084
     },
     {
       "path": "views/anlageform.js",
@@ -285,13 +285,18 @@
     },
     {
       "path": "views/rechnungen.js",
-      "sha256": "20529b422b95a206a1c9d5319f51f3976d3b7ff357365ba366619cfafa9f920d",
-      "size": 59328
+      "sha256": "cde24b8158b87275a43efc2ee57eb1a02546311ec0e0c53f98fb503dbf2b174d",
+      "size": 43984
     },
     {
       "path": "views/rechnungseditor.js",
-      "sha256": "8198d7a363c4ea374ac530b1e6868949ea6d5e6d32b50a22c5fa98bf3bd925a6",
-      "size": 44248
+      "sha256": "7af24ddb483e2518e68530b1ae8f42c75009daaa7a7805ae8ea3573f7f561c90",
+      "size": 50930
+    },
+    {
+      "path": "views/rechnungsgestalter.js",
+      "sha256": "2f03242ea77a23c1fb5377437ad01893a2e1ea1f6e5d45f243e1c6ab5b4a9351",
+      "size": 45053
     },
     {
       "path": "views/reports.js",
@@ -330,7 +335,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "5ba982a6f0cb08ea77df364e3ff80ec181b0cc62a8a0a0585746ee44253d0ae3",
+      "sha256": "067751cafda06760bedae152a5d65e4d1ca22d053b77add36b0c84c1e28f3288",
       "size": 6905
     },
     {

@@ -10,20 +10,20 @@
  * wie im PDF (lib/rechnungsdruck.js → lib/pdfvorschau.js).
  */
 
-import { esc, $, $$, money, moneyInput, parseMoney, fmtDate, todayISO, uid, debounce } from '../lib/util.js';
+import { esc, $, $$, money, moneyInput, parseMoney, todayISO, uid, debounce, daysBetween } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, err } from '../lib/ui.js';
-import { store, sel, upsertEntity, nextInvoiceNumber } from '../lib/store.js';
+import { store, sel, commit, upsertEntity, nextInvoiceNumber } from '../lib/store.js';
 import { router, navigate } from '../lib/router.js';
 import { openMenu } from '../lib/popover.js';
 import {
   EINHEITEN, ARTEN, STEUERFAELLE, ZAHLUNGSARTEN, LAENDER, berechnen, pruefen, vollstaendig, verkaeuferAus, neuePosition,
   einheitAusText, einheitText, positionLeer, anschriftAusText, kaeuferAusKontakt, faelligkeit, zahlungsText, betragText, satzText,
-  titel as titelVon, profil as profilAus,
+  titel as titelVon, profil as profilAus, istGutschrift,
 } from '../lib/rechnung.js';
 import {
   rechnungSpeichern, entwurfLoeschen, ausstellen, vergebeneNummern, alsVorlage, produktSpeichern,
 } from '../lib/rechnungsaktionen.js';
-import { vorschauSvg, pdfZeigen } from '../lib/rechnungsdateien.js';
+import { vorschauSvg, pdfZeigen, bildWaehlen, bildAblegen, bildHolen } from '../lib/rechnungsdateien.js';
 
 const BEREICH_TITEL = { kaeufer: 'Kunde', rechnung: 'Rechnung', positionen: 'Positionen', zahlung: 'Zahlung', verkaeufer: 'Ihre Angaben' };
 
@@ -51,6 +51,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
     ? { ...structuredClone(vorlage.daten || {}), kaeufer: structuredClone(vorlage.daten?.kaeufer || {}), positionen: structuredClone(vorlage.daten?.positionen || []) }
     : structuredClone(rechnung);
   if (!Array.isArray(r.positionen)) r.positionen = [];
+  if (!Array.isArray(r.bilder)) r.bilder = [];
   r.kaeufer ??= {};
   r.kaeufer.land ??= 'DE';
   if (!r.positionen.length) r.positionen.push(neuePosition(s));
@@ -85,16 +86,20 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
         <section class="card" id="reAngaben" data-bereich="rechnung"></section>
         <section class="card" id="rePositionen" data-bereich="positionen"></section>
         <section class="card" id="reTexte"></section>
+        <section class="card" id="reBilder"></section>
         <section class="card" id="reZahlung" data-bereich="zahlung"></section>
       </div>
       <aside class="re-seitenspalte">
         <div class="card re-check" id="reCheck"></div>
+        <div class="row between re-vorschau-kopf"><span class="small muted">Vorschau</span>
+          <button type="button" class="btn sm ghost" id="reZurGestaltung">${icon('layout', 14).__raw} Aussehen ändern</button></div>
         <div class="re-vorschau" id="reVorschau" aria-label="Vorschau"></div>
       </aside>
     </div>
     <div class="re-leiste" id="reLeiste"></div>`;
 
   if (istVorlage) $('#reVorlageName', root).addEventListener('input', (e) => { vorlageName = e.target.value; });
+  $('#reZurGestaltung', root).addEventListener('click', () => navigate('rechnungen', { tab: 'gestaltung' }));
 
   /* ------------------------------------------------------------------------ */
   /* Kunde                                                                    */
@@ -245,7 +250,12 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
           <div class="field"><label for="ra_bezug">Bezieht sich auf Rechnung</label><input id="ra_bezug" data-f="bezug.nummer" value="${esc(r.bezug?.nummer || '')}" placeholder="Nummer der ursprünglichen Rechnung"></div>
           <div class="field"><label for="ra_bezugDatum">vom</label><input id="ra_bezugDatum" type="date" data-f="bezug.datum" value="${esc(r.bezug?.datum || '')}"></div>` : ''}
         </div>
+        <label class="check mt8" title="Pflicht bei Arbeiten an Haus oder Grundstück für Privatkunden (§ 14 Abs. 4 Nr. 9 UStG)">
+          <input type="checkbox" id="ra_aufbewahrung" ${r.hinweisAufbewahrung ? 'checked' : ''}>
+          <span>Arbeiten an Haus oder Grundstück für einen Privatkunden <span class="muted">(Hinweis auf die Aufbewahrungspflicht)</span></span>
+        </label>
       </div>`;
+    $('#ra_aufbewahrung', root).addEventListener('change', (e) => { r.hinweisAufbewahrung = e.target.checked; aktualisieren(); });
     $$('[data-leistung]', root).forEach((b) => b.addEventListener('click', () => {
       r.leistungArt = b.dataset.leistung;
       if (r.leistungArt === 'datum' && !r.leistungsdatum) r.leistungsdatum = r.datum || todayISO();
@@ -440,16 +450,36 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
     $$('#reTexte textarea', root).forEach(hoeheAnpassen);
   }
 
-  function zahlungZeichnen() {
+  /** Schnelltasten wie in der Buchung: Zahlungsziel in Tagen ab Rechnungsdatum. */
+  const SCHNELL = [[0, 'Sofort', 'Zahlbar sofort'], [14, '+14 T', '14 Tage ab Rechnungsdatum'], [30, '+30 T', '30 Tage ab Rechnungsdatum']];
+  const schnelltasten = () => SCHNELL.map(([t, label, title]) => `<button type="button" class="btn sm${Number(r.zahlungszielTage) === t && !r.faellig ? ' active' : ''}" data-ziel="${t}" title="${esc(title)}">${esc(label)}</button>`).join('');
+
+  /** Fälligkeit und Zahlungsziel hängen zusammen; geändert wird immer beides. */
+  function faelligZeigen() {
     const f = faelligkeit(r);
+    const feld = $('#rz_faellig', root);
+    if (feld && document.activeElement !== feld) feld.value = f || '';
+    const ziel = $('#rz_ziel', root);
+    if (ziel && document.activeElement !== ziel) ziel.value = r.zahlungszielTage ?? '';
+    const hint = $('#rz_faelligHinweis', root);
+    if (hint) hint.textContent = r.faellig ? 'liegt vor dem Rechnungsdatum' : f && r.datum ? `${Number(r.zahlungszielTage) || 0} Tage nach dem Rechnungsdatum` : '';
+    $$('[data-ziel]', root).forEach((b) => b.classList.toggle('active', Number(b.dataset.ziel) === Number(r.zahlungszielTage) && !r.faellig));
+  }
+
+  function zahlungZeichnen() {
+    const gut = istGutschrift(r);
     $('#reZahlung', root).innerHTML = `
-      <div class="card-head"><h3>${icon('euro', 16).__raw} Zahlung</h3></div>
+      <div class="card-head"><h3>${icon('euro', 16).__raw} Zahlung</h3>${gut ? '<span class="sub">Gutschrift: Sie zahlen an den Kunden</span>' : ''}</div>
       <div class="card-body">
         <div class="form-grid">
           <div class="field"><label for="rz_art">Zahlungsart</label><select id="rz_art" data-f="zahlungsart">${optionen(Object.entries(ZAHLUNGSARTEN).map(([k, z]) => [k, z.name]), r.zahlungsart || 'ueberweisung')}</select></div>
           <div class="field"><label for="rz_ziel">Zahlungsziel in Tagen</label><input id="rz_ziel" type="number" min="0" max="365" data-f="zahlungszielTage" data-zahl value="${esc(r.zahlungszielTage ?? '')}"></div>
-          ${istVorlage ? '' : `<div class="field"><label for="rz_faellig">Fällig am</label><input id="rz_faellig" type="date" data-f="faellig" value="${esc(r.faellig || '')}">
-            <span class="hint">${r.faellig ? 'von Hand gesetzt' : f ? `aus dem Zahlungsziel: ${esc(fmtDate(f))}` : ''}</span></div>`}
+          <div class="field full"><label for="rz_faellig">Fällig am</label>
+            <div class="row" style="gap:6px">
+              ${istVorlage ? '<span class="small muted" style="flex:1">ergibt sich aus dem Rechnungsdatum</span>' : `<input id="rz_faellig" type="date" value="${esc(faelligkeit(r) || '')}" style="flex:1">`}
+              ${schnelltasten()}
+            </div>
+            <span class="hint" id="rz_faelligHinweis"></span></div>
           <div class="field"><label for="rz_bereits">Bereits gezahlt (Anzahlung) €</label><input id="rz_bereits" inputmode="decimal" data-f="bereitsGezahlt" data-geld value="${esc(r.bereitsGezahlt ? moneyInput(r.bereitsGezahlt) : '')}"></div>
           <div class="field"><label for="rz_skontoT">Skonto: innerhalb von Tagen</label><input id="rz_skontoT" type="number" min="0" max="365" data-f="skontoTage" data-zahl value="${esc(r.skontoTage || '')}"></div>
           <div class="field"><label for="rz_skontoP">Skonto in %</label><input id="rz_skontoP" inputmode="decimal" data-f="skontoProzent" data-prozent value="${esc(r.skontoProzent ? String(r.skontoProzent).replace('.', ',') : '')}"></div>
@@ -458,6 +488,88 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
             <span class="hint">Leer lassen, dann bildet Kontovia den Text aus Zahlungsziel und Skonto.</span></div>
         </div>
       </div>`;
+    $$('[data-ziel]', root).forEach((b) => b.addEventListener('click', () => {
+      r.zahlungszielTage = Number(b.dataset.ziel);
+      r.faellig = '';
+      faelligZeigen();
+      zahlungsPlatzhalter();
+      aktualisieren();
+    }));
+    $('#rz_faellig', root)?.addEventListener('change', (e) => {
+      const wert = e.target.value;
+      if (!wert) r.faellig = '';
+      else if (r.datum && wert >= r.datum) { r.zahlungszielTage = daysBetween(r.datum, wert); r.faellig = ''; }
+      else r.faellig = wert;
+      faelligZeigen();
+      zahlungsPlatzhalter();
+      aktualisieren();
+    });
+    faelligZeigen();
+  }
+
+  function zahlungsPlatzhalter() {
+    const t = $('#rz_text', root);
+    if (t) t.placeholder = zahlungsText({ ...r, zahlungsbedingungen: '' }) || 'Werden aus Zahlungsziel und Skonto gebildet';
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /* Bilder dieser Rechnung                                                   */
+  /* ------------------------------------------------------------------------ */
+
+  function bilderZeichnen() {
+    const box = $('#reBilder', root);
+    const liste = r.bilder;
+    box.innerHTML = `
+      <div class="card-head"><h3>${icon('image', 16).__raw} Bilder</h3><span class="sub">etwa Fotos der Arbeit oder ein Lageplan</span><div class="spacer"></div>
+        <button type="button" class="btn sm" id="reBildNeu">${icon('plus', 14).__raw} Bild</button></div>
+      ${liste.length ? `<div class="card-body re-bilderliste">${liste.map((e) => `
+        <div class="re-rbild" data-rbild="${esc(e.id)}">
+          <div class="re-bildfeld"><span class="small muted">lädt …</span></div>
+          <div class="stack" style="flex:1;min-width:0">
+            <input data-rb="text" value="${esc(e.text || '')}" placeholder="Bildunterschrift (optional)" aria-label="Bildunterschrift">
+            <label class="re-regler">Breite <input type="range" min="20" max="165" step="1" data-rb="breite" value="${esc(e.breite || 60)}"> <span data-rbw>${esc(e.breite || 60)} mm</span></label>
+          </div>
+          <div class="re-rbild-knoepfe">
+            <button type="button" class="icon-btn" data-rb-hoch title="Weiter nach vorne" aria-label="Weiter nach vorne">${icon('up', 15).__raw}</button>
+            <button type="button" class="icon-btn" data-rb-weg title="Entfernen" aria-label="Bild entfernen">${icon('trash', 15).__raw}</button>
+          </div>
+        </div>`).join('')}
+        <p class="small muted mb0">Die Bilder stehen auf der Rechnung unter den Positionen. Die Stelle legen Sie unter Gestaltung fest.</p></div>` : ''}`;
+    $('#reBildNeu', box).addEventListener('click', bildHinzufuegen);
+    for (const e of liste) {
+      const zeile = box.querySelector(`[data-rbild="${CSS.escape(e.id)}"]`);
+      bildHolen(e.bildId).then((b) => {
+        const feld = zeile?.querySelector('.re-bildfeld');
+        if (feld) feld.innerHTML = b ? `<img src="${esc(b.url)}" alt="">` : '<span class="small muted">fehlt</span>';
+      });
+      zeile.querySelector('[data-rb="text"]').addEventListener('input', (ev) => { e.text = ev.target.value; aktualisieren(); });
+      zeile.querySelector('[data-rb="breite"]').addEventListener('input', (ev) => {
+        e.breite = Number(ev.target.value);
+        zeile.querySelector('[data-rbw]').textContent = `${e.breite} mm`;
+        aktualisieren();
+      });
+      zeile.querySelector('[data-rb-weg]').addEventListener('click', () => { r.bilder = r.bilder.filter((x) => x !== e); bilderZeichnen(); aktualisieren(); });
+      zeile.querySelector('[data-rb-hoch]').addEventListener('click', () => {
+        const i = r.bilder.indexOf(e);
+        if (i > 0) [r.bilder[i - 1], r.bilder[i]] = [r.bilder[i], r.bilder[i - 1]];
+        bilderZeichnen();
+        aktualisieren();
+      });
+    }
+  }
+
+  async function bildHinzufuegen() {
+    const datei = await bildWaehlen();
+    if (!datei) return;
+    try {
+      const meta = await bildAblegen(datei);
+      await commit('beleg.bild', (db) => { db.attachments.push(meta); }, { silent: true });
+      r.bilder.push({ id: uid('rb'), bildId: meta.id, breite: 60, text: '' });
+      bilderZeichnen();
+      aktualisieren();
+    } catch (e) {
+      err('Bild nicht übernommen', e.message);
+    }
   }
 
   /* ------------------------------------------------------------------------ */
@@ -476,11 +588,8 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
     if (el.matches('textarea')) hoeheAnpassen(el);
     if (el.dataset.f) {
       setzen(r, el.dataset.f, wertAus(el));
-      if (el.dataset.f === 'zahlungszielTage' || el.dataset.f === 'datum') {
-        const hint = $('#rz_faellig', root)?.parentElement.querySelector('.hint');
-        const f = faelligkeit(r);
-        if (hint && !r.faellig) hint.textContent = f ? `aus dem Zahlungsziel: ${fmtDate(f)}` : '';
-      }
+      if (el.dataset.f === 'zahlungszielTage') r.faellig = '';
+      if (el.dataset.f === 'zahlungszielTage' || el.dataset.f === 'datum') { faelligZeigen(); zahlungsPlatzhalter(); }
       aktualisieren();
       return;
     }
@@ -507,7 +616,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
       positionenZeichnen();
       aktualisieren();
     }
-    if (el.dataset.f === 'faellig' || el.dataset.f === 'zahlungsart') zahlungZeichnen();
+    if (el.dataset.f === 'zahlungsart' || el.dataset.f === 'art') zahlungZeichnen();
   });
 
   /* ------------------------------------------------------------------------ */
@@ -673,7 +782,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
         </div>
         <p class="mt0">Danach steht die Rechnung fest: Kontovia legt das PDF mit der E-Rechnung und die XRechnung unverändert ab.
           Ändern lässt sie sich dann nur noch durch Stornieren oder Korrigieren.</p>
-        <label class="check"><input type="checkbox" id="reBuchen" checked> Als offene Einnahme buchen${b.steuern.length > 1 ? ` (je Steuersatz eine Buchung)` : ''}</label>
+        <label class="check"><input type="checkbox" id="reBuchen" checked> ${istGutschrift(r) ? 'Als Minderung der Einnahmen buchen' : 'Als offene Einnahme buchen'}${b.steuern.length > 1 ? ` (je Steuersatz eine Buchung)` : ''}</label>
         <div id="reBuchenOpt" class="form-grid mt8">
           <div class="field"><label for="reKonto">Zahlungskonto</label><select id="reKonto">${optionen(konten.map((k) => [k.id, k.name]), konten[0]?.id || '')}</select></div>
           <div class="field"><label for="reBezahlt">Schon bezahlt am</label><input type="date" id="reBezahlt" value="${r.zahlungsart === 'bar' ? esc(r.datum || todayISO()) : ''}">
@@ -712,6 +821,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
   angabenZeichnen();
   positionenZeichnen();
   texteZeichnen();
+  bilderZeichnen();
   zahlungZeichnen();
   aktualisieren();
 }
