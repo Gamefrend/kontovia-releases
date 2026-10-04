@@ -29,6 +29,12 @@ export class Vault {
     this.header = null;
     this.lastBackupAt = 0;
     this.saving = null;
+    /** Wird mit dem Bestand gerufen, wenn er sich öffnet oder gespeichert wird (Name des Kontos, bridge.js). */
+    this.beschrifter = null;
+  }
+
+  async _beschriften(db, geoeffnet) {
+    try { await this.beschrifter?.(db, geoeffnet); } catch (err) { console.error('Konto beschriften:', err?.message); }
   }
 
   get isLocked() {
@@ -44,6 +50,7 @@ export class Vault {
     this.attachKey = await K.subKey(dek, 'kontovia/attachments/v1');
     this.header = header;
     this.db = db;
+    await this._beschriften(db, true);
   }
 
   async create(password, initialDb) {
@@ -138,6 +145,7 @@ export class Vault {
       const header = { ...this.header, savedAt: new Date().toISOString() };
       const body = await K.sealBody(this.dek, db, header);
       const buffer = K.packContainer(header, body);
+      await this._beschriften(db, false);
       await this._maybeBackup();
       await A.schreiben('dateien', TRESOR, buffer);
       this.header = header;

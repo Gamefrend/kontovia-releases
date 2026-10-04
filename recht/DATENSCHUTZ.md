@@ -8,7 +8,7 @@
   prüfen lassen. Rechtsberatung ist das hier nicht.
 -->
 
-Stand: 4. Oktober 2026, Programmversion 2.7.0
+Stand: 5. Oktober 2026, Programmversion 2.8.0
 
 ---
 
@@ -139,9 +139,20 @@ Zutun und wird hier beschrieben.
 
 ## Abmelden
 
-„Abmelden“ neben „Sperren“ entfernt Ihre Buchhaltung, die Belege, die
-Sicherungen und alle Zugänge von diesem Gerät, damit Sie sich mit einem anderen
-Konto anmelden können. In der Cloud bleibt, was dort liegt.
+„Abmelden“ neben „Sperren“ entfernt das geöffnete Konto mit Buchhaltung, Belegen,
+Sicherungen und allen Zugängen von diesem Gerät. Ist es mit Google verbunden,
+gleicht Kontovia vorher noch einmal ab. Weitere Konten auf dem Gerät bleiben
+unberührt. In der Cloud bleibt, was dort liegt.
+
+## Mehrere Konten auf einem Gerät
+
+Auf einem Gerät können mehrere Konten angemeldet sein, zum Beispiel für mehrere
+Betriebe. Jedes Konto hat sein eigenes Passwort und liegt getrennt von den anderen
+im Speicher des Browsers; beim Wechseln wird die Seite neu geladen, damit nichts
+von einem Konto in das andere gelangt. Im Klartext steht auf dem Gerät nur eine
+Liste dieser Konten mit einer Kennung, dem Namen des Betriebs und, falls
+verbunden, der Google-Adresse, damit Sie ein Konto vor dem Entsperren erkennen.
+Mit „Abmelden“ verschwindet der Eintrag.
 
 ## Google Kalender (freiwillig)
 
@@ -249,7 +260,7 @@ installieren.
   (IndexedDB), in derselben Verschlüsselung wie oben beschrieben. Browser dürfen
   solche Daten bei Platzmangel räumen. Kontovia bittet deshalb um dauerhafte
   Speicherung und zeigt unter *Einstellungen* an, ob der Browser sie gewährt hat.
-  Ihre Gerätekennung und, für höchstens zwei Minuten während einer
+  Ihre Gerätekennung, die Liste Ihrer Konten und, für höchstens zwei Minuten während einer
   Aktualisierung, die Übergabe aus „Angemeldet bleiben beim Update“ liegen immer
   im Browser.
   In Chrome und Edge lässt sich die Buchhaltung stattdessen in einem Ordner auf

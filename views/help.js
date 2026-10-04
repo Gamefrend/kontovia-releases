@@ -336,11 +336,16 @@ function cloud(root) {
         gilt dann die Regel für den Hintergrund.</p>
       </div></div>
       <div class="card mb16"><div class="card-body">
-        <h3 class="mt0">Entsperren, Sperren und Abmelden</h3>
+        <h3 class="mt0">Entsperren, Sperren, Wechseln und Abmelden</h3>
         <p><strong>Sperren</strong> schließt nur den Tresor. <strong>Abmelden</strong> (daneben in der Seitenleiste)
-        entfernt Buchhaltung, Belege und alle Zugänge von diesem Gerät, damit Sie sich mit einem anderen Konto
-        anmelden können. Ist Kontovia mit Google verbunden, gleicht es vorher ab; sonst fragt es besonders
-        deutlich nach, denn dann gäbe es Ihre Buchhaltung nur noch in einer Sicherung.</p>
+        entfernt das offene Konto mit Buchhaltung, Belegen und allen Zugängen von diesem Gerät. Ist es mit Google
+        verbunden, gleicht Kontovia vorher von selbst ab und meldet sich erst danach ab. Klappt der Abgleich nicht,
+        etwa ohne Netz, bleibt alles stehen, bis Sie entscheiden. Ohne Google-Verbindung weist Kontovia deutlich darauf hin,
+        dass es Ihre Buchhaltung dann nur noch in einer Sicherung gäbe.</p>
+        <p><strong>Mehrere Konten:</strong> Mit einem Klick auf den Namen oben in der Seitenleiste wechseln Sie zu einem
+        anderen Konto auf diesem Gerät oder fügen ein weiteres hinzu, zum Beispiel für einen zweiten Betrieb. Jedes Konto hat sein
+        eigenes Passwort und ist von den anderen getrennt. Vor dem Wechsel gleicht Kontovia ab, wenn das Konto mit Google
+        verbunden ist. Ein Google-Konto passt zu genau einem Konto auf dem Gerät.</p>
         <p class="mb0">Neben dem Passwort lassen sich unter <a data-go="settings">Einstellungen → Sicherheit</a> zwei
         weitere Wege einschalten, jeder für sich ausreichend: <strong>Fingerabdruck oder Gesicht</strong> (nur auf diesem
         Gerät, der Schlüssel bleibt im Sicherheitschip) und das <strong>Google-Konto</strong> (auf jedem Gerät; dafür liegt

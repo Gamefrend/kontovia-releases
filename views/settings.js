@@ -6,8 +6,8 @@ import {
 import { icon, modal, confirmDialog, askPassword, ok, err, warn, toast, feldHinweis } from '../lib/ui.js';
 import { store, sel, commit, saveNow, setDb, verifyAudit, lockedUntil } from '../lib/store.js';
 import { refresh, navigate, router } from '../lib/router.js';
-import { applyTheme, lockNow } from '../app.js';
-import { abmelden, zugaengeKarte } from '../lib/zugaenge.js';
+import { applyTheme, lockNow, appInfo } from '../app.js';
+import { abmelden, zugaengeKarte, kontoSchluessel } from '../lib/zugaenge.js';
 import { renderCloudCard, renderUpdateCard } from './cloudpanel.js';
 import { renderCalendarCard } from './calendarsync.js';
 import { table, mountTables } from '../lib/table.js';
@@ -632,7 +632,7 @@ export async function runBackup() {
     if (res) {
       ok('Sicherung erstellt', `${bytes(res.bytes)} · ${res.path}`);
       // Für den Hinweis nach dem Entsperren (app.js): wann zuletzt gesichert wurde, je Gerät.
-      try { localStorage.setItem('kontovia.vollsicherung', String(Date.now())); } catch { /* ohne Gedächtnis eben nicht */ }
+      try { localStorage.setItem(kontoSchluessel('vollsicherung', appInfo.konto), String(Date.now())); } catch { /* ohne Gedächtnis eben nicht */ }
     }
   } catch (e) {
     err('Sicherung fehlgeschlagen', e.message);

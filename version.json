@@ -1,12 +1,12 @@
 {
-  "version": "2.7.0",
-  "released": "2026-10-04T14:52:32.271Z",
-  "notes": "Aufgaben mit Text, Bildern und Unteraufgaben\n\n- Aufgaben können jetzt formatierten Text mit Überschriften, Listen und Links enthalten, dazu Bilder (auch per Strg+V) und Unteraufgaben, die Sie schon in der Liste abhaken.\n- Eine Aufgabe lässt sich mit Terminen, Buchungen, Kontakten und Rechnungen verknüpfen. Dort steht sie dann auch, und von dort legen Sie gleich eine neue an. Aufgaben mit Datum erscheinen im Kalender.\n- Wie weit die Aufgabenliste vorausschaut, wählen Sie selbst: 7 Tage, 4 Wochen, 1 Monat oder einen eigenen Zeitraum. Die Zeile zum schnellen Anlegen ist weg, „Aufgabe“ oben rechts reicht.\n- Neu: Mit Strg+K durchsuchen Sie alles auf einmal, also Buchungen, Rechnungen, Kontakte, Termine, Aufgaben und Einstellungen. Auf dem Handy öffnet das Suchsymbol oben die Suche.\n- Buchungen, die nicht zum Betrieb gehören, heißen jetzt „privat“ statt „nicht gelistet“. An der Wirkung ändert sich nichts.",
+  "version": "2.8.0",
+  "released": "2026-10-04T15:19:56.711Z",
+  "notes": "Mehrere Konten und Abmelden mit Abgleich\n\n- Auf einem Gerät können mehrere Konten angemeldet sein, etwa für zwei Betriebe. Ein Klick auf den Namen oben in der Seitenleiste wechselt das Konto oder fügt eines hinzu.\n- Jedes Konto hat sein eigenes Passwort und bleibt von den anderen getrennt. Vor dem Wechsel gleicht Kontovia ab, wenn das Konto mit Google verbunden ist.\n- Beim Abmelden gleicht Kontovia zuerst mit Google ab. Klappt das nicht, etwa ohne Netz, entscheiden Sie: noch einmal versuchen, abbrechen oder trotzdem abmelden.\n- Das Eintippen von „ABMELDEN“ entfällt. Abmelden betrifft nur das offene Konto, die anderen bleiben erhalten.\n- Auf dem Sperrbildschirm sehen Sie, zu welchem Konto das Passwort gehört, und wechseln dort bei Bedarf das Konto.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "9fdd6e219bac9b84cf4e6a317516d02a2b4e3baa46bcbf820b8979669e484855",
-      "size": 64483
+      "sha256": "2e26ece3b0ddb273dc13165ef1aba4c0902677cf9c370b9d1a8ea76470b0ef97",
+      "size": 66752
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -255,8 +255,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "72244d5c9246594807d2f7800f7ab5f01d8a91ed3d517df97f98d237c9ebcc61",
-      "size": 20433
+      "sha256": "7569b6e73c5cac1fbd769d8e91411c00f6ba43be45a2a67942d1ec9d13ce25f7",
+      "size": 21326
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -265,23 +265,23 @@
     },
     {
       "path": "lib/zugaenge.js",
-      "sha256": "cdad4d741c11621b5ab27c6a02a57349484236d77bef2a62c02ffc3d1c56849e",
-      "size": 10304
+      "sha256": "421fd033f743c0da0d2319056002dfaadc3fcf2e5bf4b15954e99da39f5b9157",
+      "size": 21082
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "8805e0d9caede9e12bda509f77ef830bc12a70415d897c7aca2ff9e16129437b",
+      "sha256": "5b53704253e9065fdbe1c9b7ec761d5bd90f6eb99c5cbb75f3e5cb88a3f9eafc",
       "size": 879
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "840da696a6ca4544f9b0dc1d065ccd1cd1c0d08fa015f4bb473c9aa4a3f9c669",
-      "size": 15585
+      "sha256": "4d5e2b6babeee08649b27977f0c462521059f338c42a3afe426171bed0225ec6",
+      "size": 16249
     },
     {
       "path": "styles.css",
-      "sha256": "c6305f6e3d19475c445700fa98520587e677177548b836ce6ef9f92624768249",
-      "size": 76513
+      "sha256": "f90c7e483d7854507b51fcdc9581fb2460057b18257319118b1cf93f7ccb0bed",
+      "size": 78755
     },
     {
       "path": "views/anlageform.js",
@@ -320,8 +320,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "9789aa28f6f57c73e55df14aa7e32af944bd56b19bef87362efb9f0a90277115",
-      "size": 42946
+      "sha256": "5dfee7bf8cfc3dbe588b640622e1dcfe40a2eb56b81d50d9ddb9351779519c4a",
+      "size": 43541
     },
     {
       "path": "views/master.js",
@@ -350,8 +350,8 @@
     },
     {
       "path": "views/settings.js",
-      "sha256": "8536fc285ec986c2619cdb201b8204d54f545e78da803ce501f312af44672be8",
-      "size": 37253
+      "sha256": "c252c5838651be25706d9e2ccb39f80c87070a0a88a79d076c456f2985acd7be",
+      "size": 37302
     },
     {
       "path": "views/spruenge.js",
@@ -375,12 +375,12 @@
     },
     {
       "path": "web/ablage.js",
-      "sha256": "b3dcb462e8051c4494117f49db8d1818e165b361ae03003bc2da04bc35523e07",
-      "size": 23541
+      "sha256": "bfc431cabd75a244d90acdafc48c660faf4af7119d260a2c537692b385462ff3",
+      "size": 26353
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "0df862c3ff48220b5a1d28e97513002ad9dad5b16151fd9461921e8efca5c6cd",
+      "sha256": "664c4138ee19d3eb874bf9b83166f776f73d53f0e06eeffb40543a5a4a90c36f",
       "size": 6905
     },
     {
@@ -390,8 +390,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "6b21d9ad48b01127f55a0af4e61cbc318d72723cf08610b47f7680c685a9a7c0",
-      "size": 45289
+      "sha256": "2d3b90008ed0c9f7cf62103b6e591e2bd880265136fe46088796e86a5a8758e0",
+      "size": 47989
     },
     {
       "path": "web/cloud.js",
@@ -439,6 +439,11 @@
       "size": 10300
     },
     {
+      "path": "web/konten.js",
+      "sha256": "566ef763c4b1cd73e7cb96a08ccb1f5bb2e34151a554d8887d6755cdc02cb1a1",
+      "size": 7060
+    },
+    {
       "path": "web/mobil.js",
       "sha256": "69556d1b97555038de1a448605bb8cc7dbcf95bf84be1904a9f73f1f416743c3",
       "size": 6192
@@ -470,8 +475,8 @@
     },
     {
       "path": "web/tresor.js",
-      "sha256": "f4e59e8f6a53f5d1a88150d2302fec2803964a6b09ffaba6805bacb655079c92",
-      "size": 12563
+      "sha256": "5545a4e14c4eb0df5b4f45410e2473892d15f2a30c7723b5fe19110d918ea94b",
+      "size": 12950
     },
     {
       "path": "web/uebergabe.js",

@@ -19,6 +19,7 @@ import * as G from './gcal.js';
 import * as Z from './sperre.js';
 import * as UE from './uebergabe.js';
 import * as EN from './entsperrung.js';
+import * as KO from './konten.js';
 import BUILTIN from './cloudconfig.js';
 import * as D from './dateien.js';
 import { drucken } from './druck.js';
@@ -42,6 +43,11 @@ const googleRueckkehr = nurGoogleFenster ? null : G.rueckkehrAusAdresse();
 if (!nurGoogleFenster) I.starten({ toast });
 
 const vault = new Vault(U.VERSION);
+/* Das Konto trägt den Namen des Betriebs und, wenn verbunden, die Google-Adresse; so erkennt man es vor dem Entsperren wieder. */
+vault.beschrifter = (db, geoeffnet) => KO.beschriften({
+  name: db?.settings?.companyName || db?.settings?.ownerName,
+  email: db?.cloud?.state?.firebase?.email || '',
+}, { geoeffnet });
 const cloud = new Cloud(vault, { zeigeCode });
 const gcal = new G.GoogleCalendar(vault, { clientId: BUILTIN.googleWeb?.clientId || '' });
 gcal.rueckkehr(googleRueckkehr);
@@ -174,7 +180,8 @@ function nachSperre(reason) {
   if (lockTimer) clearTimeout(lockTimer);
   lockTimer = null;
   restartAutoSync();
-  send('locked', { reason });
+  // Beim Konto-Wechsel lädt die Oberfläche die Seite gleich neu; ein Sperrbildschirm dazwischen flackerte nur.
+  if (reason !== 'konto-wechsel') send('locked', { reason });
 }
 
 /* Ruhezustand und Bildschirmsperre (sperre.js). */
@@ -387,22 +394,38 @@ async function mitSchluesselEntsperrt(dek) {
   return kopie(fuerOberflaeche(vault.db));
 }
 
-/** Löscht von diesem Gerät alles, was zur Buchhaltung gehört (Abmelden). */
+/**
+ * Löscht das offene Konto von diesem Gerät (Abmelden): Buchhaltung, Belege,
+ * Sicherungen und Zugänge. Andere Konten auf dem Gerät bleiben unberührt.
+ * @returns {Promise<{naechstes:string|null}>} welches Konto danach offen ist
+ */
 async function geraetLeeren() {
+  const id = KO.aktivId();
   await vault.saving?.catch(() => {});
   await cloud.anmeldungVerwerfen().catch(() => {});
   if (!vault.isLocked) vault.lock();
   nachSperre('abmelden');
   await UE.verwerfen().catch(() => {});
   await A.geraetLeeren();
+  const naechstes = await KO.aktivEntfernen();
   try {
     for (const k of Object.keys(localStorage)) {
-      // Das Erscheinungsbild gehört zum Gerät, alles andere zur Buchhaltung.
-      if (k.startsWith('kontovia.') && k !== 'kontovia.thema') localStorage.removeItem(k);
+      if (!k.startsWith('kontovia.')) continue;
+      // Das Erscheinungsbild gehört zum Gerät. Merker je Konto (….<Konto>) gehen mit dem Konto;
+      // alles Übrige bleibt, solange es noch ein anderes Konto gibt.
+      if (k.endsWith(`.${id}`) || (!naechstes && k !== 'kontovia.thema')) localStorage.removeItem(k);
     }
   } catch { /* ohne Speicher gibt es nichts zu löschen */ }
   try { window.name = ''; } catch { /* egal */ }
-  return true;
+  return { naechstes };
+}
+
+/** Sperrt für den Wechsel zu einem anderen Konto, ohne dass die Oberfläche einen Sperrbildschirm zeigt. */
+async function fuerKontowechselSperren() {
+  await vault.saving?.catch(() => {});
+  await cloud.anmeldungVerwerfen().catch(() => {});
+  if (!vault.isLocked) vault.lock();
+  nachSperre('konto-wechsel');
 }
 
 const api = {
@@ -420,6 +443,7 @@ const api = {
       isDev: false,
       deviceId: device.id,
       deviceName: device.name,
+      konto: KO.aktivId(),
     }), { needsUnlock: false }),
     openDataFolder: handle(async () => {
       throw new Error('Einen Ordner öffnet der Browser nicht selbst. Wo Ihre Buchhaltung liegt, steht unter Einstellungen → Sicherung und Speicherort.');
@@ -435,7 +459,7 @@ const api = {
       return res.text();
     }, { needsUnlock: false }),
     activity: async () => { resetLockTimer(); return true; },
-    /** Vom Gerät abmelden: Buchhaltung, Belege, Sicherungen und Zugänge hier entfernen. Der Aufrufer hat vorher abgeglichen und bestätigen lassen. */
+    /** Das offene Konto von diesem Gerät abmelden: Buchhaltung, Belege, Sicherungen und Zugänge hier entfernen. Der Aufrufer hat vorher abgeglichen. */
     abmelden: handle(async () => geraetLeeren(), { needsUnlock: false }),
     bildschirmsperre: handle(async () => Z.bildschirmStatus(), { needsUnlock: false }),
     bildschirmsperreSetzen: handle(async (an) => {
@@ -467,7 +491,9 @@ const api = {
       const speicher = await ortBeschreiben();
       // Ohne Zugriff auf den Ordner lässt sich nicht sagen, ob dort ein Tresor liegt.
       const exists = speicher.art === 'ordner' && speicher.zugriff !== 'granted' ? null : await vault.exists();
-      return { exists, locked: vault.isLocked, autoLockMinutes, speicher, fortsetzen: !!fortsetzen };
+      // Eine Buchhaltung aus der Zeit vor den Konten: jetzt in die Liste aufnehmen.
+      if (exists && KO.uebersicht().ausstehend) await KO.beschriften({}).catch(() => {});
+      return { exists, locked: vault.isLocked, autoLockMinutes, speicher, fortsetzen: !!fortsetzen, konten: KO.uebersicht() };
     }, { needsUnlock: false }),
     create: handle(async (password, settings) => {
       if (typeof password !== 'string' || password.length < 10) throw new Error('Das Passwort muss mindestens 10 Zeichen haben.');
@@ -680,6 +706,27 @@ const api = {
       sperreBeobachten();
       return kopie(fuerOberflaeche(db));
     }, { needsUnlock: false }),
+  },
+
+  /* Mehrere Konten auf einem Gerät (konten.js). Gewechselt wird mit einem Neustart der Seite, den die Oberfläche auslöst. */
+  konten: {
+    liste: handle(async () => KO.uebersicht(), { needsUnlock: false }),
+    /** Zu einem anderen Konto wechseln. Der Aufrufer hat vorher abgeglichen und lädt danach neu. */
+    wechseln: handle(async (id) => {
+      await fuerKontowechselSperren();
+      await KO.wechseln(String(id));
+      return true;
+    }, { needsUnlock: false }),
+    /** Ein leeres Konto öffnen, in dem eine neue Buchhaltung angelegt oder geladen wird. */
+    hinzufuegen: handle(async () => {
+      await fuerKontowechselSperren();
+      await KO.neu();
+      return true;
+    }, { needsUnlock: false }),
+    /** Das Hinzufügen abbrechen und zum Konto davor zurückkehren. */
+    zurueck: handle(async () => KO.ausstehendVerwerfen(), { needsUnlock: false }),
+    /** Gehört dieses Google-Konto schon zu einem anderen Konto auf diesem Gerät? Dessen Name oder null. */
+    googleBelegt: handle(async (email) => KO.googleBelegt(String(email ?? '')), { needsUnlock: false }),
   },
 
   /* Speicherort: im Browser (IndexedDB) oder in einem Ordner auf dem Gerät (ablage.js). */
@@ -942,6 +989,8 @@ if (nurGoogleFenster) {
   startFehler(fehlt);
 } else {
   Object.assign(device, await geraetLaden());
+  // Welches Konto offen ist, steht vor allem anderen fest: die Ablage liest nur dessen Datenbank.
+  await KO.laden().catch((e) => console.error('Konten:', e));
   await A.speicherortLaden().catch((e) => console.error('Speicherort:', e));
   fortsetzen = await UE.abholen({ version: U.VERSION }).catch(() => null);
   // Nur für den Start gedacht: wer nicht gleich weitermacht, braucht das Passwort.

@@ -154,6 +154,13 @@ table.data td, .help, .notice, .stat .value, .modal-body pre { user-select: text
 }
 .brand-name { font-weight: 600; letter-spacing: -.01em; font-size: 15px; line-height: 1.25; }
 .brand-sub { font-size: 12px; color: var(--muted); line-height: 1.3; }
+.brand-wechsel { width: 100%; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  padding: 6px 8px; margin: -6px 0; border-radius: var(--radius-sm); min-width: 0; }
+.brand-wechsel:hover, .brand-wechsel[aria-expanded="true"] { background: var(--surface-2); }
+.brand-wechsel:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.brand-text { flex: 1; min-width: 0; }
+.brand-text .brand-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brand-pfeil { flex: none; color: var(--muted); }
 
 /* Der eine Hauptknopf: eine neue Buchung. */
 .cta {
@@ -1280,3 +1287,22 @@ textarea.invalid { border-color: var(--neg); }
   .such-tipp, .such-fuss { display: none; }
   .modal-backdrop:has(.modal.suche) { padding-top: calc(env(safe-area-inset-top) + 12px); }
 }
+
+/* Mehrere Konten auf einem Gerät (2.8) */
+.pop.konten-menu { min-width: 260px; max-width: 320px; padding: 6px; }
+.konten-opt { gap: 10px; padding: 7px 10px 7px 8px; }
+.konten-opt .menu-label { display: flex; flex-direction: column; line-height: 1.3; }
+.konten-opt .menu-sub { margin-left: 0; font-size: 12px; font-weight: 400; overflow: hidden; text-overflow: ellipsis; }
+.konten-bild { width: 28px; height: 28px; border-radius: 8px; flex: none; display: grid; place-items: center;
+  background: var(--surface-3); color: var(--text-2); font-weight: 600; font-size: 13px; }
+.konten-bild.neu { background: transparent; border: 1px dashed var(--border-strong); }
+.konten-opt[aria-pressed="true"] .konten-bild, .konten-chip[aria-pressed="true"] .konten-bild { background: var(--accent); color: var(--accent-text); }
+.konten-wahl { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 10px; }
+.konten-chip { display: inline-flex; align-items: center; gap: 8px; max-width: 100%; padding: 4px 12px 4px 5px; border-radius: 999px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
+.konten-chip span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.konten-chip:hover:not(:disabled) { border-color: var(--border-strong); background: var(--surface-2); }
+.konten-chip[aria-pressed="true"] { border-color: var(--accent); cursor: default; }
+.konten-chip .konten-bild { width: 24px; height: 24px; border-radius: 50%; font-size: 12px; }
+.setup-zurueck { position: absolute; top: 12px; left: 12px; }
+.gate-card { position: relative; }

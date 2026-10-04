@@ -25,12 +25,22 @@
  * nur die Gerätekennung liegt, wie unter Windows, im Klartext.
  */
 
+/** Die Datenbank des Geräts; darin liegt auch die erste Buchhaltung („haupt“). */
 const DB_NAME = 'kontovia';
 const DB_VERSION = 1;
+/** Die erste Buchhaltung eines Geräts: liegt wie vor der Kontenverwaltung in der Datenbank des Geräts. */
+export const HAUPTKONTO = 'haupt';
+/** Name der Datenbank, in der die Buchhaltung eines Kontos liegt. */
+export const kontoDatenbank = (id) => (!id || id === HAUPTKONTO ? DB_NAME : `${DB_NAME}-k-${id}`);
 export const STORES = ['dateien', 'belege', 'sicherungen'];
 
-/** Einträge, die immer im Browser bleiben: Sie gehören zu diesem Gerät, nicht zur Buchhaltung. */
-const NUR_IM_BROWSER = new Set(['geraet', 'speicherort', 'uebergabe', 'biometrie', 'entsperrung-google']);
+/**
+ * Einträge, die immer im Browser bleiben: Sie gehören zu diesem Gerät, nicht zur
+ * Buchhaltung. Je Konto: Speicherort, Übergabe, Biometrie, Merker für Google.
+ */
+const NUR_IM_BROWSER = new Set(['geraet', 'konten', 'speicherort', 'uebergabe', 'biometrie', 'entsperrung-google']);
+/** Gehören zum Gerät, nicht zu einem Konto: Gerätekennung und die Liste der Konten. */
+const GERAET_GLOBAL = new Set(['geraet', 'konten']);
 /** Was aus dem Bereich „dateien“ in den Ordner gehört. */
 const DATEIEN_IM_ORDNER = new Set(['kontovia.tresor', 'sync-basis.bin']);
 const BELEG_ID = /^[a-f0-9]{32}$/;
@@ -41,12 +51,12 @@ const SICHERUNG = /^[\w.-]{1,120}\.tresor$/;
 /* Unterbau: IndexedDB                                                         */
 /* -------------------------------------------------------------------------- */
 
-let dbPromise = null;
+const dbPromises = new Map();
 
-function oeffnen() {
-  if (dbPromise) return dbPromise;
-  dbPromise = new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
+function oeffnen(name = DB_NAME) {
+  if (dbPromises.has(name)) return dbPromises.get(name);
+  const promise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(name, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
       for (const s of STORES) if (!db.objectStoreNames.contains(s)) db.createObjectStore(s);
@@ -54,20 +64,21 @@ function oeffnen() {
     req.onsuccess = () => {
       const db = req.result;
       // Ein anderes Fenster mit neuerer Fassung will umbauen: Platz machen.
-      db.onversionchange = () => { db.close(); dbPromise = null; };
+      db.onversionchange = () => { db.close(); dbPromises.delete(name); };
       resolve(db);
     };
     req.onerror = () => {
-      dbPromise = null;
+      dbPromises.delete(name);
       reject(new Error('Der Speicher des Browsers ist nicht verfügbar. Im privaten Modus kann Kontovia nichts ablegen.'));
     };
     req.onblocked = () => reject(new Error('Kontovia ist noch in einem anderen Fenster mit einer älteren Fassung geöffnet.'));
   });
-  return dbPromise;
+  dbPromises.set(name, promise);
+  return promise;
 }
 
-function vorgang(store, mode, fn) {
-  return oeffnen().then((db) => new Promise((resolve, reject) => {
+function vorgang(name, store, mode, fn) {
+  return oeffnen(name).then((db) => new Promise((resolve, reject) => {
     // „strict“: der Browser meldet erst Erfolg, wenn die Daten wirklich auf
     // dem Datenträger stehen – bei einer Buchhaltung die richtige Wahl.
     const tx = db.transaction(store, mode, { durability: 'strict' });
@@ -83,27 +94,47 @@ function vorgang(store, mode, fn) {
 /** Größe eines Eintrags: Uint8Array oder {bytes}. */
 const groesse = (v) => v?.byteLength ?? v?.bytes?.byteLength ?? 0;
 
-const indexedDb = {
-  art: 'browser',
-  lesen: (store, key) => vorgang(store, 'readonly', (os) => os.get(key)),
-  schreiben: (store, key, value) => vorgang(store, 'readwrite', (os) => { os.put(value, key); }),
-  /** Mehrere Einträge in einer einzigen Transaktion – alles oder nichts. */
-  schreibenMehrere: (store, eintraege) => vorgang(store, 'readwrite', (os) => { for (const [k, v] of eintraege) os.put(v, k); }),
-  loeschen: (store, key) => vorgang(store, 'readwrite', (os) => { os.delete(key); }),
-  schluessel: (store) => vorgang(store, 'readonly', (os) => os.getAllKeys()),
-  umfang: (store) => vorgang(store, 'readonly', (os) => new Promise((resolve, reject) => {
-    let bytes = 0;
-    let count = 0;
-    const req = os.openCursor();
-    req.onsuccess = () => {
-      const c = req.result;
-      if (!c) { resolve({ bytes, count }); return; }
-      bytes += groesse(c.value);
-      count++;
-      c.continue();
-    };
-    req.onerror = () => reject(req.error);
-  })),
+/** Die IndexedDB-Datenbank `name` als Unterbau. */
+function indexedDbFuer(name) {
+  return {
+    art: 'browser',
+    datenbank: name,
+    lesen: (store, key) => vorgang(name, store, 'readonly', (os) => os.get(key)),
+    schreiben: (store, key, value) => vorgang(name, store, 'readwrite', (os) => { os.put(value, key); }),
+    /** Mehrere Einträge in einer einzigen Transaktion – alles oder nichts. */
+    schreibenMehrere: (store, eintraege) => vorgang(name, store, 'readwrite', (os) => { for (const [k, v] of eintraege) os.put(v, k); }),
+    loeschen: (store, key) => vorgang(name, store, 'readwrite', (os) => { os.delete(key); }),
+    schluessel: (store) => vorgang(name, store, 'readonly', (os) => os.getAllKeys()),
+    umfang: (store) => vorgang(name, store, 'readonly', (os) => new Promise((resolve, reject) => {
+      let bytes = 0;
+      let count = 0;
+      const req = os.openCursor();
+      req.onsuccess = () => {
+        const c = req.result;
+        if (!c) { resolve({ bytes, count }); return; }
+        bytes += groesse(c.value);
+        count++;
+        c.continue();
+      };
+      req.onerror = () => reject(req.error);
+    })),
+  };
+}
+
+const indexedDb = indexedDbFuer(DB_NAME);
+
+/** Die echten Datenbanken des Browsers; die Prüfungen setzen hier Nachbildungen ein. */
+const echteDatenbanken = {
+  oeffnen: indexedDbFuer,
+  async loeschen(name) {
+    try { (await dbPromises.get(name))?.close(); } catch { /* war nie offen */ }
+    dbPromises.delete(name);
+    if (typeof indexedDB === 'undefined') return;
+    await new Promise((resolve) => {
+      const req = indexedDB.deleteDatabase(name);
+      req.onsuccess = req.onerror = req.onblocked = () => resolve();
+    });
+  },
 };
 
 /* -------------------------------------------------------------------------- */
@@ -279,6 +310,9 @@ export function ordnerUnterbau(root) {
 /* -------------------------------------------------------------------------- */
 
 let browser = indexedDb;
+/** Hier liegt, was zum Gerät gehört (Gerätekennung, Liste der Konten); nie im Ordner. */
+let geraet = indexedDb;
+let datenbanken = echteDatenbanken;
 let ordner = null;
 /** Läuft ein Umzug, warten Schreibzugriffe, bis er fertig ist (dann gilt der neue Ort). */
 let umzug = null;
@@ -286,7 +320,10 @@ let umzug = null;
 let laufend = 0;
 let ruhig = [];
 
-const unterbau = (store, key) => (ordner && !(store === 'dateien' && NUR_IM_BROWSER.has(String(key))) ? ordner : browser);
+const unterbau = (store, key) => {
+  if (store === 'dateien' && GERAET_GLOBAL.has(String(key))) return geraet;
+  return ordner && !(store === 'dateien' && NUR_IM_BROWSER.has(String(key))) ? ordner : browser;
+};
 const warten = async () => { while (umzug) await umzug.catch(() => {}); };
 
 async function schreibend(fn) {
@@ -331,9 +368,40 @@ export function umfang(store) {
  * Für die Prüfungen ohne Browser: einen anderen Unterbau für den Bereich
  * „Browser“ einsetzen (etwa speicherImArbeitsspeicher()).
  */
-export function browserUnterbauSetzen(u) {
+export function browserUnterbauSetzen(u, datenbankenNachbildung = null) {
   browser = u || indexedDb;
+  geraet = browser;
+  datenbanken = datenbankenNachbildung || echteDatenbanken;
   ordner = null;
+}
+
+/**
+ * Wählt das Konto, dessen Buchhaltung gelesen und geschrieben wird. Jedes Konto
+ * hat seine eigene Datenbank; die Daten eines Kontos kommen so nie mit denen
+ * eines anderen in Berührung. Gilt bis zum nächsten Aufruf (Neustart der Seite).
+ */
+export function kontoSetzen(id) {
+  browser = id === HAUPTKONTO || !id ? geraet : datenbanken.oeffnen(kontoDatenbank(id));
+  ordner = null;
+}
+
+/**
+ * Löscht die Datenbank eines Kontos, das nicht (mehr) gebraucht wird. Die
+ * Gerätedatenbank bleibt, sie hält auch die Liste der Konten: dort werden nur
+ * die Einträge des Kontos „haupt“ entfernt.
+ */
+export async function kontoLoeschen(id) {
+  if (!id || id === HAUPTKONTO) {
+    const db = geraet;
+    for (const s of STORES) {
+      for (const k of await db.schluessel(s)) {
+        if (s === 'dateien' && GERAET_GLOBAL.has(String(k))) continue;
+        await db.loeschen(s, k);
+      }
+    }
+    return;
+  }
+  await datenbanken.loeschen(kontoDatenbank(id));
 }
 
 /** Ein Unterbau im Arbeitsspeicher, mit derselben Schnittstelle wie IndexedDB (für die Prüfungen). */
@@ -393,7 +461,7 @@ export async function zugriffErbitten() {
 
 /**
  * Abmelden: entfernt alles aus dem Browser, was zu dieser Buchhaltung gehört.
- * Nur die Gerätekennung bleibt. Ein gewählter Ordner wird vergessen; die
+ * Nur die Gerätekennung und die Liste der Konten bleiben. Ein gewählter Ordner wird vergessen; die
  * Dateien darin bleiben unberührt.
  */
 export function geraetLeeren() {
@@ -401,7 +469,7 @@ export function geraetLeeren() {
     ordner = null;
     for (const s of STORES) {
       for (const k of await browser.schluessel(s)) {
-        if (s === 'dateien' && k === 'geraet') continue;
+        if (s === 'dateien' && GERAET_GLOBAL.has(String(k))) continue;
         await browser.loeschen(s, k);
       }
     }

@@ -13,7 +13,7 @@ import { closePopover, openPopover } from './lib/popover.js';
 import { scope } from './lib/prefs.js';
 import { startCalendarSync, stopCalendarSync } from './lib/gcalsync.js';
 import { VERSIONEN } from './lib/versionen.js';
-import { abmelden, entsperrWege } from './lib/zugaenge.js';
+import { abmelden, entsperrWege, kontenMenue, kontenAufSperrbildschirm, nachrichtHolen, kontoName, kontoSchluessel } from './lib/zugaenge.js';
 import { feedbackOeffnen, entwicklerKlick } from './lib/feedback.js';
 import { sucheOeffnen, SUCHE_KUERZEL } from './lib/suche.js';
 
@@ -109,6 +109,8 @@ async function boot() {
     setDevice(appInfo.deviceId);
   } catch { /* Standardwerte behalten */ }
   const status = await api.vault.status();
+  // Was der Vorgang vor dem Neuladen sagen wollte (Abmelden, Konto gewechselt).
+  nachricht = nachrichtHolen();
   // Web-Fassung: zurück von einer Anmeldung per Weiterleitung zu Google?
   const rm = await api.cloud.rueckmeldung?.().catch(() => null);
   if (rm?.fehler && !rm.abgebrochen) err('Anmeldung bei Google', rm.fehler);
@@ -116,7 +118,11 @@ async function boot() {
   // fehlender Ordner ist kein Grund, still eine neue Buchhaltung anzufangen.
   if (status.speicher?.art === 'ordner' && status.speicher.zugriff !== 'granted') { renderOrdnerZugriff(status.speicher); return; }
   if (status.speicher?.art === 'ordner' && !status.exists) { renderOrdnerFehlt(status.speicher); return; }
-  if (!status.exists) { renderSetup(); return; }
+  if (!status.exists) {
+    renderSetup(status.konten);
+    if (nachricht) toast('Abgemeldet', nachricht, 'ok', 7000);
+    return;
+  }
   // Eben aus dem Programm heraus aktualisiert: weiter ohne Passwort. Der
   // Startbildschirm sagt schon vorher, was gerade geschieht.
   if (status.fortsetzen) {
@@ -143,8 +149,11 @@ async function boot() {
     ? `Bei Google angemeldet als ${rm.email || 'Ihr Konto'}. Entsperren Sie Kontovia, um die Verbindung zu speichern.`
     : status.fortsetzen
       ? 'Kontovia wurde aktualisiert. Bitte melden Sie sich dieses eine Mal mit Ihrem Passwort an.'
-      : '');
+      : nachricht);
 }
+
+/** Was der Vorgang vor dem Neuladen sagen wollte; einmalig, wird beim Start gesetzt. */
+let nachricht = '';
 
 /**
  * Erster Start nach einer Aktualisierung aus dem Programm heraus: Die
@@ -224,8 +233,11 @@ function passwordScore(pw) {
   return { score: 100, label: 'sehr stark', color: 'var(--pos)' };
 }
 
-function renderSetup() {
+function renderSetup(konten = null) {
   let step = 0;
+  /** Ein weiteres Konto wird hinzugefügt: Es gibt ein Konto, zu dem man zurückkehren kann. */
+  const weiteres = !!(konten?.ausstehend && konten.konten.length);
+  const vorher = konten?.konten.find((k) => k.id === konten.zuletzt) || konten?.konten[0];
   const data = {
     companyName: '', ownerName: '', street: '', zip: '', city: '',
     taxNumber: '', vatId: '', taxOffice: '',
@@ -256,6 +268,16 @@ function renderSetup() {
       <div class="small muted">Haben Sie Kontovia unter Windows oder schon in einem Ordner auf diesem Gerät
       benutzt? Öffnen Sie diesen Ordner; Kontovia arbeitet dann direkt darin.</div></div>
       <button class="btn" id="o_oeffnen">${icon('folder', 15).__raw} Ordner öffnen</button></div>`);
+
+  /** Dieses Google-Konto gehört auf diesem Gerät schon zu einem anderen Konto: nicht zweimal anlegen. */
+  async function schonVergeben(st) {
+    const n = st?.email ? await api.konten.googleBelegt(st.email).catch(() => null) : null;
+    if (!n) return false;
+    api.cloud.signinCancel().catch(() => {});
+    anmeldung = null;
+    err('Dieses Google-Konto ist schon da', `Es gehört auf diesem Gerät bereits zu „${n}“. Wechseln Sie zu diesem Konto, statt es ein zweites Mal anzulegen.`);
+    return true;
+  }
 
   const anmeldeKasten = () => {
     if (anmeldung && !anmeldung.vorhanden) {
@@ -316,6 +338,7 @@ function renderSetup() {
       wartet = false;
       // Abgebrochen, während die Antwort unterwegs war: nichts zurückbehalten.
       if (abgebrochen) { api.cloud.signinCancel().catch(() => {}); return; }
+      if (await schonVergeben(st)) { kastenZeichnen(); return; }
       anmeldung = st;
       if (st.vorhanden) {
         collect();
@@ -334,7 +357,8 @@ function renderSetup() {
 
   const bodies = [
     () => html`
-      <h2>Willkommen bei Kontovia</h2>
+      <h2>${weiteres ? 'Weiteres Konto hinzufügen' : 'Willkommen bei Kontovia'}</h2>
+      ${weiteres ? raw(`<p class="small muted" style="margin:-6px 0 12px">Jedes Konto hat sein eigenes Passwort und seine eigene Buchhaltung. Die bisherigen Konten bleiben, wie sie sind.</p>`) : ''}
       <p class="lead">Ihre Buchhaltung bleibt auf diesem Gerät, verschlüsselt mit
       Ihrem Passwort. Es gibt kein Benutzerkonto beim Hersteller und keine Telemetrie; Ihre
       Buchhaltung verlässt das Gerät nur, wenn Sie den Cloud-Abgleich einschalten. Zuerst ein
@@ -434,6 +458,7 @@ function renderSetup() {
     app.innerHTML = html`
       <div class="gate">
         <div class="gate-card wide">
+          ${weiteres ? raw(`<button type="button" class="btn ghost sm setup-zurueck" id="setupZurueck">${icon('left', 14).__raw} Zurück zu „${esc(kontoName(vorher))}“</button>`) : ''}
           <div class="gate-logo">K</div>
           ${raw(stepsHtml())}
           <div id="g_box"></div>
@@ -447,6 +472,10 @@ function renderSetup() {
       </div>`;
 
     kastenZeichnen();
+    $('#setupZurueck')?.addEventListener('click', async () => {
+      try { await api.konten.zurueck(); } catch (e) { err('Zurück nicht möglich', e.message); return; }
+      location.reload();
+    });
     feldHinweis($('#f_taxNumber'), steuernummerHinweis);
     feldHinweis($('#f_vatId'), ustIdHinweis);
     $('#f_taxMode')?.addEventListener('change', (e) => {
@@ -521,13 +550,18 @@ function renderSetup() {
     mitCodeMoeglich = !!st?.code;
     // Zurück von Google (Web-Fassung): die Anmeldung steht schon.
     if (st?.angemeldet && !anmeldung) {
-      anmeldung = st;
-      if (st.vorhanden && app.querySelector('.gate-card')) {
-        collect();
-        renderCloudLaden(st, { neu: () => { anmeldung = null; draw(); } });
-        return;
-      }
-      ok('Mit Google angemeldet', st.email || '');
+      schonVergeben(st).then((doppelt) => {
+        if (doppelt) { kastenZeichnen(); return; }
+        anmeldung = st;
+        if (st.vorhanden && app.querySelector('.gate-card')) {
+          collect();
+          renderCloudLaden(st, { neu: () => { anmeldung = null; draw(); } });
+          return;
+        }
+        ok('Mit Google angemeldet', st.email || '');
+        kastenZeichnen();
+      });
+      return;
     }
     kastenZeichnen();
   }).catch(() => {});
@@ -747,6 +781,7 @@ function renderUnlock(message = '') {
       <div class="gate-card">
         <div class="gate-logo">K</div>
         <h2>Kontovia ist gesperrt</h2>
+        <p class="small muted" id="unlockKonto" style="margin:-6px 0 8px"></p>
         <p class="lead">Geben Sie Ihr Passwort ein, um die Buchhaltung zu entschlüsseln.</p>
         ${message ? raw(`<div class="notice mb16">${esc(message)}</div>`) : ''}
         <div class="field">
@@ -769,9 +804,7 @@ function renderUnlock(message = '') {
           Tresor anlegen und unter <em>Einstellungen → Sicherung wiederherstellen</em> einspielen.</p>
           <p class="muted">Die automatischen Sicherungen sind mit dem Tresorpasswort verschlüsselt, das zu ihrer Zeit galt.</p>
         </details>
-        <div class="row mt16" style="justify-content:center">
-          <button class="btn ghost sm" id="unlockAbmelden">${icon('logout', 14)} Von diesem Gerät abmelden</button>
-        </div>
+        <div id="kontenWahl" class="mt16"></div>
       </div>
     </div>`;
 
@@ -799,7 +832,7 @@ function renderUnlock(message = '') {
   };
   btn.addEventListener('click', submit);
   pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
-  $('#unlockAbmelden').addEventListener('click', () => abmelden({ gesperrt: true }));
+  kontenAufSperrbildschirm($('#kontenWahl'));
   entsperrWege($('#entWege'), { eintreten, melde: (t) => { errEl.textContent = t; } });
 }
 
@@ -847,11 +880,11 @@ async function sicherungsHinweis() {
   let zuletzt = 0;
   let gezeigt = 0;
   try {
-    zuletzt = Number(localStorage.getItem('kontovia.vollsicherung')) || 0;
-    gezeigt = Number(localStorage.getItem('kontovia.sicherungshinweis')) || 0;
+    zuletzt = Number(localStorage.getItem(kontoSchluessel('vollsicherung', appInfo.konto))) || 0;
+    gezeigt = Number(localStorage.getItem(kontoSchluessel('sicherungshinweis', appInfo.konto))) || 0;
   } catch { return; }
   if (jetzt - zuletzt < 30 * tag || jetzt - gezeigt < 7 * tag) return;
-  try { localStorage.setItem('kontovia.sicherungshinweis', String(jetzt)); } catch { /* egal */ }
+  try { localStorage.setItem(kontoSchluessel('sicherungshinweis', appInfo.konto), String(jetzt)); } catch { /* egal */ }
   toast('Ihre Buchhaltung liegt nur in diesem Browser',
     `Den Speicher darf der Browser bei Platzmangel räumen. ${sp.moeglich ? 'Verschieben Sie sie in einen Ordner, schalten' : 'Schalten'} Sie die Cloud-Sicherung ein oder legen Sie eine Vollsicherung an. Hier klicken.`,
     'warn', 15000)?.addEventListener('click', () => navigate('settings', { abschnitt: 'speicher' }));
@@ -1042,13 +1075,14 @@ function renderShell() {
   app.innerHTML = html`
     <div class="shell">
       <aside class="sidebar">
-        <div class="brand">
+        <button type="button" class="brand brand-wechsel" id="brandBtn" aria-haspopup="menu" title="Konto wechseln oder hinzufügen">
           <div class="brand-mark">K</div>
-          <div>
+          <div class="brand-text">
             <div class="brand-name">Kontovia</div>
             <div class="brand-sub" id="brandSub"></div>
           </div>
-        </div>
+          ${icon('down', 15, 'brand-pfeil')}
+        </button>
         <button class="cta" id="newTxBtn" type="button" aria-haspopup="menu">
           ${icon('plus', 18)}<span class="grow">Neue Buchung</span>${icon('down', 15)}
         </button>
@@ -1074,7 +1108,7 @@ function renderShell() {
           <button class="btn ghost block" id="feedbackBtn" title="Rückmeldung geben, auf Wunsch mit Bildschirmfoto">${icon('chat', 16)} Feedback</button>
           <div class="foot-knoepfe">
             <button class="btn ghost" id="lockBtn" title="Sperren (${MOD}+L)">${icon('lock', 16)} Sperren</button>
-            <button class="btn ghost" id="logoutBtn" title="Von diesem Gerät abmelden, um ein anderes Konto zu verwenden">${icon('logout', 16)} Abmelden</button>
+            <button class="btn ghost" id="logoutBtn" title="Dieses Konto von diesem Gerät abmelden (vorher wird abgeglichen)">${icon('logout', 16)} Abmelden</button>
           </div>
         </div>
       </aside>
@@ -1110,6 +1144,7 @@ function renderShell() {
     const item = e.target.closest('[data-view]');
     if (item) { e.preventDefault(); navigate(item.dataset.view); }
   });
+  $('#brandBtn').addEventListener('click', (e) => kontenMenue(e.currentTarget));
   $('#lockBtn').addEventListener('click', () => lockNow());
   $('#logoutBtn').addEventListener('click', () => abmelden());
   $('#feedbackBtn').addEventListener('click', () => feedbackOeffnen());
