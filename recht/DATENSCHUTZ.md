@@ -8,7 +8,7 @@
   prüfen lassen. Rechtsberatung ist das hier nicht.
 -->
 
-Stand: 4. Oktober 2026, Programmversion 2.6.0
+Stand: 4. Oktober 2026, Programmversion 2.7.0
 
 ---
 

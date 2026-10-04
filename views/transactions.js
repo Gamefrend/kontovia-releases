@@ -18,6 +18,7 @@ import { eRechnungLesen, eRechnungAusDatei, xmlAusPdf, richtung } from '../lib/e
 import { eRechnungHtml, zeigeERechnung } from './erechnung.js';
 import { regelAusBuchung, TURNUS } from '../lib/wiederkehrend.js';
 import { faelligeAnbieten } from './wiederkehrend.js';
+import { aufgabenAbschnitt } from './todos.js';
 
 const api = window.kontovia;
 
@@ -60,7 +61,7 @@ export async function render(root, params = {}, { actions } = {}) {
   // „neu“: alle bisherigen Filter und die Suche vergessen, damit die Liste genau das zeigt, wohin man gesprungen ist.
   if (params.neu) { st.filters = {}; st.q = ''; auswahl = null; }
   if (params.receipt) st.filters.hasReceipt = params.receipt;
-  // Der Filter nach Finanzamt-Unterlagen besteht nur, wenn es nicht gelistete Buchungen gibt.
+  // Der Filter nach Finanzamt-Unterlagen besteht nur, wenn es private Buchungen gibt.
   if (params.listing && sel.transactions().some((t) => t.unlisted)) st.filters.listing = params.listing;
   if (params.status) st.filters.status = params.status;
   if (params.categoryId) st.filters.categoryId = params.categoryId;
@@ -197,14 +198,14 @@ function listSpec() {
         ['ueberfaellig', 'Überfällig', overdue],
       ],
     },
-    // Nur anbieten, wenn es überhaupt nicht gelistete Buchungen gibt.
+    // Nur anbieten, wenn es überhaupt private Buchungen gibt.
     ...(sel.transactions().some((t) => t.unlisted) || tableState(TABLE).filters.listing ? [{
       key: 'listing', column: 'status', title: 'Finanzamt-Unterlagen', initial: 'alle',
       chip: (v, label) => label,
       options: () => [
-        ['alle', 'Gelistete und nicht gelistete', alle],
-        ['gelistet', 'Nur gelistete', (t) => !t.unlisted],
-        ['nicht-gelistet', 'Nur nicht gelistete', (t) => !!t.unlisted],
+        ['alle', 'Alle, auch private', alle],
+        ['gelistet', 'Ohne private', (t) => !t.unlisted],
+        ['privat', 'Nur private', (t) => !!t.unlisted],
       ],
     }] : []),
     {
@@ -275,7 +276,7 @@ function summaryHtml(rows) {
     <span><span class="muted">Ausgänge</span> <strong class="amount neg">${money(sumExpense)} €</strong></span>
     <span><span class="muted">Saldo</span> <strong class="amount ${sumIncome - sumExpense >= 0 ? 'pos' : 'neg'}">${money(sumIncome - sumExpense)} €</strong></span>
     ${offen.length ? raw(`<span class="badge warn" title="Noch nicht bezahlt, zählt erst am Zahlungstag">${offen.length} offen${offenText ? ': ' + esc(offenText) : ''}</span>`) : ''}
-    ${unlistedCount ? raw(`<span class="badge unlisted" title="In den Summen enthalten, in Finanzamt-Unterlagen nicht">${unlistedCount} nicht gelistet</span>`) : ''}
+    ${unlistedCount ? raw(`<span class="badge unlisted" title="In den Summen enthalten, in den Unterlagen fürs Finanzamt nicht">${unlistedCount} privat</span>`) : ''}
   </div>`;
 }
 
@@ -293,7 +294,7 @@ function descriptionCell(t) {
   const dep = depositInfo(t);
   return `
     <div class="truncate">${esc(t.description || '(ohne Beschreibung)')}</div>
-    ${t.unlisted ? `<span class="badge unlisted tiny" title="Erscheint nicht in Finanzamt-Export, EÜR, Umsatzsteuer und DATEV">${icon('hide', 11).__raw} nicht gelistet</span>` : ''}
+    ${t.unlisted ? `<span class="badge unlisted tiny" title="Privat: gehört nicht zum Betrieb und steht nicht in EÜR, Umsatzsteuer, DATEV und den Unterlagen fürs Finanzamt">${icon('hide', 11).__raw} privat</span>` : ''}
     ${t.location ? `<div class="tiny muted truncate">${icon('pin', 11).__raw} ${esc(t.location)}</div>` : ''}
     ${dep ? `<span class="badge info tiny" title="${esc(depositTitle(dep))}">Anzahlung${dep.percent ? ' ' + esc(percentText(dep.percent)) + ' %' : ''}</span>` : ''}
     ${t.isReversal ? '<span class="badge tiny">Storno</span>' : ''}
@@ -574,15 +575,15 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       </div>
 
       <div class="mt8">
-        <label class="check" title="Erscheint nicht in Export &amp; Finanzamt, EÜR, Umsatzsteuer und DATEV">
+        <label class="check" title="Eine private Buchung gehört nicht zum Betrieb und steht nicht in EÜR, Umsatzsteuer, DATEV und den Unterlagen fürs Finanzamt">
           <input type="checkbox" id="i_unlisted" ${tx.unlisted ? 'checked' : ''}>
-          <span>Nicht gelistet <span class="muted">(nur zur eigenen Übersicht, nicht in Finanzamt-Unterlagen)</span></span>
+          <span>Privat <span class="muted">(gehört nicht zum Betrieb)</span></span>
         </label>
         <div class="notice warn mt8" id="unlistedHint" ${tx.unlisted ? '' : raw('style="display:none"')}>
-          Diese Buchung fehlt in allen Exporten für Finanzamt und Steuerkanzlei (EÜR, Umsatzsteuer,
-          DATEV, Betriebsprüfung). In Übersicht und Auswertungen zählt sie nur, wenn dort
-          <strong>„Nicht gelistete Buchungen einbeziehen“</strong> gesetzt ist. Gedacht für Vorgänge,
-          die steuerlich nicht zum Betrieb gehören. Betriebliche Einnahmen und Ausgaben müssen
+          Diese Buchung ist privat. Sie gehört nicht zum Betrieb und steht deshalb nicht in den Unterlagen
+          für Finanzamt und Steuerkanzlei (EÜR, Umsatzsteuer, DATEV, Betriebsprüfung). In Übersicht und
+          Auswertungen zählt sie nur mit, wenn dort <strong>„Private Buchungen einbeziehen“</strong> gesetzt ist.
+          Betriebliche Einnahmen und Ausgaben dürfen nicht als privat gekennzeichnet werden, sie müssen
           vollständig erklärt werden (§ 146 Abs. 1 AO).
         </div>
       </div>
@@ -639,8 +640,12 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         <hr class="sep">
         <div class="row between mb8"><strong style="font-size:13px">Verknüpfte Termine</strong></div>
         ${linkedAppts.map((a) => `<div class="attach"><span>${icon('calendar', 14).__raw}</span><span class="name">${esc(a.title)} · ${esc(fmtDate(a.date))}</span></div>`).join('')}
-      `) : ''}`;
+      `) : ''}
 
+      ${isNew ? '' : raw('<hr class="sep"><div id="txAufgaben" data-ohne-stand></div>')}`;
+
+    const aufgabenBox = form.querySelector('#txAufgaben');
+    if (aufgabenBox) aufgabenAbschnitt(aufgabenBox, 'buchung', tx.id, { titel: 'Aufgaben zu dieser Buchung' });
     drawAttachments();
     drawERechnung();
     updateAmountSummary();

@@ -16,6 +16,7 @@ import { eventIdFor } from '../lib/gcal.js';
 import { openMenu } from '../lib/popover.js';
 import { steuertermine } from '../lib/fristen.js';
 import { oeffneFrist } from './spruenge.js';
+import { openTodoDialog } from './todos.js';
 
 const state = {
   cursor: monthStart(todayISO()),
@@ -24,6 +25,7 @@ const state = {
   showEvents: true,
   showDone: true,
   showTax: true,
+  showTodos: true,
 };
 
 const FREQ = { none: 'einmalig', weekly: 'wöchentlich', biweekly: 'alle zwei Wochen', monthly: 'monatlich', yearly: 'jährlich' };
@@ -66,6 +68,21 @@ function eventEntries(from, to) {
     });
   }
   return out;
+}
+
+/** Aufgaben mit eigenem Fälligkeitsdatum als Kalendereinträge. Aufgaben an einem Termin zeigt dieser selbst. */
+function todoEntries(from, to) {
+  return sel.todos()
+    .filter((t) => t.dueDate && t.dueDate >= from && t.dueDate <= to && (state.showDone || !t.done))
+    .map((t) => ({
+      id: 'todo_' + t.id,
+      isTodo: true,
+      todoId: t.id,
+      occurrence: t.dueDate,
+      title: t.title || '(ohne Titel)',
+      done: !!t.done,
+      allDay: true,
+    }));
 }
 
 /** Steuertermine (Voranmeldung, Jahreserklärungen) als Kalendereinträge. */
@@ -112,6 +129,7 @@ export async function render(root, params, { actions } = {}) {
         state.mode === 'month' && { value: 'showDue', label: 'Zahlungstermine offener Rechnungen', on: state.showDue },
         { value: 'showEvents', label: 'Veranstaltungen aus Anzahlungen', on: state.showEvents },
         { value: 'showTax', label: 'Steuertermine (Voranmeldung, Erklärungen)', on: state.showTax },
+        { value: 'showTodos', label: 'Aufgaben mit Fälligkeit', on: state.showTodos },
         { value: 'showDone', label: 'Erledigte Termine', on: state.showDone },
       ].filter(Boolean),
     }],
@@ -170,14 +188,15 @@ function drawMonth(root) {
   const dues = state.showDue ? dueEntries(gridStart, gridEnd) : [];
   const veranstaltungen = state.showEvents ? eventEntries(gridStart, gridEnd) : [];
   const fristen = state.showTax ? taxEntries(gridStart, gridEnd) : [];
+  const aufgaben = state.showTodos ? todoEntries(gridStart, gridEnd) : [];
   const byDay = new Map();
-  for (const e of [...fristen, ...events, ...dues, ...veranstaltungen]) {
+  for (const e of [...fristen, ...events, ...aufgaben, ...dues, ...veranstaltungen]) {
     if (!byDay.has(e.occurrence)) byDay.set(e.occurrence, []);
     byDay.get(e.occurrence).push(e);
   }
 
   const monthName = `${MONTHS[Number(first.slice(5, 7)) - 1]} ${first.slice(0, 4)}`;
-  const monthEvents = [...events].filter((e) => e.occurrence >= first && e.occurrence <= last);
+  const monthEvents = [...events, ...aufgaben].filter((e) => e.occurrence >= first && e.occurrence <= last);
 
   root.innerHTML = html`
     <div class="card">
@@ -222,6 +241,7 @@ function hiddenHint() {
     state.mode === 'month' && !state.showDue && 'Zahlungstermine',
     !state.showEvents && 'Veranstaltungen',
     !state.showTax && 'Steuertermine',
+    !state.showTodos && 'Aufgaben',
     !state.showDone && 'Erledigte',
   ].filter(Boolean);
   return weg.length ? `<span class="small muted" title="Über „Anzeige“ oben rechts wieder einblenden">${icon('hide', 13).__raw} ausgeblendet: ${esc(weg.join(', '))}</span>` : '';
@@ -237,6 +257,8 @@ function cellHtml(date, monthRef, items) {
     <div class="cal-day">${Number(date.slice(8, 10))}</div>
     ${shown.map((e) => e.isTax
       ? `<div class="cal-ev cal-tax" ${taxAttrs(e)} title="${esc(`${e.title}: ${e.hinweis}`)}">§ ${esc(e.title)}</div>`
+      : e.isTodo
+      ? `<div class="cal-ev cal-todo ${e.done ? 'done' : ''}" data-cal-todo="${esc(e.todoId)}" title="${esc('Aufgabe: ' + e.title)}">${e.done ? '✓' : '☐'} ${esc(e.title)}</div>`
       : e.isDue
       ? `<div class="cal-ev" style="background:var(--warn-soft);color:var(--warn);border-left-color:var(--warn)" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(money(e.amount))} € ${esc(e.type === 'income' ? '↓' : '↑')}</div>`
       : e.isEvent
@@ -258,22 +280,22 @@ function agendaRow(e) {
   const linked = (e.transactionIds || []).length;
   // Veranstaltungen stammen aus einer Buchung und führen auch dorthin zurück,
   // Steuertermine zu den Zahlen, die dafür gebraucht werden.
-  const anchor = e.isTax ? taxAttrs(e) : e.isEvent ? `data-tx="${esc(e.txId)}"` : `data-appt="${esc(e.id)}"`;
+  const anchor = e.isTax ? taxAttrs(e) : e.isEvent ? `data-tx="${esc(e.txId)}"` : e.isTodo ? `data-cal-todo="${esc(e.todoId)}"` : `data-appt="${esc(e.id)}"`;
   return `<div class="agenda-item" ${anchor}>
     <div class="agenda-date">
       <div class="d">${esc(e.occurrence.slice(8, 10))}</div>
       <div class="m">${esc(MONTHS_SHORT[Number(e.occurrence.slice(5, 7)) - 1])}</div>
     </div>
     <div style="flex:1;min-width:0">
-      <div class="strong truncate">${e.done ? '✓ ' : ''}${esc(e.title)}${e.isRepeat ? ' <span class="badge tiny">Wiederholung</span>' : ''}${e.isEvent ? ' <span class="badge info tiny">Veranstaltung</span>' : ''}${e.isTax ? ' <span class="badge warn tiny">Steuertermin</span>' : ''}</div>
+      <div class="strong truncate">${e.done ? '✓ ' : ''}${esc(e.title)}${e.isRepeat ? ' <span class="badge tiny">Wiederholung</span>' : ''}${e.isEvent ? ' <span class="badge info tiny">Veranstaltung</span>' : ''}${e.isTax ? ' <span class="badge warn tiny">Steuertermin</span>' : ''}${e.isTodo ? ' <span class="badge pos tiny">Aufgabe</span>' : ''}</div>
       <div class="tiny muted">
-        ${e.isTax ? esc(e.hinweis) : e.allDay ? 'ganztägig' : esc((e.startTime || '') + (e.endTime ? ' – ' + e.endTime : ''))}
+        ${e.isTax ? esc(e.hinweis) : e.isTodo ? 'fällig' : e.allDay ? 'ganztägig' : esc((e.startTime || '') + (e.endTime ? ' – ' + e.endTime : ''))}
         ${e.location ? ' · ' + esc(e.location) : ''}
         ${e.contactId ? ' · ' + esc(sel.contactName(e.contactId)) : ''}
         · KW ${isoWeek(e.occurrence)}
       </div>
     </div>
-    ${e.isEvent || e.isTax ? '' : todoBadge(e.id)}
+    ${e.isEvent || e.isTax || e.isTodo ? '' : todoBadge(e.id)}
     ${linked ? `<span class="badge info">${icon('link', 12).__raw} ${linked} Buchung${linked > 1 ? 'en' : ''}</span>` : ''}
   </div>`;
 }
@@ -289,6 +311,7 @@ function drawAgenda(root) {
     ...expandAppointments(sel.appointments(), from, to).filter((e) => state.showDone || !e.done),
     ...(state.showEvents ? eventEntries(from, to) : []),
     ...(state.showTax ? taxEntries(from, to) : []),
+    ...(state.showTodos ? todoEntries(from, to) : []),
   ], (e) => e.occurrence + (e.startTime || ''));
 
   root.innerHTML = html`
@@ -322,6 +345,10 @@ function wireEvents(root) {
   $$('[data-appt]', root).forEach((n) => n.addEventListener('click', (e) => {
     e.stopPropagation();
     openAppointmentDialog(n.dataset.appt);
+  }));
+  $$('[data-cal-todo]', root).forEach((n) => n.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openTodoDialog(n.dataset.calTodo, {}, { nachSpeichern: () => draw(root) });
   }));
   $$('[data-tx]', root).forEach((n) => n.addEventListener('click', (e) => {
     e.stopPropagation();

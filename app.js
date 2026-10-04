@@ -15,6 +15,7 @@ import { startCalendarSync, stopCalendarSync } from './lib/gcalsync.js';
 import { VERSIONEN } from './lib/versionen.js';
 import { abmelden, entsperrWege } from './lib/zugaenge.js';
 import { feedbackOeffnen, entwicklerKlick } from './lib/feedback.js';
+import { sucheOeffnen, SUCHE_KUERZEL } from './lib/suche.js';
 
 import * as viewDashboard from './views/dashboard.js';
 import * as viewTransactions from './views/transactions.js';
@@ -1051,6 +1052,9 @@ function renderShell() {
         <button class="cta" id="newTxBtn" type="button" aria-haspopup="menu">
           ${icon('plus', 18)}<span class="grow">Neue Buchung</span>${icon('down', 15)}
         </button>
+        <button class="such-knopf" id="searchBtn" type="button" aria-haspopup="dialog" title="Alles durchsuchen (${SUCHE_KUERZEL})">
+          ${icon('search', 16)}<span class="grow">Suchen</span><kbd>${SUCHE_KUERZEL}</kbd>
+        </button>
         <nav class="nav" id="nav" aria-label="Hauptnavigation">
           <div class="nav-group">
             ${raw(['dashboard', 'transactions', 'rechnungen', 'calendar', 'todos'].map(navItem).join(''))}
@@ -1077,6 +1081,7 @@ function renderShell() {
       <main class="main">
         <header class="topbar">
           <h1 id="viewTitle">Übersicht</h1>
+          <button class="icon-btn top-suche" id="topSearch" type="button" aria-label="Suchen" title="Alles durchsuchen">${icon('search', 20)}</button>
           <div class="spacer"></div>
           <div id="topActions" class="row"></div>
         </header>
@@ -1110,6 +1115,8 @@ function renderShell() {
   $('#feedbackBtn').addEventListener('click', () => feedbackOeffnen());
   entwicklerKlick($('#versionLabel'));
   $('#newTxBtn').addEventListener('click', (e) => neueBuchungMenue(e.currentTarget));
+  $('#searchBtn').addEventListener('click', () => sucheOeffnen({ sperren: lockNow }));
+  $('#topSearch').addEventListener('click', () => { $('.shell')?.classList.remove('nav-offen'); sucheOeffnen({ sperren: lockNow }); });
   // Die Schnellleiste der Telefonansicht (src/web/mobil.js) öffnet dasselbe Menü an ihrem Knopf.
   if (!neuHoerer) {
     neuHoerer = (e) => neueBuchungMenue(e.detail.anker);
@@ -1215,7 +1222,7 @@ api.on.locked(async ({ reason }) => {
   // Ungesicherte Eingaben einer Ansicht sind mit dem Sperren verworfen.
   router.leaveGuard = null;
   closePopover();
-  // Nach dem Entsperren gelten wieder die Zahlen ohne nicht gelistete Buchungen.
+  // Nach dem Entsperren gelten wieder die Zahlen ohne private Buchungen.
   scope.includeUnlisted = false;
   stopCalendarSync();
   clearDb();
@@ -1319,7 +1326,13 @@ function showAbout() {
 document.addEventListener('keydown', (e) => {
   if (!store.db) return;
   if (e.key === 'Escape') return;
-  const inField = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '');
+  // Strg+K (am Mac ⌘K) öffnet die Suche von überall, auch aus einem Eingabefeld heraus.
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    sucheOeffnen({ sperren: lockNow });
+    return;
+  }
+  const inField = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '') || !!document.activeElement?.isContentEditable;
   if (!inField && e.key === '?') { navigate('help'); }
 });
 

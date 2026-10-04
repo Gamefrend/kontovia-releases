@@ -171,6 +171,12 @@ function anleitung(root) {
         und haken es ab. Eine Aufgabe kann zu einem Termin gehören, muss aber nicht. Hat sie kein
         eigenes Datum, gilt der Termin als Frist. Im Termin selbst stehen seine Aufgaben zum Abhaken
         und Ergänzen.</p>
+        <p>Eine Aufgabe kann einen <strong>formatierten Text</strong> mit Überschriften, Listen, Links und Bildern
+        enthalten (Bilder auch per <kbd>${MOD}</kbd>+<kbd>V</kbd> aus der Zwischenablage) sowie <strong>Unteraufgaben</strong>,
+        die sich direkt in der Liste abhaken lassen. Mit <em>Verknüpft mit</em> hängen Sie sie an Buchungen, Kontakte und
+        Rechnungen. Dort erscheint sie dann auch, und mit <em>+ Aufgabe</em> legen Sie dort gleich eine neue an.
+        Aufgaben mit Datum stehen im Kalender. Wie weit die Liste vorausschaut (7 Tage, 4 Wochen, 1 Monat oder ein
+        eigener Zeitraum), stellen Sie oben in der Liste unter <em>Vorschau</em> ein.</p>
         ${raw(`<p><strong>Google Kalender:</strong> Unter <em>Abgleich</em> oben im
         Kalender oder unter Einstellungen → Kalender-Abgleich verbinden Sie Kontovia mit Ihrem
         Google-Konto. Kontovia legt dort einen eigenen Kalender „Kontovia“ an und gleicht in beide
@@ -190,7 +196,7 @@ function anleitung(root) {
         <p><strong>Filter in den Spaltenköpfen.</strong> In der <a data-go="transactions">Buchungsliste</a>
         filtern Sie dort, wo die Werte stehen: über den kleinen Trichter im Kopf der Spalten
         <em>Kategorie</em>, <em>Kontakt</em>, <em>Status</em> (offen, bezahlt, überfällig, dazu stornierte und
-        nicht gelistete Buchungen), <em>Brutto</em> (nur Einnahmen oder nur Ausgaben), im Kopf der
+        private Buchungen), <em>Brutto</em> (nur Einnahmen oder nur Ausgaben), im Kopf der
         Belegspalte (mit oder ohne Beleg) und, sobald Orte erfasst sind, bei <em>Beschreibung</em>.
         Neben jeder Möglichkeit steht, wie viele Buchungen sie ergibt. Ein Klick auf den
         Spaltennamen sortiert.</p>
@@ -240,19 +246,19 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Nicht gelistete Buchungen</h3>
-        <p>Im Buchungsdialog können Sie eine Buchung als <strong>nicht gelistet</strong> kennzeichnen.
+        <h3 class="mt0">Private Buchungen</h3>
+        <p>Im Buchungsdialog können Sie eine Buchung als <strong>privat</strong> kennzeichnen.
         Das ist für Vorgänge gedacht, die Sie für die eigene Übersicht festhalten wollen, die
-        steuerlich aber nicht zum Betrieb gehören. Nicht gelistete Buchungen fehlen in allen Unterlagen für Finanzamt und
+        steuerlich aber nicht zum Betrieb gehören, etwa ein privater Einkauf, der über das Geschäftskonto lief. Private Buchungen fehlen in allen Unterlagen für Finanzamt und
         Steuerkanzlei: EÜR, Umsatzsteuer, DATEV-Stapel, Prüfungsordner, Buchungsjournal.</p>
         <p>In Übersicht und Auswertungen zählen sie nur mit, wenn Sie dort oben den Schalter
-        <strong>„Nicht gelistete einbeziehen“</strong> setzen. Die Zahl daneben nennt, wie viele es
+        <strong>„Private einbeziehen“</strong> setzen. Die Zahl daneben nennt, wie viele es
         im gewählten Zeitraum gibt; die Beträge stehen im Hinweis beim Darüberfahren. Der Schalter
-        gilt bis zum Sperren. In der Buchungsliste zeigt ein Abzeichen, welche Buchung nicht
-        gelistet ist, und der Filter im Kopf der Spalte <em>Status</em> blendet sie ein oder aus.</p>
-        <p class="small">Wichtig: Betriebliche Einnahmen und Ausgaben müssen vollständig erklärt werden
+        gilt bis zum Sperren. In der Buchungsliste zeigt ein Abzeichen, welche Buchung
+        privat ist, und der Filter im Kopf der Spalte <em>Status</em> blendet sie ein oder aus.</p>
+        <p class="small">Wichtig: Betriebliche Einnahmen und Ausgaben dürfen nicht als privat gekennzeichnet werden, sie müssen vollständig erklärt werden
         (§ 146 Abs. 1 AO). Das Änderungsjournal bleibt deshalb vollständig. Es verzeichnet auch
-        Änderungen an nicht gelisteten Buchungen, sonst wäre seine Prüfsummenkette unterbrochen.</p>
+        Änderungen an privaten Buchungen, sonst wäre seine Prüfsummenkette unterbrochen.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -275,6 +281,7 @@ function anleitung(root) {
             <tr><td><kbd>${MOD}</kbd>+<kbd>N</kbd></td><td>Neue Buchung</td></tr>
             <tr><td><kbd>${MOD}</kbd>+<kbd>Umschalt</kbd>+<kbd>N</kbd></td><td>Neuer Termin</td></tr>
             <tr><td><kbd>${MOD}</kbd>+<kbd>S</kbd></td><td>Sofort speichern</td></tr>
+            <tr><td><kbd>${MOD}</kbd>+<kbd>K</kbd></td><td>Alles durchsuchen: Buchungen, Rechnungen, Kontakte, Termine, Aufgaben, Seiten</td></tr>
             <tr><td><kbd>${MOD}</kbd>+<kbd>F</kbd></td><td>In Buchungen suchen</td></tr>
             <tr><td><kbd>${MOD}</kbd>+<kbd>L</kbd></td><td>Sperren</td></tr>
             <tr><td><kbd>${MOD}</kbd>+<kbd>1</kbd> … <kbd>7</kbd></td><td>Übersicht, Buchungen, Kalender, Auswertungen, Export, Stammdaten, Aufgaben</td></tr>

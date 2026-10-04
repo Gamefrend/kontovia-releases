@@ -81,7 +81,7 @@ const gesamt = () => ({ preset: 'alles', ...resolvePreset('alles') });
 
 /**
  * Die Buchungsliste so gefiltert, dass sie die Zahl der Übersicht erklärt:
- * Zahlungen im Zeitraum, ohne nicht gelistete Buchungen, sofern die nicht mitzählen.
+ * Zahlungen im Zeitraum, ohne private Buchungen, sofern die nicht mitzählen.
  * Alle anderen Filter der Liste werden dafür zurückgesetzt.
  */
 const buchungen = (extra = {}) => ({
@@ -125,7 +125,7 @@ function paymentFoot(cur, kind) {
  * sichtbares Modul danach fragt.
  */
 function context() {
-  // Nicht gelistete Buchungen zählen nur mit, wenn der Schalter gesetzt ist.
+  // Private Buchungen zählen nur mit, wenn der Schalter gesetzt ist.
   const db = scopeDb(store.db, scope.includeUnlisted);
   const once = (fn) => { let done = false; let v; return () => { if (!done) { v = fn(); done = true; } return v; }; };
   const cmp = once(() => compareRanges(db, period.from, period.to));
@@ -330,7 +330,7 @@ const WIDGETS = {
     render: () => {
       const heute = todayISO();
       const termine = steuertermine(store.db.settings, heute, addDays(heute, 150)).slice(0, 5);
-      // Beträge wie in den Unterlagen fürs Finanzamt: ohne nicht gelistete Buchungen.
+      // Beträge wie in den Unterlagen fürs Finanzamt: ohne private Buchungen.
       const amtlich = listedOnly(store.db);
       const body = termine.length ? `<div class="frist-list">${termine.map((t, i) => {
         const tage = Math.round((new Date(`${t.datum}T12:00:00`) - new Date(`${heute}T12:00:00`)) / 86400000);

@@ -53,7 +53,7 @@ export async function render(root, params, { actions } = {}) {
 }
 
 function draw(root) {
-  // Nicht gelistete Buchungen zählen nur mit, wenn das Häkchen gesetzt ist –
+  // Private Buchungen zählen nur mit, wenn das Häkchen gesetzt ist –
   // für alle Reiter gemeinsam und ebenso im PDF dieser Ansicht.
   const db = scopeDb(store.db, scope.includeUnlisted);
   // Der Umsatzsteuer-Reiter ist für Kleinunternehmer ausgeblendet – war er
@@ -85,16 +85,16 @@ function draw(root) {
 }
 
 /**
- * Hinweis auf EÜR und Umsatzsteuer, solange nicht gelistete Buchungen
+ * Hinweis auf EÜR und Umsatzsteuer, solange private Buchungen
  * mitgezählt werden: Diese Zahlen sind dann nicht die fürs Finanzamt.
  */
 function scopeWarning() {
   if (!scope.includeUnlisted) return '';
   const st = unlistedStats(store.db, period.from, period.to);
   if (!st.count) return '';
-  return `<div class="notice warn mb16"><strong>Enthält ${st.count === 1 ? 'eine nicht gelistete Buchung' : `${int(st.count)} nicht gelistete Buchungen`}.</strong>
+  return `<div class="notice warn mb16"><strong>Enthält ${st.count === 1 ? 'eine private Buchung' : `${int(st.count)} private Buchungen`}.</strong>
     Für ELSTER gelten die Werte ohne sie. Entfernen Sie dafür oben das Häkchen oder nehmen Sie die
-    Unterlagen unter „Export &amp; Finanzamt“, die nicht gelistete Buchungen nie enthalten.</div>`;
+    Unterlagen unter „Export &amp; Finanzamt“, die private Buchungen nie enthalten.</div>`;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -711,7 +711,7 @@ async function exportPdf(wie) {
   if (st.count) {
     doc.bloecke.push({
       art: 'hinweis',
-      inhalt: [{ t: `Enthält ${st.count} nicht gelistete Buchung${st.count === 1 ? '' : 'en'}.`, fett: true },
+      inhalt: [{ t: `Enthält ${st.count} private Buchung${st.count === 1 ? '' : 'en'}.`, fett: true },
         { t: ' Diese Aufstellung ist nur für den eigenen Gebrauch; für das Finanzamt gelten die Werte ohne sie.' }],
     });
   }

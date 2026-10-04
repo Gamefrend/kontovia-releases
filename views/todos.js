@@ -1,23 +1,35 @@
 /**
  * Kontovia – Aufgaben.
  *
- * Eine schlichte Liste zum Abhaken. Eine Aufgabe kann zu einem Termin gehören
- * („Unterlagen für den Steuerberater zusammenstellen“), muss aber nicht. Ohne
- * eigenes Fälligkeitsdatum gilt dann der Termin: Bis dahin sollte sie erledigt
- * sein, und so wird sie auch einsortiert.
+ * Eine Liste zum Abhaken. Eine Aufgabe hat einen Titel, auf Wunsch einen
+ * formatierten Text mit Bildern, Unteraufgaben, ein Fälligkeitsdatum und
+ * Verknüpfungen: mit einem Termin, mit Buchungen, Kontakten und Rechnungen.
+ * Ohne eigenes Datum gilt der Termin: Bis dahin sollte sie erledigt sein, und
+ * so wird sie auch einsortiert.
  */
 
 import { html, raw, esc, $, $$, fmtDate, fmtDateShort, todayISO, addDays, relativeDays, norm, int } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, emptyState } from '../lib/ui.js';
-import { sel, upsertTodo, setTodoDone, deleteTodo, newTodoDraft } from '../lib/store.js';
-import { refresh } from '../lib/router.js';
+import { sel, store, upsertTodo, setTodoDone, deleteTodo, newTodoDraft } from '../lib/store.js';
+import { refresh, navigate } from '../lib/router.js';
 import { openAppointmentDialog } from './calendar.js';
 import { expandAppointments } from '../lib/termine.js';
+import { prefs, setPref } from '../lib/prefs.js';
+import { openPopover } from '../lib/popover.js';
+import { richEditor, bilderEntfernen } from '../lib/richeditor.js';
+import { aufgabenHtml, klartext, bildIds } from '../lib/richtext.js';
+import {
+  teilaufgaben, neueTeilaufgabe, fortschritt, verknuepfungen, verknuepfungHinzu, verknuepfungenRoh, aufgabenZu,
+  horizontNormal, horizontEnde, horizontText, horizontTitel, aufgabenText, EINHEITEN, VERKNUEPFUNG_ARTEN,
+} from '../lib/aufgaben.js';
+import { sucheIndex, suchen } from '../lib/suchindex.js';
 
 const state = {
   show: 'open', // open | done | all
   q: '',
 };
+
+const horizont = () => horizontNormal(prefs.aufgabenHorizont);
 
 /* -------------------------------------------------------------------------- */
 /* Fälligkeit                                                                  */
@@ -72,22 +84,57 @@ function apptChip(todo) {
     ${icon('calendar', 12).__raw}<span class="truncate">${esc(fmtDateShort(tag))} · ${esc(appt.title || 'Termin')}</span></button>`;
 }
 
+const LINK_ICON = { buchung: 'book', kontakt: 'users', rechnung: 'invoice' };
+
+/** Öffnet das Ziel einer Verknüpfung. Die Ansichten werden erst jetzt geladen: Sie kennen ihrerseits die Aufgaben. */
+export async function verknuepfungOeffnen(typ, id) {
+  if (typ === 'buchung') (await import('./transactions.js')).openTransactionDialog(id);
+  else if (typ === 'kontakt') (await import('./master.js')).openStammdatum('contacts', id);
+  else if (typ === 'rechnung') navigate('rechnungen', { id });
+}
+
+function linkChips(todo, max = 3) {
+  const liste = verknuepfungen(store.db, todo);
+  const sicht = liste.slice(0, max).map((v) => `<button type="button" class="chip todo-appt" data-open-link="${esc(v.typ)}:${esc(v.id)}"
+    title="${esc(`${VERKNUEPFUNG_ARTEN[v.typ]} öffnen: ${v.titel}`)}">${icon(LINK_ICON[v.typ], 12).__raw}<span class="truncate">${esc(v.titel)}</span></button>`);
+  if (liste.length > max) sicht.push(`<span class="badge tiny" title="${esc(liste.slice(max).map((v) => v.titel).join(', '))}">+${liste.length - max}</span>`);
+  return sicht.join('');
+}
+
+/** Erste Zeile des Textes, für die Liste. */
+function textAuszug(todo) {
+  return klartext(aufgabenHtml(todo)).split('\n').find((z) => z.trim()) || '';
+}
+
 /** Eine Zeile der Liste – auch in der Übersicht verwendet. */
 export function todoRow(todo, { compact = false } = {}) {
-  const notiz = !compact && todo.notes ? `<span class="todo-note truncate">${esc(todo.notes.split('\n')[0])}</span>` : '';
+  const auszug = !compact ? textAuszug(todo) : '';
+  const notiz = auszug ? `<span class="todo-note truncate">${esc(auszug)}</span>` : '';
+  const fort = fortschritt(todo);
+  const teile = fort.gesamt
+    ? `<span class="badge tiny ${fort.fertig === fort.gesamt ? 'pos' : ''}" title="${fort.fertig} von ${fort.gesamt} Unteraufgaben erledigt">${icon('todo', 11).__raw} ${fort.fertig}/${fort.gesamt}</span>` : '';
+  const bilder = bildIds(aufgabenHtml(todo)).length
+    ? `<span class="badge tiny" title="Mit Bild">${icon('image', 11).__raw}</span>` : '';
+  const unter = !compact && !todo.done && fort.gesamt
+    ? `<div class="todo-subs">${teilaufgaben(todo).map((s) => `
+        <label class="todo-sub${s.done ? ' done' : ''}">
+          <input type="checkbox" data-toggle-sub="${esc(todo.id)}:${esc(s.id)}" ${s.done ? 'checked' : ''}>
+          <span>${esc(s.title)}</span>
+        </label>`).join('')}</div>` : '';
   return `<div class="todo-item${todo.done ? ' done' : ''}" data-todo="${esc(todo.id)}">
     <input type="checkbox" class="todo-check" data-toggle-todo="${esc(todo.id)}" ${todo.done ? 'checked' : ''}
       aria-label="${esc(todo.title)} ${todo.done ? 'wieder öffnen' : 'als erledigt abhaken'}">
     <div class="todo-main" data-edit-todo="${esc(todo.id)}" role="button" tabindex="0">
       <div class="todo-title">${esc(todo.title || '(ohne Titel)')}</div>
-      <div class="todo-meta">${dueBadge(todo)}${apptChip(todo)}${notiz}</div>
+      <div class="todo-meta">${dueBadge(todo)}${teile}${bilder}${apptChip(todo)}${compact ? '' : linkChips(todo)}${notiz}</div>
+      ${unter}
     </div>
   </div>`;
 }
 
 /**
- * Haken, Bearbeiten und Termin in einer gezeichneten Liste. Nach jeder
- * Änderung zeichnet `redraw` neu.
+ * Haken, Bearbeiten, Unteraufgaben, Termin und Verknüpfungen in einer
+ * gezeichneten Liste. Nach jeder Änderung zeichnet `redraw` neu.
  */
 export function wireTodoRows(root, redraw) {
   $$('[data-toggle-todo]', root).forEach((c) => c.addEventListener('change', async () => {
@@ -95,15 +142,57 @@ export function wireTodoRows(root, redraw) {
     if (c.checked) ok('Erledigt', sel.todo(c.dataset.toggleTodo)?.title || '');
     redraw();
   }));
+  $$('[data-toggle-sub]', root).forEach((c) => c.addEventListener('change', async () => {
+    const [tid, sid] = c.dataset.toggleSub.split(':');
+    const t = sel.todo(tid);
+    if (!t) return;
+    await upsertTodo({ ...t, subtasks: teilaufgaben(t).map((s) => (s.id === sid ? { ...s, done: c.checked } : s)) });
+    redraw();
+  }));
   $$('[data-edit-todo]', root).forEach((n) => {
-    const open = () => openTodoDialog(n.dataset.editTodo);
-    n.addEventListener('click', (e) => { if (!e.target.closest('[data-open-appt]')) open(); });
+    const open = () => openTodoDialog(n.dataset.editTodo, {}, { nachSpeichern: redraw });
+    n.addEventListener('click', (e) => { if (!e.target.closest('[data-open-appt],[data-open-link],.todo-subs')) open(); });
     n.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === n) { e.preventDefault(); open(); } });
   });
   $$('[data-open-appt]', root).forEach((b) => b.addEventListener('click', (e) => {
     e.stopPropagation();
     openAppointmentDialog(b.dataset.openAppt);
   }));
+  $$('[data-open-link]', root).forEach((b) => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const [typ, id] = b.dataset.openLink.split(':');
+    verknuepfungOeffnen(typ, id);
+  }));
+}
+
+/* -------------------------------------------------------------------------- */
+/* Aufgaben an anderer Stelle (Buchung, Kontakt, Rechnung)                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Füllt `el` mit den Aufgaben, die zu einem Ziel gehören, und einem Knopf für
+ * eine neue. Zeichnet sich nach jeder Änderung selbst neu.
+ * @param {HTMLElement} el
+ * @param {'buchung'|'kontakt'|'rechnung'} typ
+ * @param {string} id
+ * @param {{titel?:string, vorgabe?:string}} [o]  Überschrift; Vorschlag für den Titel einer neuen Aufgabe
+ */
+export function aufgabenAbschnitt(el, typ, id, { titel = 'Aufgaben dazu', vorgabe = '' } = {}) {
+  const zeichnen = () => {
+    if (!el.isConnected) return;
+    const liste = aufgabenZu(store.db, typ, id).sort((a, b) => Number(!!a.done) - Number(!!b.done) || String(a.createdAt || '').localeCompare(String(b.createdAt || '')));
+    el.innerHTML = `
+      <div class="row between" style="gap:8px;margin-bottom:${liste.length ? 4 : 0}px">
+        <strong class="small">${esc(titel)}${liste.length ? ` <span class="muted">${liste.filter((t) => !t.done).length} offen</span>` : ''}</strong>
+        <button type="button" class="btn sm ghost" data-neue-aufgabe>${icon('plus', 14).__raw} Aufgabe</button>
+      </div>
+      ${liste.length ? `<div class="todo-mini">${liste.map((t) => todoRow(t, { compact: true })).join('')}</div>` : ''}`;
+    wireTodoRows(el, zeichnen);
+    el.querySelector('[data-neue-aufgabe]').addEventListener('click', () => {
+      openTodoDialog(null, { title: vorgabe, links: [{ typ, id }] }, { nachSpeichern: zeichnen });
+    });
+  };
+  zeichnen();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -132,7 +221,49 @@ export async function render(root, params, { actions } = {}) {
 function matches(t) {
   if (!state.q) return true;
   const appt = t.appointmentId ? sel.appointment(t.appointmentId) : null;
-  return norm(`${t.title} ${t.notes || ''} ${appt?.title || ''}`).includes(norm(state.q));
+  const ziele = verknuepfungen(store.db, t).map((v) => v.titel).join(' ');
+  return norm(`${aufgabenText(t)} ${appt?.title || ''} ${ziele}`).includes(norm(state.q));
+}
+
+/** Das Fenster, in dem man den Vorschauzeitraum der Liste einstellt. */
+function zeitraumWaehlen(anker, root) {
+  const VORSCHLAEGE = [[7, 'tage'], [14, 'tage'], [4, 'wochen'], [1, 'monate'], [3, 'monate'], [6, 'monate']];
+  openPopover(anker, {
+    label: 'Zeitraum der Vorschau',
+    className: 'menu hz',
+    align: 'end',
+    build: (pop, handle) => {
+      const jetzt = horizont();
+      pop.innerHTML = `
+        <div class="menu-title">Vorschau in der Liste</div>
+        ${VORSCHLAEGE.map(([n, e]) => {
+          const an = jetzt.n === n && jetzt.einheit === e;
+          return `<button type="button" class="menu-opt" data-nav aria-pressed="${an}" data-n="${n}" data-e="${e}">${icon('check', 14).__raw}<span class="menu-label">${esc(horizontTitel({ n, einheit: e }))}</span></button>`;
+        }).join('')}
+        <div class="menu-sep"></div>
+        <div class="menu-title">Eigener Zeitraum</div>
+        <form class="hz-frei" autocomplete="off">
+          <span>Nächste</span>
+          <input type="number" id="hzN" min="1" max="365" step="1" value="${jetzt.n}" aria-label="Anzahl">
+          <select id="hzE" aria-label="Einheit">${Object.entries(EINHEITEN).map(([k, [, viele]]) => `<option value="${k}" ${k === jetzt.einheit ? 'selected' : ''}>${viele}</option>`).join('')}</select>
+          <button class="btn sm primary" type="submit">OK</button>
+        </form>`;
+      const setzen = (n, einheit) => {
+        setPref('aufgabenHorizont', horizontNormal({ n, einheit }));
+        handle.close(true);
+        draw(root);
+      };
+      pop.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-n]');
+        if (b) setzen(Number(b.dataset.n), b.dataset.e);
+      });
+      pop.querySelector('.hz-frei').addEventListener('submit', (e) => {
+        e.preventDefault();
+        setzen(Number(pop.querySelector('#hzN').value), pop.querySelector('#hzE').value);
+      });
+      setTimeout(() => pop.querySelector('#hzN')?.select(), 20);
+    },
+  });
 }
 
 function draw(root) {
@@ -140,21 +271,22 @@ function draw(root) {
   const alle = sel.todos();
   const offen = alle.filter((t) => !t.done);
   const erledigt = alle.filter((t) => t.done);
+  const hz = horizont();
+  const ende = horizontEnde(today, hz);
 
   let body;
   if (!alle.length) {
-    body = emptyState('Noch keine Aufgaben', 'Oben eintragen und mit Enter anlegen. Eine Aufgabe lässt sich mit einem Termin verknüpfen, muss aber nicht.').__raw;
+    body = emptyState('Noch keine Aufgaben', 'Mit „Aufgabe“ oben rechts legen Sie die erste an. Aufgaben können Text, Bilder und Unteraufgaben enthalten und lassen sich mit Terminen, Buchungen, Kontakten und Rechnungen verknüpfen.').__raw;
   } else if (state.show === 'done') {
     const rows = erledigt.filter(matches).sort((a, b) => String(b.doneAt || '').localeCompare(String(a.doneAt || '')));
     body = rows.length ? group('Erledigt', rows) : emptyState('Nichts gefunden', state.q ? 'Keine erledigte Aufgabe passt zur Suche.' : 'Noch nichts abgehakt.').__raw;
   } else {
     const sorted = openTodosSorted(today).filter(matches);
-    const woche = addDays(today, 7);
     const teile = [
       ['Überfällig', sorted.filter((t) => { const d = dueOf(t, today).date; return d && d < today; })],
       ['Heute', sorted.filter((t) => dueOf(t, today).date === today)],
-      ['Nächste sieben Tage', sorted.filter((t) => { const d = dueOf(t, today).date; return d > today && d <= woche; })],
-      ['Später', sorted.filter((t) => dueOf(t, today).date > woche)],
+      [horizontTitel(hz), sorted.filter((t) => { const d = dueOf(t, today).date; return d > today && d <= ende; })],
+      ['Später', sorted.filter((t) => dueOf(t, today).date > ende)],
       ['Ohne Datum', sorted.filter((t) => !dueOf(t, today).date)],
     ];
     body = teile.filter(([, rows]) => rows.length).map(([title, rows]) => group(title, rows)).join('');
@@ -176,27 +308,14 @@ function draw(root) {
         <span class="sub">${int(offen.length)} offen · ${int(erledigt.length)} erledigt</span>
         <div class="spacer"></div>
         ${alle.length > 6 ? raw(`<input type="search" class="search" id="todoSearch" placeholder="Suchen …" aria-label="Aufgaben durchsuchen" value="${esc(state.q)}" style="max-width:220px">`) : ''}
+        ${alle.length && state.show !== 'done' ? raw(`<button class="btn sm" id="todoHorizont" aria-haspopup="dialog" aria-expanded="false" title="Wie weit die Liste vorausschaut">${icon('calendar', 14).__raw} Vorschau: ${esc(horizontText(hz))} ${icon('down', 13).__raw}</button>`) : ''}
       </div>
       <div class="card-body">
-        <form class="todo-add" id="todoAdd" autocomplete="off">
-          <input id="todoTitle" placeholder="Neue Aufgabe, z. B. Belege für Oktober einscannen" aria-label="Neue Aufgabe">
-          <input type="date" id="todoDue" aria-label="Fällig am (freiwillig)" title="Fällig am (freiwillig)">
-          <button class="btn primary" type="submit">${icon('plus', 15)} Hinzufügen</button>
-        </form>
         <div id="todoList">${raw(body)}</div>
       </div>
     </div>`;
 
-  $('#todoAdd', root).addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const title = $('#todoTitle', root).value.trim();
-    if (!title) { $('#todoTitle', root).focus(); return; }
-    await upsertTodo(newTodoDraft({ title, dueDate: $('#todoDue', root).value || '' }));
-    // In der Ansicht „Erledigt“ taucht die neue Aufgabe nicht auf – dann wenigstens bestätigen.
-    if (state.show === 'done') ok('Aufgabe angelegt', `„${title}“ steht unter „Offen“`);
-    draw(root);
-    $('#todoTitle', root)?.focus();
-  });
+  $('#todoHorizont', root)?.addEventListener('click', (e) => zeitraumWaehlen(e.currentTarget, root));
   const suche = $('#todoSearch', root);
   suche?.addEventListener('input', () => {
     state.q = suche.value;
@@ -241,42 +360,74 @@ function appointmentOptions(selectedId) {
     + (vergangen.length ? `<optgroup label="Vergangene Termine">${vergangen.map(opt).join('')}</optgroup>` : '');
 }
 
-export function openTodoDialog(id, preset = {}) {
+/**
+ * @param {string|null} id  bestehende Aufgabe oder null für eine neue
+ * @param {object} [preset]  Vorbelegung einer neuen Aufgabe (title, dueDate, appointmentId, links …)
+ * @param {{nachSpeichern?:Function}} [o]  wird nach Speichern und Löschen gerufen
+ */
+export function openTodoDialog(id, preset = {}, { nachSpeichern = null } = {}) {
   const existing = id ? sel.todo(id) : null;
   const t = existing ? structuredClone(existing) : newTodoDraft(preset);
   const isNew = !existing;
+  const urspruenglich = bildIds(aufgabenHtml(t));
+  const neueBilder = new Set();
+  let subs = teilaufgaben(t).map((s) => ({ ...s }));
+  let links = verknuepfungenRoh(t).map((l) => ({ ...l }));
+  let editor = null;
   let ausgangslage = null;
   let fertig = false;
-  const stand = () => JSON.stringify(['title', 'due', 'appt', 'notes', 'done'].map((k) => {
-    const el = m.root.querySelector('#d_' + k);
-    return el ? (el.type === 'checkbox' ? el.checked : el.value.trim()) : null;
-  }));
+  const stand = () => JSON.stringify([
+    m.root.querySelector('#d_title')?.value.trim(), m.root.querySelector('#d_due')?.value, m.root.querySelector('#d_appt')?.value,
+    editor?.html(), subs.map((s) => [s.title, s.done]), links, m.root.querySelector('#d_done')?.checked ?? t.done,
+  ]);
 
   const m = modal({
     title: isNew ? 'Neue Aufgabe' : 'Aufgabe bearbeiten',
+    size: 'wide',
     // Vor dem Wegklicken nachfragen, wenn etwas eingetragen wurde.
     confirmDismiss: () => ausgangslage !== null && !fertig && stand() !== ausgangslage,
+    // Bilder, die in einem verworfenen Fenster abgelegt wurden, wieder entfernen.
+    onClose: () => { if (!fertig && neueBilder.size) bilderEntfernen([...neueBilder]); },
     body: html`
-      <div class="field">
-        <label for="d_title">Aufgabe *</label>
-        <input id="d_title" value="${t.title}" placeholder="z. B. Unterlagen für den Steuerberater zusammenstellen">
-      </div>
-      <div class="form-grid">
+      <div class="todo-dlg">
         <div class="field">
-          <label for="d_due">Fällig am</label>
-          <input type="date" id="d_due" value="${t.dueDate || ''}">
-          <span class="hint">Freiwillig. Ohne Datum gilt der verknüpfte Termin.</span>
+          <label for="d_title">Aufgabe *</label>
+          <input id="d_title" value="${t.title}" placeholder="z. B. Unterlagen für den Steuerberater zusammenstellen">
+        </div>
+        <div class="form-grid">
+          <div class="field">
+            <label for="d_due">Fällig am</label>
+            <input type="date" id="d_due" value="${t.dueDate || ''}">
+            <span class="hint">Freiwillig. Ohne Datum gilt der verknüpfte Termin.</span>
+          </div>
+          <div class="field">
+            <label for="d_appt">Gehört zum Termin</label>
+            <select id="d_appt">${raw(appointmentOptions(t.appointmentId))}</select>
+            <span class="hint">Freiwillig. Die Aufgabe steht dann auch im Termin.</span>
+          </div>
         </div>
         <div class="field">
-          <label for="d_appt">Gehört zum Termin</label>
-          <select id="d_appt">${raw(appointmentOptions(t.appointmentId))}</select>
-          <span class="hint">Freiwillig. Die Aufgabe steht dann auch im Termin.</span>
+          <label>Beschreibung</label>
+          <div id="d_editor"></div>
         </div>
-        <div class="field full">
-          <label for="d_notes">Notiz</label>
-          <textarea id="d_notes" placeholder="Was genau, wer, wo …">${t.notes || ''}</textarea>
+        <div class="field">
+          <label for="d_subNew">Unteraufgaben</label>
+          <div class="tl-subs" id="d_subs"></div>
+          <div class="todo-add compact">
+            <input id="d_subNew" placeholder="Unteraufgabe hinzufügen und Enter drücken" aria-label="Neue Unteraufgabe">
+            <button type="button" class="btn sm" id="d_subAdd">${icon('plus', 14)} Hinzufügen</button>
+          </div>
         </div>
-        ${!isNew ? raw(`<label class="check full"><input type="checkbox" id="d_done" ${t.done ? 'checked' : ''}> erledigt</label>`) : ''}
+        <div class="field">
+          <label>Verknüpft mit</label>
+          <div class="tl-links" id="d_links"></div>
+          <div class="tl-picker" id="d_picker" hidden>
+            <input type="search" id="d_pickQ" placeholder="Buchung, Kontakt oder Rechnung suchen …" aria-label="Verknüpfung suchen" autocomplete="off">
+            <div class="tl-results" id="d_pickR"></div>
+          </div>
+          <span class="hint">Freiwillig. Die Aufgabe erscheint dann auch bei der Buchung, dem Kontakt oder der Rechnung.</span>
+        </div>
+        ${!isNew ? raw(`<label class="check"><input type="checkbox" id="d_done" ${t.done ? 'checked' : ''}> erledigt</label>`) : ''}
       </div>`,
     foot: `
       <div class="left row" style="gap:8px">
@@ -287,6 +438,107 @@ export function openTodoDialog(id, preset = {}) {
   });
   const g = (k) => m.root.querySelector('#d_' + k);
 
+  editor = richEditor(g('editor'), { html: aufgabenHtml(t), beiNeuemBild: (bid) => neueBilder.add(bid) });
+
+  /* Unteraufgaben */
+  const subsZeichnen = () => {
+    g('subs').innerHTML = subs.map((s, i) => `
+      <div class="tl-sub" data-sub="${esc(s.id)}">
+        <input type="checkbox" class="todo-check" data-sub-done ${s.done ? 'checked' : ''} aria-label="${esc(s.title)} erledigt">
+        <input class="tl-sub-title" data-sub-title value="${esc(s.title)}" aria-label="Unteraufgabe">
+        <button type="button" class="icon-btn" data-sub-up title="Nach oben" aria-label="Nach oben" ${i === 0 ? 'disabled' : ''}>${icon('up', 14).__raw}</button>
+        <button type="button" class="icon-btn" data-sub-down title="Nach unten" aria-label="Nach unten" ${i === subs.length - 1 ? 'disabled' : ''}>${icon('down', 14).__raw}</button>
+        <button type="button" class="icon-btn" data-sub-weg title="Entfernen" aria-label="Unteraufgabe entfernen">${icon('x', 14).__raw}</button>
+      </div>`).join('');
+  };
+  subsZeichnen();
+  const subAdd = () => {
+    const feld = g('subNew');
+    const titel = feld.value.trim();
+    if (!titel) { feld.focus(); return; }
+    subs.push(neueTeilaufgabe(titel));
+    feld.value = '';
+    subsZeichnen();
+    feld.focus();
+  };
+  g('subAdd').addEventListener('click', subAdd);
+  g('subNew').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey) { e.preventDefault(); e.stopPropagation(); subAdd(); } });
+  g('subs').addEventListener('input', (e) => {
+    const s = subs.find((x) => x.id === e.target.closest('[data-sub]')?.dataset.sub);
+    if (s && e.target.matches('[data-sub-title]')) s.title = e.target.value;
+  });
+  g('subs').addEventListener('change', (e) => {
+    const s = subs.find((x) => x.id === e.target.closest('[data-sub]')?.dataset.sub);
+    if (s && e.target.matches('[data-sub-done]')) s.done = e.target.checked;
+  });
+  g('subs').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.matches('[data-sub-title]') && !e.ctrlKey && !e.metaKey) { e.preventDefault(); e.stopPropagation(); g('subNew').focus(); }
+  });
+  g('subs').addEventListener('click', (e) => {
+    const zeile = e.target.closest('[data-sub]');
+    const i = subs.findIndex((x) => x.id === zeile?.dataset.sub);
+    if (i < 0) return;
+    if (e.target.closest('[data-sub-weg]')) subs.splice(i, 1);
+    else if (e.target.closest('[data-sub-up]') && i > 0) [subs[i - 1], subs[i]] = [subs[i], subs[i - 1]];
+    else if (e.target.closest('[data-sub-down]') && i < subs.length - 1) [subs[i + 1], subs[i]] = [subs[i], subs[i + 1]];
+    else return;
+    subsZeichnen();
+  });
+
+  /* Verknüpfungen */
+  const linksZeichnen = () => {
+    const vorhanden = verknuepfungen(store.db, { links });
+    const tot = links.length - vorhanden.length;
+    g('links').innerHTML = vorhanden.map((v) => `
+      <span class="chip todo-link" data-l="${esc(v.typ)}:${esc(v.id)}">
+        <button type="button" class="tl-link-open" data-l-open title="${esc(`${VERKNUEPFUNG_ARTEN[v.typ]} öffnen`)}">${icon(LINK_ICON[v.typ], 12).__raw}<span class="truncate">${esc(v.titel)}</span><span class="muted tiny">${esc(v.sub)}</span></button>
+        <button type="button" class="chip-x" data-l-weg aria-label="Verknüpfung entfernen" title="Verknüpfung entfernen">${icon('x', 11).__raw}</button>
+      </span>`).join('')
+      + `<button type="button" class="chip" id="d_pick">${icon('plus', 12).__raw} Verknüpfen</button>`
+      + (tot ? `<span class="small muted">${tot === 1 ? 'Ein Ziel gibt es nicht mehr' : `${tot} Ziele gibt es nicht mehr`}</span>` : '');
+  };
+  linksZeichnen();
+  let index = null;
+  const pickerZeichnen = () => {
+    const q = g('pickQ').value.trim();
+    const bereits = new Set(links.map((l) => `${l.typ}:${l.id}`));
+    index ??= sucheIndex(store.db).filter((e) => VERKNUEPFUNG_ARTEN[e.art]);
+    const treffer = q
+      ? suchen(index, q, { pro: 12 }).filter((e) => !bereits.has(`${e.art}:${e.id}`))
+      : [...index].filter((e) => !bereits.has(`${e.art}:${e.id}`)).sort((a, b) => String(b.datum || '').localeCompare(String(a.datum || ''))).slice(0, 8);
+    g('pickR').innerHTML = treffer.length
+      ? treffer.map((e) => `<button type="button" class="menu-opt" data-add="${esc(e.art)}:${esc(e.id)}">${icon(LINK_ICON[e.art], 14).__raw}<span class="menu-label">${esc(e.titel)}<span class="menu-sub">${esc(VERKNUEPFUNG_ARTEN[e.art])} · ${esc(e.sub)}</span></span></button>`).join('')
+      : `<p class="small muted" style="padding:6px 8px;margin:0">${q ? 'Nichts gefunden.' : 'Noch nichts zum Verknüpfen vorhanden.'}</p>`;
+  };
+  g('links').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-l]');
+    if (chip && e.target.closest('[data-l-weg]')) {
+      const [typ, lid] = chip.dataset.l.split(':');
+      links = links.filter((l) => !(l.typ === typ && l.id === lid));
+      linksZeichnen();
+    } else if (chip && e.target.closest('[data-l-open]')) {
+      const [typ, lid] = chip.dataset.l.split(':');
+      verknuepfungOeffnen(typ, lid);
+    } else if (e.target.closest('#d_pick')) {
+      g('picker').hidden = !g('picker').hidden;
+      if (!g('picker').hidden) { pickerZeichnen(); g('pickQ').focus(); }
+    }
+  });
+  g('pickQ').addEventListener('input', pickerZeichnen);
+  g('pickQ').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); g('pickR').querySelector('[data-add]')?.click(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); g('picker').hidden = true; }
+  });
+  g('pickR').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-add]');
+    if (!b) return;
+    const [typ, lid] = b.dataset.add.split(':');
+    links = verknuepfungHinzu({ links }, typ, lid);
+    g('picker').hidden = true;
+    g('pickQ').value = '';
+    linksZeichnen();
+  });
+
   ausgangslage = stand();
   m.root.querySelector('#btnCancel').addEventListener('click', () => m.dismiss());
   m.root.querySelector('#btnSave').addEventListener('click', async () => {
@@ -295,21 +547,33 @@ export function openTodoDialog(id, preset = {}) {
     fertig = true;
     t.dueDate = g('due').value || '';
     t.appointmentId = g('appt').value || '';
-    t.notes = g('notes').value.trim();
+    t.body = editor.html();
+    t.notes = klartext(t.body);
+    // Eine Unteraufgabe, die noch im Eingabefeld steht, geht nicht verloren.
+    const offen = g('subNew').value.trim();
+    if (offen) subs.push(neueTeilaufgabe(offen));
+    t.subtasks = subs.filter((s) => s.title.trim()).map((s) => ({ ...s, title: s.title.trim() }));
+    t.links = verknuepfungenRoh({ links });
     const done = g('done') ? g('done').checked : t.done;
     if (done !== t.done) t.doneAt = done ? new Date().toISOString() : '';
     t.done = done;
     await upsertTodo(t);
+    // Bilder, die nicht mehr im Text stehen, samt Datei entfernen.
+    const bleiben = new Set(bildIds(t.body));
+    await bilderEntfernen([...new Set([...urspruenglich, ...neueBilder])].filter((b) => !bleiben.has(b)));
     m.close();
     ok(isNew ? 'Aufgabe angelegt' : 'Aufgabe gespeichert', t.title);
+    nachSpeichern?.();
     refresh();
   });
   m.root.querySelector('#btnDel')?.addEventListener('click', async () => {
     if (!await confirmDialog({ title: 'Aufgabe löschen?', text: `„${t.title}“ wird entfernt.`, confirmLabel: 'Löschen', danger: true })) return;
     fertig = true;
     await deleteTodo(t.id);
+    await bilderEntfernen([...new Set([...urspruenglich, ...neueBilder])]);
     m.close();
     ok('Aufgabe gelöscht');
+    nachSpeichern?.();
     refresh();
   });
 }

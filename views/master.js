@@ -14,6 +14,7 @@ import { anschriftAusText, LAENDER } from '../lib/rechnung.js';
 import { openTransactionDialog } from './transactions.js';
 import { refresh } from '../lib/router.js';
 import { table, mountTable, mountTables } from '../lib/table.js';
+import { aufgabenAbschnitt } from './todos.js';
 
 
 let tab = 'categories';
@@ -367,6 +368,11 @@ function wireRowButtons(root, collection, usageField, label) {
   }));
 }
 
+/** Öffnet einen Eintrag der Stammdaten (Kategorie, Kontakt, Konto, Anlagegut), etwa aus der Suche. */
+export function openStammdatum(collection, id) {
+  openDialog(collection, id);
+}
+
 function openDialog(collection, id) {
   const item = id ? store.db[collection].find((x) => x.id === id) : null;
   const forms = {
@@ -381,6 +387,7 @@ function openDialog(collection, id) {
 /** Stand aller Eingabefelder eines Fensters – für die Rückfrage vor dem Verwerfen. */
 function formStand(root) {
   return JSON.stringify([...root.querySelectorAll('.modal-body input, .modal-body select, .modal-body textarea')]
+    .filter((el) => !el.closest('[data-ohne-stand]'))
     .map((el) => (el.type === 'checkbox' ? el.checked : el.value)));
 }
 
@@ -519,7 +526,12 @@ function contactForm(c) {
         <div class="field"><label>Kundennummer</label><input id="f_customerNumber" value="${c.customerNumber || ''}"></div>
         <div class="field"><label>Leitweg-ID</label><input id="f_buyerReference" value="${c.buyerReference || ''}" placeholder="nur bei Behörden"></div>
       </div>
-      <div class="field"><label>Notiz</label><textarea id="f_notes">${c.notes || ''}</textarea></div>`,
+      <div class="field"><label>Notiz</label><textarea id="f_notes">${c.notes || ''}</textarea></div>
+      ${isNew ? '' : raw('<div class="field" id="f_aufgaben" data-ohne-stand></div>')}`,
+    onOpen: (rootEl) => {
+      const box = rootEl.querySelector('#f_aufgaben');
+      if (box) aufgabenAbschnitt(box, 'kontakt', c.id, { titel: 'Aufgaben zu diesem Kontakt' });
+    },
     onSave: async (rootEl) => {
       const g = (k) => rootEl.querySelector('#f_' + k).value.trim();
       if (!g('name')) { warn('Bitte einen Namen eintragen'); return false; }

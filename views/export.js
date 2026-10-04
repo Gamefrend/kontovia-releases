@@ -35,7 +35,7 @@ function card({ id, title, sub, body, button, tone = '' }) {
 }
 
 function draw(root) {
-  // Unterlagen für Finanzamt und Kanzlei enthalten nicht gelistete Buchungen nie.
+  // Unterlagen für Finanzamt und Kanzlei enthalten private Buchungen nie.
   const db = listedOnly(store.db);
   const hidden = unlistedStats(store.db, period.from, period.to);
   const klein = isKleinunternehmer(db);
@@ -65,7 +65,7 @@ function draw(root) {
     </div>
 
     ${hidden.count ? raw(`<div class="notice warn mb16">
-      <strong>${hidden.count === 1 ? '1 nicht gelistete Buchung' : `${int(hidden.count)} nicht gelistete Buchungen`} im Zeitraum</strong>
+      <strong>${hidden.count === 1 ? '1 private Buchung' : `${int(hidden.count)} private Buchungen`} im Zeitraum</strong>
       (Einnahmen ${esc(money(hidden.income))} €, Ausgaben ${esc(money(hidden.expense))} €) sind in keinem dieser
       Exporte enthalten, weder in Zahlen noch im Journal, im DATEV-Stapel, im Prüfungsordner oder in den Belegen.
       Nur der Gesamtexport „Alles (JSON)“ enthält den vollständigen Bestand.
@@ -121,7 +121,7 @@ function draw(root) {
       ${raw(card({
         title: 'Rohdaten', sub: 'CSV und JSON',
         body: `Einzelne Tabellen für die Weiterverarbeitung in Excel oder LibreOffice:
-          die gelisteten Buchungen und die Kontakte. Damit lassen sich eigene Unterlagen auch
+          die Buchungen ohne die privaten und die Kontakte. Damit lassen sich eigene Unterlagen auch
           selbst zusammenstellen. Der JSON-Export enthält den kompletten Bestand, falls Sie die
           Daten je in ein anderes Programm übernehmen wollen.`,
         button: `<button class="btn" id="btnCsvTx">Buchungen (CSV)</button>
@@ -284,7 +284,7 @@ function wire(root, db, rows) {
       confirmLabel: 'Trotzdem exportieren', danger: true,
     });
     if (!yes) return;
-    // Der Gesamtexport ist der vollständige Bestand – auch nicht gelistete Buchungen.
+    // Der Gesamtexport ist der vollständige Bestand – auch private Buchungen.
     const p = await api.file.save({ defaultName: `Kontovia-Daten_${todayISO()}.json`, filters: [{ name: 'JSON', extensions: ['json'] }], text: X.jsonExport(store.db) });
     if (p) ok('Export gespeichert', p);
   }));

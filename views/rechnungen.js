@@ -33,6 +33,7 @@ import { zeigeERechnung } from './erechnung.js';
 import { editorZeigen } from './rechnungseditor.js';
 import { gestaltungZeigen } from './rechnungsgestalter.js';
 import { openTransactionDialog } from './transactions.js';
+import { aufgabenAbschnitt } from './todos.js';
 
 const api = window.kontovia;
 
@@ -252,6 +253,11 @@ async function detailZeigen(root, r, actions) {
         </div>
 
         <div class="card">
+          <div class="card-head"><h3>${icon('todo', 16).__raw} Aufgaben</h3></div>
+          <div class="card-body" id="reAufgaben"></div>
+        </div>
+
+        <div class="card">
           <div class="card-head"><h3>${icon('edit', 16).__raw} Ändern</h3></div>
           <div class="card-body">
             <p class="small muted mt0">Eine ausgestellte Rechnung bleibt, wie sie ist. Fehler behebt eine Korrektur: Die Rechnung wird storniert und
@@ -294,6 +300,7 @@ async function detailZeigen(root, r, actions) {
 
   $$('[data-gehe]', root).forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); navigate('rechnungen', { id: a.dataset.gehe }); }));
   $$('[data-tx]', root).forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); openTransactionDialog(a.dataset.tx, 'income', { onSaved: () => refresh() }); }));
+  aufgabenAbschnitt($('#reAufgaben', root), 'rechnung', r.id, { titel: 'Zu dieser Rechnung', vorgabe: offen ? `Zahlungseingang prüfen: ${r.nummer}` : '' });
   $('#reSenden', root).addEventListener('click', () => sendenDialog(r));
   $('#rePdfSpeichern', root).addEventListener('click', sicher(async () => { const p = await pdfSpeichern(r); if (p) ok('PDF gespeichert', p); }));
   $('#reXml', root).addEventListener('click', sicher(async () => { const p = await xmlSpeichern(r, 'xrechnung'); if (p) ok('XRechnung gespeichert', p); }));

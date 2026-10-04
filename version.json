@@ -1,12 +1,12 @@
 {
-  "version": "2.6.0",
-  "released": "2026-10-04T14:02:37.718Z",
-  "notes": "Abmelden, Fingerabdruck und Rückmeldungen\n\n- Neben „Sperren“ gibt es jetzt „Abmelden“. Damit räumen Sie dieses Gerät auf und melden sich mit einem anderen Konto an. Kontovia gleicht vorher noch einmal ab.\n- Auf dem Handy öffnen Sie Kontovia mit Fingerabdruck oder Gesicht. Wenn Sie es möchten, geht das Entsperren auch über Ihr Google-Konto. Das Passwort bleibt immer gültig. Einschalten unter Einstellungen, Sicherheit.\n- Mit „Feedback“ in der Seitenleiste schreiben Sie uns, was Ihnen auffällt, auf Wunsch mit einem Bild der aktuellen Seite.\n- Im Rechnungsgestalter schließt ein Klick neben ein Fenster nur dieses Fenster. Farben stellen Sie auch im Rechtsklick-Menü ein.\n- Texte auf der Rechnung ändern Sie mit einem Doppelklick direkt auf der Vorschau. Bilder aus der Zwischenablage fügen Sie mit Strg+V ein.",
+  "version": "2.7.0",
+  "released": "2026-10-04T14:52:32.271Z",
+  "notes": "Aufgaben mit Text, Bildern und Unteraufgaben\n\n- Aufgaben können jetzt formatierten Text mit Überschriften, Listen und Links enthalten, dazu Bilder (auch per Strg+V) und Unteraufgaben, die Sie schon in der Liste abhaken.\n- Eine Aufgabe lässt sich mit Terminen, Buchungen, Kontakten und Rechnungen verknüpfen. Dort steht sie dann auch, und von dort legen Sie gleich eine neue an. Aufgaben mit Datum erscheinen im Kalender.\n- Wie weit die Aufgabenliste vorausschaut, wählen Sie selbst: 7 Tage, 4 Wochen, 1 Monat oder einen eigenen Zeitraum. Die Zeile zum schnellen Anlegen ist weg, „Aufgabe“ oben rechts reicht.\n- Neu: Mit Strg+K durchsuchen Sie alles auf einmal, also Buchungen, Rechnungen, Kontakte, Termine, Aufgaben und Einstellungen. Auf dem Handy öffnet das Suchsymbol oben die Suche.\n- Buchungen, die nicht zum Betrieb gehören, heißen jetzt „privat“ statt „nicht gelistet“. An der Wirkung ändert sich nichts.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "c855c9d9d1a7a2e5a341ea0b8cc7f9f4a28992fbe464f85f68bcd1023f048e02",
-      "size": 63500
+      "sha256": "9fdd6e219bac9b84cf4e6a317516d02a2b4e3baa46bcbf820b8979669e484855",
+      "size": 64483
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -54,14 +54,19 @@
       "size": 2007
     },
     {
+      "path": "lib/aufgaben.js",
+      "sha256": "3384e640b11326bacc760ebf3d06938955f9d11643edc3ec7204d2de72093fa2",
+      "size": 5751
+    },
+    {
       "path": "lib/bildschirmfoto.js",
       "sha256": "35d383d0dd0e41d1ad7a1f488132c84fd3453ff7159d6e562269d64d8c45b77a",
       "size": 7666
     },
     {
       "path": "lib/calc.js",
-      "sha256": "cefd85daa2daa43e662556d85ec36331c7053ca034e43214416486361e7684ae",
-      "size": 45500
+      "sha256": "0875b07d3987728cfa26d5d43446ec233ecb5de6b61b9e7f80c88bcbd99a89e0",
+      "size": 45460
     },
     {
       "path": "lib/dokument.js",
@@ -85,8 +90,8 @@
     },
     {
       "path": "lib/exports.js",
-      "sha256": "c01fc3f46df28e8697ac2c5594ee856a84724a47f59e71810bd07bb9d66d6fbb",
-      "size": 37735
+      "sha256": "1bb2f4b46faacea73add0b398eb59aa01ad410ce328c5bf4fbbe122925395d50",
+      "size": 37711
     },
     {
       "path": "lib/feedback.js",
@@ -155,8 +160,8 @@
     },
     {
       "path": "lib/prefs.js",
-      "sha256": "323548f49f064d3b6d4acc444123a497b60e2b9d13dc756977b1a6893d10942b",
-      "size": 8206
+      "sha256": "50f3e2f6e2c1eb4c39f3b8ac58d651822534f4ea86d8e67f5ee8b5e319119485",
+      "size": 8232
     },
     {
       "path": "lib/rechnung.js",
@@ -184,14 +189,34 @@
       "size": 27246
     },
     {
+      "path": "lib/richeditor.js",
+      "sha256": "5618507d7fc6187ac27cc4080ec5e7f2b0a74afd064dc70dcaf1c76f1168f381",
+      "size": 11038
+    },
+    {
+      "path": "lib/richtext.js",
+      "sha256": "ca954faaa094c7bcc5cbfe10b7a971d46ac7d6df356d8f17533d0001a96bd1e2",
+      "size": 6432
+    },
+    {
       "path": "lib/router.js",
       "sha256": "1fa0a225c1865be7bc467285de5311b268bb9ce5b41984d924e2e5e03746278a",
       "size": 4723
     },
     {
       "path": "lib/store.js",
-      "sha256": "0914c5cde891d1f1aa2f992f95489e8ae66e32cb4eb47bfe7bf6e89addc68817",
-      "size": 34692
+      "sha256": "e53f0d9c4adc1014b7f09a7118cd0c5aaca4912b83bfe05747e11e40cf2c6189",
+      "size": 35006
+    },
+    {
+      "path": "lib/suche.js",
+      "sha256": "7a6691f2eb463f849763c1c7b45dd7b6e83bd687da5a2fac4c85ed921e19a7dd",
+      "size": 7603
+    },
+    {
+      "path": "lib/suchindex.js",
+      "sha256": "12c45f7be7163d11d30d47d49967c92070f496df4bc63ad00ae1a5a02d9858fc",
+      "size": 7742
     },
     {
       "path": "lib/sync.js",
@@ -215,8 +240,8 @@
     },
     {
       "path": "lib/ui.js",
-      "sha256": "3f7a2c88abbb0147aff31543ba3316ee0a4ab844e0434cd23738526d9ed8d165",
-      "size": 43623
+      "sha256": "2046c66bc2595d28cb243177f9b01cf3cdf123c0bce699539da3ef8c04677f05",
+      "size": 43649
     },
     {
       "path": "lib/updates.js",
@@ -230,8 +255,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "7c6070f4ceb08cef1c6882129c8f43e45233829c3cde26d62816daaa4eadc6fc",
-      "size": 19374
+      "sha256": "72244d5c9246594807d2f7800f7ab5f01d8a91ed3d517df97f98d237c9ebcc61",
+      "size": 20433
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -245,18 +270,18 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "4011fce6c50b406e3ef95bb1ee3840e52931a943d47d1ca917c4571a86674d5e",
+      "sha256": "8805e0d9caede9e12bda509f77ef830bc12a70415d897c7aca2ff9e16129437b",
       "size": 879
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "721540c9ce81dcd63b9a0c17cd37fdabd5a0d66c035c55f4d610e8613b2af730",
+      "sha256": "840da696a6ca4544f9b0dc1d065ccd1cd1c0d08fa015f4bb473c9aa4a3f9c669",
       "size": 15585
     },
     {
       "path": "styles.css",
-      "sha256": "6b6b6aa538ac1bfdd55dbd31e771f57a7b4909f1d819607296bbd49eb0722d58",
-      "size": 68974
+      "sha256": "c6305f6e3d19475c445700fa98520587e677177548b836ce6ef9f92624768249",
+      "size": 76513
     },
     {
       "path": "views/anlageform.js",
@@ -265,8 +290,8 @@
     },
     {
       "path": "views/calendar.js",
-      "sha256": "05a64317023b740196b346ca79222460ef81f7c7ee717cd1f72cf62572ebaee1",
-      "size": 35864
+      "sha256": "efdf5284f5a66e5c2bf40c64afd0251f934b64acb68bbb2551e2f2327e2d9241",
+      "size": 37227
     },
     {
       "path": "views/calendarsync.js",
@@ -280,8 +305,8 @@
     },
     {
       "path": "views/dashboard.js",
-      "sha256": "288e3798ffd48c3d4c843df266933a47d903db9229b2c75aa11602c2468d9ce5",
-      "size": 39028
+      "sha256": "ff64d81525826b57856bbd2be8ea87c1dea027e6a9a0ed78a35e5ba6b3722769",
+      "size": 39004
     },
     {
       "path": "views/erechnung.js",
@@ -290,23 +315,23 @@
     },
     {
       "path": "views/export.js",
-      "sha256": "3d5b7fadb9ef3a91e975b1582353032717000ec5b38089ca3c5647afa5174126",
-      "size": 19802
+      "sha256": "b5119e1eda60c967b774d295090f8e2b3cd2525244ece41a1dd525c2f4d31d6a",
+      "size": 19777
     },
     {
       "path": "views/help.js",
-      "sha256": "4b9f8fe269d41766788156310bf3561afae03c0c9dc3958a20870e8e6ebf6d1d",
-      "size": 42054
+      "sha256": "9789aa28f6f57c73e55df14aa7e32af944bd56b19bef87362efb9f0a90277115",
+      "size": 42946
     },
     {
       "path": "views/master.js",
-      "sha256": "d307466e9a744f61e4dc109467daf04c5b421ef0b5034f2df05ad53d58264acf",
-      "size": 32841
+      "sha256": "1eece0e079eacda110387c17fe4d428763e95107dbf2dbce4fff7f72908ac4f3",
+      "size": 33401
     },
     {
       "path": "views/rechnungen.js",
-      "sha256": "cde24b8158b87275a43efc2ee57eb1a02546311ec0e0c53f98fb503dbf2b174d",
-      "size": 43984
+      "sha256": "9f81c5401fb0dcd14e7a318614b581f00170db4aadaafd0f97c364759ebe7b4e",
+      "size": 44372
     },
     {
       "path": "views/rechnungseditor.js",
@@ -320,8 +345,8 @@
     },
     {
       "path": "views/reports.js",
-      "sha256": "0f2e6dc7c35f406bfeb77bf0f24eccf8b575f9d224507cb91ac73f6defd2f304",
-      "size": 42967
+      "sha256": "f4adfb2d468dc1a385f2b017fd032649fbebfce495d6d7a0fdf51b7dd08fd2ca",
+      "size": 42919
     },
     {
       "path": "views/settings.js",
@@ -335,13 +360,13 @@
     },
     {
       "path": "views/todos.js",
-      "sha256": "5a39333c3288f12dc2a626eccc25d8d2dc7d107f2f4e2885bb6fe9853ed68804",
-      "size": 15339
+      "sha256": "f5d2f0ab3a76fbd9209a30cd0c4217b7d0c9d2e9b2565f1a3b2c9bb8fa96455b",
+      "size": 30294
     },
     {
       "path": "views/transactions.js",
-      "sha256": "f13c185e8d63fdfa652f4f56ce88e3f6dd801e281ba0d4af33f4c609e79d2f4a",
-      "size": 72203
+      "sha256": "fe75d30a05742b2e8d3f46b25371cde18fb8e99b729934006de826e1040701ed",
+      "size": 72566
     },
     {
       "path": "views/wiederkehrend.js",
@@ -355,7 +380,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "90d2ca7b4bec36927f4afc4c9bc98ddbed10241069c722f8e062180919871f59",
+      "sha256": "0df862c3ff48220b5a1d28e97513002ad9dad5b16151fd9461921e8efca5c6cd",
       "size": 6905
     },
     {
