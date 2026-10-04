@@ -10,6 +10,7 @@ import { applyTheme, lockNow, appInfo } from '../app.js';
 import { abmelden, zugaengeKarte, kontoSchluessel } from '../lib/zugaenge.js';
 import { renderCloudCard, renderUpdateCard } from './cloudpanel.js';
 import { renderCalendarCard } from './calendarsync.js';
+import { mahnKarte } from './mahneinstellungen.js';
 import { table, mountTables } from '../lib/table.js';
 
 const api = window.kontovia;
@@ -43,6 +44,7 @@ export async function render(root, params, { actions } = {}) {
   // Aus der Statusleiste („Cloud-Sicherung einrichten“) direkt zur Cloud-Karte.
   if (params?.abschnitt === 'cloud') $('#cloudCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   if (params?.abschnitt === 'speicher') $('#speicherCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  if (params?.abschnitt === 'mahnwesen') $('#mahnCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
 async function draw(root) {
@@ -165,6 +167,8 @@ async function draw(root) {
       </div>
     </div>
 
+    <div class="card mt16" id="mahnCard"></div>
+
     <div class="card mt16" id="zugaengeCard"></div>
 
     <div class="card mt16" id="speicherCard">
@@ -281,6 +285,7 @@ async function draw(root) {
   trackChanges(root);
   // Cloud und Updates laden ihre Karten selbst nach – beide fragen den
   // Web-Schicht und sollen die übrige Ansicht nicht aufhalten.
+  mahnKarte($('#mahnCard', root));
   renderCloudCard($('#cloudCard', root));
   renderCalendarCard($('#calendarCard', root));
   renderUpdateCard($('#updateCard', root));

@@ -383,7 +383,8 @@ export async function gestaltungZeigen(root, params = {}) {
           <textarea data-p="${k}" rows="5" aria-label="${esc(NAMEN[k])}">${esc(entwurf.profil[k])}</textarea>${reihenKnoepfe(k)}`;
       }
       case 'hinweise':
-        return `${kopfHtml('Zahlung und Hinweise', 'Bankverbindung, Zahlungsziel und Steuerhinweise stehen immer auf der Rechnung.')}${reihenKnoepfe('hinweise')}`;
+        return `${kopfHtml('Zahlung und Hinweise', 'Bankverbindung, Zahlungsziel und Steuerhinweise stehen immer auf der Rechnung.')}
+          ${haken('girocode', d.girocode, 'GiroCode zum Bezahlen mit der Banking-App', 'Erscheint bei Überweisung, wenn eine gültige IBAN eingetragen ist.')}${reihenKnoepfe('hinweise')}`;
       case 'bilder':
         return `${kopfHtml('Bilder der Rechnung', 'Diese Bilder wählen Sie in der Rechnung selbst, etwa Fotos Ihrer Arbeit.')}${reihenKnoepfe('bilder')}`;
       case 'bild':

@@ -117,8 +117,56 @@ function anleitung(root) {
         Mit einem <strong>Doppelklick</strong> ändern Sie einen Text direkt auf dem Blatt (Strg+Enter beendet, Esc
         verwirft); er steht danach überall, wo er vorkommt, im selben Wortlaut, auch in den Rechnungsdaten.
         Ein Bild aus der Zwischenablage, etwa ein Bildschirmfoto, fügen Sie mit <kbd>Strg</kbd>+<kbd>V</kbd> ein.</p>
+        <p><strong>GiroCode.</strong> Bei Zahlung per Überweisung steht auf der Rechnung ein QR-Code. Wer ihn mit der
+        Banking-App scannt, hat Empfänger, IBAN, Betrag und Rechnungsnummer schon in der Überweisung. Er erscheint, wenn
+        unter Rechnungen → Gestaltung eine gültige IBAN eingetragen ist. Abschalten lässt er sich im Gestalter bei
+        „Zahlung und Hinweise“. Rechnungen, die schon ausgestellt sind, ändern sich dadurch nicht.</p>
         <p class="small">Der Versand per E-Mail und der automatische Empfang kommen mit einer der nächsten Versionen.
         Bis dahin speichern Sie das PDF und hängen es an Ihre E-Mail an.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body" id="hilfe-kontoauszug">
+        <h3 class="mt0">Kontoauszug einlesen</h3>
+        <p>Unter <a data-go="kontoimport">Kontoauszug</a> lesen Sie die Datei ein, die Sie bei Ihrer Bank herunterladen: CSV (zum Beispiel von
+        Sparkasse, Volksbank, ING oder DKB), CAMT.053 oder MT940. Die Datei wird nur im Browser auf diesem Gerät gelesen. Sie wird nicht hochgeladen
+        und nirgends gespeichert, und nichts wird gebucht, bevor Sie es bestätigen.</p>
+        <p><strong>Ablauf.</strong> Datei und Zahlungskonto wählen, bei CSV die Spalten prüfen (Kontovia erkennt sie meist selbst und
+        merkt sich die Zuordnung für das nächste Mal), die vorgeschlagene Zuordnung durchsehen, ankreuzen und buchen. Die
+        Zeichensätze (Windows-1252, ISO-8859-1, UTF-8) erkennt Kontovia selbst, Umlaute stimmen.</p>
+        <p><strong>Zuordnung.</strong> Ein Eingang wird offenen Rechnungen zugeordnet, nach Rechnungsnummer im Verwendungszweck, Betrag und
+        Name des Kunden. Er kann auch Rechnung plus Mahngebühr und Verzugsaufschlag decken. Ein Ausgang wird offenen Eingangsrechnungen und
+        wiederkehrenden Buchungen zugeordnet. Das geschieht nach festen Regeln, nicht durch ein lernendes Verfahren. Jeder Vorschlag nennt
+        seine Gründe und eine Sicherheit: <em>sicher</em> (Nummer und Betrag passen), <em>wahrscheinlich</em> (Betrag und Name passen),
+        <em>unsicher</em>. Angekreuzt sind nur sichere Treffer und Ihre eigenen Regeln. Für den Rest legen Sie Regeln an: „Wenn der
+        Verwendungszweck Adobe enthält, dann Kategorie Software“. Sie liegen verschlüsselt in Ihrem Tresor.</p>
+        <p><strong>Doppelt gebucht wird nichts.</strong> Jeder Umsatz bekommt einen Prüfwert. Dieselbe Datei noch einmal oder eine Datei mit
+        überlappendem Zeitraum bucht nichts doppelt. Buchungen, die es schon gibt (auch von Hand erfasste), melden sich als mögliche Dublette.</p>
+        <p><strong>Herkunft und Festschreibung.</strong> Jede Buchung nennt die Datei und den Zeitpunkt, im Journal steht sie ebenfalls. Der Zahlungseingang
+        einer offenen Rechnung setzt Zahlungsdatum und Konto, wie beim Markieren als bezahlt. Ein festgeschriebener Zeitraum wird nicht
+        verändert: Eine festgeschriebene offene Rechnung lässt sich bezahlen, wenn das Datum nach der Festschreibung liegt. Eine Teilzahlung
+        trennt Kontovia nur bei einer offenen Buchung außerhalb der Festschreibung ab.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body" id="hilfe-mahnwesen">
+        <h3 class="mt0">Zahlungserinnerung und Mahnung</h3>
+        <p>Unter <a data-go="rechnungen">Rechnungen → Mahnwesen</a> stehen alle überfälligen Rechnungen mit dem Vorschlag für die
+        nächste Stufe: Zahlungserinnerung, 1. Mahnung, 2. Mahnung mit letzter Frist. Ein Klick auf „Mahnen“ öffnet das
+        Fenster mit Frist, Gebühr und Verzugsaufschlag. Danach liegt das Schreiben als PDF vor, mit Ihrer Vorlage, Ihrem
+        Absender und einem GiroCode über den ganzen Betrag. Jede Mahnung steht auch in der Rechnung.
+        Gutschriften, bezahlte und stornierte Rechnungen werden nicht gemahnt; bei einer Teilzahlung ist der offene Rest dran.</p>
+        <p><strong>Mahngebühr.</strong> Frist und Gebühr je Stufe stellen Sie unter
+        <a data-go="settings">Einstellungen → Mahnwesen</a> ein. Beim Erstellen können Sie die Gebühr für das einzelne Schreiben
+        ändern oder auf 0 setzen. Eine Gebühr von 0 € steht nicht auf dem Schreiben.</p>
+        <p><strong>Verzugsaufschlag.</strong> Er ist ausgeschaltet, bis Sie ihn einschalten. Möglich sind Prozent pro Jahr auf den
+        offenen Betrag (tageweise ab Fälligkeit), eine feste Pauschale (Vorgabe 40 €, höchstens einmal je Rechnung) oder
+        beides. Bei Geschäftskunden gilt gesetzlich üblich der Basiszinssatz plus 9 Prozentpunkte. Der Basiszinssatz ändert
+        sich halbjährlich, deshalb tragen Sie den Satz selbst ein. Bei Privatkunden gelten andere Sätze. Welche Beträge
+        Sie verlangen, verantworten Sie selbst; Kontovia ersetzt keine Rechtsberatung.</p>
+        <p><strong>Buchhaltung.</strong> Gebühr und Verzugsaufschlag sind kein Entgelt für eine Leistung. Sie ändern weder die
+        Rechnung noch deren Umsatzsteuer, und eine festgeschriebene Rechnung bleibt, wie sie ist. Beim Erstellen der Mahnung
+        wird nichts gebucht. Sobald das Geld da ist, buchen Sie es in der Rechnung mit „Mahnkosten als eingegangen buchen“: als
+        eigene Einnahme ohne Umsatzsteuer, an dem Tag, an dem sie eingegangen ist. Kontovia legt dafür die Kategorie
+        „Mahngebühren und Verzugsaufschlag“ an. Eine irrtümlich erstellte Mahnung nehmen Sie in der Rechnung zurück.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">

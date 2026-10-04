@@ -34,6 +34,7 @@ import { editorZeigen } from './rechnungseditor.js';
 import { gestaltungZeigen } from './rechnungsgestalter.js';
 import { openTransactionDialog } from './transactions.js';
 import { aufgabenAbschnitt } from './todos.js';
+import { mahnwesenZeigen, mahnungenKarte } from './mahnwesen.js';
 
 const api = window.kontovia;
 
@@ -43,6 +44,7 @@ const TABS = {
   eingang: 'Eingang',
   produkte: 'Produkte',
   vorlagen: 'Vorlagen',
+  mahnwesen: 'Mahnwesen',
   gestaltung: 'Gestaltung',
 };
 
@@ -87,7 +89,7 @@ export async function render(root, params = {}, { actions } = {}) {
     <div id="reBody"></div>`;
   $$('[data-tab]', root).forEach((b) => b.addEventListener('click', () => { navigate('rechnungen', { tab: b.dataset.tab }, { ersetzen: true }); }));
   const body = $('#reBody', root);
-  ({ ausgang, eingang, produkte, vorlagen, gestaltung }[tab])(body, params);
+  ({ ausgang, eingang, produkte, vorlagen, mahnwesen: mahnwesenZeigen, gestaltung }[tab])(body, params);
 }
 
 /** „Neue Rechnung“: leer oder aus einer Vorlage. */
@@ -130,7 +132,10 @@ function ausgang(root) {
       ${statCard({ label: `Gestellt ${jahr}`, value: `${money(sum(diesesJahr, (x) => x.b.brutto))} €`, foot: `${int(diesesJahr.length)} ausgestellt`, icon: 'chart' }).__raw}
       ${statCard({ label: 'Entwürfe', value: int(entwuerfe.length), foot: entwuerfe.length ? 'noch nicht ausgestellt' : 'keine offenen Entwürfe', icon: 'edit' }).__raw}
     </div>
+    ${ueber.length ? `<div class="notice warn mb16">${icon('alert', 15).__raw} ${int(ueber.length)} ${ueber.length === 1 ? 'Rechnung ist' : 'Rechnungen sind'} überfällig.
+      <button class="btn sm ml8" id="reZuMahnwesen">Zum Mahnwesen</button></div>` : ''}
     <div class="card" id="reListe"></div>`;
+  $('#reZuMahnwesen', root)?.addEventListener('click', () => navigate('rechnungen', { tab: 'mahnwesen' }));
 
   mountTable($('#reListe', root), {
     id: 'rechnungen-ausgang',
@@ -253,6 +258,11 @@ async function detailZeigen(root, r, actions) {
         </div>
 
         <div class="card">
+          <div class="card-head"><h3>${icon('alert', 16).__raw} Mahnungen</h3></div>
+          <div class="card-body" id="reMahnungen"></div>
+        </div>
+
+        <div class="card">
           <div class="card-head"><h3>${icon('todo', 16).__raw} Aufgaben</h3></div>
           <div class="card-body" id="reAufgaben"></div>
         </div>
@@ -300,6 +310,7 @@ async function detailZeigen(root, r, actions) {
 
   $$('[data-gehe]', root).forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); navigate('rechnungen', { id: a.dataset.gehe }); }));
   $$('[data-tx]', root).forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); openTransactionDialog(a.dataset.tx, 'income', { onSaved: () => refresh() }); }));
+  mahnungenKarte($('#reMahnungen', root), r);
   aufgabenAbschnitt($('#reAufgaben', root), 'rechnung', r.id, { titel: 'Zu dieser Rechnung', vorgabe: offen ? `Zahlungseingang prüfen: ${r.nummer}` : '' });
   $('#reSenden', root).addEventListener('click', () => sendenDialog(r));
   $('#rePdfSpeichern', root).addEventListener('click', sicher(async () => { const p = await pdfSpeichern(r); if (p) ok('PDF gespeichert', p); }));

@@ -218,6 +218,44 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   .cal-more::first-line { font-size: 10px; }
 }
 
+/* Kontoauszug prüfen und Mahnliste auf dem Telefon: Karten statt Spalten, damit Betrag,
+   Zuordnung und der Knopf ohne Querscrollen zu sehen sind. */
+@media (max-width: 640px) {
+  table.data.ki-list, table.data.mw-list { display: block; min-width: 0; }
+  table.ki-list thead, table.mw-list thead { display: none; }
+  table.ki-list tbody, table.mw-list tbody { display: block; }
+  table.ki-list tbody tr[data-row], table.mw-list tbody tr[data-row] {
+    display: grid; column-gap: 10px; row-gap: 4px; align-items: center; padding: 11px 14px; border-bottom: 1px solid var(--border);
+  }
+  table.ki-list tbody tr[data-row] > td, table.mw-list tbody tr[data-row] > td { display: block; padding: 0; border: 0; min-width: 0; white-space: normal; }
+  table.ki-list tbody tr[data-row] { grid-template-columns: auto minmax(0, 1fr) auto; }
+  table.ki-list td.ki-wahl { grid-row: 1; grid-column: 1; }
+  table.ki-list td.ki-text { grid-row: 1; grid-column: 2; }
+  table.ki-list td.ki-betrag { grid-row: 1; grid-column: 3; text-align: right; }
+  table.ki-list td.ki-zu { grid-row: 2; grid-column: 2 / 4; }
+  table.ki-list td.ki-datum { grid-row: 3; grid-column: 2; font-size: 12px; color: var(--muted); }
+  table.ki-list td.ki-akt { grid-row: 3; grid-column: 3; text-align: right; }
+  table.mw-list tbody tr[data-row] { grid-template-columns: minmax(0, 1fr) auto; }
+  table.mw-list td.mw-nr { grid-row: 1; grid-column: 1; font-weight: 600; }
+  table.mw-list td.mw-offen { grid-row: 1; grid-column: 2; text-align: right; font-weight: 560; }
+  table.mw-list td.mw-kunde { grid-row: 2; grid-column: 1; }
+  table.mw-list td.mw-faellig { grid-row: 2; grid-column: 2; text-align: right; }
+  table.mw-list td.mw-stand { grid-row: 3; grid-column: 1; }
+  table.mw-list td.mw-vor { grid-row: 3; grid-column: 2; text-align: right; }
+  table.mw-list td.mw-akt { grid-row: 4; grid-column: 1 / 3; text-align: right; }
+  table.data.mw-hist { display: block; min-width: 0; }
+  table.mw-hist thead { display: none; }
+  table.mw-hist tbody { display: block; }
+  table.mw-hist tbody tr[data-row] { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; row-gap: 4px; align-items: center; padding: 11px 14px; border-bottom: 1px solid var(--border); }
+  table.mw-hist tbody tr[data-row] > td { display: block; padding: 0; border: 0; min-width: 0; white-space: normal; }
+  table.mw-hist td.mh-nr { grid-row: 1; grid-column: 1; font-weight: 600; }
+  table.mw-hist td.mh-gesamt { grid-row: 1; grid-column: 2; text-align: right; font-weight: 560; }
+  table.mw-hist td.mh-stufe { grid-row: 2; grid-column: 1; }
+  table.mw-hist td.mh-akt { grid-row: 2; grid-column: 2; text-align: right; }
+  table.mw-hist td.mh-datum { grid-row: 3; grid-column: 1; font-size: 12px; color: var(--muted); }
+  table.ki-list tr.empty-row, table.ki-list tr.empty-row > td, table.mw-list tr.empty-row, table.mw-list tr.empty-row > td, table.mw-hist tr.empty-row, table.mw-hist tr.empty-row > td { display: block; }
+}
+
 /* Buchungsliste auf dem Telefon: Karten statt Spalten. Beschreibung und
    Betrag oben, Datum, Kategorie und Status darunter – der Betrag ist so ohne
    Querscrollen zu sehen. Sortieren und Filtern gehen über die Leiste darüber

@@ -28,6 +28,7 @@ import * as viewExport from './views/export.js';
 import * as viewMaster from './views/master.js';
 import * as viewSettings from './views/settings.js';
 import * as viewHelp from './views/help.js';
+import * as viewKontoimport from './views/kontoimport.js';
 
 const api = window.kontovia;
 const app = document.getElementById('app');
@@ -36,6 +37,7 @@ export let appInfo = { version: '1.0.0' };
 const VIEWS = {
   dashboard: { title: 'Übersicht', icon: 'dashboard', mod: viewDashboard, key: '1' },
   transactions: { title: 'Buchungen', icon: 'book', mod: viewTransactions, key: '2' },
+  kontoimport: { title: 'Kontoauszug', icon: 'bank', mod: viewKontoimport },
   calendar: { title: 'Kalender', icon: 'calendar', mod: viewCalendar, key: '3' },
   todos: { title: 'Aufgaben', icon: 'todo', mod: viewTodos, key: '7' },
   rechnungen: { title: 'Rechnungen', icon: 'invoice', mod: viewRechnungen, key: '8' },
@@ -1095,7 +1097,7 @@ function renderShell() {
         </button>
         <nav class="nav" id="nav" aria-label="Hauptnavigation">
           <div class="nav-group">
-            ${raw(['dashboard', 'transactions', 'rechnungen', 'calendar', 'todos'].map(navItem).join(''))}
+            ${raw(['dashboard', 'transactions', 'kontoimport', 'rechnungen', 'calendar', 'todos'].map(navItem).join(''))}
           </div>
           <div class="nav-sep"></div>
           <div class="nav-group">

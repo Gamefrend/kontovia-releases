@@ -738,6 +738,8 @@ tr.unlisted td:not(:last-child) { color: var(--text-2); }
 @media (max-width: 1440px) { table.data .col-nr, table.data .col-ust { display: none; } }
 /* Ab hier bliebe der Beschreibung kaum Platz („Kontoführ…“) – Netto steht im Dialog. */
 @media (max-width: 1180px) { table.data .col-kontakt, table.data .col-netto { display: none; } }
+/* Mahnwesen: Nebenspalten weichen früh, Nummer, Betrag und Stufe bleiben. */
+@media (max-width: 1100px) { table.data .col-mh-opt { display: none; } }
 table.data.fixed th, table.data.fixed td { padding-left: 10px; padding-right: 10px; }
 
 /* Aufklappfelder (popover.js): liegen genau unter ihrem Knopf, sind in der
@@ -1423,3 +1425,15 @@ table.data tbody tr { transition: background .15s; }
 
 /* Ladeplatzhalter atmen statt zu blinken. */
 .skeleton { animation: sk 1.4s ease-in-out infinite; }
+
+/* Kontoauszug einlesen (views/kontoimport.js) */
+.ki-schritte { display: flex; flex-wrap: wrap; gap: 6px 18px; list-style: none; padding: 0; margin: 0 0 16px; font-size: 13px; color: var(--muted); }
+.ki-schritte li { display: flex; align-items: center; gap: 6px; }
+.ki-schritte li span { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--surface-3); font-size: 12px; font-weight: 600; }
+.ki-schritte li.aktuell { color: var(--text); font-weight: 600; }
+.ki-schritte li.aktuell span { background: var(--accent); color: var(--accent-text); }
+.ki-schritte li.fertig span { background: var(--accent-soft); color: var(--accent); }
+.ki-drop { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; padding: 28px 16px; margin-top: 16px; border: 2px dashed var(--border); border-radius: var(--radius, 12px); cursor: pointer; color: var(--text-2); }
+.ki-drop:hover, .ki-drop:focus-visible, .ki-drop.ueber { border-color: var(--accent); background: var(--accent-soft); outline: none; }
+.ki-filter { display: flex; flex-wrap: wrap; gap: 6px; }
+.ki-spalten select { max-width: 100%; }

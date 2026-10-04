@@ -8,7 +8,7 @@
   prüfen lassen. Rechtsberatung ist das hier nicht.
 -->
 
-Stand: 5. Oktober 2026, Programmversion 2.9.2
+Stand: 4. Oktober 2026, Programmversion 2.10.0
 
 ---
 
@@ -53,6 +53,25 @@ Verbindungen, die das Programm überhaupt aufbauen kann, sind die unten
 genannten: der Cloud-Abgleich, der Abgleich mit Google Kalender und die Suche
 nach einer neuen Programmversion. Alle drei laufen erst, wenn Sie ihnen
 ausdrücklich zustimmen.
+
+## Kontoauszüge einlesen
+
+Wenn Sie einen Kontoauszug einlesen (CSV, CAMT.053 oder MT940), liest Kontovia die Datei im Browser auf Ihrem Gerät.
+Die Datei wird nicht hochgeladen und nirgends abgelegt. Ihr Inhalt liegt nur im Arbeitsspeicher, bis Sie gebucht
+oder die Ansicht verlassen haben, und wird beim Sperren verworfen. Es gibt keinen Abruf bei der Bank und keine
+Verbindung zu einem Dienst: Sie laden die Datei selbst bei Ihrer Bank herunter. Die Zuordnung zu Rechnungen folgt
+festen Regeln und keinem lernenden Verfahren.
+
+Gebucht wird nur, was Sie bestätigen. Die Buchungen stehen danach wie alle anderen verschlüsselt in Ihrem Tresor,
+mit dem Namen der Datei und dem Zeitpunkt als Herkunft, mit einem Prüfwert je Umsatz, damit derselbe Umsatz nie
+zweimal gebucht wird, und mit der IBAN der Gegenseite. Eigene Regeln und gemerkte Spaltenzuordnungen liegen ebenfalls
+verschlüsselt im Tresor und gehen beim Cloud-Abgleich nur verschlüsselt mit.
+
+## Mahnungen
+
+Mahnschreiben entstehen auf Ihrem Gerät und liegen wie Rechnungen als PDF verschlüsselt im Tresor. Sie enthalten Name
+und Anschrift des Kunden sowie die Beträge. Wie lange Sie sie aufbewahren, bestimmen Sie. Handelsbriefe sind nach
+§ 257 HGB sechs Jahre aufzubewahren.
 
 ## Cloud-Abgleich (freiwillig)
 

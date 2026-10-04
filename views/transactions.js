@@ -39,7 +39,8 @@ let auswahl = null;
 
 const VAT_TREATMENTS = {
   standard: 'Regelbesteuert',
-  steuerfrei: 'Steuerfrei / nicht steuerbar',
+  steuerfrei: 'Steuerfrei',
+  'nicht-steuerbar': 'Nicht steuerbar (kein Entgelt, etwa Mahngebühren)',
   'ig-lieferung': 'Innergemeinschaftliche Lieferung',
   'reverse-charge-out': 'Reverse Charge (Leistung ins Ausland)',
   'ig-erwerb': 'Innergemeinschaftlicher Erwerb',
@@ -440,6 +441,8 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       ${tx.voided ? raw(`<div class="notice danger mb16">Diese Buchung wurde${tx.voidedAt ? ` am ${esc(fmtDate(tx.voidedAt.slice(0, 10)))}` : ''} storniert${tx.voidReason ? ` (${esc(tx.voidReason)})` : ''}.
         Eine Gegenbuchung hebt sie auf; beide bleiben unverändert erhalten und lassen sich weder bearbeiten noch löschen.</div>`) : ''}
       ${tx.isReversal ? raw('<div class="notice mb16">Das ist die Gegenbuchung zu einem Storno. Sie hebt die stornierte Buchung auf und lässt sich weder bearbeiten noch löschen.</div>') : ''}
+      ${tx.import ? raw(`<div class="notice mb16">Aus einem Kontoauszug übernommen: Datei „${esc(tx.import.datei)}“, ${esc(fmtDate(String(tx.import.ts).slice(0, 10)))}.</div>`) : ''}
+      ${tx.mahnRechnungId ? raw('<div class="notice mb16">Mahngebühr und Verzugsaufschlag zu einer Rechnung. Das ist kein Entgelt für eine Leistung und deshalb ohne Umsatzsteuer.</div>') : ''}
 
       <div class="seg mb16">
         <button data-type="expense" class="expense ${tx.type === 'expense' ? 'active' : ''}">Ausgabe</button>
