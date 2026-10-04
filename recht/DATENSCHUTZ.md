@@ -8,7 +8,7 @@
   prüfen lassen. Rechtsberatung ist das hier nicht.
 -->
 
-Stand: 5. Oktober 2026, Programmversion 2.9.0
+Stand: 5. Oktober 2026, Programmversion 2.9.1
 
 ---
 
@@ -141,11 +141,16 @@ auf der Sie waren, die Programmversion, die Fenstergröße, den Zeitpunkt und
 auf Wunsch das Foto. Nicht übertragen werden Ihre Buchhaltung, Ihr Name, Ihre
 E-Mail-Adresse oder eine Kennung Ihres Kontos; dafür ist kein Konto nötig.
 Anders als Ihre Buchhaltung ist diese Übertragung nicht mit Ihrem Passwort
-verschlüsselt (sie läuft über eine verschlüsselte Verbindung, liegt aber für
-uns lesbar im Speicher). Schreiben Sie daher bitte keine Passwörter,
-Kontonummern oder Steuerdaten hinein. Lesen und löschen können die
-Rückmeldungen nur die Betreiber von Kontovia. Wir verwenden sie, um Kontovia zu
-verbessern, und löschen sie, wenn sie erledigt sind.
+verschlüsselt (sie läuft über eine verschlüsselte Verbindung, liegt aber
+unverschlüsselt im Speicher). **Jede gesendete Rückmeldung, auch ein
+mitgesendetes Foto, kann von allen gelesen werden, die Kontovia benutzen**
+(unter „Rückmeldungen ansehen“ im Rückmeldefenster und in der Hilfe), und
+technisch von jedem, der die Adresse des Speichers kennt. Schreiben Sie daher
+bitte keine Passwörter, Kontonummern, Steuerdaten oder Namen von Kunden hinein
+und kreuzen Sie das Foto nur an, wenn die Seite nichts zeigt, das nicht
+öffentlich sein soll. Löschen können die Rückmeldungen nur die Betreiber von
+Kontovia; wir tun das auf Anfrage und wenn eine Rückmeldung erledigt ist. Wir
+verwenden sie, um Kontovia zu verbessern.
 
 Eine Kopie bleibt verschlüsselt in Ihrer Buchhaltung auf Ihrem Gerät, das Foto
 als Beleg. Klappt das Senden nicht, versucht Kontovia es später erneut; bis

@@ -1,7 +1,7 @@
 {
-  "version": "2.9.0",
-  "released": "2026-10-04T18:09:29.147Z",
-  "notes": "Neues dunkles Aussehen, Bewegung und Rückmeldungen an uns\n\n- Das dunkle Aussehen ist neu: ein warmes Graphit mit kräftigerem Akzent. Alle Farben sind auf gute Lesbarkeit geprüft.\n- Seiten, Zahlen, Diagramme, Fenster und Meldungen bewegen sich jetzt weich. Wer Bewegung im System abgestellt hat, sieht davon nichts.\n- Auf dem Handy bleibt die Leiste oben immer gleich groß. Zeitraum und Knöpfe der Seite scrollen einfach mit. Fenster lassen sich am Griff nach unten wegziehen.\n- Mit „Feedback“ senden Sie Ihre Nachricht jetzt wirklich an uns. Ein Bild der Seite geht nur mit, wenn Sie es selbst ankreuzen. Nichts aus Ihrer Buchhaltung wird dabei übertragen.\n- Kleine Fehler behoben: Knöpfe im Export liefen über den Rand, auf kleinen Fenstern waren Einstellungen zu eng, und im Rechnungsgestalter gibt es echte Pfeile für Rückgängig und Wiederholen.",
+  "version": "2.9.1",
+  "released": "2026-10-04T18:25:03.681Z",
+  "notes": "Rückmeldungen für alle sichtbar\n\n- Alle gesendeten Rückmeldungen kann jetzt jeder lesen. Sie finden die Liste im Rückmeldefenster und in der Hilfe unter „Rückmeldungen ansehen“.\n- Das Rückmeldefenster sagt vor dem Senden deutlich, dass Ihre Nachricht öffentlich ist. Das Bild der Seite geht weiterhin nur mit, wenn Sie es selbst ankreuzen.",
   "files": [
     {
       "path": "app.js",
@@ -100,8 +100,8 @@
     },
     {
       "path": "lib/feedback.js",
-      "sha256": "5bacd1dfd09a8a532692b5b1b47eaa65467c7615a993a6b4bb18e3bf1231745b",
-      "size": 18523
+      "sha256": "8918979206a34f26020fdc9b77e520a262cb28c51a5e1dee96709f2b36319514",
+      "size": 21499
     },
     {
       "path": "lib/fristen.js",
@@ -260,8 +260,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "5235b14951397044e41c174659a1d149e39c5d138e55d5e59511637e74739682",
-      "size": 22315
+      "sha256": "34db771490e5b9179844e0b53da1e5210d18636401a543f3d16b00968f0c7b2a",
+      "size": 22770
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -275,13 +275,13 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "2cbfea9b1a1a7d767bc5c2f3c4c3e68dd6d1147ff6c03ed227648030c2e8220c",
+      "sha256": "65a03aa3b90088800f279863c607ef867d3dc68f3668dd6cc9c8930432ff807c",
       "size": 879
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "d4b1d5058fb5b17e37ede018f5a0a184179fe1f2c4e46be7605033d80a8cbb39",
-      "size": 17271
+      "sha256": "b80db9510bf494f8e1ca192c28f1179d102468d542ecdb156022d29a30b49366",
+      "size": 17650
     },
     {
       "path": "styles.css",
@@ -325,8 +325,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "97c60e598acea9e654cb075c648a8fb4e381234a7e80098388c86a51f39e512d",
-      "size": 43791
+      "sha256": "4a3bf2720184a078ea7aa15d8f1f243481fbadb6584a54e953c7c3f7260859e1",
+      "size": 44158
     },
     {
       "path": "views/master.js",
@@ -385,7 +385,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "70295466136eaf7259f331f035e4057314c15e8712c8eb665bf89a89913b7eb9",
+      "sha256": "2813be3ba222576b46564c462ca1c47fdf9a3d8b3ae93527ec78992130221d77",
       "size": 6905
     },
     {
@@ -395,8 +395,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "3905f3550e9e0376639ce4d0a4076d3bf667a9a72de14df00fdc383477131a66",
-      "size": 48763
+      "sha256": "485cb2b4d13ac4ca03baf4e6e52ec07f52496ad17a9b41a242adb20ec48d5776",
+      "size": 48869
     },
     {
       "path": "web/cloud.js",
@@ -460,8 +460,8 @@
     },
     {
       "path": "web/rueckmeldung.js",
-      "sha256": "78c0d04f5b8c55c46783c0d04a422fd67072efea03e0db26f0ddbcc80eeae4e2",
-      "size": 6090
+      "sha256": "e666c6d6f2f59d672d7388bcdf85b43b6fbde094c433705ec1b7a68e7782b726",
+      "size": 6063
     },
     {
       "path": "web/scrypt-worker.js",

@@ -5,10 +5,12 @@
  * (Ordner feedback/ im selben Bucket wie die Tresore, siehe
  * firebase/storage.rules). Dazu braucht es kein Konto: Anlegen darf jeder,
  * aber nur kleine Dateien mit festem Namen, und nichts lässt sich danach
- * ändern oder lesen. Lesen und Löschen dürfen nur die Entwickler-Konten aus
- * den Regeln, hier über die Anmeldung der Cloud-Sicherung.
+ * ändern. Löschen dürfen nur die Entwickler-Konten aus den Regeln, hier über
+ * die Anmeldung der Cloud-Sicherung.
  *
- * Gesendet wird nur, was die Person im Rückmeldefenster sieht und bestätigt:
+ * Jede Rückmeldung ist für alle lesbar (Entscheidung des Betreibers, 2.9.1):
+ * Lesen und Auflisten brauchen keine Anmeldung. Gesendet wird nur, was die
+ * Person im Rückmeldefenster sieht und bestätigt:
  * Art, Text, Name der Seite, Programmversion, Fenstergröße und auf Wunsch ein
  * Bildschirmfoto. Nichts aus der Buchhaltung, keine Kennung, keine E-Mail.
  * Anders als der Tresor ist das nicht verschlüsselt, der Absender wird im
@@ -81,19 +83,18 @@ export async function senden({ eintrag, fotoBytes = null }, cfg = null) {
   return { ok: true };
 }
 
-/* ---- Lesen: nur für Entwickler-Konten ---- */
+/* ---- Lesen: für alle, ohne Anmeldung ---- */
 
-/** Lädt die eingegangenen Rückmeldungen (neueste zuerst). `be` ist die Anmeldung der Cloud-Sicherung. */
-export async function laden(be, cfg = null) {
+/** Lädt die eingegangenen Rückmeldungen (neueste zuerst). */
+export async function laden(cfg = null) {
   const b = bucket(cfg);
-  const headers = await be.auth();
+  const headers = {};
   const prefix = 'feedback/';
   const namen = [];
   let seite = '';
   do {
     const url = `${STORAGE}/${enc(b)}/o?prefix=${enc(prefix)}&maxResults=1000${seite ? `&pageToken=${enc(seite)}` : ''}`;
-    let data;
-    try { data = await requestJson(url, { headers, timeoutMs: 30000 }); } catch (err) { throw lesefehler(err, be); }
+    const data = await requestJson(url, { headers, timeoutMs: 30000 });
     for (const it of data?.items || []) namen.push(String(it.name).slice(prefix.length));
     seite = data?.nextPageToken || '';
   } while (seite && namen.length < 5000);
@@ -113,7 +114,7 @@ export async function laden(be, cfg = null) {
 
 function lesefehler(err, be) {
   if (err?.status === 403 || err?.status === 401) {
-    const e = new Error('Dieses Konto darf Rückmeldungen nicht lesen. Die Kennung muss in den Zugriffsregeln des Cloud-Speichers eingetragen sein (Anleitung im README).');
+    const e = new Error('Dieses Konto darf Rückmeldungen nicht löschen. Die Kennung muss in den Zugriffsregeln des Cloud-Speichers eingetragen sein (Anleitung im README).');
     e.code = 'KEINE_BERECHTIGUNG';
     e.kennung = be?.state?.uid || '';
     return e;
@@ -121,10 +122,10 @@ function lesefehler(err, be) {
   return err;
 }
 
-export async function foto(be, id, cfg = null) {
+export async function foto(id, cfg = null) {
   if (!ID_RE.test(String(id))) throw new Error('Ungültige Kennung.');
   const res = await request(`${STORAGE}/${enc(bucket(cfg))}/o/${enc(`feedback/${id}.jpg`)}?alt=media`, {
-    headers: await be.auth(), timeoutMs: 60000, maxBytes: MAX_FOTO + 1024,
+    headers: {}, timeoutMs: 60000, maxBytes: MAX_FOTO + 1024,
   });
   if (res.status !== 200) throw new Error(`Das Foto konnte nicht geladen werden (HTTP ${res.status}).`);
   return res.body;
