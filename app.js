@@ -9,7 +9,7 @@ import { store, setDb, clearDb, subscribe, saveNow, sel, lockedUntil, setDevice,
 import { startAutoSync, syncState, onSync, syncNow } from './lib/sync.js';
 import { updateState, onUpdate, startUpdateWatch, markNotified } from './lib/updates.js';
 import { router, onNavigate, navigate, refresh } from './lib/router.js';
-import { closePopover } from './lib/popover.js';
+import { closePopover, openPopover } from './lib/popover.js';
 import { scope } from './lib/prefs.js';
 import { startCalendarSync, stopCalendarSync } from './lib/gcalsync.js';
 import { VERSIONEN } from './lib/versionen.js';
@@ -967,10 +967,37 @@ export function renderUpdateButton() {
 function navItem(key) {
   const v = VIEWS[key];
   return html`
-    <div class="nav-item ${router.view === key ? 'active' : ''}" data-view="${key}" role="button" tabindex="0" aria-current="${router.view === key ? 'page' : 'false'}">
+    <div class="nav-item ${router.view === key ? 'active' : ''}" data-view="${key}" role="button" tabindex="0" aria-current="${router.view === key ? 'page' : 'false'}"${v.key ? raw(` title="${esc(v.title)} (${MOD}+${esc(v.key)})"`) : ''}>
       ${icon(v.icon, 18)}<span>${v.title}</span>
-      ${v.key ? raw(`<span class="kbd">${MOD}+${esc(v.key)}</span>`) : ''}
     </div>`;
+}
+
+let neuHoerer = null;
+
+/** Der eine Hauptknopf der Seitenleiste: eine neue Buchung, Einnahme oder Ausgabe. */
+export function neueBuchungMenue(anker) {
+  openPopover(anker, {
+    label: 'Neue Buchung',
+    className: 'menu neu-menu',
+    build: (pop, handle) => {
+      pop.innerHTML = `
+        <button type="button" class="menu-opt neu-opt" data-nav data-art="income">
+          <span class="neu-ico pos">${icon('arrowDown', 16, 'neu-svg').__raw}</span>
+          <span class="menu-label"><strong>Einnahme</strong><span class="menu-sub">Geld, das Sie erhalten</span></span>
+        </button>
+        <button type="button" class="menu-opt neu-opt" data-nav data-art="expense">
+          <span class="neu-ico">${icon('arrowUp', 16, 'neu-svg').__raw}</span>
+          <span class="menu-label"><strong>Ausgabe</strong><span class="menu-sub">Geld, das Sie bezahlen</span></span>
+        </button>`;
+      pop.addEventListener('click', async (ev) => {
+        const b = ev.target.closest('[data-art]');
+        if (!b) return;
+        handle.close();
+        const m = await import('./views/transactions.js');
+        m.openTransactionDialog(null, b.dataset.art);
+      });
+    },
+  });
 }
 
 function renderShell() {
@@ -984,23 +1011,26 @@ function renderShell() {
             <div class="brand-sub" id="brandSub"></div>
           </div>
         </div>
-        <nav class="nav" id="nav">
+        <button class="cta" id="newTxBtn" type="button" aria-haspopup="menu">
+          ${icon('plus', 18)}<span class="grow">Neue Buchung</span>${icon('down', 15)}
+        </button>
+        <nav class="nav" id="nav" aria-label="Hauptnavigation">
           <div class="nav-group">
             ${raw(['dashboard', 'transactions', 'calendar', 'todos'].map(navItem).join(''))}
           </div>
+          <div class="nav-sep"></div>
           <div class="nav-group">
-            <div class="nav-group-title">Auswerten</div>
             ${raw(['reports', 'export'].map(navItem).join(''))}
           </div>
+          <div class="nav-spacer"></div>
           <div class="nav-group">
-            <div class="nav-group-title">Verwaltung</div>
             ${raw(['master', 'settings', 'help'].map(navItem).join(''))}
           </div>
         </nav>
         <div class="sidebar-foot">
           <div id="updateSlot"></div>
           <div id="themeSlot"></div>
-          <button class="btn ghost block" id="lockBtn">${icon('lock', 16)} Sperren <span class="kbd" style="margin-left:auto;font-size:10px;color:var(--muted)">${MOD}+L</span></button>
+          <button class="btn ghost block" id="lockBtn" title="Sperren (${MOD}+L)">${icon('lock', 16)} Sperren</button>
         </div>
       </aside>
       <main class="main">
@@ -1035,6 +1065,12 @@ function renderShell() {
     if (item) { e.preventDefault(); navigate(item.dataset.view); }
   });
   $('#lockBtn').addEventListener('click', () => lockNow());
+  $('#newTxBtn').addEventListener('click', (e) => neueBuchungMenue(e.currentTarget));
+  // Die Schnellleiste der Telefonansicht (src/web/mobil.js) öffnet dasselbe Menü an ihrem Knopf.
+  if (!neuHoerer) {
+    neuHoerer = (e) => neueBuchungMenue(e.detail.anker);
+    document.addEventListener('kontovia:neue-buchung', neuHoerer);
+  }
   // Die Hülle wird beim Entsperren neu aufgebaut – ein bereits bekannter Fund
   // muss danach wieder sichtbar sein.
   renderUpdateButton();

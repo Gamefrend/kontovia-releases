@@ -9,14 +9,14 @@
   "orientation": "any",
   "lang": "de",
   "dir": "ltr",
-  "background_color": "#f5f6f8",
-  "theme_color": "#1f63d6",
+  "background_color": "#f6f7f9",
+  "theme_color": "#3446e0",
   "categories": [
     "finance",
     "business",
     "productivity"
   ],
-  "version": "2.2.0",
+  "version": "2.3.0",
   "icons": [
     {
       "src": "icons/icon-192.png",

@@ -40,13 +40,8 @@ const SIZE_TITLE = { 3: 'ein Viertel', 4: 'ein Drittel', 6: 'halbe Breite', 8: '
 
 export async function render(root, params, { actions } = {}) {
   editing = false;
-  actions.innerHTML = html`
-    <div id="dbPeriod"></div>
-    <button class="btn income" id="quickIncome">${icon('plus', 16)} Einnahme</button>
-    <button class="btn expense" id="quickExpense">${icon('plus', 16)} Ausgabe</button>`;
+  actions.innerHTML = html`<div id="dbPeriod"></div>`;
   periodControl($('#dbPeriod', actions), period, () => draw(root));
-  actions.querySelector('#quickIncome').addEventListener('click', () => openTransactionDialog(null, 'income'));
-  actions.querySelector('#quickExpense').addEventListener('click', () => openTransactionDialog(null, 'expense'));
   draw(root);
 }
 

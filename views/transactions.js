@@ -81,13 +81,8 @@ export async function render(root, params = {}, { actions } = {}) {
   // ein Filter darauf würde sonst unsichtbar weiterwirken.
   if (st.filters.location && !knownLocations().includes(st.filters.location)) delete st.filters.location;
 
-  actions.innerHTML = html`
-    <div id="txPeriod"></div>
-    <button class="btn income" id="newIncome">${icon('plus', 16)} Einnahme</button>
-    <button class="btn expense" id="newExpense">${icon('plus', 16)} Ausgabe</button>`;
+  actions.innerHTML = html`<div id="txPeriod"></div>`;
   periodCtl = periodControl($('#txPeriod', actions), period, () => list?.render());
-  actions.querySelector('#newIncome').addEventListener('click', () => openTransactionDialog(null, 'income'));
-  actions.querySelector('#newExpense').addEventListener('click', () => openTransactionDialog(null, 'expense'));
 
   root.innerHTML = '<div class="card" id="txCard"></div>';
   list = mountTable($('#txCard', root), listSpec());

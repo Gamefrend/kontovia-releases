@@ -9,14 +9,15 @@
 body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
 
 /* Als App auf dem Home-Bildschirm läuft die Seite unter der Statusleiste. */
-.topbar { padding-top: env(safe-area-inset-top); height: calc(56px + env(safe-area-inset-top)); }
-.brand { padding-top: calc(16px + env(safe-area-inset-top)); }
+.topbar { padding-top: env(safe-area-inset-top); height: calc(76px + env(safe-area-inset-top)); }
+.sidebar { padding-top: calc(20px + env(safe-area-inset-top)); }
 .gate { padding-top: calc(24px + env(safe-area-inset-top)); padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
-.statusbar { height: calc(26px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); }
+.statusbar { height: calc(32px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); }
 #toasts { bottom: calc(18px + env(safe-area-inset-bottom)); }
 
 .kv-menu { display: none; }
 .kv-nav-hg { display: none; }
+.kv-tabs { display: none; }
 
 /* Druck (siehe druck.js): nur der eingesetzte Bericht. */
 #kv-druck { display: none; }
@@ -56,10 +57,10 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   .kv-menu { display: grid; margin-left: -6px; }
 
   .topbar {
-    height: auto; min-height: calc(52px + env(safe-area-inset-top));
-    flex-wrap: wrap; gap: 8px; padding: env(safe-area-inset-top) 12px 0;
+    height: auto; min-height: calc(56px + env(safe-area-inset-top));
+    flex-wrap: wrap; gap: 8px; padding: env(safe-area-inset-top) 16px 0;
   }
-  .topbar h1 { font-size: 15px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar h1 { font-size: 22px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .topbar .spacer { display: none; }
   #topActions { flex-wrap: wrap; gap: 6px; padding-bottom: 8px; width: 100%; }
   #topActions:empty { display: none; }
@@ -75,7 +76,30 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   .shell.kv-kompakt .topbar { min-height: calc(48px + env(safe-area-inset-top)); }
   .shell.kv-kompakt #topActions { display: none; }
 
-  .content { padding: 14px 12px calc(40px + env(safe-area-inset-bottom)); }
+  .content { padding: 4px 16px 24px; }
+  .statusbar { padding-left: 16px; padding-right: 16px; }
+  /* Der Platz unter dem Inhalt gehört der festen Leiste am unteren Rand. */
+  .main { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .kv-tabs {
+    display: grid; grid-template-columns: 1fr 1fr 72px 1fr 1fr; align-items: center;
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 140;
+    height: calc(64px + env(safe-area-inset-bottom)); padding: 0 6px env(safe-area-inset-bottom);
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+    border-top: 1px solid var(--border);
+    backdrop-filter: blur(12px);
+  }
+  .kv-tab {
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+    height: 100%; border: 0; background: none; color: var(--muted); font-size: 11.5px; font-weight: 500; cursor: pointer;
+  }
+  .kv-tab.active { color: var(--accent); }
+  .kv-tab-plus {
+    justify-self: center; width: 52px; height: 52px; margin-top: -14px; border: 0; border-radius: 16px;
+    background: var(--accent); color: var(--accent-text); display: grid; place-items: center; cursor: pointer;
+    box-shadow: 0 8px 20px color-mix(in srgb, var(--accent) 40%, transparent);
+  }
+  .shell.nav-offen .kv-tabs { z-index: 100; }
+  .cta { display: none; }
   .page-head { flex-wrap: wrap; }
 
   .grid.c2, .grid.c3, .grid.side { grid-template-columns: 1fr; }

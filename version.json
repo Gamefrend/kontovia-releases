@@ -1,36 +1,51 @@
 {
-  "version": "2.2.0",
-  "released": "2026-10-03T23:29:26.523Z",
-  "notes": "Besser am Telefon, Installieren auf Android, verlässlicherer Google Kalender\n\n- Auf Android lässt sich Kontovia jetzt mit einem Tipp als App installieren: Der Knopf „App installieren“ steht im Menü und auf dem Anmeldebildschirm.\n- Am Telefon sind Fenster nicht mehr zu breit, die Kennzahlen stehen untereinander, und die Zeile mit Zeitraum und Neu-Knöpfen klappt beim Hinunterscrollen weg.\n- Im Monatskalender zeigen kleine Striche die Termine. Gelesen werden sie in der Liste darunter.\n- Google Kalender: Wo ein zweites Fenster nicht geht, etwa in der App auf dem iPhone, wechselt Kontovia kurz zu Google und kommt danach zurück. Blockiert der Browser das Fenster, fragt Kontovia vorher.",
+  "version": "2.3.0",
+  "released": "2026-10-04T08:33:57.267Z",
+  "notes": "Neues, ruhigeres Aussehen\n\n- Kontovia sieht jetzt aufgeräumter und moderner aus: mehr Luft, feine Linien, große Zahlen und eine neue Schrift.\n- Eine neue Buchung legen Sie jetzt mit einem einzigen Knopf oben links an. Ein Klick darauf lässt Sie zwischen Einnahme und Ausgabe wählen.\n- In der Seitenleiste stehen die vier wichtigsten Bereiche oben, Auswertungen und Export darunter, Stammdaten, Einstellungen und Hilfe ganz unten.\n- Am Telefon gibt es eine feste Leiste am unteren Rand mit Übersicht, Buchungen, Neue Buchung, Kalender und Mehr.\n- In den Diagrammen sind Einnahmen blau und Ausgaben grau, damit man zuerst sieht, was hereinkommt.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "4d479aafe1ff63a0c4275e34dd50296b5c8eebab80561625ae54164a0fe5bf19",
-      "size": 59669
+      "sha256": "53bd3b8e8cd2a2bb00510eff0e271e41be5c60e9141f371b0bcf5931b174e5d3",
+      "size": 61307
+    },
+    {
+      "path": "fonts/LICENSE-Geist.txt",
+      "sha256": "71609cbb5c78b5870d712eab73a31d76622635c6ed034ab5cee3b9ecbda8685f",
+      "size": 4486
+    },
+    {
+      "path": "fonts/geist-latin-ext-wght-normal.woff2",
+      "sha256": "824f485b5d26e2f2da3c2b236132ece1bc8e4e43373452950bb0e40548b4313f",
+      "size": 16512
+    },
+    {
+      "path": "fonts/geist-latin-wght-normal.woff2",
+      "sha256": "19f9c92546aa300c312235e3125af1b81394d8db9a4bc4a425cd5b641d2d54e1",
+      "size": 29400
     },
     {
       "path": "icons/apple-touch-icon.png",
-      "sha256": "47fcffae0ac27df8bf70241f83248ff5cf1821b116cc739ed0a85b2419b62ecb",
-      "size": 3125
+      "sha256": "b4bb9936d96ea8382a68864b11e42b3a71b113b6736cf3036ed19293689ac493",
+      "size": 1011
     },
     {
       "path": "icons/icon-192.png",
-      "sha256": "5acfe36ec10c067dffc659c2a859282e05fe4a68c3101388e88e0dd34e3096a7",
-      "size": 3692
+      "sha256": "b51cc1c43d621eda2cf8c0067bd330a4b039e2c0cf27390a9b1a260872da213d",
+      "size": 1523
     },
     {
       "path": "icons/icon-512.png",
-      "sha256": "baf0569511c2c515d268440642c6276eba590ea30f91ca9d23201acec48284d4",
-      "size": 11640
+      "sha256": "d630447d8b74c8f1541bc2312e4cb898d088d3453dcaf9b6a2f0d59ed8ac57b4",
+      "size": 5247
     },
     {
       "path": "icons/icon-maskable-512.png",
-      "sha256": "0ddc28672c0de636d3ea8ba181941acd8438e9c0b248be4cd28232875c1af231",
-      "size": 10728
+      "sha256": "16e52bfe30499a5951232e521b554e8c48960ebb3d1ee29c2d335eb8e24e8353",
+      "size": 3640
     },
     {
       "path": "index.html",
-      "sha256": "991be4f646d503040b1b87f8e98dee8be941f4e11437d68e64cccad5ce5a9a07",
+      "sha256": "73759fdd22f80854165510ec02ab3d08928ca45cb14c8ac79dfb718ca1a2c9af",
       "size": 2007
     },
     {
@@ -145,8 +160,8 @@
     },
     {
       "path": "lib/ui.js",
-      "sha256": "96905145f6ddcbce315af18e2eec01f336c9c4775d2404738d70f3eb76b32e47",
-      "size": 42731
+      "sha256": "494f86aad9fa272b943898d4d93b9d5fe1573ca5b95c219ae3ea2edfc16b8342",
+      "size": 42593
     },
     {
       "path": "lib/updates.js",
@@ -160,8 +175,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "59a72aa60ada5852db333e299857ea25e799a440416f022fab1c3eeafcbc7498",
-      "size": 14898
+      "sha256": "d33442cc9cb8ee4ccd5cd3d8e5b12c46445428f55a4b72f7e2443e52bf58b92c",
+      "size": 15672
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -170,18 +185,18 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "4f760415619f08f26925181a0a8cc14112d6bdc76e3a2c4381bad8dff9f01eb2",
+      "sha256": "3f64e8beaf5e7b959f05e899106b34cb2bb04e1eb5deca975223c82e063c61b7",
       "size": 879
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "2ee96b2c51eee5007bc9ccbd453a02895fb1919efe44a6df22419cef48d87ead",
+      "sha256": "3a07303a843765a840760ea80d5f724bbf2488066c12f20767b8b3c0dc8d2a0e",
       "size": 13438
     },
     {
       "path": "styles.css",
-      "sha256": "358b27add4d7a3f20802d4709f191daaabe3664e23548ef190bd046396630a9c",
-      "size": 50444
+      "sha256": "98f9ab0a0c7c326a4bfbfb2580191f802cb4fb7e76b0c20456ed292685943599",
+      "size": 52686
     },
     {
       "path": "views/anlageform.js",
@@ -205,8 +220,8 @@
     },
     {
       "path": "views/dashboard.js",
-      "sha256": "f47db3e15834918c9cfff737c72374f904386a8dcca37448f5fdf00f12192305",
-      "size": 39432
+      "sha256": "288e3798ffd48c3d4c843df266933a47d903db9229b2c75aa11602c2468d9ce5",
+      "size": 39028
     },
     {
       "path": "views/erechnung.js",
@@ -250,8 +265,8 @@
     },
     {
       "path": "views/transactions.js",
-      "sha256": "98c6472902abd252111daa93d51dc75d39e4836abb80e52624f7296e6804f5fb",
-      "size": 72599
+      "sha256": "f13c185e8d63fdfa652f4f56ce88e3f6dd801e281ba0d4af33f4c609e79d2f4a",
+      "size": 72203
     },
     {
       "path": "views/wiederkehrend.js",
@@ -265,7 +280,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "b5034acfc5ed740e9e4b91fd24975f2ae4024a976f501ecd7690571349c1380a",
+      "sha256": "8a174c08661ef8e08a80c7cbaabeb1faa98fb0e6cc039031944bbd4eed263c80",
       "size": 6905
     },
     {
@@ -320,8 +335,8 @@
     },
     {
       "path": "web/mobil.js",
-      "sha256": "8ac728ebce56a0d0c118dd0a1cb143cac93b7b3a722eb828e21f62721b65c9d4",
-      "size": 3488
+      "sha256": "69556d1b97555038de1a448605bb8cc7dbcf95bf84be1904a9f73f1f416743c3",
+      "size": 6192
     },
     {
       "path": "web/netz.js",
@@ -365,8 +380,8 @@
     },
     {
       "path": "web/web.css",
-      "sha256": "2bb58e2c8631f58ad64ed8d0cd52fe37f8ad52194a407bc01dc67e867a2c30f9",
-      "size": 8554
+      "sha256": "13a59a8f98605534d0c3131c61ebad75652e8beb63101d17a583e86de27c5b5e",
+      "size": 9828
     },
     {
       "path": "web/weiterleitung.js",
