@@ -112,6 +112,11 @@ function anleitung(root) {
         <p><strong>Gestalten</strong> lassen sich Stil, Farbe, Logo, ein Zusatzbild (etwa Ihre Unterschrift) und die
         Texte. Das ändert nur die Ansicht; die Rechnungsdaten bleiben immer eine gültige E-Rechnung.
         Häufige Rechnungen speichern Sie als <strong>Vorlage</strong>.</p>
+        <p><strong>Bedienung auf der Vorschau.</strong> Teil anklicken zeigt ein Fenster mit allen Einstellungen. Ein
+        Klick neben das Fenster schließt nur dieses. Ein Rechtsklick öffnet das Menü, in dem Sie auch Farben wählen.
+        Mit einem <strong>Doppelklick</strong> ändern Sie einen Text direkt auf dem Blatt (Strg+Enter beendet, Esc
+        verwirft); er steht danach überall, wo er vorkommt, im selben Wortlaut, auch in den Rechnungsdaten.
+        Ein Bild aus der Zwischenablage, etwa ein Bildschirmfoto, fügen Sie mit <kbd>Strg</kbd>+<kbd>V</kbd> ein.</p>
         <p class="small">Der Versand per E-Mail und der automatische Empfang kommen mit einer der nächsten Versionen.
         Bis dahin speichern Sie das PDF und hängen es an Ihre E-Mail an.</p>
       </div></div>
@@ -322,6 +327,23 @@ function cloud(root) {
         Erlaubnis: unter <a data-go="settings">Einstellungen → Sicherheit</a>. Safari und Firefox melden es
         nicht. Auf iPhone und iPad hält Safari Kontovia beim Sperren des Bildschirms an; nach dem Entsperren
         gilt dann die Regel für den Hintergrund.</p>
+      </div></div>
+      <div class="card mb16"><div class="card-body">
+        <h3 class="mt0">Entsperren, Sperren und Abmelden</h3>
+        <p><strong>Sperren</strong> schließt nur den Tresor. <strong>Abmelden</strong> (daneben in der Seitenleiste)
+        entfernt Buchhaltung, Belege und alle Zugänge von diesem Gerät, damit Sie sich mit einem anderen Konto
+        anmelden können. Ist Kontovia mit Google verbunden, gleicht es vorher ab; sonst fragt es besonders
+        deutlich nach, denn dann gäbe es Ihre Buchhaltung nur noch in einer Sicherung.</p>
+        <p class="mb0">Neben dem Passwort lassen sich unter <a data-go="settings">Einstellungen → Sicherheit</a> zwei
+        weitere Wege einschalten, jeder für sich ausreichend: <strong>Fingerabdruck oder Gesicht</strong> (nur auf diesem
+        Gerät, der Schlüssel bleibt im Sicherheitschip) und das <strong>Google-Konto</strong> (auf jedem Gerät; dafür liegt
+        der Schlüssel in Ihrem Konto, wer es übernimmt, kommt auch an die Buchhaltung). Das Passwort bleibt immer gültig.</p>
+      </div></div>
+      <div class="card mb16"><div class="card-body">
+        <h3 class="mt0">Rückmeldung geben</h3>
+        <p class="mb0">Mit <strong>Feedback</strong> unten in der Seitenleiste schreiben Sie uns frei, was Ihnen
+        auffällt. Auf Wunsch geht ein Bild der Seite mit, auf der Sie waren, ohne das Rückmeldefenster. Es wird
+        verschlüsselt in Ihrer Buchhaltung gespeichert und vorerst nirgends hin gesendet.</p>
       </div></div>
       <div class="card"><div class="card-body">
         <h3 class="mt0">Cloud-Abgleich einschalten</h3>

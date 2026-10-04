@@ -18,6 +18,7 @@ import * as W from './weiterleitung.js';
 import * as G from './gcal.js';
 import * as Z from './sperre.js';
 import * as UE from './uebergabe.js';
+import * as EN from './entsperrung.js';
 import BUILTIN from './cloudconfig.js';
 import * as D from './dateien.js';
 import { drucken } from './druck.js';
@@ -359,6 +360,51 @@ async function ortBeschreiben() {
 /* Die Brücke                                                                  */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Gemeinsamer Abschluss, wenn der Tresor mit dem Datenschlüssel statt mit dem
+ * Passwort aufgeht (Fingerabdruck, Gesicht, Google-Konto).
+ */
+async function mitSchluesselEntsperrt(dek) {
+  if (anderesFenster) {
+    K.wipe(dek);
+    throw new Error('Kontovia ist in einem anderen Fenster geöffnet. Bitte dort weiterarbeiten oder dieses Fenster neu laden.');
+  }
+  let db;
+  try {
+    db = await vault.unlockWithKey(dek);
+  } catch (err) {
+    K.wipe(dek);
+    throw err;
+  }
+  failedUnlocks = 0;
+  autoLockMinutes = Number(db?.settings?.autoLockMinutes ?? 10);
+  resetLockTimer();
+  await cloud.nachEntsperren().catch((e) => console.error('Verbindung nach Übernahme:', e));
+  await cloud.anmeldungVerbinden().catch((e) => console.error('Verbinden nach Weiterleitung:', e));
+  restartAutoSync();
+  A.dauerhaftAnfordern();
+  sperreBeobachten();
+  return kopie(fuerOberflaeche(vault.db));
+}
+
+/** Löscht von diesem Gerät alles, was zur Buchhaltung gehört (Abmelden). */
+async function geraetLeeren() {
+  await vault.saving?.catch(() => {});
+  await cloud.anmeldungVerwerfen().catch(() => {});
+  if (!vault.isLocked) vault.lock();
+  nachSperre('abmelden');
+  await UE.verwerfen().catch(() => {});
+  await A.geraetLeeren();
+  try {
+    for (const k of Object.keys(localStorage)) {
+      // Das Erscheinungsbild gehört zum Gerät, alles andere zur Buchhaltung.
+      if (k.startsWith('kontovia.') && k !== 'kontovia.thema') localStorage.removeItem(k);
+    }
+  } catch { /* ohne Speicher gibt es nichts zu löschen */ }
+  try { window.name = ''; } catch { /* egal */ }
+  return true;
+}
+
 const api = {
   app: {
     info: handle(async () => ({
@@ -389,6 +435,8 @@ const api = {
       return res.text();
     }, { needsUnlock: false }),
     activity: async () => { resetLockTimer(); return true; },
+    /** Vom Gerät abmelden: Buchhaltung, Belege, Sicherungen und Zugänge hier entfernen. Der Aufrufer hat vorher abgeglichen und bestätigen lassen. */
+    abmelden: handle(async () => geraetLeeren(), { needsUnlock: false }),
     bildschirmsperre: handle(async () => Z.bildschirmStatus(), { needsUnlock: false }),
     bildschirmsperreSetzen: handle(async (an) => {
       if (an) await Z.bildschirmEinschalten(() => doLock('bildschirmsperre'));
@@ -565,6 +613,73 @@ const api = {
       if (!f) return null;
       return vault.importFullBackup(new Uint8Array(await f.arrayBuffer()), String(password ?? ''));
     }),
+  },
+
+  /* Weitere Wege, den Tresor zu öffnen (entsperrung.js): Fingerabdruck oder Gesicht, Google-Konto. */
+  entsperrung: {
+    status: handle(async () => {
+      await rueckkehrFertig;
+      return {
+        biometrie: await EN.biometrieStatus(),
+        google: { moeglich: cloud.weiterleitungMoeglich(), ...(await cloud.googleStatus().catch(() => ({ eingerichtet: false }))) },
+      };
+    }, { needsUnlock: false }),
+    biometrieEinrichten: handle(async () => { await EN.biometrieEinrichten(vault.dek); return EN.biometrieStatus(); }),
+    biometrieEntfernen: handle(async () => { await EN.biometrieEntfernen(); return EN.biometrieStatus(); }, { needsUnlock: false }),
+    biometrieEntsperren: handle(async () => {
+      if (!vault.isLocked) throw new Error('Kontovia ist schon entsperrt.');
+      let dek;
+      try {
+        dek = await EN.biometrieOeffnen();
+      } catch (err) {
+        // Passt der gespeicherte Zugang nicht mehr (anderer Tresor), ist er wertlos.
+        if (err?.code === 'BAD_KEY') await EN.biometrieEntfernen().catch(() => {});
+        throw err;
+      }
+      try {
+        return await mitSchluesselEntsperrt(dek);
+      } catch (err) {
+        if (err?.code === 'BAD_KEY') await EN.biometrieEntfernen().catch(() => {});
+        throw err;
+      }
+    }, { needsUnlock: false }),
+    googleEinrichten: handle(async () => { await cloud.googleEinrichten(); return cloud.googleStatus(); }),
+    googleEntfernen: handle(async () => { await cloud.googleEntfernen(); return cloud.googleStatus(); }),
+    /** Nach dem Entsperren mit dem Passwort: den Schlüssel im Konto auf dem neuesten Stand halten. */
+    googleAuffrischen: handle(async () => cloud.googleAuffrischen()),
+    /** Zu Google und zurück; danach geht es mit googleFortsetzen weiter. */
+    googleEntsperren: handle(async () => {
+      if (!cloud.weiterleitungMoeglich()) throw new Error('In dieser Fassung ist die Anmeldung bei Google nicht eingerichtet.');
+      await vault.saving?.catch(() => {});
+      return cloud.weiterleiten('entsperren');
+    }, { needsUnlock: false }),
+    /** Nach der Rückkehr von Google: den Tresor mit dem Schlüssel aus dem Konto öffnen. */
+    googleFortsetzen: handle(async () => {
+      await rueckkehrFertig;
+      const dek = cloud.schluesselUebergeben();
+      if (!dek) {
+        await cloud.anmeldungVerwerfen();
+        throw Object.assign(new Error('Für dieses Google-Konto ist das Entsperren ohne Passwort nicht eingeschaltet. Melden Sie sich mit dem Passwort an und schalten Sie es in den Einstellungen unter Sicherheit ein.'), { code: 'KEIN_SCHLUESSEL' });
+      }
+      try {
+        return await mitSchluesselEntsperrt(dek);
+      } catch (err) {
+        await cloud.anmeldungVerwerfen();
+        if (err?.code === 'BAD_KEY') throw Object.assign(new Error('Der Schlüssel im Google-Konto gehört zu einer anderen Buchhaltung. Bitte mit dem Passwort entsperren.'), { code: 'BAD_KEY' });
+        throw err;
+      }
+    }, { needsUnlock: false }),
+    /** Erster Start: die Buchhaltung aus dem Konto laden, ohne Passwort. */
+    googleLaden: handle(async () => {
+      if (anderesFenster) throw new Error('Kontovia ist in einem anderen Fenster geöffnet. Bitte dort weiterarbeiten oder dieses Fenster neu laden.');
+      const db = await cloud.ausCloudLadenOhnePasswort();
+      autoLockMinutes = Number(db?.settings?.autoLockMinutes ?? 10);
+      resetLockTimer();
+      restartAutoSync();
+      A.dauerhaftAnfordern();
+      sperreBeobachten();
+      return kopie(fuerOberflaeche(db));
+    }, { needsUnlock: false }),
   },
 
   /* Speicherort: im Browser (IndexedDB) oder in einem Ordner auf dem Gerät (ablage.js). */

@@ -30,7 +30,7 @@ const DB_VERSION = 1;
 export const STORES = ['dateien', 'belege', 'sicherungen'];
 
 /** Einträge, die immer im Browser bleiben: Sie gehören zu diesem Gerät, nicht zur Buchhaltung. */
-const NUR_IM_BROWSER = new Set(['geraet', 'speicherort', 'uebergabe']);
+const NUR_IM_BROWSER = new Set(['geraet', 'speicherort', 'uebergabe', 'biometrie', 'entsperrung-google']);
 /** Was aus dem Bereich „dateien“ in den Ordner gehört. */
 const DATEIEN_IM_ORDNER = new Set(['kontovia.tresor', 'sync-basis.bin']);
 const BELEG_ID = /^[a-f0-9]{32}$/;
@@ -389,6 +389,23 @@ export async function speicherort() {
 export async function zugriffErbitten() {
   if (!ordner) return 'granted';
   return ordner.zugriffErbitten();
+}
+
+/**
+ * Abmelden: entfernt alles aus dem Browser, was zu dieser Buchhaltung gehört.
+ * Nur die Gerätekennung bleibt. Ein gewählter Ordner wird vergessen; die
+ * Dateien darin bleiben unberührt.
+ */
+export function geraetLeeren() {
+  return schreibend(async () => {
+    ordner = null;
+    for (const s of STORES) {
+      for (const k of await browser.schluessel(s)) {
+        if (s === 'dateien' && k === 'geraet') continue;
+        await browser.loeschen(s, k);
+      }
+    }
+  });
 }
 
 /** Den Ordner nicht mehr verwenden; die Dateien darin bleiben unberührt. */

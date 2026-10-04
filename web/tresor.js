@@ -89,6 +89,21 @@ export class Vault {
     return data;
   }
 
+  /** Wie adoptContainer, aber mit dem Datenschlüssel statt des Passworts (Entsperren per Google-Konto). */
+  async adoptContainerWithKey(bytes, dek) {
+    if (await this.exists()) throw new Error('Am Speicherort liegt bereits eine Buchhaltung.');
+    const { header, headerBuf, body } = K.unpackContainer(bytes);
+    let data;
+    try {
+      data = await K.openBody(dek, body, headerBuf);
+    } catch {
+      throw Object.assign(new Error('Der Schlüssel passt nicht zu dieser Buchhaltung.'), { code: 'BAD_KEY' });
+    }
+    await A.schreiben('dateien', TRESOR, bytes);
+    await this._adopt(dek, header, data);
+    return data;
+  }
+
   /** Legt den jetzigen Stand vor einem Eingriff als Sicherung ab. */
   async sicherungskopie(anlass) {
     const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);

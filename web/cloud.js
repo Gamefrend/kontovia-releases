@@ -21,6 +21,7 @@ import { FirebaseBackend } from './firebase.js';
 import BUILTIN from './cloudconfig.js';
 import { journalNachEinspielen, fuerSicherung, altlastenEntfernen } from './zugang.js';
 import * as W from './weiterleitung.js';
+import { googlePaket, googleSchluessel, googleMerken, googleVergessen, googleMerker } from './entsperrung.js';
 
 const BASIS = 'sync-basis.bin';
 const BASIS_AAD = K.utf8('kontovia/sync-basis');
@@ -181,6 +182,8 @@ export class Cloud {
       angemeldet: !!a,
       email: a?.state.email || '',
       vorhanden: !!a?.meta.exists,
+      /** Liegt im Konto ein Schlüssel für „Mit Google entsperren“? */
+      schluessel: !!a?.schluessel,
       groesse: a?.meta.size || 0,
       stand: a?.meta.updated || null,
     };
@@ -206,7 +209,7 @@ export class Cloud {
       await be.disconnect({ widerrufen: false }).catch(() => {});
       throw new Error(`Angemeldet, aber die Cloud ist nicht erreichbar: ${err.message}`);
     }
-    this.anmeldung = { provider, state, be, meta, blob: null };
+    this.anmeldung = { provider, state, be, meta, blob: null, schluessel: await this.schluesselPruefen(be) };
     return this.anmeldeStatus();
   }
 
@@ -256,7 +259,7 @@ export class Cloud {
         await be.disconnect({ widerrufen: false }).catch(() => {});
         throw new Error(`Angemeldet, aber die Cloud ist nicht erreichbar: ${err.message}`);
       }
-      this.anmeldung = { provider: 'firebase', state, be, meta, blob: null, zweck: antwort.zweck };
+      this.anmeldung = { provider: 'firebase', state, be, meta, blob: null, zweck: antwort.zweck, schluessel: await this.schluesselPruefen(be) };
       this.meldung.email = state.email || antwort.email || '';
     } catch (err) {
       this.meldung.fehler = err.message;
@@ -266,7 +269,7 @@ export class Cloud {
   /** Nach dem Entsperren: eine eben per Weiterleitung erfolgte Anmeldung mit diesem Tresor verbinden. */
   async anmeldungVerbinden() {
     const a = this.anmeldung;
-    if (!a || a.zweck !== 'verbinden' || this.vault.isLocked) return false;
+    if (!a || !['verbinden', 'entsperren'].includes(a.zweck) || this.vault.isLocked) return false;
     this.anmeldung = null;
     const c = this.cfg();
     c.provider = a.provider;
@@ -294,6 +297,7 @@ export class Cloud {
   async anmeldungVerwerfen() {
     const a = this.anmeldung;
     this.anmeldung = null;
+    if (a?.schluessel) K.wipe(a.schluessel);
     if (a) await a.be.disconnect({ widerrufen: false }).catch(() => {});
     return true;
   }
@@ -312,11 +316,89 @@ export class Cloud {
     return true;
   }
 
+  /* ---------------------------------------------------------------------- */
+  /* Mit Google entsperren (entsperrung.js)                                  */
+  /* ---------------------------------------------------------------------- */
+
+  /** Der Datenschlüssel aus dem Konto, wenn es ihn gibt; Fehler beim Lesen heißen „gibt es nicht“. */
+  async schluesselPruefen(be) {
+    try {
+      const bytes = await be.schluesselLesen();
+      return bytes ? googleSchluessel(bytes) : null;
+    } catch { return null; }
+  }
+
+  /** Nach der Anmeldung bei Google, bei vorhandenem Tresor: den Schlüssel aus dem Konto übergeben (einmal). */
+  schluesselUebergeben() {
+    const a = this.anmeldung;
+    if (!a?.schluessel) return null;
+    const dek = a.schluessel;
+    a.schluessel = null;
+    return dek;
+  }
+
+  /** Erster Start: die Buchhaltung aus der Cloud laden, ohne Passwort, mit dem Schlüssel aus dem Konto. */
+  async ausCloudLadenOhnePasswort() {
+    const a = this.anmeldung;
+    if (!a?.meta.exists) throw new Error('In Ihrem Konto liegt keine Buchhaltung, die sich laden ließe.');
+    const dek = this.schluesselUebergeben();
+    if (!dek) throw Object.assign(new Error('Für dieses Konto ist das Öffnen ohne Passwort nicht eingeschaltet. Bitte geben Sie das Passwort ein.'), { code: 'KEIN_SCHLUESSEL' });
+    a.blob ??= await a.be.vaultDownload();
+    return this.ausCloudUebernehmen(a, (blob) => this.vault.adoptContainerWithKey(blob, dek));
+  }
+
+  /** Legt den Datenschlüssel in das verbundene Google-Konto (Einstellungen → Sicherheit). */
+  async googleEinrichten() {
+    this.vault.assertUnlocked();
+    const st = this.cfg().state?.firebase || {};
+    if (!st.refreshToken) throw Object.assign(new Error('Dazu muss Kontovia mit Ihrem Google-Konto verbunden sein.'), { code: 'NICHT_VERBUNDEN' });
+    await this.be().schluesselSchreiben(googlePaket(this.vault.dek));
+    await googleMerken(st.email);
+    return true;
+  }
+
+  async googleEntfernen() {
+    this.vault.assertUnlocked();
+    if (this.cfg().state?.firebase?.refreshToken) await this.be().schluesselLoeschen();
+    await googleVergessen();
+    return true;
+  }
+
+  /** Ist der Schlüssel im verbundenen Konto hinterlegt? */
+  async googleStatus() {
+    const merker = await googleMerker();
+    if (this.vault.isLocked) return { eingerichtet: !!merker, email: merker?.email || '' };
+    const st = this.cfg().state?.firebase || {};
+    if (!st.refreshToken) return { eingerichtet: false, verbunden: false, email: '' };
+    const dek = await this.schluesselPruefen(this.be());
+    const da = !!dek;
+    if (dek) K.wipe(dek);
+    return { eingerichtet: da, verbunden: true, email: st.email || '' };
+  }
+
+  /** Nach dem Entsperren mit dem Passwort: hat sich der Schlüssel geändert (etwa nach einer Sicherung), im Konto erneuern. */
+  async googleAuffrischen() {
+    if (this.vault.isLocked || !(await googleMerker())) return false;
+    if (!this.cfg().state?.firebase?.refreshToken) return false;
+    const be = this.be();
+    const alt = await this.schluesselPruefen(be);
+    const gleich = alt && alt.length === this.vault.dek.length && alt.every((b, i) => b === this.vault.dek[i]);
+    if (alt) K.wipe(alt);
+    if (gleich) return false;
+    await be.schluesselSchreiben(googlePaket(this.vault.dek));
+    return true;
+  }
+
   async ausCloudLaden(password) {
     const a = this.anmeldung;
     if (!a?.meta.exists) throw new Error('In Ihrem Konto liegt keine Buchhaltung, die sich laden ließe.');
     a.blob ??= await a.be.vaultDownload();
-    const db = await this.vault.adoptContainer(a.blob, password);
+    return this.ausCloudUebernehmen(a, (blob) => this.vault.adoptContainer(blob, password));
+  }
+
+  /** Gemeinsam für beide Wege: den geladenen Tresor öffnen (Passwort oder Schlüssel) und diese Verbindung eintragen. */
+  async ausCloudUebernehmen(a, oeffnen) {
+    const db = await oeffnen(a.blob);
     this.anmeldung = null;
     const c = (db.cloud && typeof db.cloud === 'object') ? db.cloud : (db.cloud = {});
     for (const k of VERBINDUNG) delete c[k];

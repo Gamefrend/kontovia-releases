@@ -14,6 +14,7 @@ const SECURETOKEN = 'https://securetoken.googleapis.com/v1';
 const STORAGE = 'https://firebasestorage.googleapis.com/v0/b';
 
 export const VAULT_NAME = 'tresor.kv';
+const SCHLUESSEL_NAME = 'entsperrung.kv';
 /** Wie früher unter Windows: 2026-10-01T08-30-00Z_auto.kv */
 export const BACKUP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z_[a-z-]{1,30}\.kv$/;
 
@@ -263,6 +264,37 @@ export class FirebaseBackend {
     return true;
   }
 
+  /** Die Datei mit dem Datenschlüssel für „Mit Google entsperren“ (entsperrung.js); null, wenn es sie nicht gibt. */
+  async schluesselLesen() {
+    const headers = await this.auth();
+    try {
+      const res = await request(this.objectUrl(`${this.base()}/${SCHLUESSEL_NAME}`, '?alt=media'), { headers, timeoutMs: 20000 });
+      return res.status === 200 ? res.body : null;
+    } catch (err) {
+      if (err.status === 404) return null;
+      throw err;
+    }
+  }
+
+  async schluesselSchreiben(bytes) {
+    const headers = { ...(await this.auth()), 'content-type': 'application/octet-stream' };
+    await requestJson(
+      `${STORAGE}/${enc(this.cfg.bucket)}/o?uploadType=media&name=${enc(`${this.base()}/${SCHLUESSEL_NAME}`)}`,
+      { method: 'POST', headers, body: bytes, timeoutMs: 30000 },
+    );
+    return true;
+  }
+
+  async schluesselLoeschen() {
+    const headers = await this.auth();
+    try {
+      await requestJson(this.objectUrl(`${this.base()}/${SCHLUESSEL_NAME}`), { method: 'DELETE', headers, timeoutMs: 20000 });
+    } catch (err) {
+      if (err.status !== 404) throw err;
+    }
+    return true;
+  }
+
   async removeAll() {
     for (const a of await this.listAttachments()) await this.attachmentRemove(a.id).catch(() => {});
     for (const s of await this.listBackups().catch(() => [])) await this.backupRemove(s.name).catch(() => {});
@@ -272,6 +304,7 @@ export class FirebaseBackend {
     } catch (err) {
       if (err.status !== 404) throw err;
     }
+    await this.schluesselLoeschen().catch(() => {});
     return true;
   }
 

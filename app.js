@@ -13,6 +13,8 @@ import { closePopover, openPopover } from './lib/popover.js';
 import { scope } from './lib/prefs.js';
 import { startCalendarSync, stopCalendarSync } from './lib/gcalsync.js';
 import { VERSIONEN } from './lib/versionen.js';
+import { abmelden, entsperrWege } from './lib/zugaenge.js';
+import { feedbackOeffnen, entwicklerKlick } from './lib/feedback.js';
 
 import * as viewDashboard from './views/dashboard.js';
 import * as viewTransactions from './views/transactions.js';
@@ -124,6 +126,18 @@ async function boot() {
     }
   }
   if (status.fortsetzen && await nachAktualisierung()) return;
+  if (rm?.zweck === 'entsperren') {
+    if (rm.fehler) { if (!rm.abgebrochen) { renderUnlock(rm.fehler); return; } }
+    else {
+      try {
+        eintreten(await api.entsperrung.googleFortsetzen());
+        return;
+      } catch (e) {
+        renderUnlock(e.message);
+        return;
+      }
+    }
+  }
   renderUnlock(rm?.zweck === 'verbinden' && !rm.fehler
     ? `Bei Google angemeldet als ${rm.email || 'Ihr Konto'}. Entsperren Sie Kontovia, um die Verbindung zu speichern.`
     : status.fortsetzen
@@ -537,6 +551,7 @@ function renderCloudLaden(st, { neu }) {
         </div>
         <div class="err small mb16" id="cloudErr"></div>
         <button class="btn primary lg block" id="cloudLaden">Laden und entsperren</button>
+        ${st.schluessel ? raw('<button class="btn lg block mt8" id="cloudOhnePw">Ohne Passwort laden (Anmeldung bei Google genügt)</button>') : ''}
         <p class="tiny muted mt16" style="text-align:center">Die Belege kommen danach im Hintergrund nach.</p>
         <details class="forgot small mt8">
           <summary>Passwort vergessen?</summary>
@@ -557,6 +572,25 @@ function renderCloudLaden(st, { neu }) {
   wirePasswordToggles(app);
   pw.focus();
 
+  const geladen = (db) => {
+    setDb(db);
+    applyTheme();
+    renderShell();
+    navigate(db.settings?.startView || 'dashboard', {}, { ersetzen: true });
+    ohneNeuigkeiten = true;
+    afterUnlock();
+    toast('Buchhaltung geladen', 'Dieses Gerät ist jetzt mit Ihrem Google-Konto verbunden. Belege werden im Hintergrund geholt.', 'ok', 8000);
+  };
+  $('#cloudOhnePw')?.addEventListener('click', async (ev) => {
+    ev.currentTarget.disabled = true;
+    btn.disabled = true;
+    errEl.textContent = '';
+    try { geladen(await api.entsperrung.googleLaden()); } catch (e) {
+      errEl.textContent = e.message;
+      btn.disabled = false;
+      ev.currentTarget.disabled = false;
+    }
+  });
   const laden = async () => {
     if (!pw.value) return;
     btn.disabled = true;
@@ -565,13 +599,7 @@ function renderCloudLaden(st, { neu }) {
     try {
       const db = await api.cloud.signinLoad(pw.value);
       pw.value = '';
-      setDb(db);
-      applyTheme();
-      renderShell();
-      navigate(db.settings?.startView || 'dashboard', {}, { ersetzen: true });
-      ohneNeuigkeiten = true;
-      afterUnlock();
-      toast('Buchhaltung geladen', 'Dieses Gerät ist jetzt mit Ihrem Google-Konto verbunden. Belege werden im Hintergrund geholt.', 'ok', 8000);
+      geladen(db);
     } catch (e) {
       errEl.textContent = e.code === 'BAD_PASSWORD' ? 'Das Passwort passt nicht zu dieser Buchhaltung.' : e.message;
       btn.disabled = false;
@@ -726,6 +754,7 @@ function renderUnlock(message = '') {
         </div>
         <div class="err small mb16" id="unlockerr"></div>
         <button class="btn primary lg block" id="unlock">Entsperren</button>
+        <div id="entWege" class="mt16"></div>
         <p class="tiny muted mt16" style="text-align:center">
           Das Entschlüsseln dauert etwa eine Sekunde. Das bremst Angreifer,
           die Passwörter durchprobieren.
@@ -739,6 +768,9 @@ function renderUnlock(message = '') {
           Tresor anlegen und unter <em>Einstellungen → Sicherung wiederherstellen</em> einspielen.</p>
           <p class="muted">Die automatischen Sicherungen sind mit dem Tresorpasswort verschlüsselt, das zu ihrer Zeit galt.</p>
         </details>
+        <div class="row mt16" style="justify-content:center">
+          <button class="btn ghost sm" id="unlockAbmelden">${icon('logout', 14)} Von diesem Gerät abmelden</button>
+        </div>
       </div>
     </div>`;
 
@@ -766,6 +798,8 @@ function renderUnlock(message = '') {
   };
   btn.addEventListener('click', submit);
   pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+  $('#unlockAbmelden').addEventListener('click', () => abmelden({ gesperrt: true }));
+  entsperrWege($('#entWege'), { eintreten, melde: (t) => { errEl.textContent = t; } });
 }
 
 
@@ -830,6 +864,7 @@ async function afterUnlock() {
     if (rm?.ebenVerbunden) import('./views/cloudpanel.js').then((m) => m.nachWeiterleitung(rm.email));
   }).catch(() => {});
   announceMigrations().catch((e) => console.error('Hinweise der Schemapflege:', e));
+  api.entsperrung?.googleAuffrischen?.().catch(() => {});
   neuigkeitenHinweis();
   sicherungsHinweis().catch(() => {});
   try { await startAutoSync(); } catch (e) { console.error("Cloud-Automatik:", e); }
@@ -1032,7 +1067,11 @@ function renderShell() {
         <div class="sidebar-foot">
           <div id="updateSlot"></div>
           <div id="themeSlot"></div>
-          <button class="btn ghost block" id="lockBtn" title="Sperren (${MOD}+L)">${icon('lock', 16)} Sperren</button>
+          <button class="btn ghost block" id="feedbackBtn" title="Rückmeldung geben, auf Wunsch mit Bildschirmfoto">${icon('chat', 16)} Feedback</button>
+          <div class="foot-knoepfe">
+            <button class="btn ghost" id="lockBtn" title="Sperren (${MOD}+L)">${icon('lock', 16)} Sperren</button>
+            <button class="btn ghost" id="logoutBtn" title="Von diesem Gerät abmelden, um ein anderes Konto zu verwenden">${icon('logout', 16)} Abmelden</button>
+          </div>
         </div>
       </aside>
       <main class="main">
@@ -1051,7 +1090,7 @@ function renderShell() {
           <span class="sep"></span>
           <span id="statSync" style="cursor:pointer" title="Cloud-Abgleich"></span>
           <span class="spacer"></span>
-          <span>Kontovia ${appInfo.version || ''}</span>
+          <span id="versionLabel" data-version="${appInfo.version || ''}">Kontovia ${appInfo.version || ''}</span>
         </div>
       </main>
     </div>`;
@@ -1067,6 +1106,9 @@ function renderShell() {
     if (item) { e.preventDefault(); navigate(item.dataset.view); }
   });
   $('#lockBtn').addEventListener('click', () => lockNow());
+  $('#logoutBtn').addEventListener('click', () => abmelden());
+  $('#feedbackBtn').addEventListener('click', () => feedbackOeffnen());
+  entwicklerKlick($('#versionLabel'));
   $('#newTxBtn').addEventListener('click', (e) => neueBuchungMenue(e.currentTarget));
   // Die Schnellleiste der Telefonansicht (src/web/mobil.js) öffnet dasselbe Menü an ihrem Knopf.
   if (!neuHoerer) {

@@ -29,6 +29,7 @@ import {
 } from '../lib/rechnung.js';
 import { vorschauDaten, bildAblegen, bildWaehlen, bildHolen } from '../lib/rechnungsdateien.js';
 import { pixelProMm } from '../lib/rechnungsdruck.js';
+import { textDirektBearbeiten, bilderAusZwischenablage } from '../lib/textbearbeiten.js';
 
 const PT = 72 / 25.4; // Punkt je mm
 const SEITE = { b: 595.28, h: 841.89 };
@@ -587,6 +588,42 @@ export async function gestaltungZeigen(root, params = {}) {
     return { x: halb(((ev.clientX - r.left) / r.width) * (SEITE.b / PT)), y: halb(((ev.clientY - r.top) / r.height) * (SEITE.h / PT)) };
   }
 
+  /* Text direkt auf der Vorschau ändern (Doppelklick, F2). Der Wert geht dorthin, wo er hingehört,
+     und alle Felder mit demselben Wert (Fenster am Teil, Karte links) ziehen mit. */
+  let direkt = null;
+  const textFaehig = (key) => element(key)?.art === 'text' || key === 'kopftext' || key === 'schlusstext';
+
+  function textBearbeiten(key) {
+    const b = bereich(key);
+    if (!b) return false;
+    if (key === 'tabelle') {
+      // Die Überschriften der Spalten stehen im Fenster; es öffnet sich dort, wo sie sind.
+      waehlen('tabelle');
+      const det = $('#gsPop details', root);
+      if (det) { det.open = true; popPlatzieren(); $('[data-st="name"]', det)?.focus(); }
+      return true;
+    }
+    if (!textFaehig(key)) { waehlen(key); return false; }
+    direkt?.ende(false);
+    const e = element(key);
+    const px = $('#gsWrap', root).clientWidth / SEITE.b;
+    const d = D();
+    const setzen = e
+      ? (v) => { e.text = v; $$('[data-e="text"]', root).forEach((x) => { if (x.value !== v) x.value = v; }); }
+      : (v) => { entwurf.profil[key] = v; $$(`[data-p="${key}"]`, root).forEach((x) => { if (x.value !== v) x.value = v; }); profilHinweise(); };
+    const pt = e ? Number(e.groesse) || 10 : Number(d.schriftgroesse) || 9.5;
+    waehlen(key, { still: true });
+    direkt = textDirektBearbeiten($('#gsWrap', root), {
+      x: b.x * px, y: b.y * px, b: b.b * px, h: b.h * px, schrift: pt * px,
+      text: e ? e.text || '' : entwurf.profil[key] || '',
+      farbe: (e ? e.farbe : d.textfarbe) || '#14181d', fett: !!e?.fett, ausrichtung: e?.ausrichtung || 'links',
+      label: anzeigeName(key),
+      beiAenderung: (v) => { setzen(v); geaendert(); },
+      beiEnde: () => { direkt = null; popZeichnen(); },
+    });
+    return true;
+  }
+
   /** Verschiebt einen Teil im Fluss um einen Platz (springt über leere Teile). */
   function flussVerschieben(key, richtung) {
     const liste = D().reihenfolge;
@@ -609,6 +646,8 @@ export async function gestaltungZeigen(root, params = {}) {
     if (!n) return;
     const key = n.dataset.key;
     const schonGewaehlt = auswahl === key;
+    // Ist ein Fenster offen, schließt der Klick auf ein anderes Teil nur dieses; erst der nächste Klick wählt aus.
+    if (auswahl && !schonGewaehlt && !$('#gsPop', root).hidden) { ev.preventDefault(); waehlen(null); return; }
     if (!schonGewaehlt) waehlen(key);
     n.focus({ preventScroll: true });
     // Am Telefon wählt das erste Antippen nur aus; so bleibt die Seite scrollbar.
@@ -700,6 +739,9 @@ export async function gestaltungZeigen(root, params = {}) {
       elementEntfernen(key);
     } else if (ev.key === 'Escape') {
       waehlen(null);
+    } else if (ev.key === 'F2') {
+      ev.preventDefault();
+      textBearbeiten(key);
     } else if (ev.key === 'Enter' || ev.key === ' ') {
       ev.preventDefault();
       waehlen(key);
@@ -709,9 +751,15 @@ export async function gestaltungZeigen(root, params = {}) {
       menueOeffnen({ clientX: r.left + 12, clientY: r.top + 12 }, key);
     }
   });
+  ziele.addEventListener('dblclick', (ev) => {
+    const n = ev.target.closest('.re-ziel');
+    if (n) textBearbeiten(n.dataset.key);
+  });
   // Ein Klick auf das leere Blatt öffnet die Seiteneinstellungen an dieser Stelle.
   $('#gsBlatt', root).addEventListener('click', (ev) => {
     if (ev.target.closest('.re-ziel') || zieht) return;
+    // Wie bei den Teilen: Ist ein Fenster offen, schließt der Klick auf das leere Blatt nur dieses.
+    if (auswahl && !$('#gsPop', root).hidden) { waehlen(null); return; }
     waehlen('seite', { hier: seitenOrt(ev) });
   });
   $('#gsSeite', root).addEventListener('click', () => waehlen(auswahl === 'seite' ? null : 'seite'));
@@ -730,7 +778,21 @@ export async function gestaltungZeigen(root, params = {}) {
     window.removeEventListener('scroll', schliesseMenue, true);
     window.removeEventListener('resize', schliesseMenue);
   }
-  const menueDaneben = (e) => { if (menue && !menue.contains(e.target)) schliesseMenue(); };
+  /**
+   * Ein Linksklick neben das Menü schließt nur das Menü. Der Klick selbst
+   * gehört nicht mehr dem Teil darunter: Er öffnet dort kein nächstes Fenster
+   * und beginnt kein Ziehen. Ein Rechtsklick woanders öffnet gleich das Menü dort.
+   */
+  const menueDaneben = (e) => {
+    if (!menue || menue.contains(e.target)) return;
+    schliesseMenue();
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    const schlucken = (k) => { k.stopPropagation(); k.preventDefault(); };
+    window.addEventListener('click', schlucken, { capture: true, once: true });
+    setTimeout(() => window.removeEventListener('click', schlucken, true), 600);
+  };
   const menueTaste = (e) => {
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); schliesseMenue(); return; }
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -741,6 +803,24 @@ export async function gestaltungZeigen(root, params = {}) {
     }
   };
 
+  /** Welche Farben sich für einen Teil im Menü einstellen lassen: [Ziel, Name, Wert, Vorgaben, ohne]. */
+  function farbZeilen(key) {
+    const d = D();
+    const e = element(key);
+    if (e) {
+      if (e.art === 'text' || e.art === 'linie') return [['e:farbe', 'Farbe', e.farbe, ELEMENTFARBEN, false]];
+      if (e.art === 'flaeche') return [['e:fuellung', 'Füllung', e.fuellung, ELEMENTFARBEN, true], ['e:rand', 'Rand', e.rand, ELEMENTFARBEN, true]];
+      return [];
+    }
+    const akzent = ['d:akzent', 'Akzentfarbe', d.akzent, FARBEN, false];
+    const schrift = ['d:textfarbe', 'Schriftfarbe', d.textfarbe || '#14181d', SCHRIFTFARBEN, false];
+    if (!key) return [akzent, schrift];
+    if (key === 'tabelle') return [akzent, schrift];
+    if (['kopf', 'inhalt', 'fuss'].includes(key)) return [akzent];
+    if (['anschrift', 'info', 'kopftext', 'schlusstext', 'hinweise'].includes(key)) return [schrift];
+    return [];
+  }
+
   /** Menü an der Maus; key ist der Teil darunter oder null für das leere Blatt. */
   function menueOeffnen(ev, key) {
     schliesseMenue();
@@ -749,9 +829,12 @@ export async function gestaltungZeigen(root, params = {}) {
     const b = bereich(key);
     const eintraege = [];
     const punkt = (text, ic, aktion, { gefahr = false, aus = false } = {}) => eintraege.push({ text, ic, aktion, gefahr, aus });
+    const farben = (key2) => { for (const [fz, label, wert, liste, ohne] of farbZeilen(key2)) eintraege.push({ farbe: { fz, label, wert, liste, ohne } }); };
     const trenner = () => { if (eintraege.length && eintraege[eintraege.length - 1] !== '-') eintraege.push('-'); };
     if (key && b) {
       punkt(`${anzeigeName(key)} bearbeiten`, 'edit', () => waehlen(key));
+      if (textFaehig(key)) punkt('Text direkt ändern (Doppelklick)', 'type', () => textBearbeiten(key));
+      if (farbZeilen(key).length) { trenner(); farben(key); trenner(); }
       if (b.art === 'fluss') {
         const i = D().reihenfolge.indexOf(key);
         punkt('Nach oben schieben', 'up', () => { if (flussVerschieben(key, -1)) geaendert({ panels: true }); }, { aus: i <= 0 });
@@ -768,18 +851,27 @@ export async function gestaltungZeigen(root, params = {}) {
     } else {
       for (const [a, ic, t] of [['text', 'type', 'Text'], ['bild', 'image', 'Bild'], ['flaeche', 'square', 'Fläche'], ['linie', 'minus', 'Linie']]) punkt(`${t} hier einfügen`, ic, () => elementNeu(a, hier));
       trenner();
+      farben(null);
+      trenner();
       punkt('Seite einrichten', 'layout', () => waehlen('seite', { hier }));
     }
     menue = document.createElement('div');
     menue.className = 're-menue';
     menue.setAttribute('role', 'menu');
     menue.innerHTML = eintraege.map((p, i) => (p === '-' ? '<div class="re-menue-strich" role="separator"></div>'
+      : p.farbe ? `<div class="re-menue-farbe" role="group" aria-label="${esc(p.farbe.label)}"><span class="re-menue-label">${esc(p.farbe.label)}</span>${farbwahl(p.farbe.fz, p.farbe.wert, p.farbe.liste, { ohne: p.farbe.ohne })}</div>`
       : `<button type="button" role="menuitem" data-i="${i}" class="${p.gefahr ? 'danger-text' : ''}" ${p.aus ? 'disabled' : ''}>${icon(p.ic, 14).__raw}<span>${esc(p.text)}</span></button>`)).join('');
     document.body.append(menue);
     const br = menue.offsetWidth;
     const ho = menue.offsetHeight;
     menue.style.left = `${Math.max(4, Math.min(ev.clientX, window.innerWidth - br - 4))}px`;
     menue.style.top = `${Math.max(4, Math.min(ev.clientY, window.innerHeight - ho - 4))}px`;
+    // Farben wirken sofort; das Menü bleibt offen, damit man mehrere ausprobieren kann.
+    menue.addEventListener('click', (k) => {
+      const f = k.target.closest('button[data-fz]');
+      if (f) farbeSetzen(f.dataset.fz, f.dataset.wert ?? '');
+    });
+    menue.addEventListener('input', (k) => { if (k.target.dataset?.fz) farbeSetzen(k.target.dataset.fz, k.target.value); });
     menue.addEventListener('click', (k) => {
       const t = k.target.closest('button[data-i]');
       if (!t) return;
@@ -804,13 +896,13 @@ export async function gestaltungZeigen(root, params = {}) {
   /* Elemente                                                                 */
   /* ------------------------------------------------------------------------ */
 
-  async function elementNeu(art, hier = null) {
+  async function elementNeu(art, hier = null, { datei = null } = {}) {
     const e = { ...structuredClone(ELEMENT_VORGABE[art]), id: uid('el') };
     if (art === 'flaeche') { e.x = 25; e.y = 100; e.b = 60; e.h = 20; e.rand = ''; e.seiten = 'erste'; }
     if (art === 'flaeche' || art === 'linie') { e.fuellung = e.fuellung && D().akzent; e.farbe = e.farbe && D().akzent; }
     if (art === 'text') e.farbe = D().textfarbe || e.farbe;
     if (art === 'bild') {
-      const id = await bildHochladen();
+      const id = await bildHochladen({ datei });
       if (!id) return;
       e.bildId = id;
     }
@@ -822,6 +914,7 @@ export async function gestaltungZeigen(root, params = {}) {
     await zeichnen();
     popZeichnen();
     $(`.re-ziel[data-key="${CSS.escape(auswahl)}"]`, root)?.focus({ preventScroll: true });
+    return true;
   }
 
   function elementEntfernen(key) {
@@ -841,8 +934,8 @@ export async function gestaltungZeigen(root, params = {}) {
     geaendert({ panels: true });
   }
 
-  async function bildHochladen({ maxPixel = 1600 } = {}) {
-    const datei = await bildWaehlen();
+  async function bildHochladen({ maxPixel = 1600, datei: vorgabe = null } = {}) {
+    const datei = vorgabe || await bildWaehlen();
     if (!datei) return '';
     try {
       const meta = await bildAblegen(datei, { maxPixel });
@@ -855,6 +948,22 @@ export async function gestaltungZeigen(root, params = {}) {
   }
 
   $$('[data-neu]', root).forEach((b) => b.addEventListener('click', () => elementNeu(b.dataset.neu)));
+
+  // Strg+V mit einem Bild in der Zwischenablage (etwa ein Bildschirmfoto): neues Bild auf der Seite,
+  // dort, wo der Zeiger zuletzt war, sonst an einer freien Stelle.
+  let zeigerOrt = null;
+  $('#gsBlatt', root).addEventListener('pointermove', (ev) => { zeigerOrt = seitenOrt(ev); });
+  const einfuegen = (ev) => {
+    if (!root.isConnected) { document.removeEventListener('paste', einfuegen); return; }
+    const bilder = bilderAusZwischenablage(ev);
+    if (!bilder.length) return;
+    ev.preventDefault();
+    direkt?.ende(false);
+    schliesseMenue();
+    elementNeu('bild', zeigerOrt && zeigerOrt.x >= 0 && zeigerOrt.x <= 200 ? { x: zeigerOrt.x, y: zeigerOrt.y } : null, { datei: bilder[0] })
+      .then((erstellt) => { if (erstellt) ok('Bild eingefügt', 'Verschieben und Größe ändern gehen wie bei jedem Teil.'); });
+  };
+  document.addEventListener('paste', einfuegen);
 
   /* ------------------------------------------------------------------------ */
   /* Eingaben                                                                 */
@@ -874,7 +983,7 @@ export async function gestaltungZeigen(root, params = {}) {
       if (!e) return;
       e[f] = wert;
     } else D()[f] = wert;
-    $$(`[data-fz="${fz}"]`, root).forEach((x) => {
+    [...$$(`[data-fz="${fz}"]`, root), ...(menue ? $$(`[data-fz="${fz}"]`, menue) : [])].forEach((x) => {
       if (x.type === 'color') { if (wert) x.value = wert; x.closest('label')?.classList.toggle('active', !!wert && !x.closest('.re-farben')?.querySelector(`button[data-wert="${wert.toLowerCase()}" i]`)); }
       else x.classList.toggle('active', (x.dataset.wert || '').toLowerCase() === (wert || '').toLowerCase());
     });

@@ -23,7 +23,8 @@ import {
 import {
   rechnungSpeichern, entwurfLoeschen, ausstellen, vergebeneNummern, alsVorlage, produktSpeichern,
 } from '../lib/rechnungsaktionen.js';
-import { vorschauSvg, pdfZeigen, bildWaehlen, bildAblegen, bildHolen } from '../lib/rechnungsdateien.js';
+import { vorschauDaten, pdfZeigen, bildWaehlen, bildAblegen, bildHolen, rahmenVon } from '../lib/rechnungsdateien.js';
+import { textDirektBearbeiten, bilderAusZwischenablage } from '../lib/textbearbeiten.js';
 
 const BEREICH_TITEL = { kaeufer: 'Kunde', rechnung: 'Rechnung', positionen: 'Positionen', zahlung: 'Zahlung', verkaeufer: 'Ihre Angaben' };
 
@@ -535,7 +536,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
           </div>
         </div>`).join('')}
         <p class="small muted mb0">Die Bilder stehen auf der Rechnung unter den Positionen. Die Stelle legen Sie unter Gestaltung fest.</p></div>` : ''}`;
-    $('#reBildNeu', box).addEventListener('click', bildHinzufuegen);
+    $('#reBildNeu', box).addEventListener('click', () => bildHinzufuegen());
     for (const e of liste) {
       const zeile = box.querySelector(`[data-rbild="${CSS.escape(e.id)}"]`);
       bildHolen(e.bildId).then((b) => {
@@ -558,8 +559,8 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
     }
   }
 
-  async function bildHinzufuegen() {
-    const datei = await bildWaehlen();
+  async function bildHinzufuegen(vorgabe = null) {
+    const datei = vorgabe || await bildWaehlen();
     if (!datei) return;
     try {
       const meta = await bildAblegen(datei);
@@ -658,13 +659,16 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
   }
 
   let vorschauLaeuft = 0;
+  /** Die Teile der ersten Seite (Lage in Punkt), damit ein Doppelklick auf einen Text weiß, was er trifft. */
+  let vorschauBereiche = [];
   const vorschauNeu = debounce(async () => {
     const nr = ++vorschauLaeuft;
     const host = $('#reVorschau', root);
     if (!host) return;
     try {
-      const svgs = await vorschauSvg(istVorlage ? { ...r, nummer: '', datum: todayISO(), leistungsdatum: todayISO() } : r);
+      const { svgs, bereiche } = await vorschauDaten(istVorlage ? { ...r, nummer: '', datum: todayISO(), leistungsdatum: todayISO() } : r);
       if (nr !== vorschauLaeuft || !host.isConnected) return;
+      vorschauBereiche = bereiche;
       host.innerHTML = svgs.map((svg, i) => `<div class="re-blatt" title="Seite ${i + 1}">${svg}</div>`).join('');
     } catch (e) {
       host.innerHTML = `<div class="notice small">Die Vorschau ließ sich nicht erstellen: ${esc(e.message)}</div>`;
@@ -816,6 +820,51 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
   }
 
   /* ------------------------------------------------------------------------ */
+
+  // Strg+V mit einem Bild in der Zwischenablage: es kommt zu den Bildern dieser Rechnung.
+  const einfuegen = (ev) => {
+    if (!root.isConnected) { document.removeEventListener('paste', einfuegen); return; }
+    const bilder = bilderAusZwischenablage(ev);
+    if (!bilder.length) return;
+    ev.preventDefault();
+    bildHinzufuegen(bilder[0]).then(() => ok('Bild eingefügt', 'Es steht unter den Positionen.'));
+  };
+  document.addEventListener('paste', einfuegen);
+
+  /* Doppelklick auf den Text vor oder nach den Positionen: direkt auf der Vorschau ändern.
+     Der Wert steht danach in der Rechnung selbst, im Textfeld links und in der E-Rechnung,
+     denn alle drei kommen aus denselben Daten (r). */
+  let direkt = null;
+  $('#reVorschau', root).addEventListener('dblclick', (ev) => {
+    const blatt = ev.target.closest('.re-blatt');
+    if (!blatt || blatt !== $('#reVorschau .re-blatt', root)) return;
+    const rect = blatt.getBoundingClientRect();
+    const px = rect.width / 595.28;
+    const x = (ev.clientX - rect.left) / px;
+    const y = (ev.clientY - rect.top) / px;
+    const b = vorschauBereiche.find((q) => (q.key === 'kopftext' || q.key === 'schlusstext') && x >= q.x && x <= q.x + q.b && y >= q.y && y <= q.y + q.h);
+    if (!b) return;
+    const feldName = b.key;
+    const host = $('.re-seitenspalte', root);
+    const vorher = host.style.position;
+    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+    const hr = host.getBoundingClientRect();
+    direkt?.ende(false);
+    direkt = textDirektBearbeiten(host, {
+      x: rect.left - hr.left + host.scrollLeft + b.x * px, y: rect.top - hr.top + host.scrollTop + b.y * px, b: b.b * px, h: b.h * px,
+      schrift: (Number(rahmenVon(r).d.schriftgroesse) || 9.5) * px,
+      text: r[feldName] || '',
+      farbe: rahmenVon(r).d.textfarbe || '#14181d',
+      label: feldName === 'kopftext' ? 'Text vor den Positionen' : 'Text am Ende',
+      beiAenderung: (v) => {
+        r[feldName] = v;
+        const f = root.querySelector(`[data-f="${feldName}"]`);
+        if (f) { f.value = v; hoeheAnpassen(f); }
+        aktualisieren();
+      },
+      beiEnde: () => { direkt = null; host.style.position = vorher; },
+    });
+  });
 
   kundeZeichnen();
   angabenZeichnen();

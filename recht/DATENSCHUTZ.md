@@ -8,7 +8,7 @@
   prüfen lassen. Rechtsberatung ist das hier nicht.
 -->
 
-Stand: 4. Oktober 2026, Programmversion 2.5.0
+Stand: 4. Oktober 2026, Programmversion 2.6.0
 
 ---
 
@@ -69,7 +69,9 @@ Sicherungen vollständig wiederherstellbar sind.
 
 **Was der Betreiber der Ablage sehen kann:** Dateigröße, Änderungszeitpunkt und
 die Identität des angemeldeten Kontos. **Nicht** den Inhalt. Dafür wäre Ihr
-Tresorpasswort nötig, und das verlässt Ihr Gerät nie.
+Tresorpasswort nötig, und das verlässt Ihr Gerät nie. Eine Ausnahme gibt es nur,
+wenn Sie selbst „Google-Konto“ unter *Weitere Wege zum Entsperren* einschalten
+(siehe unten).
 
 **Rechtsgrundlage:** Art. 6 Abs. 1 lit. b und f DSGVO (Durchführung der eigenen
 Buchhaltung, berechtigtes Interesse an einer Datensicherung).
@@ -102,6 +104,44 @@ Dialog können Sie wählen, ob der verschlüsselte Tresor samt Belegen und
 Sicherungen in der Cloud gelöscht werden soll. Die Freigabe für Kontovia in
 Ihrem Google-Konto entfernen Sie unter *Sicherheit → Verbindungen zu
 Drittanbieter-Apps* (myaccount.google.com/connections).
+
+## Weitere Wege zum Entsperren (freiwillig)
+
+Ihr Passwort bleibt immer gültig. Zusätzlich lassen sich in den Einstellungen
+unter *Sicherheit* zwei weitere Wege einschalten. Jeder öffnet denselben Tresor
+für sich allein.
+
+**Fingerabdruck oder Gesicht (nur dieses Gerät).** Ihr Gerät gibt nach der
+Bestätigung per Biometrie ein geheimes Merkmal heraus, aus dem Kontovia einen
+Schlüssel ableitet, der den Tresorschlüssel umhüllt. Die Hülle liegt nur im
+Speicher Ihres Browsers. Fingerabdruck und Gesicht selbst sehen weder Kontovia
+noch der Betreiber noch Google; sie bleiben im Sicherheitschip Ihres Geräts.
+Beim Abmelden wird die Hülle gelöscht.
+
+**Google-Konto (jedes Gerät).** Dafür legt Kontovia den Tresorschlüssel als
+kleine Datei in Ihrem eigenen Bereich des Cloud-Speichers ab. Wer sich mit
+Ihrem Google-Konto anmeldet, bekommt sie und kann Kontovia ohne Passwort
+öffnen. **Das ist ein Zugeständnis an die Bequemlichkeit:** Wer Ihr Google-Konto
+übernimmt, und der Betreiber des Cloud-Projekts, der technisch auf den Speicher
+zugreifen kann, kommen dann an Ihre Buchhaltung. Ohne diesen Schalter hat nur
+Ihr Passwort den Schlüssel. Mit „Ausschalten“ wird die Datei gelöscht. Auch
+„Verbindung trennen“ mit Löschen der Cloud-Daten entfernt sie.
+
+## Rückmeldungen
+
+Mit „Feedback“ in der Seitenleiste können Sie Text und auf Wunsch ein
+Bildschirmfoto der aktuellen Seite speichern. Das Foto entsteht auf Ihrem
+Gerät und kann Zahlen aus Ihrer Buchhaltung zeigen; Sie sehen es vor dem
+Speichern und können es abwählen. Gespeichert wird die Rückmeldung verschlüsselt
+in Ihrer Buchhaltung, das Foto als Beleg. Sie wird vorerst an niemanden
+gesendet. Sollte ein Versand eingeführt werden, geschieht er nur auf Ihr
+Zutun und wird hier beschrieben.
+
+## Abmelden
+
+„Abmelden“ neben „Sperren“ entfernt Ihre Buchhaltung, die Belege, die
+Sicherungen und alle Zugänge von diesem Gerät, damit Sie sich mit einem anderen
+Konto anmelden können. In der Cloud bleibt, was dort liegt.
 
 ## Google Kalender (freiwillig)
 

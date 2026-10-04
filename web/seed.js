@@ -126,6 +126,7 @@ function makeSeed(settings = {}) {
     invoices: [],
     products: [],
     invoiceTemplates: [],
+    feedback: [],
     auditLog: [],
     counters: { invoice: 1 },
     // Die Bezeichnungen der Zeilen setzt die Oberfläche beim Laden (euer.js).

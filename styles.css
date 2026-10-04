@@ -1154,3 +1154,29 @@ html[data-theme="dark"] .re-blatt { border-color: transparent; }
   .re-weg-schmal { display: none; }
   .re-bildwahl { flex-direction: column; }
 }
+
+/* Abmelden, Wege zum Entsperren, Rückmeldungen (2.6) */
+.foot-knoepfe { display: flex; gap: 6px; }
+.foot-knoepfe .btn { flex: 1; justify-content: center; padding-inline: 8px; }
+.entsperr-oder { display: flex; align-items: center; gap: 10px; margin: 4px 0 12px; color: var(--muted); font-size: 12px; }
+.entsperr-oder::before, .entsperr-oder::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.zugang-zeile { display: flex; gap: 16px; align-items: flex-start; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.zugang-zeile:first-child { padding-top: 0; }
+.zugang-zeile:last-child { border-bottom: 0; padding-bottom: 0; }
+.zugang-zeile .btn { flex: none; }
+.fb-karte { padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; background: var(--surface); }
+.fb-karte.erledigt { opacity: .6; }
+.fb-text { white-space: pre-wrap; margin: 10px 0 0; line-height: 1.55; }
+.fb-foto { margin-top: 10px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.fb-foto img { max-width: 100%; max-height: 220px; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+textarea.invalid { border-color: var(--neg); }
+
+/* Gestalter: Farben im Menü, Text direkt auf dem Blatt ändern (2.6) */
+.re-menue-farbe { display: flex; flex-direction: column; gap: 6px; padding: 6px 10px 8px; }
+.re-menue-label { font-size: 12px; font-weight: 500; color: var(--muted); }
+.re-menue .re-farben button.re-farbe { width: 22px; height: 22px; padding: 0; display: block; border-radius: 50%; border: 2px solid var(--surface); }
+.re-menue .re-farben button.re-farbe.active { box-shadow: 0 0 0 2px var(--accent); }
+.re-menue .re-farben button.re-farbe:hover:not(:disabled) { box-shadow: 0 0 0 2px var(--border-strong); }
+.re-menue .re-farben { gap: 6px; max-width: 250px; }
+.re-inline { position: absolute; z-index: 9; box-sizing: border-box; resize: none; overflow: hidden; margin: 0; padding: 0 2px; line-height: 1.3;
+  font-family: inherit; background: #fff; border: 1.5px solid var(--accent); border-radius: 2px; box-shadow: 0 2px 10px rgba(0, 0, 0, .18); outline: none; }

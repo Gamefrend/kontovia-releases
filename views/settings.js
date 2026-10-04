@@ -7,6 +7,7 @@ import { icon, modal, confirmDialog, askPassword, ok, err, warn, toast, feldHinw
 import { store, sel, commit, saveNow, setDb, verifyAudit, lockedUntil } from '../lib/store.js';
 import { refresh, navigate, router } from '../lib/router.js';
 import { applyTheme, lockNow } from '../app.js';
+import { abmelden, zugaengeKarte } from '../lib/zugaenge.js';
 import { renderCloudCard, renderUpdateCard } from './cloudpanel.js';
 import { renderCalendarCard } from './calendarsync.js';
 import { table, mountTables } from '../lib/table.js';
@@ -148,6 +149,7 @@ async function draw(root) {
             <div class="row" style="gap:8px">
               <button class="btn" id="btnPw">${icon('key', 15)} Passwort ändern</button>
               <button class="btn" id="btnLock">${icon('lock', 15)} Jetzt sperren</button>
+              <button class="btn" id="btnAbmelden">${icon('logout', 15)} Abmelden</button>
             </div>
           </div>
           <div class="notice">
@@ -156,12 +158,14 @@ async function draw(root) {
             Das Entschlüsseln ist bewusst aufwendig, damit niemand Passwörter in großer
             Zahl durchprobieren kann. Belege werden einzeln verschlüsselt und tragen auf
             der Festplatte keine sprechenden Namen. Eine Wiederherstellung ohne Passwort
-            gibt es nicht. Der freiwillige Cloud-Abgleich überträgt ausschließlich die
+            gibt es nicht, außer über die weiteren Wege unten, die Sie selbst einschalten. Der freiwillige Cloud-Abgleich überträgt ausschließlich die
             bereits verschlüsselte Buchhaltung.
           </div>
         </div>
       </div>
     </div>
+
+    <div class="card mt16" id="zugaengeCard"></div>
 
     <div class="card mt16" id="speicherCard">
       <div class="card-head"><h3>${icon('archive', 16)} Sicherung und Speicherort</h3></div>
@@ -510,7 +514,9 @@ function wire(root) {
   });
 
   $('#btnLock', root).addEventListener('click', () => lockNow());
+  $('#btnAbmelden', root).addEventListener('click', () => abmelden());
   bildschirmKasten($('#bildschirmBox', root));
+  zugaengeKarte($('#zugaengeCard', root));
 
   $('#btnPw', root).addEventListener('click', async () => {
     const oldPw = await askPassword({ title: 'Passwort ändern', text: 'Zuerst zur Sicherheit das aktuelle Passwort.', label: 'Aktuelles Passwort', confirmLabel: 'Weiter' });
@@ -660,6 +666,9 @@ const VORGAENGE = {
   'korrektur.sonderzeichen': 'Korrektur: Sonderzeichen',
   'termin.kalenderabgleich': 'Kalenderabgleich',
   'beleg.aufraeumen': 'Belege aufgeräumt',
+  'feedback.neu': 'Rückmeldung gespeichert',
+  'feedback.aendern': 'Rückmeldung geändert',
+  'feedback.geloescht': 'Rückmeldung gelöscht',
   'wiederkehrend.fortschreiben': 'Wiederkehrende Buchungen angelegt',
   'testdaten.ergaenzen': 'Vorführdaten ergänzt',
 };
