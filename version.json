@@ -1,7 +1,7 @@
 {
-  "version": "2.4.1",
-  "released": "2026-10-04T12:07:14.546Z",
-  "notes": "Rechnungen frei gestalten\n\n- Im Gestalter verschieben Sie die Bausteine Ihrer Rechnung per Hand und fügen eigene Texte, Bilder, Flächen und Linien hinzu. Auch Briefpapier, Tabellenstil und Spalten lassen sich anpassen, ein Schritt zurück geht immer.\n- Die Fälligkeit setzen Sie mit einem Klick auf „Sofort“, „+14 Tage“ oder „+30 Tage“. Fälligkeit und Zahlungsziel bleiben dabei im Gleichklang.\n- Bilder können Sie für jede Rechnung einzeln wählen. Ein Hinweis erinnert Sie daran, Rechnungen zehn Jahre aufzubewahren.\n- Bei Schlussrechnungen werden Anzahlungen samt Umsatzsteuer abgezogen. Gutschriften bucht Kontovia als Minusbetrag.\n- Steuernummer, Anschrift und Register bleiben auf dem PDF, auch wenn Sie die Fußzeile ausschalten. Eine USt-IdNr. ohne Länderkürzel zeigt Kontovia jetzt als fehlende Angabe.",
+  "version": "2.5.0",
+  "released": "2026-10-04T12:42:07.605Z",
+  "notes": "Rechnungen einfacher gestalten\n\n- Sie ändern die Rechnung jetzt direkt auf der Vorschau: Teil anklicken, und ein kleines Fenster zeigt Farbe, Größe, Texte und mehr. Ein Rechtsklick zeigt weitere Möglichkeiten.\n- Die Tabelle wählen Sie mit Bildern aus: Farbfläche, Linien, Streifen oder Raster. Spalten und Überschriften klappen Sie bei Bedarf auf.\n- Das Verschieben folgt der Maus jetzt genau. Tabelle und Texte ordnen Sie durch Ziehen nach oben oder unten.\n- Egal wie Sie gestalten: Pflichtangaben und die Daten der E-Rechnung bleiben vollständig und lesbar. Teile, die sich überlappen würden, rücken von selbst zur Seite.\n- Zu helle Farben dunkelt Kontovia in der Schrift ab, und Beträge werden nie abgeschnitten.",
   "files": [
     {
       "path": "app.js",
@@ -150,8 +150,8 @@
     },
     {
       "path": "lib/rechnung.js",
-      "sha256": "b3bac553f6e9a458e2cb7ce09b7d7bc0d7b0e9122b4b7e1e7fe04ad21db6f97c",
-      "size": 35174
+      "sha256": "9b0432978dba33da5ca5cf5322c109234148e2b42fe2100af6d44a04061ae6af",
+      "size": 38314
     },
     {
       "path": "lib/rechnungsaktionen.js",
@@ -165,8 +165,8 @@
     },
     {
       "path": "lib/rechnungsdruck.js",
-      "sha256": "919cb48cc1a3b953929638a9f2dfb2394d67f708152cf339fad47597297abe58",
-      "size": 33758
+      "sha256": "66a81736b82446e8ca3e46c901cbb5af78345139d6a3b73c298489475d4af9d6",
+      "size": 47718
     },
     {
       "path": "lib/reports.js",
@@ -215,8 +215,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "3dda9be9d130d5f4d1ef1fef30e43b68731cd5de6dd79a913135da895aaa010b",
-      "size": 17559
+      "sha256": "6e89432eef9881bbe7cfe68144ac411236f8250d2cf7600f2e1127f04f8b976e",
+      "size": 18412
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -225,18 +225,18 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "26f843af2e5544984a101091d416d18411b066e7ba2e5317b6df4e74796874fa",
+      "sha256": "5c7193e230f73b3b15464b9011186ffebcad3f571e082dc8db2b659d71a5d954",
       "size": 879
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "811e97245eaae448eec4eb9f3b3b023a5b99679d98d83be22fddc5e3e9f5197f",
+      "sha256": "f4a25bfc0188429c95ba4948aa0a1f8c0c7ecc3f8cf170284ca01d1336d03367",
       "size": 13438
     },
     {
       "path": "styles.css",
-      "sha256": "ccae111abaaefe7b8cd3f3b16d6e0f904a538070d085fca9205853c424622835",
-      "size": 63084
+      "sha256": "da5c376a8e08bdb53ab0d74aab8804bbc1d141728743170ea606b78fcf8a8b8a",
+      "size": 66784
     },
     {
       "path": "views/anlageform.js",
@@ -295,8 +295,8 @@
     },
     {
       "path": "views/rechnungsgestalter.js",
-      "sha256": "2f03242ea77a23c1fb5377437ad01893a2e1ea1f6e5d45f243e1c6ab5b4a9351",
-      "size": 45053
+      "sha256": "3ec4a9326f425d33658cd0f0d7dc0a2c025f9aeac103109230422809df5f398a",
+      "size": 66440
     },
     {
       "path": "views/reports.js",
@@ -335,7 +335,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "067751cafda06760bedae152a5d65e4d1ca22d053b77add36b0c84c1e28f3288",
+      "sha256": "2d2bac6ef84f98f2154c782c4112e77e8a31ea30612a773d75efe3591dc69826",
       "size": 6905
     },
     {
@@ -435,8 +435,8 @@
     },
     {
       "path": "web/web.css",
-      "sha256": "13a59a8f98605534d0c3131c61ebad75652e8beb63101d17a583e86de27c5b5e",
-      "size": 9828
+      "sha256": "771a6cc2b18c9a6f086f2036ac6b2ad8954a1c1b3a4bc8634b59d756f575feff",
+      "size": 10011
     },
     {
       "path": "web/weiterleitung.js",

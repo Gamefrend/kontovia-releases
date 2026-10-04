@@ -80,6 +80,8 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   .statusbar { padding-left: 16px; padding-right: 16px; }
   /* Der Platz unter dem Inhalt gehört der festen Leiste am unteren Rand. */
   .main { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  /* Das Fenster am Teil im Rechnungsgestalter liegt über der festen Leiste. */
+  .re-pop.blatt { bottom: calc(72px + env(safe-area-inset-bottom)); max-height: 52vh; z-index: 145; }
   .kv-tabs {
     display: grid; grid-template-columns: 1fr 1fr 72px 1fr 1fr; align-items: center;
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 140;
