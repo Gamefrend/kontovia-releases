@@ -354,8 +354,10 @@ function cloud(root) {
       <div class="card mb16"><div class="card-body">
         <h3 class="mt0">Rückmeldung geben</h3>
         <p class="mb0">Mit <strong>Feedback</strong> unten in der Seitenleiste schreiben Sie uns frei, was Ihnen
-        auffällt. Auf Wunsch geht ein Bild der Seite mit, auf der Sie waren, ohne das Rückmeldefenster. Es wird
-        verschlüsselt in Ihrer Buchhaltung gespeichert und vorerst nirgends hin gesendet.</p>
+        auffällt. Auf Wunsch geht ein Bild der Seite mit, auf der Sie waren, ohne das Rückmeldefenster. Mit
+        <strong>Senden</strong> geht Ihre Nachricht an das Kontovia-Team; eine Kopie bleibt verschlüsselt auf Ihrem Gerät.
+        Dabei werden nur Art, Text, Name der Seite, Programmversion und Fenstergröße übertragen, nichts aus Ihrer
+        Buchhaltung, kein Name und keine E-Mail-Adresse. Das Bild geht nur mit, wenn Sie es ankreuzen.</p>
       </div></div>
       <div class="card"><div class="card-body">
         <h3 class="mt0">Cloud-Abgleich einschalten</h3>

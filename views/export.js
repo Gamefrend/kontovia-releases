@@ -29,7 +29,7 @@ function card({ id, title, sub, body, button, tone = '' }) {
       <div class="card-head"><h3>${esc(title)}</h3><span class="sub">${esc(sub)}</span></div>
       <div class="card-body">
         <div class="small" style="color:var(--text-2);line-height:1.6">${body}</div>
-        <div class="row mt16" style="gap:8px">${button}</div>
+        <div class="row wrap mt16" style="gap:8px">${button}</div>
       </div>
     </div>`;
 }

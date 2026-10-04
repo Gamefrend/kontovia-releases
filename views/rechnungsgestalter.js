@@ -140,8 +140,10 @@ export async function gestaltungZeigen(root, params = {}) {
             <button type="button" class="btn sm" data-neu="linie">${icon('minus', 14).__raw} Linie</button>
             <span class="spacer"></span>
             <button type="button" class="btn sm" id="gsSeite">${icon('layout', 14).__raw} Seite</button>
-            <button type="button" class="icon-btn" id="gsZurueck" title="Rückgängig (Strg+Z)" aria-label="Rückgängig">${icon('left', 16).__raw}</button>
-            <button type="button" class="icon-btn" id="gsVor" title="Wiederholen (Strg+Y)" aria-label="Wiederholen">${icon('right', 16).__raw}</button>
+            <span class="re-undo">
+              <button type="button" class="icon-btn" id="gsZurueck" title="Rückgängig (Strg+Z)" aria-label="Rückgängig">${icon('undo', 16).__raw}</button>
+              <button type="button" class="icon-btn" id="gsVor" title="Wiederholen (Strg+Y)" aria-label="Wiederholen">${icon('redo', 16).__raw}</button>
+            </span>
           </div>
           <p class="small muted mb0 re-tipp">${icon('move', 14).__raw}<span>Klicken Sie auf einen Teil der Rechnung, um ihn zu ändern, und ziehen Sie ihn an eine andere Stelle. Ein Rechtsklick (am Telefon: länger drücken) zeigt weitere Möglichkeiten. Tabelle und Texte ordnen Sie durch Ziehen nach oben oder unten.</span></p>
         </div>

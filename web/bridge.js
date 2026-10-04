@@ -29,6 +29,7 @@ import { fuerOberflaeche } from './zugang.js';
 import { modal, toast } from '../lib/ui.js';
 import './mobil.js';
 import * as I from './installation.js';
+import * as R from './rueckmeldung.js';
 
 /* Läuft diese Seite nur als kleines Fenster für Google Kalender? Dann reicht
    sie die Antwort an das eigentliche Kontovia-Fenster weiter und schließt
@@ -825,6 +826,21 @@ const api = {
         throw err;
       }
     }, { needsUnlock: false }),
+  },
+
+  /**
+   * Rückmeldungen online (rueckmeldung.js). Senden geht ohne Konto und auch bei
+   * gesperrtem Tresor; Lesen und Löschen laufen über die Anmeldung der
+   * Cloud-Sicherung und gelingen nur Konten, die firebase/storage.rules nennt.
+   */
+  feedback: {
+    senden: handle(async ({ eintrag, fotoBase64 } = {}) => R.senden({
+      eintrag: eintrag || {}, fotoBytes: fotoBase64 ? K.fromBase64(String(fotoBase64)) : null,
+    }), { needsUnlock: false }),
+    laden: handle(async () => R.laden(cloud.be())),
+    foto: handle(async (id) => K.toBase64(await R.foto(cloud.be(), String(id)))),
+    loeschen: handle(async (id) => R.loeschen(cloud.be(), String(id))),
+    kennung: handle(async () => cloud.be().state?.uid || ''),
   },
 
   cloud: {

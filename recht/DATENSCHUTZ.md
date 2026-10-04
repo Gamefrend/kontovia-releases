@@ -8,7 +8,7 @@
   prüfen lassen. Rechtsberatung ist das hier nicht.
 -->
 
-Stand: 5. Oktober 2026, Programmversion 2.8.0
+Stand: 5. Oktober 2026, Programmversion 2.9.0
 
 ---
 
@@ -129,13 +129,28 @@ Ihr Passwort den Schlüssel. Mit „Ausschalten“ wird die Datei gelöscht. Auc
 
 ## Rückmeldungen
 
-Mit „Feedback“ in der Seitenleiste können Sie Text und auf Wunsch ein
-Bildschirmfoto der aktuellen Seite speichern. Das Foto entsteht auf Ihrem
-Gerät und kann Zahlen aus Ihrer Buchhaltung zeigen; Sie sehen es vor dem
-Speichern und können es abwählen. Gespeichert wird die Rückmeldung verschlüsselt
-in Ihrer Buchhaltung, das Foto als Beleg. Sie wird vorerst an niemanden
-gesendet. Sollte ein Versand eingeführt werden, geschieht er nur auf Ihr
-Zutun und wird hier beschrieben.
+Mit „Feedback“ in der Seitenleiste können Sie uns Text und auf Wunsch ein
+Bildschirmfoto der aktuellen Seite schicken. Das Foto entsteht auf Ihrem
+Gerät und kann Zahlen aus Ihrer Buchhaltung zeigen; es geht nur mit, wenn Sie
+den Haken dafür selbst setzen, und Sie sehen es vorher.
+
+Mit „Senden“ übertragen wir in den Cloud-Speicher unseres Projekts (Google
+Cloud Storage, EU, derselbe Speicher wie für die Cloud-Sicherung, aber ein
+getrennter Ordner): die Art der Rückmeldung, Ihren Text, den Namen der Seite,
+auf der Sie waren, die Programmversion, die Fenstergröße, den Zeitpunkt und
+auf Wunsch das Foto. Nicht übertragen werden Ihre Buchhaltung, Ihr Name, Ihre
+E-Mail-Adresse oder eine Kennung Ihres Kontos; dafür ist kein Konto nötig.
+Anders als Ihre Buchhaltung ist diese Übertragung nicht mit Ihrem Passwort
+verschlüsselt (sie läuft über eine verschlüsselte Verbindung, liegt aber für
+uns lesbar im Speicher). Schreiben Sie daher bitte keine Passwörter,
+Kontonummern oder Steuerdaten hinein. Lesen und löschen können die
+Rückmeldungen nur die Betreiber von Kontovia. Wir verwenden sie, um Kontovia zu
+verbessern, und löschen sie, wenn sie erledigt sind.
+
+Eine Kopie bleibt verschlüsselt in Ihrer Buchhaltung auf Ihrem Gerät, das Foto
+als Beleg. Klappt das Senden nicht, versucht Kontovia es später erneut; bis
+dahin bleibt die Rückmeldung nur bei Ihnen. Rückmeldungen, die Sie vor Version
+2.9 gespeichert haben, wurden nie gesendet und werden auch nicht nachgesendet.
 
 ## Abmelden
 

@@ -9,7 +9,7 @@
 body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
 
 /* Als App auf dem Home-Bildschirm läuft die Seite unter der Statusleiste. */
-.topbar { padding-top: env(safe-area-inset-top); height: calc(76px + env(safe-area-inset-top)); }
+.kopf { padding-top: env(safe-area-inset-top); height: calc(76px + env(safe-area-inset-top)); }
 .sidebar { padding-top: calc(20px + env(safe-area-inset-top)); }
 .gate { padding-top: calc(24px + env(safe-area-inset-top)); padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
 .statusbar { height: calc(32px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); }
@@ -48,21 +48,37 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   /* Die Seitenleiste wird zur ausklappbaren Leiste (Knopf oben links). */
   .sidebar {
     position: fixed; inset: 0 auto 0 0; width: min(290px, 84vw); z-index: 160;
-    transform: translateX(-102%); transition: transform .2s ease;
+    transform: translateX(-102%); transition: transform .45s var(--aus), box-shadow .45s; box-shadow: none;
     box-shadow: var(--shadow-lg);
     padding-bottom: env(safe-area-inset-bottom);
   }
-  .shell.nav-offen .sidebar { transform: none; }
-  .shell.nav-offen .kv-nav-hg { display: block; position: fixed; inset: 0; z-index: 150; background: rgba(8, 11, 15, .45); }
+  .shell.nav-offen .sidebar { transform: none; box-shadow: var(--shadow-lg); }
+  /* Der Hintergrund hinter der Leiste blendet ein und aus, statt zu springen. */
+  .kv-nav-hg { display: block; position: fixed; inset: 0; z-index: 150; background: rgba(4, 3, 2, .5); opacity: 0; pointer-events: none; transition: opacity .35s var(--aus); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
+  .shell.nav-offen .kv-nav-hg { opacity: 1; pointer-events: auto; }
   .kv-menu { display: grid; margin-left: -6px; }
 
-  .topbar {
-    height: auto; min-height: calc(56px + env(safe-area-inset-top));
-    flex-wrap: wrap; gap: 8px; padding: env(safe-area-inset-top) 16px 0;
+  /* Kopf der Ansicht. Die Leiste mit Menü, Titel und Suche ist immer gleich hoch und
+     bleibt oben stehen; es gibt keinen Zustand „kleiner“, der beim Scrollen
+     umschlägt. Zeitraum und Neu-Knöpfe (#topActions) scrollen mit dem Inhalt
+     weg. Dafür scrollt am Telefon die ganze Spalte (.main) statt nur .content. */
+  .shell { grid-template-rows: minmax(0, 1fr); --kopfhoehe: calc(56px + env(safe-area-inset-top)); --unten: calc(64px + env(safe-area-inset-bottom)); }
+  .main {
+    display: flex; flex-direction: column; overflow-x: hidden; overflow-y: auto;
+    overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(64px + env(safe-area-inset-bottom)); scroll-padding-top: var(--kopfhoehe);
   }
-  .topbar h1 { font-size: 22px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .topbar .spacer { display: none; }
-  #topActions { flex-wrap: wrap; gap: 6px; padding-bottom: 8px; width: 100%; }
+  .kopf { display: contents; }
+  .topbar {
+    position: sticky; top: 0; z-index: 30; flex: none;
+    height: var(--kopfhoehe); padding: env(safe-area-inset-top) 16px 0; gap: 8px;
+    background: color-mix(in srgb, var(--bg) 84%, transparent);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4);
+  }
+  .topbar::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: var(--border); opacity: 0; transition: opacity .25s; }
+  .shell.gescrollt .topbar::after { opacity: 1; }
+  .topbar h1 { font-size: 22px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #topActions { flex: none; flex-wrap: wrap; gap: 6px; padding: 2px 16px 12px; width: 100%; }
   #topActions:empty { display: none; }
   #topActions select, #topActions input { width: auto; max-width: 100%; }
   /* Die Zeitraumwahl nimmt die ganze Zeile, damit der Zeitraum lesbar bleibt. */
@@ -70,16 +86,15 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   #topActions .period-btn { flex: 1; min-width: 0; }
   .page-head .scope-toggle { white-space: normal; }
 
-  /* Beim Hinunterscrollen klappt die Aktionszeile (Zeitraum, Neu-Knöpfe) weg
-     und gibt den Platz dem Inhalt; beim Hinaufscrollen ist sie sofort wieder da. */
-  #topActions { transition: opacity .15s ease; }
-  .shell.kv-kompakt .topbar { min-height: calc(48px + env(safe-area-inset-top)); }
-  .shell.kv-kompakt #topActions { display: none; }
-
-  .content { padding: 4px 16px 24px; }
-  .statusbar { padding-left: 16px; padding-right: 16px; }
-  /* Der Platz unter dem Inhalt gehört der festen Leiste am unteren Rand. */
-  .main { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .content { flex: 1 0 auto; overflow: visible; padding: 4px 16px 24px; }
+  /* Die Statusleiste steht am Ende der Seite und nimmt dem Inhalt keinen Platz weg. Nur wenn
+     etwas nicht stimmt (Speichern läuft oder ist fehlgeschlagen), bleibt sie über der festen
+     Leiste unten stehen, auch beim Scrollen. */
+  .statusbar { flex: none; height: 32px; padding: 0 16px; }
+  .statusbar:has(.save-dot.error, .save-dot.saving) { position: sticky; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 20; background: color-mix(in srgb, var(--bg) 96%, transparent); border-top: 1px solid var(--border); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+  /* Spaltenköpfe bleiben unter der Kopfleiste hängen, nicht dahinter; die Leisten mit Knöpfen über der Statusleiste. */
+  table.data th { top: var(--kopfhoehe); }
+  .apply-bar.dirty, .re-leiste { bottom: calc(var(--unten) + 8px); }
   /* Das Fenster am Teil im Rechnungsgestalter liegt über der festen Leiste. */
   .re-pop.blatt { bottom: calc(72px + env(safe-area-inset-bottom)); max-height: 52vh; z-index: 145; }
   .kv-tabs {
@@ -95,6 +110,9 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
     height: 100%; border: 0; background: none; color: var(--muted); font-size: 11.5px; font-weight: 500; cursor: pointer;
   }
   .kv-tab.active { color: var(--accent); }
+  /* Die Marke oben an der Leiste gleitet zum gewählten Eintrag (lib/bewegung.js). */
+  .kv-tabs .marke { top: 0; height: 3px; width: var(--mw, 28px); transform: translateX(var(--mx, 0)); border-radius: 0 0 4px 4px; background: var(--accent); box-shadow: 0 6px 14px color-mix(in srgb, var(--accent) 60%, transparent); }
+  .kv-tabs .marke::before { display: none; }
   .kv-tab-plus {
     justify-self: center; width: 52px; height: 52px; margin-top: -14px; border: 0; border-radius: 16px;
     background: var(--accent); color: var(--accent-text); display: grid; place-items: center; cursor: pointer;
@@ -128,11 +146,16 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
 
   /* Fenster kommen von unten, wie auf dem Telefon üblich. */
   .modal-backdrop { padding: 0; place-items: end stretch; }
-  .modal, .modal.wide, .modal.slim {
+  .modal, .modal.wide, .modal.slim, .modal-abbild, .modal-abbild.wide, .modal-abbild.slim {
     width: 100%; max-height: calc(100dvh - env(safe-area-inset-top) - 12px);
     border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   }
   .modal-body { padding: 16px; }
+  /* Griff oben am Blatt: zeigt, dass es sich nach unten wegziehen lässt. */
+  .modal-head { position: relative; padding-top: 24px; cursor: grab; }
+  .modal-head::before { content: ''; position: absolute; top: 8px; left: 50%; width: 38px; height: 4px; margin-left: -19px; border-radius: 3px; background: var(--border-strong); }
+  .modal .row.between, .modal-abbild .row.between { flex-wrap: wrap; }
+  .such-knopf kbd { display: none; }
   .modal-foot { flex-wrap: wrap; border-radius: 0; padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
   .modal-foot .btn { flex: 1 1 auto; }
   .modal-foot .left { flex-basis: 100%; }
@@ -150,6 +173,24 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   .gate { padding-left: 12px; padding-right: 12px; }
   .gate-card { padding: 22px 18px; }
   .preview-frame { height: 60dvh; }
+}
+
+/* Fingergroße Ziele: Umschalter in Kartenköpfen, Chips und Textknöpfe unter den Kennzahlen. */
+@media (pointer: coarse), (max-width: 820px) {
+  .seg.sm button { min-width: 40px; min-height: 36px; justify-content: center; }
+  .chip { min-height: 34px; }
+  .stat-link { padding: 6px 0; }
+  .todo-appt { min-height: 34px; }
+  .bar-row { padding: 8px 0; }
+}
+
+/* Niedrige Fenster (Laptop, Tablet quer): die Seitenleiste rückt zusammen, damit Navigation und Fuß ohne Scrollen passen. */
+@media (min-width: 821px) and (max-height: 860px) {
+  .sidebar { gap: 12px; padding-top: calc(14px + env(safe-area-inset-top)); }
+  .nav-item { height: 36px; }
+  .sidebar-foot .btn { height: 34px; }
+  .sidebar-foot .seg.theme-toggle button { height: 30px; }
+  .nav-sep { margin: 6px 8px; }
 }
 
 /* Schmale Telefone: Kennzahlen untereinander statt in zwei engen Spalten, in

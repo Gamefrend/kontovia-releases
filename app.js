@@ -14,8 +14,9 @@ import { scope } from './lib/prefs.js';
 import { startCalendarSync, stopCalendarSync } from './lib/gcalsync.js';
 import { VERSIONEN } from './lib/versionen.js';
 import { abmelden, entsperrWege, kontenMenue, kontenAufSperrbildschirm, nachrichtHolen, kontoName, kontoSchluessel } from './lib/zugaenge.js';
-import { feedbackOeffnen, entwicklerKlick } from './lib/feedback.js';
+import { feedbackOeffnen, feedbackNachsenden, entwicklerKlick } from './lib/feedback.js';
 import { sucheOeffnen, SUCHE_KUERZEL } from './lib/suche.js';
+import { seite, seitenwechsel, beobachten, markierung, themaWechsel, schuetteln } from './lib/bewegung.js';
 
 import * as viewDashboard from './views/dashboard.js';
 import * as viewTransactions from './views/transactions.js';
@@ -70,12 +71,12 @@ export function applyTheme(pref) {
 mql.addEventListener('change', () => applyTheme());
 
 /** Hell, Dunkel oder wie das System – ein Klick, ohne Umweg über die Einstellungen. */
-async function setTheme(mode) {
+async function setTheme(mode, anker) {
   await commit('einstellung.darstellung', (db) => {
     db.settings.theme = mode;
     db.settings.updatedAt = new Date().toISOString();
   }, { silent: true });
-  applyTheme();
+  themaWechsel(() => applyTheme(), anker);
   // Steht die Einstellungsseite offen, zeigte ihre Auswahl sonst den alten
   // Wert und schriebe ihn beim nächsten „Übernehmen“ zurück.
   const auswahl = document.getElementById('s_theme');
@@ -92,7 +93,7 @@ function renderThemeToggle() {
     <button type="button" data-theme-set="${v}" class="${mode === v ? 'active' : ''}" aria-pressed="${mode === v}"
       title="${v === 'system' ? 'Wie das Betriebssystem' : t}">${icon(ic, 14).__raw}<span>${t}</span></button>`).join('')}</div>`;
   slot.querySelectorAll('[data-theme-set]').forEach((b) => b.addEventListener('click', () => {
-    if (b.dataset.themeSet !== mode) setTheme(b.dataset.themeSet);
+    if (b.dataset.themeSet !== mode) setTheme(b.dataset.themeSet, b);
   }));
 }
 
@@ -211,6 +212,8 @@ function eintreten(db) {
   renderShell();
   navigate(db.settings.startView || 'dashboard', {}, { ersetzen: true });
   afterUnlock();
+  // Rückmeldungen, die beim letzten Mal nicht ankamen, jetzt noch einmal versuchen.
+  setTimeout(() => feedbackNachsenden(), 5000);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -828,6 +831,7 @@ function renderUnlock(message = '') {
       btn.disabled = false;
       btn.textContent = 'Entsperren';
       pw.select();
+      schuetteln($('.gate-card'));
     }
   };
   btn.addEventListener('click', submit);
@@ -1113,12 +1117,13 @@ function renderShell() {
         </div>
       </aside>
       <main class="main">
-        <header class="topbar">
-          <h1 id="viewTitle">Übersicht</h1>
-          <button class="icon-btn top-suche" id="topSearch" type="button" aria-label="Suchen" title="Alles durchsuchen">${icon('search', 20)}</button>
-          <div class="spacer"></div>
+        <div class="kopf">
+          <header class="topbar">
+            <h1 id="viewTitle">Übersicht</h1>
+            <button class="icon-btn top-suche" id="topSearch" type="button" aria-label="Suchen" title="Alles durchsuchen">${icon('search', 20)}</button>
+          </header>
           <div id="topActions" class="row"></div>
-        </header>
+        </div>
         <div class="content" id="content"></div>
         <div class="statusbar">
           <span class="row" style="gap:6px"><i class="save-dot" id="saveDot"></i><span id="saveText">gespeichert</span></span>
@@ -1144,6 +1149,8 @@ function renderShell() {
     const item = e.target.closest('[data-view]');
     if (item) { e.preventDefault(); navigate(item.dataset.view); }
   });
+  markierung($('#nav'), { aktiv: '.nav-item.active' });
+  beobachten($('#content'));
   $('#brandBtn').addEventListener('click', (e) => kontenMenue(e.currentTarget));
   $('#lockBtn').addEventListener('click', () => lockNow());
   $('#logoutBtn').addEventListener('click', () => abmelden());
@@ -1228,6 +1235,9 @@ onNavigate(async (view, params) => {
   $('#viewTitle').textContent = conf.title;
   $('#topActions').innerHTML = '';
   content.scrollTop = 0;
+  // Am Telefon scrollt die ganze Spalte (web.css), nicht nur der Inhalt.
+  content.closest('.main').scrollTop = 0;
+  seitenwechsel();
   content.innerHTML = '<div class="skeleton" style="height:120px"></div>';
   try {
     await conf.mod.render(content, params, { actions: $('#topActions') });
@@ -1235,6 +1245,7 @@ onNavigate(async (view, params) => {
     console.error(e);
     content.innerHTML = html`<div class="notice danger">Die Ansicht konnte nicht dargestellt werden: ${e.message}</div>`;
   }
+  seite(content);
   updateStatus();
 });
 

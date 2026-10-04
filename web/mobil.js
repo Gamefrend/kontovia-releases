@@ -7,6 +7,8 @@
  * Kopfzeile gesetzt, sobald sie nach dem Entsperren aufgebaut ist.
  */
 
+import { markierung } from '../lib/bewegung.js';
+
 const SYMBOL = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
 
 function einsetzen() {
@@ -82,47 +84,33 @@ function tabsEinsetzen(shell, zu) {
   const leiste = shell.querySelector('#nav');
   if (leiste) new MutationObserver(abgleichen).observe(leiste, { subtree: true, attributes: true, attributeFilter: ['class'] });
   abgleichen();
+  // Die Marke oben an der Leiste gleitet zum gewählten Eintrag.
+  markierung(nav, { aktiv: '.kv-tab.active', achse: 'x', breite: 28 });
 }
 
 /**
- * Die Aktionszeile der Kopfleiste (Zeitraum, Neu-Knöpfe) nimmt auf dem Telefon
- * ein Fünftel des Bildschirms ein. Beim Hinunterscrollen wird sie ausgeblendet,
- * beim Hinaufscrollen oder ganz oben ist sie wieder da. Nur bei langen Seiten:
- * Sonst würde der gewonnene Platz die Seite so kurz machen, dass sie nicht mehr
- * scrollt und die Zeile hin und her springt.
+ * Die Kopfleiste (Menü, Titel, Suche) ist am Telefon immer gleich hoch. Beim
+ * Scrollen ändert sich an ihr nichts außer einer feinen Linie am unteren Rand,
+ * die zeigt, dass darunter Inhalt vorbeizieht. Frühere Fassungen klappten
+ * beim Hinunterscrollen eine Zeile weg und machten die Leiste kleiner; die
+ * Höhe sprang, und alles in der Leiste rückte zusammen. Zeitraum und Neu-Knöpfe
+ * scrollen jetzt einfach mit dem Inhalt (siehe web.css).
+ *
+ * Ein Tipp auf den Titel bringt die Seite nach oben, wie auf dem iPhone üblich.
  */
 function kopfzeileBeobachten() {
   const shell = document.querySelector('.shell');
-  const inhalt = shell?.querySelector('.content');
-  if (!inhalt || inhalt.dataset.kvScroll) return;
-  inhalt.dataset.kvScroll = '1';
-  let letzte = 0;
-  let sperre = false;
-  inhalt.addEventListener('scroll', () => {
-    if (sperre) return;
-    const y = inhalt.scrollTop;
-    const delta = y - letzte;
-    const eng = matchMedia('(max-width: 820px)').matches;
-    const lang = inhalt.scrollHeight - inhalt.clientHeight > 320;
-    const kompakt = shell.classList.contains('kv-kompakt');
-    if (!eng || !lang || y < 24) {
-      if (kompakt) shell.classList.remove('kv-kompakt');
-    } else if (!kompakt && delta > 10 && y > 90) {
-      shell.classList.add('kv-kompakt');
-      sperre = true; // Die Höhenänderung löst selbst ein Scroll-Ereignis aus.
-      setTimeout(() => { sperre = false; letzte = inhalt.scrollTop; }, 120);
-    } else if (kompakt && delta < -10) {
-      shell.classList.remove('kv-kompakt');
-      sperre = true;
-      setTimeout(() => { sperre = false; letzte = inhalt.scrollTop; }, 120);
-    }
-    letzte = y;
+  const spalte = shell?.querySelector('.main');
+  if (!spalte || spalte.dataset.kvScroll) return;
+  spalte.dataset.kvScroll = '1';
+  let an = false;
+  spalte.addEventListener('scroll', () => {
+    const jetzt = spalte.scrollTop > 6;
+    if (jetzt !== an) { an = jetzt; shell.classList.toggle('gescrollt', jetzt); }
   }, { passive: true });
-  // Eine andere Ansicht (kürzer, oben beginnend) bringt die Zeile zurück.
-  new MutationObserver(() => {
-    if (inhalt.scrollTop < 24 || inhalt.scrollHeight - inhalt.clientHeight <= 320) shell.classList.remove('kv-kompakt');
-    letzte = inhalt.scrollTop;
-  }).observe(inhalt, { childList: true });
+  shell.querySelector('#viewTitle')?.addEventListener('click', () => {
+    if (matchMedia('(max-width: 820px)').matches) spalte.scrollTo({ top: 0, behavior: 'smooth' });
+  });
 }
 
 const app = document.getElementById('app');
