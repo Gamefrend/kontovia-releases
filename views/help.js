@@ -23,7 +23,6 @@ export async function render(root, params = {}) {
     <div id="helpBody" class="help"></div>`;
   $$('[data-tab]', root).forEach((b) => b.addEventListener('click', () => { tab = b.dataset.tab; render(root); }));
   ({ anleitung, cloud, neu, recht }[tab] || anleitung)($('#helpBody', root));
-  $('[data-rueck]', root)?.addEventListener('click', async () => (await import('../lib/feedback.js')).rueckmeldungenAnsehen());
   // Sprung zu einem Abschnitt, etwa aus der Export-Ansicht.
   // Ohne Animation: die wird bei verdecktem Fenster ausgesetzt, der Sprung bliebe dann aus.
   if (params.anker) setTimeout(() => $(`#recht-${params.anker}`, root)?.scrollIntoView({ block: 'start' }), 60);
@@ -356,12 +355,11 @@ function cloud(root) {
         <h3 class="mt0">Rückmeldung geben</h3>
         <p class="mb0">Mit <strong>Feedback</strong> unten in der Seitenleiste schreiben Sie uns frei, was Ihnen
         auffällt. Auf Wunsch geht ein Bild der Seite mit, auf der Sie waren, ohne das Rückmeldefenster. Mit
-        <strong>Senden</strong> geht Ihre Nachricht an das Kontovia-Team und ist <strong>für alle sichtbar</strong>;
+        <strong>Senden</strong> geht Ihre Nachricht an das Kontovia-Team und <strong>kann von anderen gelesen werden</strong>;
         eine Kopie bleibt verschlüsselt auf Ihrem Gerät. Dabei werden nur Art, Text, Name der Seite,
         Programmversion und Fenstergröße übertragen, nichts aus Ihrer Buchhaltung, kein Name und keine
         E-Mail-Adresse. Das Bild geht nur mit, wenn Sie es ankreuzen. Schreiben Sie bitte nichts hinein,
         das nicht öffentlich sein soll.</p>
-        <p class="mb0 mt8"><button class="btn sm" type="button" data-rueck>Rückmeldungen ansehen</button></p>
       </div></div>
       <div class="card"><div class="card-body">
         <h3 class="mt0">Cloud-Abgleich einschalten</h3>

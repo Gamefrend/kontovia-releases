@@ -1,7 +1,7 @@
 {
-  "version": "2.9.1",
-  "released": "2026-10-04T18:25:03.681Z",
-  "notes": "Rückmeldungen für alle sichtbar\n\n- Alle gesendeten Rückmeldungen kann jetzt jeder lesen. Sie finden die Liste im Rückmeldefenster und in der Hilfe unter „Rückmeldungen ansehen“.\n- Das Rückmeldefenster sagt vor dem Senden deutlich, dass Ihre Nachricht öffentlich ist. Das Bild der Seite geht weiterhin nur mit, wenn Sie es selbst ankreuzen.",
+  "version": "2.9.2",
+  "released": "2026-10-04T18:55:33.965Z",
+  "notes": "Rückmeldefenster überarbeitet\n\n- Das Rückmeldefenster ist aufgeräumter. Es sagt vor dem Senden deutlich, dass andere Nutzer Ihre Nachricht lesen können.\n- Das Bild der Seite geht weiterhin nur mit, wenn Sie es selbst ankreuzen.",
   "files": [
     {
       "path": "app.js",
@@ -100,8 +100,8 @@
     },
     {
       "path": "lib/feedback.js",
-      "sha256": "8918979206a34f26020fdc9b77e520a262cb28c51a5e1dee96709f2b36319514",
-      "size": 21499
+      "sha256": "f6886f1329aeaaf58ee88be6d087483b4800d09a7bcae26035e791faa6cee629",
+      "size": 18597
     },
     {
       "path": "lib/fristen.js",
@@ -260,8 +260,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "34db771490e5b9179844e0b53da1e5210d18636401a543f3d16b00968f0c7b2a",
-      "size": 22770
+      "sha256": "59f328e2a9ac978fb3fd93ff20c9b15d973698de0915f94a3519d9778b7530e9",
+      "size": 22870
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -275,13 +275,13 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "65a03aa3b90088800f279863c607ef867d3dc68f3668dd6cc9c8930432ff807c",
+      "sha256": "7ce20e76addaf0aa877936be0387204ac15d4c744d2c05dc0315ba57383bb85b",
       "size": 879
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "b80db9510bf494f8e1ca192c28f1179d102468d542ecdb156022d29a30b49366",
-      "size": 17650
+      "sha256": "9f52353f38fc7ace51e8dfa1dffc7b68d2bb68107fcd705f15030afdd7255926",
+      "size": 17485
     },
     {
       "path": "styles.css",
@@ -325,8 +325,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "4a3bf2720184a078ea7aa15d8f1f243481fbadb6584a54e953c7c3f7260859e1",
-      "size": 44158
+      "sha256": "77af504644a3079ed4ed98c80d511f82ffb926b1f518053a885bd61611d3fc75",
+      "size": 43928
     },
     {
       "path": "views/master.js",
@@ -385,7 +385,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "2813be3ba222576b46564c462ca1c47fdf9a3d8b3ae93527ec78992130221d77",
+      "sha256": "9adf6acce35c3a3d6ca2ed3e26ef3142a392b46adc3a4918d4b2a5660722dd43",
       "size": 6905
     },
     {
@@ -395,8 +395,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "485cb2b4d13ac4ca03baf4e6e52ec07f52496ad17a9b41a242adb20ec48d5776",
-      "size": 48869
+      "sha256": "544b110f7db0bd4672e9c9bacd59715bde55a7ce4fdc77ee2c0052938767e79a",
+      "size": 48655
     },
     {
       "path": "web/cloud.js",
@@ -460,8 +460,8 @@
     },
     {
       "path": "web/rueckmeldung.js",
-      "sha256": "e666c6d6f2f59d672d7388bcdf85b43b6fbde094c433705ec1b7a68e7782b726",
-      "size": 6063
+      "sha256": "ea4dc55dd454d74689c83bb62118a1582f6438eb2ead6eea1d31f8d6a4d387f3",
+      "size": 5631
     },
     {
       "path": "web/scrypt-worker.js",

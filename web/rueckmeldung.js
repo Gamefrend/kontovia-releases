@@ -5,11 +5,11 @@
  * (Ordner feedback/ im selben Bucket wie die Tresore, siehe
  * firebase/storage.rules). Dazu braucht es kein Konto: Anlegen darf jeder,
  * aber nur kleine Dateien mit festem Namen, und nichts lässt sich danach
- * ändern. Löschen dürfen nur die Entwickler-Konten aus den Regeln, hier über
- * die Anmeldung der Cloud-Sicherung.
+ * ändern.
  *
- * Jede Rückmeldung ist für alle lesbar (Entscheidung des Betreibers, 2.9.1):
- * Lesen und Auflisten brauchen keine Anmeldung. Gesendet wird nur, was die
+ * Lesen, Auflisten und Löschen brauchen ebenfalls keine Anmeldung (Entscheidung
+ * des Betreibers für den Testbetrieb): Wer das versteckte Entwicklermenü
+ * kennt, darf dort alles sehen und alles tun. Gesendet wird nur, was die
  * Person im Rückmeldefenster sieht und bestätigt:
  * Art, Text, Name der Seite, Programmversion, Fenstergröße und auf Wunsch ein
  * Bildschirmfoto. Nichts aus der Buchhaltung, keine Kennung, keine E-Mail.
@@ -112,16 +112,6 @@ export async function laden(cfg = null) {
   return out.sort((a, c) => String(c.createdAt).localeCompare(String(a.createdAt)));
 }
 
-function lesefehler(err, be) {
-  if (err?.status === 403 || err?.status === 401) {
-    const e = new Error('Dieses Konto darf Rückmeldungen nicht löschen. Die Kennung muss in den Zugriffsregeln des Cloud-Speichers eingetragen sein (Anleitung im README).');
-    e.code = 'KEINE_BERECHTIGUNG';
-    e.kennung = be?.state?.uid || '';
-    return e;
-  }
-  return err;
-}
-
 export async function foto(id, cfg = null) {
   if (!ID_RE.test(String(id))) throw new Error('Ungültige Kennung.');
   const res = await request(`${STORAGE}/${enc(bucket(cfg))}/o/${enc(`feedback/${id}.jpg`)}?alt=media`, {
@@ -131,15 +121,15 @@ export async function foto(id, cfg = null) {
   return res.body;
 }
 
-export async function loeschen(be, id, cfg = null) {
+export async function loeschen(id, cfg = null) {
   if (!ID_RE.test(String(id))) throw new Error('Ungültige Kennung.');
   const b = bucket(cfg);
-  const headers = await be.auth();
+  const headers = {};
   for (const ende of ['jpg', 'json']) {
     try {
       await requestJson(`${STORAGE}/${enc(b)}/o/${enc(`feedback/${id}.${ende}`)}`, { method: 'DELETE', headers, timeoutMs: 20000 });
     } catch (err) {
-      if (err.status !== 404) throw lesefehler(err, be);
+      if (err.status !== 404) throw err;
     }
   }
   return true;

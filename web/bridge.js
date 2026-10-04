@@ -829,19 +829,16 @@ const api = {
   },
 
   /**
-   * Rückmeldungen online (rueckmeldung.js). Senden und Lesen gehen ohne Konto und
-   * auch bei gesperrtem Tresor; Löschen läuft über die Anmeldung der
-   * Cloud-Sicherung und gelingt nur Konten, die firebase/storage.rules nennt.
+   * Rückmeldungen online (rueckmeldung.js). Senden, Lesen und Löschen gehen ohne
+   * Konto und auch bei gesperrtem Tresor (firebase/storage.rules).
    */
   feedback: {
     senden: handle(async ({ eintrag, fotoBase64 } = {}) => R.senden({
       eintrag: eintrag || {}, fotoBytes: fotoBase64 ? K.fromBase64(String(fotoBase64)) : null,
     }), { needsUnlock: false }),
-    // Lesen steht allen offen und braucht weder Konto noch entsperrten Tresor.
     laden: handle(async () => R.laden(), { needsUnlock: false }),
     foto: handle(async (id) => K.toBase64(await R.foto(String(id))), { needsUnlock: false }),
-    loeschen: handle(async (id) => R.loeschen(cloud.be(), String(id))),
-    kennung: handle(async () => cloud.be().state?.uid || ''),
+    loeschen: handle(async (id) => R.loeschen(String(id)), { needsUnlock: false }),
   },
 
   cloud: {
