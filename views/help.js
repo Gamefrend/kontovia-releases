@@ -43,8 +43,9 @@ function anleitung(root) {
           <li><strong>Erste Ausgabe erfassen.</strong> <kbd>${MOD}</kbd>+<kbd>N</kbd> öffnet den Dialog.
               Beschreibung, Datum, Kategorie, Betrag, fertig. Den Beleg ziehen Sie einfach
               mit der Maus ins Fenster.</li>
-          <li><strong>Rechnungen stellen.</strong> Eine Einnahme mit gesetzter Fälligkeit und ohne
-              Zahldatum gilt als offene Forderung und taucht in der Übersicht und im Kalender auf.</li>
+          <li><strong>Rechnungen stellen.</strong> Unter <a data-go="rechnungen">Rechnungen</a> schreiben Sie
+              E-Rechnungen mit Ihrem Logo. Beim Ausstellen entsteht die offene Einnahme von selbst; sie
+              taucht in der Übersicht und im Kalender auf, bis sie bezahlt ist.</li>
           <li><strong>Auswerten.</strong> Unter <a data-go="reports">Auswertungen</a> sehen Sie Gewinn,
               Umsatzsteuer und Vermögen für jeden beliebigen Zeitraum.</li>
           <li><strong>Abgeben.</strong> Unter <a data-go="export">Export</a> erzeugen Sie einen Ordner
@@ -99,8 +100,26 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">E-Rechnungen (XRechnung, ZUGFeRD)</h3>
-        <p>Seit 2025 muss jedes Unternehmen E-Rechnungen annehmen können. Ziehen Sie die XML-Datei oder
+        <h3 class="mt0">Rechnungen schreiben</h3>
+        <p>Unter <a data-go="rechnungen">Rechnungen</a> entsteht jede Rechnung als Entwurf. Kunden und Positionen
+        wählen Sie aus Kontakten und Produkten oder tragen sie frei ein, auch Einheiten wie Stunden, Tage oder
+        Pauschalen. Rechts sehen Sie die fertige Seite und eine Liste der Pflichtangaben, die noch fehlen.
+        Speichern geht immer; ausstellen auch mit Lücken, nach einer Rückfrage.</p>
+        <p><strong>Ausstellen</strong> vergibt die nächste Nummer und legt zwei Dateien unveränderlich ab: ein PDF nach
+        ZUGFeRD (es enthält die Rechnungsdaten maschinenlesbar und gilt als E-Rechnung) und eine XRechnung für
+        Behörden. Danach lässt sich die Rechnung nur noch stornieren oder korrigieren. Auf Wunsch entsteht die
+        offene Einnahme dazu, bei mehreren Steuersätzen je Satz eine Buchung.</p>
+        <p><strong>Gestalten</strong> lassen sich Stil, Farbe, Logo, ein Zusatzbild (etwa Ihre Unterschrift) und die
+        Texte. Das ändert nur die Ansicht; die Rechnungsdaten bleiben immer eine gültige E-Rechnung.
+        Häufige Rechnungen speichern Sie als <strong>Vorlage</strong>.</p>
+        <p class="small">Der Versand per E-Mail und der automatische Empfang kommen mit einer der nächsten Versionen.
+        Bis dahin speichern Sie das PDF und hängen es an Ihre E-Mail an.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
+        <h3 class="mt0">E-Rechnungen empfangen (XRechnung, ZUGFeRD)</h3>
+        <p>Seit 2025 muss jedes Unternehmen E-Rechnungen annehmen können. Unter <a data-go="rechnungen">Rechnungen → Eingang</a>
+        legen Sie erhaltene E-Rechnungen ab und buchen sie mit einem Klick. Ziehen Sie die XML-Datei oder
         das ZUGFeRD-PDF einfach als Beleg in die Buchung: Kontovia erkennt die Rechnung und bietet an,
         <strong>Rechnungsnummer, Datum, Fälligkeit, Betrag, Steuersatz und Kontakt zu übernehmen</strong>.
         In der Belegvorschau sehen Sie die Rechnung lesbar, mit Positionen, Steuer und

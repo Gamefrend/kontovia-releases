@@ -10,6 +10,7 @@ import {
 } from '../lib/calc.js';
 import { neuesAnlagegut, anlageFelder, wireAnlageFelder, anlageAusFeldern, anlageGesperrt } from './anlageform.js';
 import { regelTabelle, offeneVorkommen, faelligeAnbieten } from './wiederkehrend.js';
+import { anschriftAusText, LAENDER } from '../lib/rechnung.js';
 import { openTransactionDialog } from './transactions.js';
 import { refresh } from '../lib/router.js';
 import { table, mountTable, mountTables } from '../lib/table.js';
@@ -486,6 +487,13 @@ function categoryForm(c) {
 function contactForm(c) {
   const isNew = !c;
   c = c || { id: uid('con'), name: '', kind: 'customer', email: '', phone: '', address: '', taxId: '', notes: '' };
+  // Ältere Kontakte haben nur eine Anschrift als Text: Sie wird beim Öffnen auf die Felder verteilt.
+  const frei = !c.street && !c.zip && !c.city && c.address ? anschriftAusText(`${c.name}\n${c.address}`) : null;
+  const a = {
+    zusatz: c.addressExtra ?? frei?.zusatz ?? '', strasse: c.street || frei?.strasse || '', plz: c.zip || frei?.plz || '',
+    ort: c.city || frei?.ort || '', land: c.country || frei?.land || 'DE',
+  };
+  const laender = Object.entries(LAENDER).map(([k, l]) => `<option value="${k}" ${k === a.land ? 'selected' : ''}>${esc(l.name)}</option>`).join('');
   baseDialog({
     title: isNew ? 'Neuer Kontakt' : 'Kontakt bearbeiten',
     body: html`
@@ -499,15 +507,31 @@ function contactForm(c) {
       </div>
       <div class="field"><label>E-Mail</label><input id="f_email" value="${c.email || ''}"></div>
       <div class="field"><label>Telefon</label><input id="f_phone" value="${c.phone || ''}"></div>
-      <div class="field"><label>Anschrift</label><textarea id="f_address">${c.address || ''}</textarea></div>
-      <div class="field"><label>Steuernummer / USt-IdNr.</label><input id="f_taxId" value="${c.taxId || ''}"></div>
+      <div class="field"><label>Zusatz zur Anschrift</label><input id="f_zusatz" value="${a.zusatz}" placeholder="z. Hd., Abteilung"></div>
+      <div class="field"><label>Straße und Hausnummer</label><input id="f_street" value="${a.strasse}"></div>
+      <div class="form-grid">
+        <div class="field"><label>PLZ</label><input id="f_zip" value="${a.plz}"></div>
+        <div class="field"><label>Ort</label><input id="f_city" value="${a.ort}"></div>
+      </div>
+      <div class="field"><label>Land</label><select id="f_country">${raw(laender)}</select></div>
+      <div class="field"><label>Steuernummer / USt-IdNr.</label><input id="f_taxId" value="${c.taxId || c.vatId || ''}"></div>
+      <div class="form-grid">
+        <div class="field"><label>Kundennummer</label><input id="f_customerNumber" value="${c.customerNumber || ''}"></div>
+        <div class="field"><label>Leitweg-ID</label><input id="f_buyerReference" value="${c.buyerReference || ''}" placeholder="nur bei Behörden"></div>
+      </div>
       <div class="field"><label>Notiz</label><textarea id="f_notes">${c.notes || ''}</textarea></div>`,
     onSave: async (rootEl) => {
       const g = (k) => rootEl.querySelector('#f_' + k).value.trim();
       if (!g('name')) { warn('Bitte einen Namen eintragen'); return false; }
+      const land = rootEl.querySelector('#f_country').value;
+      const tax = g('taxId').replace(/\s/g, '').toUpperCase();
       await upsertEntity('contacts', {
         ...c, name: g('name'), kind: rootEl.querySelector('#f_kind').value,
-        email: g('email'), phone: g('phone'), address: g('address'), taxId: g('taxId'), notes: g('notes'),
+        email: g('email'), phone: g('phone'), taxId: g('taxId'), notes: g('notes'),
+        addressExtra: g('zusatz'), street: g('street'), zip: g('zip'), city: g('city'), country: land,
+        vatId: /^[A-Z]{2}\d/.test(tax) ? tax : '', customerNumber: g('customerNumber'), buyerReference: g('buyerReference'),
+        // Die Anschrift als Text bleibt für Exporte und ältere Fassungen erhalten.
+        address: [g('zusatz'), g('street'), [g('zip'), g('city')].filter(Boolean).join(' '), land !== 'DE' ? LAENDER[land]?.name || land : ''].filter(Boolean).join('\n'),
       }, 'kontakt');
       ok('Kontakt gespeichert');
     },

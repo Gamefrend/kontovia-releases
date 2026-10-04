@@ -1,0 +1,734 @@
+/**
+ * Kontovia – eine Rechnung oder Vorlage bearbeiten.
+ *
+ * Alles lässt sich frei eintragen: Kunde und Positionen müssen nicht aus den
+ * Stammdaten kommen, Einheiten nicht aus der Liste. Pflichtangaben stehen
+ * rechts als Liste; speichern geht immer, ausstellen nach Rückfrage auch mit
+ * Lücken (etwa wenn eine Angabe noch fehlt und später korrigiert wird).
+ *
+ * Links das Formular, rechts die Vorschau. Die Vorschau ist dieselbe Seite
+ * wie im PDF (lib/rechnungsdruck.js → lib/pdfvorschau.js).
+ */
+
+import { esc, $, $$, money, moneyInput, parseMoney, fmtDate, todayISO, uid, debounce } from '../lib/util.js';
+import { icon, modal, confirmDialog, ok, warn, err } from '../lib/ui.js';
+import { store, sel, upsertEntity, nextInvoiceNumber } from '../lib/store.js';
+import { router, navigate } from '../lib/router.js';
+import { openMenu } from '../lib/popover.js';
+import {
+  EINHEITEN, ARTEN, STEUERFAELLE, ZAHLUNGSARTEN, LAENDER, berechnen, pruefen, vollstaendig, verkaeuferAus, neuePosition,
+  einheitAusText, einheitText, positionLeer, anschriftAusText, kaeuferAusKontakt, faelligkeit, zahlungsText, betragText, satzText,
+  titel as titelVon, profil as profilAus,
+} from '../lib/rechnung.js';
+import {
+  rechnungSpeichern, entwurfLoeschen, ausstellen, vergebeneNummern, alsVorlage, produktSpeichern,
+} from '../lib/rechnungsaktionen.js';
+import { vorschauSvg, pdfZeigen } from '../lib/rechnungsdateien.js';
+
+const BEREICH_TITEL = { kaeufer: 'Kunde', rechnung: 'Rechnung', positionen: 'Positionen', zahlung: 'Zahlung', verkaeufer: 'Ihre Angaben' };
+
+/** Wert unter einem Pfad wie „kaeufer.name“ lesen und setzen. */
+const lesen = (o, pfad) => pfad.split('.').reduce((x, k) => (x == null ? x : x[k]), o);
+function setzen(o, pfad, wert) {
+  const teile = pfad.split('.');
+  const letzter = teile.pop();
+  const ziel = teile.reduce((x, k) => (x[k] ??= {}), o);
+  ziel[letzter] = wert;
+}
+
+const optionen = (paare, wert) => paare.map(([v, t]) => `<option value="${esc(v)}" ${String(v) === String(wert) ? 'selected' : ''}>${esc(t)}</option>`).join('');
+
+/**
+ * @param {HTMLElement} root
+ * @param {{rechnung?:object, vorlage?:object}} quelle  eine Rechnung (Entwurf) oder eine Vorlage {id, name, daten}
+ * @param {HTMLElement} actions  Platz für Knöpfe in der Kopfzeile
+ */
+export function editorZeigen(root, { rechnung = null, vorlage = null }, actions) {
+  const istVorlage = !!vorlage;
+  const s = store.db.settings;
+  // Arbeitskopie: Geändert wird erst mit „Speichern“.
+  const r = istVorlage
+    ? { ...structuredClone(vorlage.daten || {}), kaeufer: structuredClone(vorlage.daten?.kaeufer || {}), positionen: structuredClone(vorlage.daten?.positionen || []) }
+    : structuredClone(rechnung);
+  if (!Array.isArray(r.positionen)) r.positionen = [];
+  r.kaeufer ??= {};
+  r.kaeufer.land ??= 'DE';
+  if (!r.positionen.length) r.positionen.push(neuePosition(s));
+  let vorlageName = vorlage?.name || '';
+  let gespeichert = JSON.stringify(r);
+  const geaendert = () => JSON.stringify(r) !== gespeichert || (istVorlage && vorlageName !== (vorlage?.name || ''));
+
+  router.leaveGuard = async () => {
+    if (!geaendert()) return true;
+    const wahl = await fragenVerlassen();
+    if (wahl === 'speichern') { await speichern({ still: true }); return true; }
+    return wahl === 'verwerfen';
+  };
+
+  actions.innerHTML = `<button class="btn" id="reZurueck">${icon('left', 16).__raw} Zur Übersicht</button>`;
+  $('#reZurueck', actions).addEventListener('click', () => navigate('rechnungen', { tab: istVorlage ? 'vorlagen' : 'ausgang' }));
+
+  const kontakte = [...sel.contacts()].sort((a, b) => String(a.name).localeCompare(String(b.name), 'de'));
+  const steuerfrei = () => !!(STEUERFAELLE[r.steuerfall] || STEUERFAELLE.standard).kategorie;
+
+  /* ------------------------------------------------------------------------ */
+  /* Gerüst                                                                   */
+  /* ------------------------------------------------------------------------ */
+
+  root.innerHTML = `
+    <div class="re-editor">
+      <div class="re-form">
+        ${istVorlage ? `<div class="card"><div class="card-body">
+          <div class="field mb0"><label for="reVorlageName">Name der Vorlage</label>
+          <input id="reVorlageName" value="${esc(vorlageName)}" placeholder="z. B. Monatliche Wartung"></div></div></div>` : ''}
+        <section class="card" id="reKunde" data-bereich="kaeufer"></section>
+        <section class="card" id="reAngaben" data-bereich="rechnung"></section>
+        <section class="card" id="rePositionen" data-bereich="positionen"></section>
+        <section class="card" id="reTexte"></section>
+        <section class="card" id="reZahlung" data-bereich="zahlung"></section>
+      </div>
+      <aside class="re-seitenspalte">
+        <div class="card re-check" id="reCheck"></div>
+        <div class="re-vorschau" id="reVorschau" aria-label="Vorschau"></div>
+      </aside>
+    </div>
+    <div class="re-leiste" id="reLeiste"></div>`;
+
+  if (istVorlage) $('#reVorlageName', root).addEventListener('input', (e) => { vorlageName = e.target.value; });
+
+  /* ------------------------------------------------------------------------ */
+  /* Kunde                                                                    */
+  /* ------------------------------------------------------------------------ */
+
+  function kundeZeichnen() {
+    const k = r.kaeufer;
+    const laender = Object.entries(LAENDER).map(([c, l]) => [c, `${l.name}`]);
+    if (k.land && !LAENDER[k.land]) laender.push([k.land, k.land]);
+    const kontakt = k.kontaktId ? sel.contact(k.kontaktId) : null;
+    $('#reKunde', root).innerHTML = `
+      <div class="card-head"><h3>${icon('users', 16).__raw} Kunde</h3><div class="spacer"></div>
+        <button type="button" class="btn sm" id="reKontaktWahl">${icon('search', 14).__raw} Aus Kontakten</button>
+        <button type="button" class="btn sm ghost" id="reAnschriftText" title="Eine Anschrift aus einer E-Mail oder einem Dokument einfügen">${icon('copy', 14).__raw} Anschrift einfügen</button>
+      </div>
+      <div class="card-body">
+        ${kontakt ? `<div class="re-kontakt-chip"><span>Aus Kontakt <strong>${esc(kontakt.name)}</strong></span>
+          <button type="button" class="btn sm ghost" id="reKontaktLos" title="Verbindung zum Kontakt lösen">${icon('x', 13).__raw}</button></div>` : ''}
+        <div class="form-grid">
+          <div class="field full"><label for="rk_name">Name oder Firma <span class="re-pflicht">Pflicht</span></label>
+            <input id="rk_name" data-f="kaeufer.name" value="${esc(k.name || '')}" autocomplete="off"></div>
+          <div class="field full"><label for="rk_zusatz">Zusatz <span class="hint">z. Hd., Abteilung</span></label>
+            <input id="rk_zusatz" data-f="kaeufer.zusatz" value="${esc(k.zusatz || '')}"></div>
+          <div class="field full"><label for="rk_strasse">Straße und Hausnummer <span class="re-pflicht">Pflicht</span></label>
+            <input id="rk_strasse" data-f="kaeufer.strasse" value="${esc(k.strasse || '')}"></div>
+          <div class="re-plzort full">
+            <div class="field"><label for="rk_plz">PLZ <span class="re-pflicht">Pflicht</span></label><input id="rk_plz" data-f="kaeufer.plz" value="${esc(k.plz || '')}" inputmode="numeric"></div>
+            <div class="field"><label for="rk_ort">Ort <span class="re-pflicht">Pflicht</span></label><input id="rk_ort" data-f="kaeufer.ort" value="${esc(k.ort || '')}"></div>
+          </div>
+          <div class="field"><label for="rk_land">Land</label><select id="rk_land" data-f="kaeufer.land">${optionen(laender, k.land || 'DE')}</select></div>
+          <div class="field"><label for="rk_email">E-Mail für Rechnungen</label><input id="rk_email" type="email" data-f="kaeufer.email" value="${esc(k.email || '')}"></div>
+          <div class="field"><label for="rk_ustId">USt-IdNr.</label><input id="rk_ustId" data-f="kaeufer.ustId" value="${esc(k.ustId || '')}" placeholder="nur bei Firmenkunden"></div>
+          <div class="field"><label for="rk_kundennummer">Kundennummer</label><input id="rk_kundennummer" data-f="kaeufer.kundennummer" value="${esc(k.kundennummer || '')}"></div>
+          <div class="field full"><label for="rk_leitwegId">Leitweg-ID</label><input id="rk_leitwegId" data-f="kaeufer.leitwegId" value="${esc(k.leitwegId || '')}" placeholder="nur bei Behörden, z. B. 04011000-12345-67">
+            <span class="hint">Öffentliche Auftraggeber nennen sie im Auftrag. Mit ihr entsteht eine XRechnung.</span></div>
+        </div>
+        <div class="row wrap mt8"><button type="button" class="btn sm ghost" id="reKontaktSpeichern">${icon('save', 14).__raw} ${kontakt ? 'Kontakt aktualisieren' : 'Als Kontakt speichern'}</button></div>
+      </div>`;
+    $('#reKontaktWahl', root).addEventListener('click', (e) => kontaktWaehlen(e.currentTarget));
+    $('#reAnschriftText', root).addEventListener('click', anschriftEinfuegen);
+    $('#reKontaktLos', root)?.addEventListener('click', () => { r.kaeufer.kontaktId = ''; kundeZeichnen(); aktualisieren(); });
+    $('#reKontaktSpeichern', root).addEventListener('click', kontaktSpeichern);
+  }
+
+  function kontaktWaehlen(anker) {
+    if (!kontakte.length) { warn('Noch keine Kontakte', 'Tragen Sie den Kunden einfach direkt ein. Mit „Als Kontakt speichern“ steht er beim nächsten Mal hier.'); return; }
+    const kunden = kontakte.filter((c) => c.kind !== 'supplier');
+    const andere = kontakte.filter((c) => c.kind === 'supplier');
+    const opt = (c) => ({ value: c.id, label: c.name, sub: [c.city || anschriftAusText(c.address || '').ort, c.email].filter(Boolean).join(' · ') });
+    openMenu(anker, {
+      label: 'Kontakt wählen',
+      sections: [
+        { key: 'k', title: 'Kunden', value: r.kaeufer.kontaktId, search: true, options: [{ value: '', label: 'Freie Eingabe ohne Kontakt' }, ...kunden.map(opt)] },
+        andere.length ? { key: 'k', title: 'Lieferanten', value: r.kaeufer.kontaktId, options: andere.map(opt) } : null,
+      ],
+      onPick: (_k, id) => {
+        if (!id) { r.kaeufer.kontaktId = ''; kundeZeichnen(); aktualisieren(); return; }
+        const neu = kaeuferAusKontakt(sel.contact(id));
+        r.kaeufer = { ...neu, leitwegId: neu.leitwegId || r.kaeufer.leitwegId || '' };
+        kundeZeichnen();
+        aktualisieren();
+      },
+    });
+  }
+
+  function anschriftEinfuegen() {
+    const m = modal({
+      title: 'Anschrift einfügen',
+      body: `<p class="mt0 small muted">Fügen Sie die Anschrift ein, wie sie in einer E-Mail, einer Bestellung oder einer Signatur steht.
+        Kontovia verteilt sie auf die Felder; prüfen Sie das Ergebnis danach.</p>
+        <textarea id="reAnschriftRoh" rows="7" placeholder="Muster GmbH&#10;z. Hd. Frau Beispiel&#10;Hauptstraße 1&#10;12345 Musterstadt"></textarea>`,
+      foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Übernehmen</button>',
+    });
+    m.root.querySelector('[data-no]').addEventListener('click', () => m.close());
+    m.root.querySelector('[data-yes]').addEventListener('click', () => {
+      const a = anschriftAusText(m.root.querySelector('#reAnschriftRoh').value);
+      for (const f of ['name', 'zusatz', 'strasse', 'plz', 'ort', 'land', 'email', 'ustId']) if (a[f]) r.kaeufer[f] = a[f];
+      m.close();
+      kundeZeichnen();
+      aktualisieren();
+    });
+  }
+
+  async function kontaktSpeichern() {
+    const k = r.kaeufer;
+    if (!String(k.name || '').trim()) { warn('Bitte zuerst einen Namen eintragen'); return; }
+    const alt = k.kontaktId ? sel.contact(k.kontaktId) : null;
+    const anschrift = [k.zusatz, k.strasse, [k.plz, k.ort].filter(Boolean).join(' '), k.land && k.land !== 'DE' ? LAENDER[k.land]?.name || k.land : '']
+      .filter(Boolean).join('\n');
+    const c = {
+      ...(alt ? structuredClone(alt) : { id: uid('con'), kind: 'customer', phone: '', notes: '' }),
+      name: k.name.trim(),
+      email: k.email || alt?.email || '',
+      address: anschrift,
+      addressExtra: k.zusatz || '',
+      street: k.strasse || '',
+      zip: k.plz || '',
+      city: k.ort || '',
+      country: k.land || 'DE',
+      vatId: k.ustId || '',
+      taxId: alt?.taxId || k.ustId || '',
+      buyerReference: k.leitwegId || '',
+      customerNumber: k.kundennummer || '',
+    };
+    await upsertEntity('contacts', c, 'kontakt');
+    r.kaeufer.kontaktId = c.id;
+    if (!kontakte.some((x) => x.id === c.id)) kontakte.push(c);
+    ok(alt ? 'Kontakt aktualisiert' : 'Kontakt gespeichert', c.name);
+    kundeZeichnen();
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /* Angaben                                                                  */
+  /* ------------------------------------------------------------------------ */
+
+  function angabenZeichnen() {
+    const bezugNoetig = r.art === '384' || r.art === '381' || r.storno;
+    const p = profilAus(s);
+    const vorschlag = istVorlage ? '' : `wird beim Ausstellen vergeben${p.praefix ? ` (${p.praefix}…)` : ''}`;
+    $('#reAngaben', root).innerHTML = `
+      <div class="card-head"><h3>${icon('file', 16).__raw} Rechnung</h3></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field"><label for="ra_art">Art</label><select id="ra_art" data-f="art">${optionen(['380', '326', '384', '381'].map((k) => [k, ARTEN[k]]), r.art || '380')}</select></div>
+          <div class="field"><label for="ra_steuerfall">Umsatzsteuer</label><select id="ra_steuerfall" data-f="steuerfall">
+            ${optionen(Object.entries(STEUERFAELLE).map(([k, f]) => [k, f.name]), r.steuerfall || 'standard')}</select></div>
+          ${r.steuerfall === 'steuerfrei' ? `<div class="field full"><label for="ra_grund">Grund der Steuerbefreiung <span class="re-pflicht">Pflicht</span></label>
+            <input id="ra_grund" data-f="befreiungsgrund" value="${esc(r.befreiungsgrund || '')}" placeholder="z. B. Steuerfreie Heilbehandlung nach § 4 Nr. 14 UStG"></div>` : ''}
+          ${istVorlage ? '' : `
+          <div class="field"><label for="ra_nummer">Rechnungsnummer</label><input id="ra_nummer" data-f="nummer" value="${esc(r.nummer || '')}" placeholder="${esc(vorschlag)}"></div>
+          <div class="field"><label for="ra_datum">Rechnungsdatum <span class="re-pflicht">Pflicht</span></label><input id="ra_datum" type="date" data-f="datum" value="${esc(r.datum || '')}"></div>`}
+          <div class="field full">
+            <label>Leistung erbracht <span class="re-pflicht">Pflicht</span></label>
+            <div class="row wrap" style="gap:8px">
+              <div class="seg sm" role="group" aria-label="Leistungsdatum oder Zeitraum">
+                <button type="button" data-leistung="datum" class="${r.leistungArt !== 'zeitraum' ? 'active' : ''}">am</button>
+                <button type="button" data-leistung="zeitraum" class="${r.leistungArt === 'zeitraum' ? 'active' : ''}">im Zeitraum</button>
+              </div>
+              ${istVorlage ? '<span class="small muted">Das Datum kommt beim Erstellen der Rechnung dazu.</span>' : (r.leistungArt === 'zeitraum'
+                ? `<input type="date" data-f="leistungVon" value="${esc(r.leistungVon || '')}" aria-label="von" class="re-datum"> <span class="muted">bis</span>
+                   <input type="date" data-f="leistungBis" value="${esc(r.leistungBis || '')}" aria-label="bis" class="re-datum">`
+                : `<input type="date" data-f="leistungsdatum" value="${esc(r.leistungsdatum || '')}" aria-label="Leistungsdatum" class="re-datum">`)}
+            </div>
+          </div>
+          <div class="field full"><label for="ra_betreff">Betreff</label><input id="ra_betreff" data-f="betreff" value="${esc(r.betreff || '')}" placeholder="z. B. Website-Relaunch, Projekt Herbst"></div>
+          <div class="field"><label for="ra_bestellung">Bestellnummer des Kunden</label><input id="ra_bestellung" data-f="bestellnummer" value="${esc(r.bestellnummer || '')}"></div>
+          ${bezugNoetig ? `
+          <div class="field"><label for="ra_bezug">Bezieht sich auf Rechnung</label><input id="ra_bezug" data-f="bezug.nummer" value="${esc(r.bezug?.nummer || '')}" placeholder="Nummer der ursprünglichen Rechnung"></div>
+          <div class="field"><label for="ra_bezugDatum">vom</label><input id="ra_bezugDatum" type="date" data-f="bezug.datum" value="${esc(r.bezug?.datum || '')}"></div>` : ''}
+        </div>
+      </div>`;
+    $$('[data-leistung]', root).forEach((b) => b.addEventListener('click', () => {
+      r.leistungArt = b.dataset.leistung;
+      if (r.leistungArt === 'datum' && !r.leistungsdatum) r.leistungsdatum = r.datum || todayISO();
+      angabenZeichnen();
+      aktualisieren();
+    }));
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /* Positionen                                                               */
+  /* ------------------------------------------------------------------------ */
+
+  const einheitenListe = `<datalist id="reEinheiten">${EINHEITEN.map((e) => `<option value="${esc(e.kurz)}">${esc(e.name)}</option>`).join('')}</datalist>`;
+
+  function positionenZeichnen() {
+    const ohneSteuer = steuerfrei();
+    const zeilen = r.positionen.map((p, i) => {
+      const netto = Math.round((Number(p.menge) || 0) * (Number(p.preis) || 0));
+      return `
+      <div class="re-pos" data-pos="${esc(p.id)}">
+        <div class="re-pos-nr">${i + 1}</div>
+        <div class="re-pos-haupt">
+          <div class="re-pos-name">
+            <input data-p="name" value="${esc(p.name || '')}" placeholder="Bezeichnung, z. B. Beratung" aria-label="Bezeichnung Position ${i + 1}" autocomplete="off">
+            <button type="button" class="btn sm ghost" data-produkt="${esc(p.id)}" title="Aus Produkten wählen" aria-label="Aus Produkten wählen">${icon('tag', 14).__raw}</button>
+          </div>
+          <textarea data-p="beschreibung" rows="1" placeholder="Beschreibung (optional)" aria-label="Beschreibung Position ${i + 1}">${esc(p.beschreibung || '')}</textarea>
+          <div class="re-pos-zahlen">
+            <label class="re-mini"><span>Menge</span><input data-p="menge" inputmode="decimal" value="${esc(String(p.menge ?? '').replace('.', ','))}"></label>
+            <label class="re-mini"><span>Einheit</span><input data-p="einheit" list="reEinheiten" value="${esc(einheitText(p))}" autocomplete="off"></label>
+            <label class="re-mini"><span>Preis netto €</span><input data-p="preis" inputmode="decimal" value="${esc(moneyInput(p.preis))}"></label>
+            ${ohneSteuer ? '' : `<label class="re-mini"><span>USt</span><select data-p="satz">${optionen([[19, '19 %'], [7, '7 %'], [0, '0 %']].concat([19, 7, 0].includes(Number(p.satz)) ? [] : [[p.satz, satzText(p.satz)]]), Number(p.satz))}</select></label>`}
+            <div class="re-mini re-pos-summe"><span>Gesamt</span><strong data-summe="${esc(p.id)}">${esc(money(netto))} €</strong></div>
+          </div>
+        </div>
+        <div class="re-pos-menue">
+          <button type="button" class="icon-btn" data-pos-menue="${esc(p.id)}" title="Mehr" aria-label="Weitere Aktionen für Position ${i + 1}">${icon('more', 16).__raw}</button>
+        </div>
+      </div>`;
+    }).join('');
+    $('#rePositionen', root).innerHTML = `
+      <div class="card-head"><h3>${icon('book', 16).__raw} Positionen</h3><div class="spacer"></div>
+        <span class="small muted" id="rePosAnzahl"></span></div>
+      <div class="card-body">
+        <div class="re-positionen">${zeilen}</div>
+        ${einheitenListe}
+        <div class="row wrap mt8">
+          <button type="button" class="btn sm" id="rePosNeu">${icon('plus', 14).__raw} Position</button>
+          <button type="button" class="btn sm" id="rePosProdukt">${icon('tag', 14).__raw} Aus Produkten</button>
+        </div>
+        <div class="re-summen" id="reSummen"></div>
+      </div>`;
+    $$('#rePositionen textarea', root).forEach(hoeheAnpassen);
+    $('#rePosNeu', root).addEventListener('click', () => {
+      r.positionen.push(neuePosition(s, { satz: r.positionen.at(-1)?.satz ?? neuePosition(s).satz }));
+      positionenZeichnen();
+      aktualisieren();
+      $$('#rePositionen [data-p="name"]', root).at(-1)?.focus();
+    });
+    $('#rePosProdukt', root).addEventListener('click', (e) => produktWaehlen(e.currentTarget, null));
+    $$('[data-produkt]', root).forEach((b) => b.addEventListener('click', () => produktWaehlen(b, b.dataset.produkt)));
+    $$('[data-pos-menue]', root).forEach((b) => b.addEventListener('click', () => positionMenue(b, b.dataset.posMenue)));
+    summenZeichnen();
+  }
+
+  function hoeheAnpassen(t) {
+    t.style.height = 'auto';
+    t.style.height = `${Math.min(220, t.scrollHeight + 2)}px`;
+  }
+
+  /** Produkte zum Einfügen: neu als Position oder in eine bestehende Zeile. */
+  function produktWaehlen(anker, posId) {
+    const produkte = sel.products().filter((p) => p.active !== false);
+    if (!produkte.length) {
+      warn('Noch keine Produkte', 'Unter Rechnungen → Produkte legen Sie Leistungen mit Preis und Einheit an. Oder: Position ausfüllen und im Menü der Zeile „Als Produkt speichern“.');
+      return;
+    }
+    const gruppen = new Map();
+    for (const p of [...produkte].sort((a, b) => String(a.name).localeCompare(String(b.name), 'de'))) {
+      const g = String(p.kategorie || '').trim() || 'Ohne Kategorie';
+      if (!gruppen.has(g)) gruppen.set(g, []);
+      gruppen.get(g).push(p);
+    }
+    const namen = [...gruppen.keys()].sort((a, b) => (a === 'Ohne Kategorie') - (b === 'Ohne Kategorie') || a.localeCompare(b, 'de'));
+    openMenu(anker, {
+      label: 'Produkt wählen',
+      sections: namen.map((g, i) => ({
+        key: 'p', title: g, value: '', search: i === 0,
+        options: gruppen.get(g).map((p) => ({
+          value: p.id, label: p.name,
+          sub: `${betragText(p.preis)} je ${einheitText(p)}${p.artikelnummer ? ` · ${p.artikelnummer}` : ''}`,
+        })),
+      })),
+      onPick: (_k, id) => {
+        const p = sel.product(id);
+        if (!p) return;
+        const werte = {
+          produktId: p.id, name: p.name, beschreibung: p.beschreibung || '', einheit: p.einheit || 'C62', einheitText: p.einheitText || '',
+          preis: Number(p.preis) || 0, artikelnummer: p.artikelnummer || '',
+          ...(steuerfrei() ? {} : { satz: Number(p.satz ?? 19) }),
+        };
+        const ziel = posId ? r.positionen.find((x) => x.id === posId) : r.positionen.find((x) => positionLeer(x));
+        if (ziel) Object.assign(ziel, werte, { menge: ziel.menge || 1 });
+        else r.positionen.push(neuePosition(s, { ...werte, menge: 1 }));
+        positionenZeichnen();
+        aktualisieren();
+      },
+    });
+  }
+
+  function positionMenue(anker, posId) {
+    const i = r.positionen.findIndex((p) => p.id === posId);
+    const p = r.positionen[i];
+    if (!p) return;
+    openMenu(anker, {
+      label: 'Position',
+      align: 'end',
+      sections: [{
+        key: 'a', value: '',
+        options: [
+          i > 0 ? { value: 'hoch', label: 'Nach oben' } : null,
+          i < r.positionen.length - 1 ? { value: 'runter', label: 'Nach unten' } : null,
+          { value: 'kopie', label: 'Duplizieren' },
+          { value: 'produkt', label: p.produktId && sel.product(p.produktId) ? 'Produkt aktualisieren' : 'Als Produkt speichern' },
+          { value: 'weg', label: 'Entfernen' },
+        ].filter(Boolean),
+      }],
+      onPick: async (_k, was) => {
+        if (was === 'hoch' || was === 'runter') {
+          const j = was === 'hoch' ? i - 1 : i + 1;
+          [r.positionen[i], r.positionen[j]] = [r.positionen[j], r.positionen[i]];
+        } else if (was === 'kopie') {
+          r.positionen.splice(i + 1, 0, { ...structuredClone(p), id: uid('pos') });
+        } else if (was === 'weg') {
+          r.positionen.splice(i, 1);
+          if (!r.positionen.length) r.positionen.push(neuePosition(s));
+        } else if (was === 'produkt') {
+          await positionAlsProdukt(p);
+          return;
+        }
+        positionenZeichnen();
+        aktualisieren();
+      },
+    });
+  }
+
+  async function positionAlsProdukt(p) {
+    if (!String(p.name || '').trim()) { warn('Bitte zuerst eine Bezeichnung eintragen'); return; }
+    const alt = p.produktId ? sel.product(p.produktId) : null;
+    const prod = {
+      ...(alt ? structuredClone(alt) : { id: uid('prod'), kategorie: '', active: true }),
+      name: p.name.trim(), beschreibung: p.beschreibung || '', einheit: p.einheit || 'C62', einheitText: p.einheitText || '',
+      preis: Number(p.preis) || 0, satz: Number(p.satz ?? 19), artikelnummer: p.artikelnummer || alt?.artikelnummer || '',
+    };
+    await produktSpeichern(prod);
+    p.produktId = prod.id;
+    ok(alt ? 'Produkt aktualisiert' : 'Als Produkt gespeichert', prod.name);
+  }
+
+  function summenZeichnen() {
+    const b = berechnen(r);
+    const w = r.waehrung || 'EUR';
+    const zeilen = [];
+    if (!steuerfrei()) {
+      zeilen.push(['Summe netto', betragText(b.netto, w)]);
+      for (const g of b.steuern) if (g.satz) zeilen.push([`USt ${satzText(g.satz)} auf ${betragText(g.basis, w)}`, betragText(g.steuer, w), 'muted']);
+    }
+    zeilen.push(['Gesamtbetrag', betragText(b.brutto, w), 'strong']);
+    if (b.bereitsGezahlt) zeilen.push(['Noch zu zahlen', betragText(b.zahlbetrag, w), 'strong']);
+    const box = $('#reSummen', root);
+    if (box) box.innerHTML = zeilen.map(([l, v, c]) => `<div class="re-summe ${c || ''}"><span>${esc(l)}</span><span class="num">${esc(v)}</span></div>`).join('');
+    const n = b.zeilen.length;
+    const anz = $('#rePosAnzahl', root);
+    if (anz) anz.textContent = n === 1 ? '1 Position' : `${n} Positionen`;
+    for (const p of r.positionen) {
+      const el = root.querySelector(`[data-summe="${CSS.escape(p.id)}"]`);
+      if (el) el.textContent = `${money(Math.round((Number(p.menge) || 0) * (Number(p.preis) || 0)))} €`;
+    }
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /* Texte und Zahlung                                                        */
+  /* ------------------------------------------------------------------------ */
+
+  function texteZeichnen() {
+    $('#reTexte', root).innerHTML = `
+      <div class="card-head"><h3>${icon('edit', 16).__raw} Texte</h3><span class="sub">stehen auf dem PDF über und unter den Positionen</span></div>
+      <div class="card-body">
+        <div class="field"><label for="rt_kopf">Text vor den Positionen</label><textarea id="rt_kopf" data-f="kopftext" rows="3">${esc(r.kopftext || '')}</textarea></div>
+        <div class="field mb0"><label for="rt_schluss">Text am Ende</label><textarea id="rt_schluss" data-f="schlusstext" rows="3">${esc(r.schlusstext || '')}</textarea></div>
+      </div>`;
+    $$('#reTexte textarea', root).forEach(hoeheAnpassen);
+  }
+
+  function zahlungZeichnen() {
+    const f = faelligkeit(r);
+    $('#reZahlung', root).innerHTML = `
+      <div class="card-head"><h3>${icon('euro', 16).__raw} Zahlung</h3></div>
+      <div class="card-body">
+        <div class="form-grid">
+          <div class="field"><label for="rz_art">Zahlungsart</label><select id="rz_art" data-f="zahlungsart">${optionen(Object.entries(ZAHLUNGSARTEN).map(([k, z]) => [k, z.name]), r.zahlungsart || 'ueberweisung')}</select></div>
+          <div class="field"><label for="rz_ziel">Zahlungsziel in Tagen</label><input id="rz_ziel" type="number" min="0" max="365" data-f="zahlungszielTage" data-zahl value="${esc(r.zahlungszielTage ?? '')}"></div>
+          ${istVorlage ? '' : `<div class="field"><label for="rz_faellig">Fällig am</label><input id="rz_faellig" type="date" data-f="faellig" value="${esc(r.faellig || '')}">
+            <span class="hint">${r.faellig ? 'von Hand gesetzt' : f ? `aus dem Zahlungsziel: ${esc(fmtDate(f))}` : ''}</span></div>`}
+          <div class="field"><label for="rz_bereits">Bereits gezahlt (Anzahlung) €</label><input id="rz_bereits" inputmode="decimal" data-f="bereitsGezahlt" data-geld value="${esc(r.bereitsGezahlt ? moneyInput(r.bereitsGezahlt) : '')}"></div>
+          <div class="field"><label for="rz_skontoT">Skonto: innerhalb von Tagen</label><input id="rz_skontoT" type="number" min="0" max="365" data-f="skontoTage" data-zahl value="${esc(r.skontoTage || '')}"></div>
+          <div class="field"><label for="rz_skontoP">Skonto in %</label><input id="rz_skontoP" inputmode="decimal" data-f="skontoProzent" data-prozent value="${esc(r.skontoProzent ? String(r.skontoProzent).replace('.', ',') : '')}"></div>
+          <div class="field full mb0"><label for="rz_text">Zahlungsbedingungen</label>
+            <textarea id="rz_text" data-f="zahlungsbedingungen" rows="2" placeholder="${esc(zahlungsText({ ...r, zahlungsbedingungen: '' }) || 'Werden aus Zahlungsziel und Skonto gebildet')}">${esc(r.zahlungsbedingungen || '')}</textarea>
+            <span class="hint">Leer lassen, dann bildet Kontovia den Text aus Zahlungsziel und Skonto.</span></div>
+        </div>
+      </div>`;
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /* Eingaben                                                                 */
+  /* ------------------------------------------------------------------------ */
+
+  function wertAus(el) {
+    if (el.dataset.geld !== undefined) return parseMoney(el.value);
+    if (el.dataset.zahl !== undefined) return el.value === '' ? 0 : Math.max(0, Math.round(Number(el.value) || 0));
+    if (el.dataset.prozent !== undefined) return Math.max(0, Number(String(el.value).replace(',', '.')) || 0);
+    return el.value;
+  }
+
+  root.addEventListener('input', (e) => {
+    const el = e.target;
+    if (el.matches('textarea')) hoeheAnpassen(el);
+    if (el.dataset.f) {
+      setzen(r, el.dataset.f, wertAus(el));
+      if (el.dataset.f === 'zahlungszielTage' || el.dataset.f === 'datum') {
+        const hint = $('#rz_faellig', root)?.parentElement.querySelector('.hint');
+        const f = faelligkeit(r);
+        if (hint && !r.faellig) hint.textContent = f ? `aus dem Zahlungsziel: ${fmtDate(f)}` : '';
+      }
+      aktualisieren();
+      return;
+    }
+    const zeile = el.closest('[data-pos]');
+    if (zeile && el.dataset.p) {
+      const p = r.positionen.find((x) => x.id === zeile.dataset.pos);
+      if (!p) return;
+      const k = el.dataset.p;
+      if (k === 'menge') p.menge = Number(String(el.value).replace(/\./g, '').replace(',', '.')) || 0;
+      else if (k === 'preis') p.preis = parseMoney(el.value);
+      else if (k === 'satz') p.satz = Number(el.value);
+      else if (k === 'einheit') { const e2 = einheitAusText(el.value); p.einheit = e2.code; p.einheitText = e2.text; }
+      else p[k] = el.value;
+      summenZeichnen();
+      aktualisieren({ summen: false });
+    }
+  });
+  root.addEventListener('change', (e) => {
+    const el = e.target;
+    if (el.dataset.f === 'steuerfall' || el.dataset.f === 'art') {
+      if (el.dataset.f === 'steuerfall' && steuerfrei()) for (const p of r.positionen) p.satz = 0;
+      if (el.dataset.f === 'steuerfall' && !steuerfrei()) for (const p of r.positionen) if (!p.satz) p.satz = Number(s.defaultVatRate ?? 19);
+      angabenZeichnen();
+      positionenZeichnen();
+      aktualisieren();
+    }
+    if (el.dataset.f === 'faellig' || el.dataset.f === 'zahlungsart') zahlungZeichnen();
+  });
+
+  /* ------------------------------------------------------------------------ */
+  /* Prüfung, Vorschau, Leiste                                                */
+  /* ------------------------------------------------------------------------ */
+
+  function pruefliste() {
+    const liste = pruefen(r, verkaeuferAus(s), { nummern: istVorlage ? null : vergebeneNummern(r.id) });
+    // In einer Vorlage fehlen Daten und Kunde naturgemäß.
+    return istVorlage ? liste.filter((x) => x.bereich === 'positionen' || x.bereich === 'verkaeufer') : liste;
+  }
+
+  function pruefungZeichnen() {
+    const liste = pruefliste();
+    const pflicht = liste.filter((x) => x.stufe === 'pflicht');
+    const hinweise = liste.filter((x) => x.stufe === 'hinweis');
+    const xr = liste.filter((x) => x.stufe === 'xrechnung');
+    const behoerde = !!String(r.kaeufer?.leitwegId || '').trim();
+    const zeile = (x) => `<li><button type="button" class="re-check-link" data-springe="${esc(x.bereich)}">${esc(x.text)}</button></li>`;
+    const box = $('#reCheck', root);
+    box.innerHTML = `
+      <div class="re-check-kopf ${pflicht.length ? 'warn' : 'gut'}">
+        ${icon(pflicht.length ? 'alert' : 'check', 16).__raw}
+        <strong>${pflicht.length ? `${pflicht.length === 1 ? 'Eine Pflichtangabe fehlt' : `${pflicht.length} Pflichtangaben fehlen`}` : 'Alle Pflichtangaben sind da'}</strong>
+      </div>
+      ${pflicht.length ? `<ul class="re-check-liste">${pflicht.map(zeile).join('')}</ul>` : `<p class="small muted mt0 mb0">${istVorlage ? 'Positionen und Ihre Angaben sind vollständig. Kunde und Datum kommen beim Erstellen der Rechnung dazu.' : 'Die Rechnung erfüllt § 14 UStG und ergibt eine gültige E-Rechnung.'}</p>`}
+      ${hinweise.length ? `<details class="re-check-mehr"><summary>${hinweise.length === 1 ? 'Ein Hinweis' : `${hinweise.length} Hinweise`}</summary><ul class="re-check-liste">${hinweise.map(zeile).join('')}</ul></details>` : ''}
+      ${xr.length && (behoerde || !pflicht.length) ? `<details class="re-check-mehr"${behoerde ? ' open' : ''}><summary>Für eine XRechnung an Behörden ${xr.length === 1 ? 'fehlt eine Angabe' : `fehlen ${xr.length} Angaben`}</summary>
+        <ul class="re-check-liste">${xr.map(zeile).join('')}</ul></details>` : ''}`;
+    $$('[data-springe]', box).forEach((b) => b.addEventListener('click', () => springen(b.dataset.springe)));
+    return liste;
+  }
+
+  function springen(bereich) {
+    if (bereich === 'verkaeufer') { navigate('rechnungen', { tab: 'gestaltung', abschnitt: 'angaben' }); return; }
+    const ziel = root.querySelector(`[data-bereich="${CSS.escape(bereich)}"]`);
+    ziel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => ziel?.querySelector('input:not([type="hidden"]), select, textarea')?.focus({ preventScroll: true }), 300);
+  }
+
+  let vorschauLaeuft = 0;
+  const vorschauNeu = debounce(async () => {
+    const nr = ++vorschauLaeuft;
+    const host = $('#reVorschau', root);
+    if (!host) return;
+    try {
+      const svgs = await vorschauSvg(istVorlage ? { ...r, nummer: '', datum: todayISO(), leistungsdatum: todayISO() } : r);
+      if (nr !== vorschauLaeuft || !host.isConnected) return;
+      host.innerHTML = svgs.map((svg, i) => `<div class="re-blatt" title="Seite ${i + 1}">${svg}</div>`).join('');
+    } catch (e) {
+      host.innerHTML = `<div class="notice small">Die Vorschau ließ sich nicht erstellen: ${esc(e.message)}</div>`;
+    }
+  }, 350);
+
+  function leisteZeichnen() {
+    const liste = pruefliste();
+    const b = berechnen(r);
+    $('#reLeiste', root).innerHTML = `
+      <div class="re-leiste-info">
+        <strong class="num">${esc(betragText(b.brutto, r.waehrung))}</strong>
+        <span class="small muted">${istVorlage ? 'Vorlage' : vollstaendig(liste) ? 'vollständig' : 'Pflichtangaben fehlen'}</span>
+      </div>
+      <div class="spacer"></div>
+      ${!istVorlage && sel.invoice(r.id) ? `<button type="button" class="btn ghost danger-text" id="reLoeschen" title="Entwurf löschen">${icon('trash', 15).__raw}<span class="re-weg-schmal">Löschen</span></button>` : ''}
+      ${istVorlage ? '' : `<button type="button" class="btn" id="reAlsVorlage">${icon('copy', 15).__raw}<span class="re-weg-schmal">Als Vorlage</span></button>
+      <button type="button" class="btn" id="rePdf">${icon('pdf', 15).__raw}<span class="re-weg-schmal">PDF</span></button>`}
+      <button type="button" class="btn" id="reSpeichern">${icon('save', 15).__raw} Speichern</button>
+      ${istVorlage ? '' : `<button type="button" class="btn primary" id="reAusstellen">${icon('check', 15).__raw} Ausstellen</button>`}`;
+    $('#reSpeichern', root).addEventListener('click', () => speichern());
+    $('#reLoeschen', root)?.addEventListener('click', loeschen);
+    $('#reAlsVorlage', root)?.addEventListener('click', vorlageAnlegen);
+    $('#rePdf', root)?.addEventListener('click', async () => {
+      try { await pdfZeigen(r); } catch (e) { err('PDF nicht erstellt', e.message); }
+    });
+    $('#reAusstellen', root)?.addEventListener('click', ausstellenFragen);
+  }
+
+  function aktualisieren({ summen = true } = {}) {
+    if (summen) summenZeichnen();
+    pruefungZeichnen();
+    leisteZeichnen();
+    vorschauNeu();
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /* Speichern, Ausstellen                                                    */
+  /* ------------------------------------------------------------------------ */
+
+  async function speichern({ still = false } = {}) {
+    if (istVorlage) {
+      const daten = structuredClone(r);
+      daten.positionen = daten.positionen.filter((p) => !positionLeer(p));
+      if (!String(daten.kaeufer?.name || '').trim()) delete daten.kaeufer;
+      await upsertEntity('invoiceTemplates', { ...structuredClone(vorlage), name: vorlageName.trim() || 'Vorlage', daten }, 'rechnungsvorlage');
+      vorlage.name = vorlageName.trim() || 'Vorlage';
+    } else {
+      await rechnungSpeichern(structuredClone(r));
+    }
+    gespeichert = JSON.stringify(r);
+    if (!still) ok(istVorlage ? 'Vorlage gespeichert' : 'Entwurf gespeichert');
+    leisteZeichnen();
+  }
+
+  async function loeschen() {
+    const yes = await confirmDialog({ title: 'Entwurf löschen?', text: 'Der Entwurf wird entfernt. Eine Nummer wurde noch nicht vergeben.', confirmLabel: 'Löschen', danger: true });
+    if (!yes) return;
+    await entwurfLoeschen(r.id);
+    router.leaveGuard = null;
+    ok('Entwurf gelöscht');
+    navigate('rechnungen', { tab: 'ausgang' });
+  }
+
+  function vorlageAnlegen() {
+    const m = modal({
+      title: 'Als Vorlage speichern',
+      size: 'slim',
+      body: `<div class="field"><label for="reVName">Name der Vorlage</label><input id="reVName" value="${esc(r.betreff || '')}" placeholder="z. B. Monatliche Wartung"></div>
+        <label class="check"><input type="checkbox" id="reVKunde" ${r.kaeufer?.name ? 'checked' : ''}> Kunde mit speichern</label>
+        <p class="small muted mb0">Gespeichert werden Positionen, Texte und Zahlungsbedingungen. Datum und Nummer kommen beim Erstellen der Rechnung neu dazu.</p>`,
+      foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Speichern</button>',
+    });
+    m.root.querySelector('[data-no]').addEventListener('click', () => m.close());
+    m.root.querySelector('[data-yes]').addEventListener('click', async () => {
+      const name = m.root.querySelector('#reVName').value.trim();
+      if (!name) { warn('Bitte einen Namen eintragen'); return; }
+      await alsVorlage(r, { name, mitKunde: m.root.querySelector('#reVKunde').checked });
+      m.close();
+      ok('Vorlage gespeichert', name);
+    });
+  }
+
+  async function ausstellenFragen() {
+    const liste = pruefliste();
+    const pflicht = liste.filter((x) => x.stufe === 'pflicht');
+    if (pflicht.length) {
+      const weiter = await new Promise((resolve) => {
+        let antwort = false;
+        const m = modal({
+          title: pflicht.length === 1 ? 'Eine Pflichtangabe fehlt' : `${pflicht.length} Pflichtangaben fehlen`,
+          body: `<p class="mt0">Ohne diese Angaben erfüllt die Rechnung die gesetzlichen Vorgaben nicht, und die E-Rechnung kann beim Empfänger abgelehnt werden:</p>
+            <ul class="re-check-liste">${pflicht.map((x) => `<li>${esc(BEREICH_TITEL[x.bereich] || '')}: ${esc(x.text)}</li>`).join('')}</ul>
+            <p class="small muted mb0">Sie können trotzdem ausstellen, etwa wenn eine Angabe noch nicht bekannt ist. Nachtragen lässt sich das dann
+            mit einer Korrektur der Rechnung.</p>`,
+          foot: '<button class="btn" data-no>Zurück zur Rechnung</button><button class="btn danger" data-yes>Trotzdem ausstellen</button>',
+          onClose: () => resolve(antwort),
+        });
+        m.root.querySelector('[data-no]').addEventListener('click', () => m.close());
+        m.root.querySelector('[data-yes]').addEventListener('click', () => { antwort = true; m.close(); });
+      });
+      if (!weiter) return;
+    }
+    const b = berechnen(r);
+    const konten = sel.accounts();
+    const p = profilAus(s);
+    let antwort = null;
+    const m = modal({
+      title: `${titelVon(r)} ausstellen`,
+      body: `
+        <div class="kpi-list mb16">
+          <div><div class="k">Nummer</div><div class="v">${esc(String(r.nummer || '').trim() || nextInvoiceNumber(Number(String(r.datum || todayISO()).slice(0, 4)), p.praefix))}</div></div>
+          <div><div class="k">Kunde</div><div class="v">${esc(r.kaeufer?.name || '–')}</div></div>
+          <div><div class="k">Betrag</div><div class="v">${esc(betragText(b.brutto, r.waehrung))}</div></div>
+        </div>
+        <p class="mt0">Danach steht die Rechnung fest: Kontovia legt das PDF mit der E-Rechnung und die XRechnung unverändert ab.
+          Ändern lässt sie sich dann nur noch durch Stornieren oder Korrigieren.</p>
+        <label class="check"><input type="checkbox" id="reBuchen" checked> Als offene Einnahme buchen${b.steuern.length > 1 ? ` (je Steuersatz eine Buchung)` : ''}</label>
+        <div id="reBuchenOpt" class="form-grid mt8">
+          <div class="field"><label for="reKonto">Zahlungskonto</label><select id="reKonto">${optionen(konten.map((k) => [k.id, k.name]), konten[0]?.id || '')}</select></div>
+          <div class="field"><label for="reBezahlt">Schon bezahlt am</label><input type="date" id="reBezahlt" value="${r.zahlungsart === 'bar' ? esc(r.datum || todayISO()) : ''}">
+            <span class="hint">leer lassen, wenn die Zahlung noch aussteht</span></div>
+        </div>`,
+      foot: `<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>${icon('check', 15).__raw} Rechnung ausstellen</button>`,
+      onClose: () => {},
+    });
+    const opt = m.root.querySelector('#reBuchenOpt');
+    m.root.querySelector('#reBuchen').addEventListener('change', (e) => { opt.hidden = !e.target.checked; });
+    m.root.querySelector('[data-no]').addEventListener('click', () => m.close());
+    m.root.querySelector('[data-yes]').addEventListener('click', async (e) => {
+      e.currentTarget.disabled = true;
+      antwort = {
+        buchen: m.root.querySelector('#reBuchen').checked,
+        kontoId: m.root.querySelector('#reKonto')?.value || '',
+        bezahlt: m.root.querySelector('#reBezahlt')?.value || '',
+      };
+      try {
+        const fertig = await ausstellen(r, antwort);
+        m.close();
+        gespeichert = JSON.stringify(r);
+        router.leaveGuard = null;
+        ok(`${titelVon(fertig)} ${fertig.nummer} ausgestellt`, antwort.buchen ? 'Die Einnahme ist gebucht.' : '');
+        navigate('rechnungen', { id: fertig.id }, { ersetzen: true });
+      } catch (ex) {
+        e.currentTarget.disabled = false;
+        err('Nicht ausgestellt', ex.message);
+      }
+    });
+  }
+
+  /* ------------------------------------------------------------------------ */
+
+  kundeZeichnen();
+  angabenZeichnen();
+  positionenZeichnen();
+  texteZeichnen();
+  zahlungZeichnen();
+  aktualisieren();
+}
+
+/** Rückfrage beim Verlassen mit ungespeicherten Änderungen. */
+function fragenVerlassen() {
+  return new Promise((resolve) => {
+    let wahl = null;
+    const m = modal({
+      title: 'Änderungen speichern?',
+      size: 'slim',
+      body: '<p class="mt0">Die Rechnung hat Änderungen, die noch nicht gespeichert sind.</p>',
+      foot: '<button class="btn left" data-stay>Weiter bearbeiten</button><button class="btn danger" data-weg>Verwerfen</button><button class="btn primary" data-save>Speichern</button>',
+      onClose: () => resolve(wahl),
+    });
+    m.root.querySelector('[data-stay]').addEventListener('click', () => { wahl = null; m.close(); });
+    m.root.querySelector('[data-weg]').addEventListener('click', () => { wahl = 'verwerfen'; m.close(); });
+    m.root.querySelector('[data-save]').addEventListener('click', () => { wahl = 'speichern'; m.close(); });
+  });
+}

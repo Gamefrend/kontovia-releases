@@ -18,6 +18,7 @@ import * as viewDashboard from './views/dashboard.js';
 import * as viewTransactions from './views/transactions.js';
 import * as viewCalendar from './views/calendar.js';
 import * as viewTodos from './views/todos.js';
+import * as viewRechnungen from './views/rechnungen.js';
 import * as viewReports from './views/reports.js';
 import * as viewExport from './views/export.js';
 import * as viewMaster from './views/master.js';
@@ -33,6 +34,7 @@ const VIEWS = {
   transactions: { title: 'Buchungen', icon: 'book', mod: viewTransactions, key: '2' },
   calendar: { title: 'Kalender', icon: 'calendar', mod: viewCalendar, key: '3' },
   todos: { title: 'Aufgaben', icon: 'todo', mod: viewTodos, key: '7' },
+  rechnungen: { title: 'Rechnungen', icon: 'invoice', mod: viewRechnungen, key: '8' },
   reports: { title: 'Auswertungen', icon: 'chart', mod: viewReports, key: '4' },
   export: { title: 'Export & Finanzamt', icon: 'export', mod: viewExport, key: '5' },
   master: { title: 'Stammdaten', icon: 'master', mod: viewMaster, key: '6' },
@@ -1016,7 +1018,7 @@ function renderShell() {
         </button>
         <nav class="nav" id="nav" aria-label="Hauptnavigation">
           <div class="nav-group">
-            ${raw(['dashboard', 'transactions', 'calendar', 'todos'].map(navItem).join(''))}
+            ${raw(['dashboard', 'transactions', 'rechnungen', 'calendar', 'todos'].map(navItem).join(''))}
           </div>
           <div class="nav-sep"></div>
           <div class="nav-group">
