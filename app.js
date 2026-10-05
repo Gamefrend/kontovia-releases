@@ -609,7 +609,7 @@ function renderCloudLaden(st, { neu }) {
         <p class="lead">Angemeldet als <strong>${st.email || 'Google-Konto'}</strong>. In Ihrem Konto
         liegt eine Kontovia-Buchhaltung${st.stand ? raw(`, Stand ${esc(fmtDateTime(st.stand))}`) : ''}${st.groesse ? raw(` (${esc(bytes(st.groesse))})`) : ''}.
         Sie ist mit dem Passwort verschlüsselt, das Sie auf Ihrem anderen Gerät festgelegt haben.</p>
-        <button class="btn primary lg block" id="cloudKoppeln">${icon('eye', 18).__raw} Mit QR-Code vom anderen Gerät öffnen</button>
+        <button class="btn primary lg block" id="cloudKoppeln">${icon('eye', 18)} Mit QR-Code vom anderen Gerät öffnen</button>
         <p class="tiny muted mt8" style="text-align:center">Scannen Sie den QR-Code auf Ihrem anderen Gerät: unter Einstellungen, Sicherheit, „Neues Gerät hinzufügen“.
         Der Code allein und Ihr Google-Konto allein genügen nicht, beides zusammen öffnet Ihre Buchhaltung.</p>
         <div class="entsperr-oder"><span>oder mit Passwort</span></div>

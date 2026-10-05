@@ -1,6 +1,6 @@
 /**
- * Kontovia – Rechnungen: schreiben, verwalten, (bald) verschicken und
- * empfangen.
+ * Kontovia – Rechnungen: schreiben, verwalten, per E-Mail verschicken (über
+ * das E-Mail-Programm des Nutzers, lib/emailversand.js) und empfangen.
  *
  * Reiter:
  *   Rechnungen  ausgehende Rechnungen, Entwürfe, Stornos
@@ -26,9 +26,14 @@ import {
   stornieren, alsBezahlt, kopieAlsEntwurf, ausVorlage, alsVorlage, versandVermerken, produktSpeichern, rechnungSpeichern,
 } from '../lib/rechnungsaktionen.js';
 import {
-  vorschauSvg, pdfSpeichern, pdfZeigen, xmlSpeichern, base64ZuBytes,
+  vorschauSvg, pdfSpeichern, pdfZeigen, xmlSpeichern, base64ZuBytes, versandDateien,
 } from '../lib/rechnungsdateien.js';
 import { eRechnungAusDatei } from '../lib/erechnung.js';
+import {
+  WEGE, STANDARD, PLATZHALTER, mailFuer, vorlageAus, adressen, adresseOk, emlBauen, mailtoAdresse,
+} from '../lib/emailversand.js';
+import { base64 } from '../lib/pdfausgabe.js';
+import { prefs, setPref } from '../lib/prefs.js';
 import { zeigeERechnung } from './erechnung.js';
 import { editorZeigen } from './rechnungseditor.js';
 import { gestaltungZeigen } from './rechnungsgestalter.js';
@@ -239,7 +244,7 @@ async function detailZeigen(root, r, actions) {
             </div>
             <p class="small muted mb0 mt8">Das PDF ist eine E-Rechnung nach ZUGFeRD (EN 16931): Es enthält die Rechnungsdaten maschinenlesbar.
               Behörden verlangen meist die XRechnung als eigene Datei.</p>
-            ${(r.versand || []).length ? `<p class="small mb0 mt8">${r.versand.map((v) => `Versendet am ${esc(fmtDate(String(v.ts).slice(0, 10)))}${v.an ? ` an ${esc(v.an)}` : ''}${v.art === 'manuell' ? ' (von Hand vermerkt)' : ''}`).join('<br>')}</p>` : ''}
+            ${(r.versand || []).length ? `<p class="small mb0 mt8">${r.versand.map((v) => `Versendet am ${esc(fmtDate(String(v.ts).slice(0, 10)))}${v.an ? ` an ${esc(v.an)}` : ''}${VERSANDART[v.art] ? ` (${VERSANDART[v.art]})` : ''}`).join('<br>')}</p>` : ''}
           </div>
         </div>
 
@@ -312,7 +317,7 @@ async function detailZeigen(root, r, actions) {
   $$('[data-tx]', root).forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); openTransactionDialog(a.dataset.tx, 'income', { onSaved: () => refresh() }); }));
   mahnungenKarte($('#reMahnungen', root), r);
   aufgabenAbschnitt($('#reAufgaben', root), 'rechnung', r.id, { titel: 'Zu dieser Rechnung', vorgabe: offen ? `Zahlungseingang prüfen: ${r.nummer}` : '' });
-  $('#reSenden', root).addEventListener('click', () => sendenDialog(r));
+  $('#reSenden', root).addEventListener('click', () => sendenDialog(r, { offen }));
   $('#rePdfSpeichern', root).addEventListener('click', sicher(async () => { const p = await pdfSpeichern(r); if (p) ok('PDF gespeichert', p); }));
   $('#reXml', root).addEventListener('click', sicher(async () => { const p = await xmlSpeichern(r, 'xrechnung'); if (p) ok('XRechnung gespeichert', p); }));
   $('#rePdfAnsehen', root).addEventListener('click', sicher(() => pdfZeigen(r)));
@@ -337,28 +342,174 @@ async function detailZeigen(root, r, actions) {
   $('#reVorlage', root).addEventListener('click', () => vorlageDialog(r));
 }
 
-/** Verschicken: noch ohne eigenen Versand. Bis dahin Dateien speichern und den Versand vermerken. */
-function sendenDialog(r) {
-  const an = r.kaeufer?.email || '';
+/* Verschicken über das E-Mail-Programm des Nutzers (lib/emailversand.js). */
+const VERSANDART = { manuell: 'von Hand vermerkt', eml: 'per E-Mail-Programm', teilen: 'geteilt', mailto: 'per E-Mail-Programm' };
+const WEG_TEXT = {
+  eml: { name: 'E-Mail-Programm am Rechner', knopf: 'E-Mail erstellen', text: 'Kontovia speichert die fertige E-Mail mit Anhang als Datei. Öffnen Sie sie, dann erscheint sie in Outlook, Thunderbird oder Apple Mail zum Absenden.' },
+  teilen: { name: 'Teilen', knopf: 'Teilen', text: 'Übergibt Anhang und Text an Mail, Outlook, Gmail oder eine andere App auf diesem Gerät. Die Empfängeradresse kopiert Kontovia vorher, Sie fügen sie dort ein.' },
+  mailto: { name: 'Nur den Text übergeben', knopf: 'E-Mail-Programm öffnen', text: 'Öffnet Ihr E-Mail-Programm mit Empfänger, Betreff und Text. Den Anhang fügen Sie dort selbst hinzu, vorher speichern Sie ihn mit „PDF speichern“.' },
+};
+
+const mitTouch = () => globalThis.matchMedia?.('(pointer: coarse)').matches;
+
+async function sendenDialog(r, { offen = true } = {}) {
+  const an = r.kaeufer?.email || (r.kaeufer?.kontaktId && sel.contact(r.kaeufer.kontaktId))?.email || '';
+  const mail = mailFuer(r, store.db.settings, { offen });
+  const behoerde = !!String(r.kaeufer?.leitwegId || '').trim();
   const m = modal({
-    title: 'Rechnung per E-Mail senden',
+    title: `${titelVon(r)} ${r.nummer} per E-Mail senden`,
     body: `
-      <div class="notice mb16">${icon('info', 15).__raw} Der Versand direkt aus Kontovia kommt mit einer der nächsten Versionen.
-        Bis dahin speichern Sie das PDF und hängen es an Ihre E-Mail an.</div>
-      <div class="field"><label for="reAn">Empfänger</label><input id="reAn" type="email" value="${esc(an)}" placeholder="E-Mail-Adresse des Kunden" disabled></div>
-      <div class="field"><label>Anhang</label><div class="small">${esc(`Rechnung_${r.nummer}.pdf`)} (ZUGFeRD, mit E-Rechnung)</div></div>`,
-    foot: `<button class="btn left" data-pdf>${icon('pdf', 15).__raw} PDF speichern</button>
-      <button class="btn" data-vermerk>Als versendet vermerken</button>
-      <button class="btn primary" data-senden disabled title="Kommt in einer der nächsten Versionen">${icon('external', 15).__raw} Senden</button>`,
+      <div class="field"><label for="reAn">An</label><input id="reAn" type="email" multiple value="${esc(an)}" placeholder="E-Mail-Adresse des Kunden" autocomplete="email"></div>
+      <div class="field"><label for="reBetreff">Betreff</label><input id="reBetreff" value="${esc(mail.betreff)}"></div>
+      <div class="field"><label for="reText">Nachricht</label><textarea id="reText" rows="9">${esc(mail.text)}</textarea>
+        <span class="hint"><a href="#" id="reVorlageText">Standardtext ändern</a></span></div>
+      <div class="field"><label>Anhang</label>
+        <label class="check"><input type="checkbox" id="reMitPdf" checked> PDF mit E-Rechnung (ZUGFeRD)</label>
+        <label class="check"><input type="checkbox" id="reMitXml" ${behoerde ? 'checked' : ''}> XRechnung als eigene Datei${behoerde ? '' : ' (meist nur für Behörden nötig)'}</label></div>
+      <div class="field mb0"><label>Weg</label><div id="reWege"></div><span class="hint" id="reWegText"></span></div>`,
+    foot: `<button class="btn left ghost" data-vermerk title="Wenn Sie die Rechnung anders verschickt haben">Als versendet vermerken</button>
+      <button class="btn" data-pdf>${icon('pdf', 15).__raw} PDF speichern</button>
+      <button class="btn primary" data-senden disabled>${icon('external', 15).__raw} <span>Wird vorbereitet …</span></button>`,
   });
-  m.root.querySelector('[data-pdf]').addEventListener('click', async () => {
+  const $m = (s) => m.root.querySelector(s);
+
+  // Die Anhänge entstehen gleich beim Öffnen: Teilen verlangt, dass es direkt auf den Klick folgt.
+  let dateien = null;
+  try {
+    dateien = await versandDateien(r);
+  } catch (e) {
+    m.close();
+    err('Die Rechnung ließ sich nicht vorbereiten', e.message);
+    return;
+  }
+  if (!m.root.isConnected) return;
+
+  const gewaehlt = () => [$m('#reMitPdf').checked && dateien.pdf, $m('#reMitXml').checked && dateien.xml].filter(Boolean);
+  const teilbar = {};
+  for (const liste of [[dateien.pdf], [dateien.xml], [dateien.pdf, dateien.xml]]) {
+    teilbar[liste.map((d) => d.name).join('|')] = await api.file.canShare(liste.map(({ name, mime }) => ({ name, mime }))).catch(() => false);
+  }
+  const kannTeilen = (liste) => liste.length > 0 && !!teilbar[liste.map((d) => d.name).join('|')];
+
+  const wege = WEGE.filter((w) => w !== 'teilen' || kannTeilen([dateien.pdf]));
+  let weg = wege.includes(prefs.mailWeg) ? prefs.mailWeg : (mitTouch() && wege.includes('teilen') ? 'teilen' : 'eml');
+
+  const zeigen = () => {
+    $m('#reWege').innerHTML = wege.map((w) => `<label class="check"><input type="radio" name="reWeg" value="${w}" ${w === weg ? 'checked' : ''}> ${esc(WEG_TEXT[w].name)}</label>`).join('');
+    const liste = gewaehlt();
+    let hinweis = WEG_TEXT[weg].text;
+    if (weg === 'teilen' && liste.length && !kannTeilen(liste)) hinweis = 'Dieses Gerät kann die XRechnung nicht teilen. Nehmen Sie sie aus dem Anhang oder wählen Sie einen anderen Weg.';
+    $m('#reWegText').textContent = hinweis;
+    const knopf = $m('[data-senden]');
+    knopf.querySelector('span').textContent = WEG_TEXT[weg].knopf;
+    knopf.disabled = (weg !== 'mailto' && !liste.length) || (weg === 'teilen' && !kannTeilen(liste));
+  };
+  zeigen();
+  $m('#reWege').addEventListener('change', (e) => { if (e.target.name === 'reWeg') { weg = e.target.value; setPref('mailWeg', weg); zeigen(); } });
+  $m('#reMitPdf').addEventListener('change', zeigen);
+  $m('#reMitXml').addEventListener('change', zeigen);
+
+  $m('#reVorlageText').addEventListener('click', async (e) => {
+    e.preventDefault();
+    if (!await mailVorlageDialog()) return;
+    const neu = mailFuer(r, store.db.settings, { offen });
+    $m('#reBetreff').value = neu.betreff;
+    $m('#reText').value = neu.text;
+  });
+
+  $m('[data-pdf]').addEventListener('click', async () => {
     try { const p = await pdfSpeichern(r); if (p) ok('PDF gespeichert', p); } catch (e) { err('PDF nicht gespeichert', e.message); }
   });
-  m.root.querySelector('[data-vermerk]').addEventListener('click', async () => {
-    await versandVermerken(r.id, 'manuell', an);
-    m.close();
-    ok('Versand vermerkt');
-    refresh();
+
+  const vermerken = async (art, empfaenger) => {
+    try {
+      await versandVermerken(r.id, art, empfaenger);
+      m.close();
+      ok('Versand vermerkt');
+      refresh();
+    } catch (e) { err('Nicht vermerkt', e.message); }
+  };
+  $m('[data-vermerk]').addEventListener('click', () => vermerken('manuell', adressen($m('#reAn').value).join(', ')));
+
+  /* Ob die Mail wirklich abging, weiß Kontovia nicht. Deshalb fragt es danach. */
+  const nachfragen = (art, empfaenger, hinweis) => {
+    m.body.innerHTML = `<div class="notice mb16">${icon('info', 15).__raw} ${esc(hinweis)}</div>
+      <p class="mt0 mb0">Haben Sie die E-Mail abgeschickt? Dann vermerkt Kontovia den Versand bei der Rechnung.</p>`;
+    m.foot.innerHTML = '<button class="btn" data-no>Noch nicht</button><button class="btn primary" data-yes>Ja, als versendet vermerken</button>';
+    $m('[data-no]').addEventListener('click', () => m.close());
+    $m('[data-yes]').addEventListener('click', () => vermerken(art, empfaenger));
+  };
+
+  $m('[data-senden]').addEventListener('click', async (e) => {
+    const knopf = e.currentTarget;
+    const ziel = adressen($m('#reAn').value);
+    const falsch = ziel.filter((a) => !adresseOk(a));
+    if (falsch.length) { warn('Bitte die Adresse prüfen', falsch.join(', ')); $m('#reAn').focus(); return; }
+    if (!ziel.length && weg !== 'teilen') { warn('Bitte eine Empfängeradresse eingeben'); $m('#reAn').focus(); return; }
+    const betreff = $m('#reBetreff').value.trim();
+    const text = $m('#reText').value;
+    const liste = gewaehlt();
+    const empfaenger = ziel.join(', ');
+    knopf.disabled = true;
+    try {
+      if (weg === 'teilen') {
+        // Das Teilen-Menü kennt keinen Empfänger: die Adresse liegt dann in der Zwischenablage.
+        // Nicht abwarten: Das Teilen-Menü muss ohne Umweg auf den Klick folgen.
+        if (empfaenger) navigator.clipboard?.writeText(empfaenger).catch(() => {});
+        const geteilt = await api.file.share({ files: liste.map((d) => ({ name: d.name, mime: d.mime, dataBase64: base64(d.bytes) })), title: betreff, text });
+        if (geteilt) nachfragen('teilen', empfaenger, empfaenger ? `Die Adresse ${empfaenger} ist kopiert. Fügen Sie sie in der E-Mail als Empfänger ein.` : 'Die Dateien sind übergeben.');
+      } else if (weg === 'eml') {
+        const eml = emlBauen({ an: ziel, betreff, text, anhaenge: liste });
+        const name = await api.file.save({ dataBase64: base64(eml), defaultName: `E-Mail_${String(r.nummer).replace(/[^\w.-]+/g, '_')}.eml`, filters: [{ name: 'E-Mail', extensions: ['eml'] }] });
+        if (name) nachfragen('eml', empfaenger, `„${name}“ ist gespeichert. Öffnen Sie die Datei mit einem Doppelklick, prüfen Sie die E-Mail und senden Sie sie ab.`);
+      } else {
+        const { url, gekuerzt } = mailtoAdresse({ an: ziel, betreff, text });
+        if (gekuerzt) navigator.clipboard?.writeText(text).catch(() => {});
+        const a = document.createElement('a');
+        a.href = url;
+        a.click();
+        nachfragen('mailto', empfaenger, gekuerzt
+          ? 'Der Text war für diesen Weg zu lang und ist gekürzt. Der ganze Text liegt in der Zwischenablage. Den Anhang fügen Sie selbst hinzu.'
+          : 'Ihr E-Mail-Programm sollte sich geöffnet haben. Den Anhang fügen Sie dort selbst hinzu.');
+      }
+    } catch (ex) {
+      err('Das hat nicht geklappt', ex.message);
+    }
+    if (knopf.isConnected) knopf.disabled = false;
+  });
+}
+
+/** Den Standardtext für E-Mails zu Rechnungen ändern. @returns {Promise<boolean>} gespeichert */
+function mailVorlageDialog() {
+  const v = vorlageAus(store.db.settings);
+  return new Promise((resolve) => {
+    let fertig = false;
+    const m = modal({
+      title: 'Standardtext für E-Mails',
+      body: `
+        <p class="mt0 small muted">Gilt für jede Rechnung, die Sie per E-Mail senden. Die Wörter in geschweiften Klammern ersetzt Kontovia durch die Angaben der Rechnung.</p>
+        <div class="field"><label for="mvBetreff">Betreff</label><input id="mvBetreff" value="${esc(v.betreff)}"></div>
+        <div class="field"><label for="mvText">Nachricht</label><textarea id="mvText" rows="11">${esc(v.text)}</textarea></div>
+        <div class="small">${PLATZHALTER.map(([k, t]) => `<div><code>{${esc(k)}}</code> <span class="muted">${esc(t)}</span></div>`).join('')}</div>`,
+      foot: '<button class="btn left ghost" data-zurueck>Ursprünglichen Text nehmen</button><button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Speichern</button>',
+      onClose: () => { if (!fertig) resolve(false); },
+    });
+    const $m = (s) => m.root.querySelector(s);
+    $m('[data-zurueck]').addEventListener('click', () => { $m('#mvBetreff').value = STANDARD.betreff; $m('#mvText').value = STANDARD.text; });
+    $m('[data-no]').addEventListener('click', () => m.close());
+    $m('[data-yes]').addEventListener('click', async () => {
+      const betreff = $m('#mvBetreff').value.trim();
+      const text = $m('#mvText').value.replace(/\r\n?/g, '\n').trim();
+      try {
+        await commit('rechnung.mailtext', (db) => {
+          db.settings.mailVorlagen = { ...(db.settings.mailVorlagen || {}), rechnung: betreff === STANDARD.betreff && text === STANDARD.text ? null : { betreff, text } };
+        }, { entity: 'einstellungen', summary: 'Standardtext für E-Mails zu Rechnungen geändert' });
+        fertig = true;
+        m.close();
+        ok('Standardtext gespeichert');
+        resolve(true);
+      } catch (e) { err('Nicht gespeichert', e.message); }
+    });
   });
 }
 

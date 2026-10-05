@@ -505,11 +505,14 @@ html[data-theme="dark"] .modal-backdrop, html[data-theme="dark"] .modal-geist { 
 .toast .d { color: var(--muted); font-size: 12px; margin-top: 2px; }
 
 /* Sperr- und Einrichtungsbildschirm */
+/* Zentriert über automatische Ränder statt place-items: Ist die Karte höher als
+   der Bildschirm (Handy), beginnt sie oben und bleibt ganz erreichbar. */
 .gate {
-  height: 100vh; display: grid; place-items: center;
+  height: 100vh; display: grid;
   background: var(--bg);
   padding: 24px; overflow-y: auto;
 }
+.gate > * { margin: auto; }
 .gate-card {
   width: min(480px, 100%); background: var(--surface);
   border: 1px solid var(--border); border-radius: var(--radius-lg);

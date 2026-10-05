@@ -1,12 +1,12 @@
 {
-  "version": "2.14.0",
-  "released": "2026-10-05T14:41:35.393Z",
-  "notes": "Daten übernehmen und neue Dateien für ELSTER und Excel\n\n- Neu: Unter „Daten übernehmen“ holen Sie Buchungen, Kunden und Produkte aus Ihrem bisherigen Programm, von der Steuerkanzlei, aus Excel oder als Visitenkarten. Was schon da ist, wird nicht doppelt übernommen.\n- Die Umsatzsteuer-Voranmeldung gibt es als Datei, die „Mein ELSTER“ direkt einliest. Umgekehrt liest Kontovia solche Dateien ein und zeigt, ob sie zu Ihren Buchungen passen.\n- Neu im Export: eine Excel-Datei mit Buchungen und Auswertungen, Ihre Kontakte als Visitenkarten und die Zusammenfassende Meldung für Lieferungen ins EU-Ausland.\n- Auf sehr kleinen Handys passt die Buchungsliste wieder ganz auf den Bildschirm.",
+  "version": "2.15.0",
+  "released": "2026-10-05T15:30:43.799Z",
+  "notes": "Rechnungen per E-Mail senden\n\n- Neu: Rechnungen per E-Mail senden. Kontovia schreibt die E-Mail mit Text und PDF, abgeschickt wird sie mit Ihrem eigenen E-Mail-Programm.\n- Am Rechner öffnet sich die fertige E-Mail in Outlook, Thunderbird oder Apple Mail. Am Handy geben Sie sie mit „Teilen“ an Ihre Mail-App.\n- Den Text der E-Mail legen Sie einmal fest, Nummer, Betrag und Frist setzt Kontovia selbst ein.\n- Auf dem Handy passt die Anmeldeseite wieder ganz auf den Bildschirm.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "aea46cda8ac2344d693eab23933db28a9af3249e5b4f074ca91e31f9742cd406",
-      "size": 71870
+      "sha256": "ba7492a7f2afbd96304e1d8c8d417629f4294b96261b218be6b7dc11a0686f33",
+      "size": 71864
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -97,6 +97,11 @@
       "path": "lib/elster.js",
       "sha256": "eee662dea403e92bff14fc034846bf57eb4ddb8dcf7d94382bafd1c3bac17671",
       "size": 17044
+    },
+    {
+      "path": "lib/emailversand.js",
+      "sha256": "42340ee076759c43b8ae4c4f7a4490bd76b40f0efeaa1162821fdcc223476c02",
+      "size": 9011
     },
     {
       "path": "lib/erechnung-schreiben.js",
@@ -220,8 +225,8 @@
     },
     {
       "path": "lib/prefs.js",
-      "sha256": "50f3e2f6e2c1eb4c39f3b8ac58d651822534f4ea86d8e67f5ee8b5e319119485",
-      "size": 8232
+      "sha256": "dc998bda02621a964fe2b56f88c586f68f16d056070dea09e1c9a18d514b9af0",
+      "size": 8301
     },
     {
       "path": "lib/qr.js",
@@ -245,8 +250,8 @@
     },
     {
       "path": "lib/rechnungsdateien.js",
-      "sha256": "7a7d2f78459a5eb1dcf9fd0112b825b52e9691e15e45222b9dea32a6d21cb16f",
-      "size": 8084
+      "sha256": "1748257bf154edf8a0efeef22744d48f7db3e3d68426ed559e59d8ee0b73bf70",
+      "size": 8573
     },
     {
       "path": "lib/rechnungsdruck.js",
@@ -335,8 +340,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "ee619f1ed2560017289c44a4ab793f62fcfc6e76aba46da2866eae523ee3fb0b",
-      "size": 27362
+      "sha256": "7fb69d3c8650a6b838427b1f178fd51243d968025a85c6f6e5b0adc783ad16ca",
+      "size": 27963
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -365,12 +370,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "599573f722423bedf277ce5cb8c6d67ddba77be90578d93e74da548ee5ff5283",
+      "sha256": "d92bfdf5434d34fed0b7204241ac478472494617a7d61fbc01077eee51f4d299",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "3da82390e76bb0c80eaa3f77dd8304ecdebca73376c5fc984a6941da86bf0bdb",
+      "sha256": "01905296a21756c63d881a6b16907006b0eb1131c30cb40a7973129231b7e895",
       "size": 26012
     },
     {
@@ -385,7 +390,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "d05ea5ea5418017a7bc44c5b8f60818bd9f42fedaef5d1c1200bfdfc0c507557",
+      "sha256": "6af58cd21f6ea404712c1385afba25268f3de41fc8d5295dd096cfe86f01c4bf",
       "size": 29187
     },
     {
@@ -400,8 +405,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "98f023102401932c387996659dd1793011f2e2ad83e8b0cdac43936f0585bd0c",
-      "size": 93369
+      "sha256": "753961cf4b0a8563d94814f472120a04c7a3b80c28f8b078735959556f780ecf",
+      "size": 93535
     },
     {
       "path": "views/anlageform.js",
@@ -445,8 +450,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "a483f774c9fae0fc82586547abfc5f8bf144d54a0953c50af2d5544cc4c6ed97",
-      "size": 59662
+      "sha256": "fa081fd35ae8594b132d3a9dbc024abc0aa93324ad5543a5102deb88bd7c0a32",
+      "size": 60312
     },
     {
       "path": "views/jahresvergleich.js",
@@ -475,8 +480,8 @@
     },
     {
       "path": "views/rechnungen.js",
-      "sha256": "efcbaabb9bc042c3bc4cc52824063b7cba0f750c4633f553db56ed3fedff5049",
-      "size": 45279
+      "sha256": "fc64036308a023a5e3fd1e93615ffb82560b183f7a9b77414741b306c65c0cdb",
+      "size": 54934
     },
     {
       "path": "views/rechnungseditor.js",
@@ -525,7 +530,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "18e3fb297724a7e3d74e3dafdd4bbde3c28c1523c301cff739e0cd4a13683a19",
+      "sha256": "ea56e8644f342341eadc7c9708b8f2f6e67fda18a3add6d749b56772f179d25a",
       "size": 6906
     },
     {
@@ -535,8 +540,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "8bbc4675724a8a17480a2c07bc4eba94ead4aae24308085ac93b0a58a7f483d3",
-      "size": 53571
+      "sha256": "e0ca88623419af5dd98a35158ce2030a5169f0c0941874cc76205e4193123fc3",
+      "size": 54117
     },
     {
       "path": "web/cloud.js",
@@ -550,8 +555,8 @@
     },
     {
       "path": "web/dateien.js",
-      "sha256": "7d39e6c22d9c9a3c45dc579e5b4a1265e2dab85c0f21e618b75c65f025fe51f9",
-      "size": 8379
+      "sha256": "a61d525aa1f6984c67e4b4e8b18682ccd812fb5592bfa702120fd031a8cb81a9",
+      "size": 9691
     },
     {
       "path": "web/druck.js",
@@ -645,8 +650,8 @@
     },
     {
       "path": "web/web.css",
-      "sha256": "77dde3fc0bb0e69a88ff8cb1f937a653139a248e88f9699127d88f05aa81b541",
-      "size": 16396
+      "sha256": "21791f1f173df5f6a3382a9389079eefe3256b953fa09f4a26a4b51c3e4bd0a5",
+      "size": 16632
     },
     {
       "path": "web/weiterleitung.js",

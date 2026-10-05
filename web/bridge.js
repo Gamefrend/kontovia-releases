@@ -626,6 +626,11 @@ const api = {
       const list = (files || []).map((f) => ({ name: D.sichererName(f.name), data: bytesAus(f) }));
       return D.mehrereAnbieten(list, { zipName: name || zipName(folderLabel, files) });
     }),
+    /** Teilen-Menü des Geräts: canShare([{name, mime}]) prüft, share({files, title, text}) gibt weiter. */
+    canShare: handle(async (liste) => D.teilenMoeglich(Array.isArray(liste) ? liste.map((f) => ({ name: str(f?.name, 180), mime: str(f?.mime, 80) })) : [])),
+    share: handle(async ({ files, title, text } = {}) => D.teilen(
+      (Array.isArray(files) ? files : []).map((f) => ({ name: D.sichererName(f.name), mime: str(f.mime, 80), data: bytesAus(f) })),
+      { title: str(title, 300), text: String(text ?? '').slice(0, 20000) })),
     // Im Browser gibt es keinen Ordner, der sich zeigen ließe.
     reveal: handle(async () => true),
     /** Eine erzeugte Datei anzeigen, etwa einen Bericht als PDF: im Browser ein neuer Tab. */

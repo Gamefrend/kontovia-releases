@@ -123,8 +123,14 @@ function anleitung(root) {
         Banking-App scannt, hat Empfänger, IBAN, Betrag und Rechnungsnummer schon in der Überweisung. Er erscheint, wenn
         unter Rechnungen → Gestaltung eine gültige IBAN eingetragen ist. Abschalten lässt er sich im Gestalter bei
         „Zahlung und Hinweise“. Rechnungen, die schon ausgestellt sind, ändern sich dadurch nicht.</p>
-        <p class="small">Der Versand per E-Mail und der automatische Empfang kommen mit einer der nächsten Versionen.
-        Bis dahin speichern Sie das PDF und hängen es an Ihre E-Mail an.</p>
+        <p><strong>Per E-Mail senden.</strong> Bei einer ausgestellten Rechnung schreibt Kontovia die E-Mail mit Betreff,
+        Text und dem PDF als Anhang. Verschickt wird sie mit Ihrem eigenen E-Mail-Programm; die E-Mail geht nicht über
+        einen Server von Kontovia. Am Rechner speichert Kontovia die fertige E-Mail als Datei; ein Doppelklick öffnet sie in
+        Outlook, Thunderbird oder Apple Mail. Am Telefon übergibt „Teilen“ Anhang und Text an Ihre Mail-App. Den
+        Standardtext ändern Sie direkt im Fenster. Danach fragt Kontovia, ob die E-Mail abgeschickt ist, und vermerkt
+        den Versand bei der Rechnung.</p>
+        <p class="small">Der automatische Empfang von E-Rechnungen kommt mit einer der nächsten Versionen. Bis dahin
+        lesen Sie eine erhaltene E-Rechnung unter Rechnungen → Eingang ein.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body" id="hilfe-kontoauszug">
