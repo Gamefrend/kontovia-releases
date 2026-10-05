@@ -1,7 +1,7 @@
 {
-  "version": "2.16.1",
-  "released": "2026-10-05T18:48:44.819Z",
-  "notes": "Senden mit Gmail repariert\n\n- Senden mit Gmail klappt jetzt. Bisher kam nach der Anmeldung „Keine Verbindung zum Server“.",
+  "version": "2.17.0",
+  "released": "2026-10-05T19:21:32.613Z",
+  "notes": "Ziele und wiederkehrende Aufgaben\n\n- Neue Art von Aufgabe: ein Ziel. Zum Beispiel 20 Seiten in 10 Tagen. Sie tragen ein, was Sie geschafft haben, und sehen, wie viel pro Tag noch nötig ist.\n- Kontovia zeigt, ob Sie im Plan oder im Rückstand sind, und was bei Ihrem bisherigen Tempo am Ende herauskommt.\n- Aufgaben können sich wiederholen, zum Beispiel jede Woche oder jeden Monat. Nach dem Abhaken kommt die nächste von selbst.",
   "files": [
     {
       "path": "app.js",
@@ -55,8 +55,8 @@
     },
     {
       "path": "lib/aufgaben.js",
-      "sha256": "3384e640b11326bacc760ebf3d06938955f9d11643edc3ec7204d2de72093fa2",
-      "size": 5751
+      "sha256": "6bd9ba00fd2b9b5c13bd27d0b97210755f96886171e9642ccf1295819d1975f1",
+      "size": 10450
     },
     {
       "path": "lib/benutzer.js",
@@ -290,8 +290,8 @@
     },
     {
       "path": "lib/store.js",
-      "sha256": "4a12619eefc51b5d519ee1511ffbb4c587112e1733d066e5968c372a826b56bf",
-      "size": 36402
+      "sha256": "ec8c3ebdf6c6f35a439df25055c5976e7b9192cb521a18ae023e88b08392f824",
+      "size": 38166
     },
     {
       "path": "lib/suche.js",
@@ -340,8 +340,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "5ff65424edaa2f2bb10596077b0c2feb9f4e94c9f99eb840973261463d4859bd",
-      "size": 28722
+      "sha256": "52352ce9cb494dfa99bc4dc7c7c230328004962aaa878c338d5905be7babb42f",
+      "size": 29266
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -370,12 +370,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "d95c4e388df0267cbd469487a1d0727ae77647af4ceee7951632898361ab4947",
+      "sha256": "0b0577f0a7e174e67371ba829075fd49fb0982673f13889f970c98af3ce91a83",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "28b62bc54acea22172a15e48d0eaa0f6dd7cc9fdea4ff8f90bdd39b6e5e9a6db",
+      "sha256": "7d04bd1ff76ef9b1c77206c8be88cfcdfe7e771285a0b1a23a998f9c7dc8d533",
       "size": 28151
     },
     {
@@ -390,7 +390,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "284623997c9c04c13f3b6269a2bbbd03409e4875acbe4d7b8a8310889b778c20",
+      "sha256": "76b6b56a6ba5c7a8f63d149baa78c40e7ed9e144bce3b030a09bdead6f0aff58",
       "size": 31451
     },
     {
@@ -405,8 +405,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "753961cf4b0a8563d94814f472120a04c7a3b80c28f8b078735959556f780ecf",
-      "size": 93535
+      "sha256": "de8cf4d1132d2567abd95a7f059ea015cd5f9dfb126bcc0812c3b7cee016e13d",
+      "size": 93863
     },
     {
       "path": "views/anlageform.js",
@@ -510,8 +510,8 @@
     },
     {
       "path": "views/todos.js",
-      "sha256": "f5d2f0ab3a76fbd9209a30cd0c4217b7d0c9d2e9b2565f1a3b2c9bb8fa96455b",
-      "size": 30294
+      "sha256": "dd207bf7a1a351704ded6e829b8dbb97829ea81d2b3c0f43ad953f0b3fb51f14",
+      "size": 38971
     },
     {
       "path": "views/transactions.js",
@@ -530,7 +530,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "edfc572c86f47f4cf5d2b97c97c3a7123b8c0ac66de1333c053c033479d12cf2",
+      "sha256": "3fcde4d11ee5bfce9ceb2229462b20ed652ab075f26aa284c7d3125ecaf9335e",
       "size": 6906
     },
     {

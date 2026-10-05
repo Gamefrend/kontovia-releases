@@ -1241,6 +1241,11 @@ textarea.invalid { border-color: var(--neg); }
 .todo-sub.done span { text-decoration: line-through; color: var(--muted); }
 @media (pointer: coarse) { .todo-sub input { width: 20px; height: 20px; } .todo-sub { padding: 3px 0; } }
 .todo-note { color: var(--muted); }
+.todo-ziel { margin-top: 8px; cursor: default; max-width: 520px; }
+.todo-ziel .bar-track { height: 8px; }
+.todo-ziel-text { margin-top: 5px; font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+.todo-ziel-add { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+.todo-ziel-add input { width: 76px; }
 
 .todo-dlg .field + .field { margin-top: 14px; }
 .todo-dlg .form-grid { margin-top: 14px; }

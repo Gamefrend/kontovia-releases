@@ -6,11 +6,15 @@
  * Verknüpfungen: mit einem Termin, mit Buchungen, Kontakten und Rechnungen.
  * Ohne eigenes Datum gilt der Termin: Bis dahin sollte sie erledigt sein, und
  * so wird sie auch einsortiert.
+ *
+ * Drei Arten: einfach, Ziel (eine Menge bis zu einer Frist, mit Fortschritt,
+ * Tagesplan und Hochrechnung) und wiederholt (kommt nach dem Abhaken wieder).
+ * Gerechnet wird in lib/aufgaben.js, geschrieben in lib/store.js.
  */
 
 import { html, raw, esc, $, $$, fmtDate, fmtDateShort, todayISO, addDays, relativeDays, norm, int } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, emptyState } from '../lib/ui.js';
-import { sel, store, upsertTodo, setTodoDone, deleteTodo, newTodoDraft } from '../lib/store.js';
+import { sel, store, upsertTodo, setTodoDone, deleteTodo, newTodoDraft, zielFortschritt } from '../lib/store.js';
 import { refresh, navigate } from '../lib/router.js';
 import { openAppointmentDialog } from './calendar.js';
 import { expandAppointments } from '../lib/termine.js';
@@ -21,6 +25,7 @@ import { aufgabenHtml, klartext, bildIds } from '../lib/richtext.js';
 import {
   teilaufgaben, neueTeilaufgabe, fortschritt, verknuepfungen, verknuepfungHinzu, verknuepfungenRoh, aufgabenZu,
   horizontNormal, horizontEnde, horizontText, horizontTitel, aufgabenText, EINHEITEN, VERKNUEPFUNG_ARTEN,
+  ARTEN, aufgabenArt, zielRechnung, zielSatz, zielNormal, mengeText, wiederholungNormal, wiederholungText, WIEDERHOLUNG_EINHEITEN,
 } from '../lib/aufgaben.js';
 import { sucheIndex, suchen } from '../lib/suchindex.js';
 
@@ -106,6 +111,34 @@ function textAuszug(todo) {
   return klartext(aufgabenHtml(todo)).split('\n').find((z) => z.trim()) || '';
 }
 
+const ZIEL_STATUS = {
+  geschafft: ['pos', 'geschafft'],
+  imPlan: ['pos', 'im Plan'],
+  hinten: ['warn', 'im Rückstand'],
+  verfehlt: ['neg', 'Frist vorbei'],
+  ohneDatum: ['', ''],
+};
+
+/** Fortschrittsbalken, Satz zum Stand und Eintragen des Fortschritts bei einem Ziel. */
+function zielBlock(todo, compact) {
+  const heute = todayISO();
+  const r = zielRechnung(todo, heute);
+  const [kl, text] = ZIEL_STATUS[r.status];
+  const e = r.einheit ? ` ${r.einheit}` : '';
+  const prog = r.prognose !== null && r.status !== 'geschafft' && r.status !== 'verfehlt'
+    ? `<span class="muted" title="Hochgerechnet aus dem bisherigen Tempo (${esc(mengeText(r.tempo))}${esc(e)} pro Tag)">Mit diesem Tempo: ${esc(mengeText(r.prognose))}${esc(e)}</span>` : '';
+  const eintragen = !compact && !todo.done
+    ? `<div class="todo-ziel-add">
+        <input type="number" step="any" value="1" data-ziel-menge aria-label="Menge${esc(e)}">
+        <button type="button" class="btn sm" data-ziel-add="${esc(todo.id)}">${icon('plus', 13).__raw} Eintragen</button>
+      </div>` : '';
+  return `<div class="todo-ziel">
+    <div class="bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(r.anteil * 100)}"><div class="bar-fill" style="width:${Math.round(r.anteil * 100)}%;background:var(--${r.status === 'hinten' ? 'warn' : r.status === 'verfehlt' ? 'neg' : 'accent'}, var(--accent))"></div></div>
+    <div class="todo-ziel-text">${text ? `<span class="badge tiny ${kl}">${esc(text)}</span> ` : ''}${esc(zielSatz(todo, heute))}${prog ? ` · ${prog}` : ''}</div>
+    ${eintragen}
+  </div>`;
+}
+
 /** Eine Zeile der Liste – auch in der Übersicht verwendet. */
 export function todoRow(todo, { compact = false } = {}) {
   const auszug = !compact ? textAuszug(todo) : '';
@@ -121,12 +154,16 @@ export function todoRow(todo, { compact = false } = {}) {
           <input type="checkbox" data-toggle-sub="${esc(todo.id)}:${esc(s.id)}" ${s.done ? 'checked' : ''}>
           <span>${esc(s.title)}</span>
         </label>`).join('')}</div>` : '';
+  const art = aufgabenArt(todo);
+  const wdh = art === 'wiederholend'
+    ? `<span class="badge tiny" title="Nach dem Abhaken kommt die Aufgabe von selbst wieder${todo.wiederholung?.anzahl ? `, bisher ${int(todo.wiederholung.anzahl)}-mal erledigt` : ''}">${icon('refresh', 11).__raw} ${esc(wiederholungText(todo.wiederholung))}</span>` : '';
   return `<div class="todo-item${todo.done ? ' done' : ''}" data-todo="${esc(todo.id)}">
     <input type="checkbox" class="todo-check" data-toggle-todo="${esc(todo.id)}" ${todo.done ? 'checked' : ''}
-      aria-label="${esc(todo.title)} ${todo.done ? 'wieder öffnen' : 'als erledigt abhaken'}">
+      aria-label="${esc(todo.title)} ${todo.done ? 'wieder öffnen' : art === 'ziel' ? 'als geschafft abhaken' : 'als erledigt abhaken'}">
     <div class="todo-main" data-edit-todo="${esc(todo.id)}" role="button" tabindex="0">
       <div class="todo-title">${esc(todo.title || '(ohne Titel)')}</div>
-      <div class="todo-meta">${dueBadge(todo)}${teile}${bilder}${apptChip(todo)}${compact ? '' : linkChips(todo)}${notiz}</div>
+      <div class="todo-meta">${dueBadge(todo)}${wdh}${teile}${bilder}${apptChip(todo)}${compact ? '' : linkChips(todo)}${notiz}</div>
+      ${art === 'ziel' ? zielBlock(todo, compact) : ''}
       ${unter}
     </div>
   </div>`;
@@ -139,9 +176,23 @@ export function todoRow(todo, { compact = false } = {}) {
 export function wireTodoRows(root, redraw) {
   $$('[data-toggle-todo]', root).forEach((c) => c.addEventListener('change', async () => {
     await setTodoDone(c.dataset.toggleTodo, c.checked);
-    if (c.checked) ok('Erledigt', sel.todo(c.dataset.toggleTodo)?.title || '');
+    const t = sel.todo(c.dataset.toggleTodo);
+    if (c.checked && t && aufgabenArt(t) === 'wiederholend') ok('Erledigt', `${t.title}, nächstes Mal am ${fmtDate(t.dueDate)}`);
+    else if (c.checked) ok('Erledigt', t?.title || '');
     redraw();
   }));
+  $$('[data-ziel-add]', root).forEach((b) => {
+    const eintragen = async () => {
+      const menge = Number(String(b.parentElement.querySelector('[data-ziel-menge]').value).replace(',', '.'));
+      if (!Number.isFinite(menge) || menge === 0) { warn('Bitte eine Menge eintragen'); return; }
+      await zielFortschritt(b.dataset.zielAdd, menge);
+      const t = sel.todo(b.dataset.zielAdd);
+      if (t?.done) ok('Ziel geschafft', t.title);
+      redraw();
+    };
+    b.addEventListener('click', eintragen);
+    b.parentElement.querySelector('[data-ziel-menge]').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); eintragen(); } });
+  });
   $$('[data-toggle-sub]', root).forEach((c) => c.addEventListener('change', async () => {
     const [tid, sid] = c.dataset.toggleSub.split(':');
     const t = sel.todo(tid);
@@ -151,7 +202,7 @@ export function wireTodoRows(root, redraw) {
   }));
   $$('[data-edit-todo]', root).forEach((n) => {
     const open = () => openTodoDialog(n.dataset.editTodo, {}, { nachSpeichern: redraw });
-    n.addEventListener('click', (e) => { if (!e.target.closest('[data-open-appt],[data-open-link],.todo-subs')) open(); });
+    n.addEventListener('click', (e) => { if (!e.target.closest('[data-open-appt],[data-open-link],.todo-subs,.todo-ziel-add')) open(); });
     n.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === n) { e.preventDefault(); open(); } });
   });
   $$('[data-open-appt]', root).forEach((b) => b.addEventListener('click', (e) => {
@@ -373,10 +424,14 @@ export function openTodoDialog(id, preset = {}, { nachSpeichern = null } = {}) {
   const neueBilder = new Set();
   let subs = teilaufgaben(t).map((s) => ({ ...s }));
   let links = verknuepfungenRoh(t).map((l) => ({ ...l }));
+  let art = aufgabenArt(t);
+  const zz = zielNormal(t, todayISO());
+  const ww = wiederholungNormal(t.wiederholung);
   let editor = null;
   let ausgangslage = null;
   let fertig = false;
   const stand = () => JSON.stringify([
+    art, ['zGesamt', 'zEinheit', 'zStand', 'zStart', 'wN', 'wF'].map((k) => m.root.querySelector('#d_' + k)?.value),
     m.root.querySelector('#d_title')?.value.trim(), m.root.querySelector('#d_due')?.value, m.root.querySelector('#d_appt')?.value,
     editor?.html(), subs.map((s) => [s.title, s.done]), links, m.root.querySelector('#d_done')?.checked ?? t.done,
   ]);
@@ -394,11 +449,36 @@ export function openTodoDialog(id, preset = {}, { nachSpeichern = null } = {}) {
           <label for="d_title">Aufgabe *</label>
           <input id="d_title" value="${t.title}" placeholder="z. B. Unterlagen für den Steuerberater zusammenstellen">
         </div>
+        <div class="field">
+          <label>Art</label>
+          <div class="seg" id="d_art" role="group" aria-label="Art der Aufgabe">
+            ${raw(Object.entries(ARTEN).map(([k, n]) => `<button type="button" data-art="${k}" aria-pressed="${k === art}" class="${k === art ? 'active' : ''}">${esc(n)}</button>`).join(''))}
+          </div>
+          <span class="hint" id="d_artHint"></span>
+        </div>
+        <div class="field" id="d_zielBox" hidden>
+          <div class="form-grid">
+            <div class="field"><label for="d_zGesamt">Wie viel insgesamt?</label><input type="number" id="d_zGesamt" min="0" step="any" value="${zz.gesamt}"></div>
+            <div class="field"><label for="d_zEinheit">Einheit</label><input id="d_zEinheit" value="${zz.einheit}" placeholder="z. B. Seiten, Belege, km" maxlength="30"></div>
+            <div class="field"><label for="d_zStand">Schon geschafft</label><input type="number" id="d_zStand" min="0" step="any" value="${zz.stand}"></div>
+            <div class="field"><label for="d_zStart">Beginn</label><input type="date" id="d_zStart" value="${zz.start}"></div>
+          </div>
+          <p class="hint" id="d_zInfo" style="margin:8px 0 0"></p>
+        </div>
+        <div class="field" id="d_wdhBox" hidden>
+          <label for="d_wN">Wiederholt sich</label>
+          <div class="row" style="gap:8px;align-items:center">
+            <span>alle</span>
+            <input type="number" id="d_wN" min="1" max="365" step="1" value="${ww.n}" style="width:72px">
+            <select id="d_wF" aria-label="Einheit">${raw(Object.entries(WIEDERHOLUNG_EINHEITEN).map(([k, [, viele]]) => `<option value="${k}" ${k === ww.freq ? 'selected' : ''}>${viele}</option>`).join(''))}</select>
+          </div>
+          <span class="hint">Nach dem Abhaken kommt die Aufgabe am nächsten Termin wieder, die Unteraufgaben sind dann wieder offen.</span>
+        </div>
         <div class="form-grid">
           <div class="field">
-            <label for="d_due">Fällig am</label>
+            <label for="d_due" id="d_dueLabel">Fällig am</label>
             <input type="date" id="d_due" value="${t.dueDate || ''}">
-            <span class="hint">Freiwillig. Ohne Datum gilt der verknüpfte Termin.</span>
+            <span class="hint" id="d_dueHint">Freiwillig. Ohne Datum gilt der verknüpfte Termin.</span>
           </div>
           <div class="field">
             <label for="d_appt">Gehört zum Termin</label>
@@ -439,6 +519,47 @@ export function openTodoDialog(id, preset = {}, { nachSpeichern = null } = {}) {
   const g = (k) => m.root.querySelector('#d_' + k);
 
   editor = richEditor(g('editor'), { html: aufgabenHtml(t), beiNeuemBild: (bid) => neueBilder.add(bid) });
+
+  /* Art: einfach, Ziel, Wiederholung */
+  const ART_HINWEIS = {
+    einfach: '',
+    ziel: 'Eine Menge bis zu einem Tag, zum Beispiel 20 Seiten in 10 Tagen. Kontovia rechnet aus, was pro Tag noch nötig ist.',
+    wiederholend: 'Eine Aufgabe, die immer wieder anfällt, etwa jeden Monat die Umsatzsteuer vorbereiten.',
+  };
+  const zielInfo = () => {
+    const heute = todayISO();
+    const probe = {
+      art: 'ziel', dueDate: g('due').value, createdAt: heute,
+      ziel: { gesamt: Number(g('zGesamt').value), einheit: g('zEinheit').value, stand: Number(g('zStand').value), start: g('zStart').value || heute },
+    };
+    if (!probe.dueDate) { g('zInfo').textContent = 'Wählen Sie unten eine Frist, dann rechnet Kontovia mit.'; return; }
+    const r = zielRechnung(probe, heute);
+    const e = r.einheit ? ` ${r.einheit}` : '';
+    g('zInfo').textContent = r.gesamtTage
+      ? `Plan: ${mengeText(r.planProTag)}${e} pro Tag, ${r.gesamtTage} ${r.gesamtTage === 1 ? 'Tag' : 'Tage'} lang. ${zielSatz(probe, heute)}.` : '';
+  };
+  const artZeigen = () => {
+    g('zielBox').hidden = art !== 'ziel';
+    g('wdhBox').hidden = art !== 'wiederholend';
+    g('artHint').textContent = ART_HINWEIS[art];
+    g('dueLabel').textContent = art === 'ziel' ? 'Frist *' : art === 'wiederholend' ? 'Nächstes Mal am' : 'Fällig am';
+    g('dueHint').textContent = art === 'ziel' ? 'Bis dahin soll die ganze Menge geschafft sein.'
+      : art === 'wiederholend' ? 'Freiwillig. Ohne Datum gilt der Tag des ersten Abhakens als Start.' : 'Freiwillig. Ohne Datum gilt der verknüpfte Termin.';
+    for (const b of g('art').querySelectorAll('[data-art]')) {
+      b.classList.toggle('active', b.dataset.art === art);
+      b.setAttribute('aria-pressed', String(b.dataset.art === art));
+    }
+    if (g('done')) g('done').closest('label').hidden = art !== 'einfach';
+    if (art === 'ziel') zielInfo();
+  };
+  g('art').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-art]');
+    if (!b) return;
+    art = b.dataset.art;
+    artZeigen();
+  });
+  for (const k of ['zGesamt', 'zEinheit', 'zStand', 'zStart', 'due']) g(k).addEventListener('input', () => { if (art === 'ziel') zielInfo(); });
+  artZeigen();
 
   /* Unteraufgaben */
   const subsZeichnen = () => {
@@ -544,7 +665,19 @@ export function openTodoDialog(id, preset = {}, { nachSpeichern = null } = {}) {
   m.root.querySelector('#btnSave').addEventListener('click', async () => {
     t.title = g('title').value.trim();
     if (!t.title) { warn('Bitte die Aufgabe benennen'); g('title').focus(); return; }
+    if (art === 'ziel') {
+      if (!(Number(g('zGesamt').value) > 0)) { warn('Bitte die Gesamtmenge eintragen'); g('zGesamt').focus(); return; }
+      if (!g('due').value) { warn('Bitte eine Frist wählen'); g('due').focus(); return; }
+      if ((g('zStart').value || todayISO()) > g('due').value) { warn('Der Beginn liegt nach der Frist'); g('zStart').focus(); return; }
+    }
     fertig = true;
+    t.art = art === 'einfach' ? '' : art;
+    if (art === 'ziel') {
+      const stand = Math.max(0, Number(g('zStand').value) || 0);
+      t.ziel = { gesamt: Number(g('zGesamt').value), einheit: g('zEinheit').value.trim(), stand, start: g('zStart').value || todayISO() };
+    } else delete t.ziel;
+    if (art === 'wiederholend') t.wiederholung = { ...(t.wiederholung || {}), ...wiederholungNormal({ freq: g('wF').value, n: g('wN').value }) };
+    else delete t.wiederholung;
     t.dueDate = g('due').value || '';
     t.appointmentId = g('appt').value || '';
     t.body = editor.html();
@@ -554,7 +687,8 @@ export function openTodoDialog(id, preset = {}, { nachSpeichern = null } = {}) {
     if (offen) subs.push(neueTeilaufgabe(offen));
     t.subtasks = subs.filter((s) => s.title.trim()).map((s) => ({ ...s, title: s.title.trim() }));
     t.links = verknuepfungenRoh({ links });
-    const done = g('done') ? g('done').checked : t.done;
+    // Bei einem Ziel entscheidet der Stand: Menge erreicht heißt erledigt.
+    const done = art === 'ziel' ? t.ziel.stand >= t.ziel.gesamt : art === 'wiederholend' ? false : g('done') ? g('done').checked : t.done;
     if (done !== t.done) t.doneAt = done ? new Date().toISOString() : '';
     t.done = done;
     await upsertTodo(t);
