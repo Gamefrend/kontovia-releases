@@ -4,7 +4,8 @@
  * Stellt `window.kontovia` bereit: eine feste Liste benannter Funktionen,
  * über die die Oberfläche (src/renderer) alles erreicht, was nicht reine
  * Darstellung ist: Verschlüsselung (kern.js), Ablage (ablage.js, tresor.js),
- * Cloud-Abgleich (cloud.js), Google Kalender (gcal.js), Dateien (dateien.js),
+ * Cloud-Abgleich (cloud.js), Google Kalender (gcal.js), E-Mail senden
+ * (mailversand.js), Dateien (dateien.js),
  * Druck (druck.js), Sperre (sperre.js) und Aktualisierung (aktualisierung.js,
  * uebergabe.js). Die Oberfläche bekommt nur Kopien der Daten, nie die Objekte
  * selbst, und nie die Anmeldemerkmale (zugang.js).
@@ -16,6 +17,7 @@ import { Vault, MAX_ATTACHMENT_BYTES } from './tresor.js';
 import { Cloud } from './cloud.js';
 import * as W from './weiterleitung.js';
 import * as G from './gcal.js';
+import * as MV from './mailversand.js';
 import * as Z from './sperre.js';
 import * as UE from './uebergabe.js';
 import * as EN from './entsperrung.js';
@@ -36,7 +38,8 @@ import * as R from './rueckmeldung.js';
    sie die Antwort an das eigentliche Kontovia-Fenster weiter und schließt
    sich (gcal.js). Das geschieht vor allem anderen, auch vor der Anmeldung
    per Weiterleitung, die sonst die Antwort für sich hielte. */
-const nurGoogleFenster = G.antwortWeiterreichen();
+/* Dasselbe für das Fenster bei Microsoft (E-Mail senden, mailversand.js). */
+const nurGoogleFenster = G.antwortWeiterreichen() || MV.msAntwortWeiterreichen();
 /* Kam die Antwort von Google, nachdem Kontovia selbst dorthin weitergeleitet hatte? Auch diese
    Antwort verlässt die Adresse sofort; sonst hielte die Anmeldung zur Cloud sie für ihre. */
 const googleRueckkehr = nurGoogleFenster ? null : G.rueckkehrAusAdresse();
@@ -53,6 +56,7 @@ vault.beschrifter = (db, geoeffnet) => KO.beschriften({
 const cloud = new Cloud(vault, { zeigeCode });
 const gcal = new G.GoogleCalendar(vault, { clientId: BUILTIN.googleWeb?.clientId || '' });
 gcal.rueckkehr(googleRueckkehr);
+const mail = new MV.MailVersand(vault, { googleClientId: BUILTIN.googleWeb?.clientId || '', microsoftClientId: BUILTIN.microsoft?.clientId || '' });
 
 /* Zurück von einer Anmeldung per Weiterleitung? Die Antwort von Google steht
    im Anker der Adresse; sie wird sofort entfernt und im Hintergrund bei
@@ -189,6 +193,7 @@ function doLock(reason) {
 function nachSperre(reason) {
   if (reason !== 'aktualisierung') UE.verwerfen().catch(() => {});
   gcal.vergessen();
+  mail.vergessen();
   // Ein offener QR-Code für ein weiteres Gerät gilt nicht über das Sperren hinaus.
   cloud.koppelnAbbrechen().catch(() => {});
   cloud.koppelnVerbindenAbbrechen();
@@ -622,6 +627,8 @@ const api = {
 
   file: {
     save: handle(async (opts = {}) => D.anbieten(bytesAus(opts), opts.defaultName || 'export', { filters: opts.filters })),
+    /** Ohne Speichern-Dialog in den Download-Ordner; ein Klick in der Download-Leiste öffnet die Datei. */
+    download: handle(async (opts = {}) => D.herunterladenOderAnbieten(bytesAus(opts), opts.defaultName || 'datei')),
     saveMany: handle(async ({ folderLabel, files, zipName: name } = {}) => {
       const list = (files || []).map((f) => ({ name: D.sichererName(f.name), data: bytesAus(f) }));
       return D.mehrereAnbieten(list, { zipName: name || zipName(folderLabel, files) });
@@ -1029,6 +1036,17 @@ const api = {
     finish: handle(async (opts = {}) => kopie(await gcal.finish(opts))),
   },
 
+  /* E-Mails direkt senden über Gmail oder Microsoft (mailversand.js). senden()
+     muss direkt aus dem Klick kommen: ohne Freigabe öffnet es das Fenster beim Anbieter. */
+  mail: {
+    status: handle(async () => mail.status()),
+    senden: handle(async (p = {}) => kopie(await mail.senden({
+      anbieter: str(p.anbieter, 20), mimeBase64: typeof p.mimeBase64 === 'string' ? p.mimeBase64 : '', nachricht: p.nachricht && typeof p.nachricht === 'object' ? p.nachricht : null,
+    }))),
+    abmelden: handle(async (anbieter) => mail.abmelden(str(anbieter, 20))),
+    cancel: handle(async () => mail.abbrechen(), { needsUnlock: false }),
+  },
+
   /* Die PDF-Dateien entstehen in der Oberfläche (lib/pdfausgabe.js). Hier
      bleibt der Druckdialog als Zusatzweg für die druckfertige Seite. */
   pdf: {
@@ -1086,7 +1104,7 @@ if (nurGoogleFenster) {
     <div class="gate"><div class="gate-card">
       <div class="gate-logo">K</div>
       <h2>Fertig</h2>
-      <p class="lead">Kontovia hat die Antwort von Google erhalten. Sie können dieses Fenster schließen.</p>
+      <p class="lead">Kontovia hat die Antwort erhalten. Sie können dieses Fenster schließen.</p>
     </div></div>`;
   setTimeout(() => window.close(), 50);
 } else if (fehlt) {

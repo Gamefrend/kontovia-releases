@@ -124,11 +124,14 @@ function anleitung(root) {
         unter Rechnungen → Gestaltung eine gültige IBAN eingetragen ist. Abschalten lässt er sich im Gestalter bei
         „Zahlung und Hinweise“. Rechnungen, die schon ausgestellt sind, ändern sich dadurch nicht.</p>
         <p><strong>Per E-Mail senden.</strong> Bei einer ausgestellten Rechnung schreibt Kontovia die E-Mail mit Betreff,
-        Text und dem PDF als Anhang. Verschickt wird sie mit Ihrem eigenen E-Mail-Programm; die E-Mail geht nicht über
-        einen Server von Kontovia. Am Rechner speichert Kontovia die fertige E-Mail als Datei; ein Doppelklick öffnet sie in
-        Outlook, Thunderbird oder Apple Mail. Am Telefon übergibt „Teilen“ Anhang und Text an Ihre Mail-App. Den
-        Standardtext ändern Sie direkt im Fenster. Danach fragt Kontovia, ob die E-Mail abgeschickt ist, und vermerkt
-        den Versand bei der Rechnung.</p>
+        Text und dem PDF als Anhang. Sie geht nie über einen Server von Kontovia, sondern über Ihr eigenes Konto oder
+        Programm. Mit <strong>Gmail</strong> oder <strong>Outlook</strong> (Outlook.com, Microsoft 365) sendet Kontovia
+        direkt; beim ersten Mal fragt Google bzw. Microsoft in einem kleinen Fenster, ob Kontovia in Ihrem Namen senden
+        darf. Die E-Mail steht danach bei Ihnen unter „Gesendet“. Für andere Anbieter legt Kontovia die fertige E-Mail
+        als Datei in den Download-Ordner; ein Klick darauf öffnet sie in Outlook, Thunderbird oder Apple Mail. Am
+        Telefon übergibt „Teilen“ Anhang und Text an Ihre Mail-App. Den Standardtext ändern Sie direkt im Fenster.
+        Kontovia vermerkt den Versand bei der Rechnung; bei den Wegen über Ihr Programm fragt es vorher, ob die E-Mail
+        abgeschickt ist.</p>
         <p class="small">Der automatische Empfang von E-Rechnungen kommt mit einer der nächsten Versionen. Bis dahin
         lesen Sie eine erhaltene E-Rechnung unter Rechnungen → Eingang ein.</p>
       </div></div>

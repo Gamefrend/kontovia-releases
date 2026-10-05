@@ -1,7 +1,7 @@
 {
-  "version": "2.15.0",
-  "released": "2026-10-05T15:30:43.799Z",
-  "notes": "Rechnungen per E-Mail senden\n\n- Neu: Rechnungen per E-Mail senden. Kontovia schreibt die E-Mail mit Text und PDF, abgeschickt wird sie mit Ihrem eigenen E-Mail-Programm.\n- Am Rechner öffnet sich die fertige E-Mail in Outlook, Thunderbird oder Apple Mail. Am Handy geben Sie sie mit „Teilen“ an Ihre Mail-App.\n- Den Text der E-Mail legen Sie einmal fest, Nummer, Betrag und Frist setzt Kontovia selbst ein.\n- Auf dem Handy passt die Anmeldeseite wieder ganz auf den Bildschirm.",
+  "version": "2.16.0",
+  "released": "2026-10-05T16:53:36.385Z",
+  "notes": "Rechnungen direkt mit Gmail oder Outlook senden\n\n- Neu: Rechnungen direkt aus Kontovia senden, über Ihr Gmail- oder Outlook-Konto. Die E-Mail steht danach bei Ihnen unter „Gesendet“.\n- Beim ersten Mal fragt Google oder Microsoft, ob Kontovia in Ihrem Namen senden darf. Lesen kann Kontovia Ihre E-Mails nicht.\n- Die E-Mail für Ihr E-Mail-Programm landet jetzt gleich im Download-Ordner. Ein Klick darauf öffnet sie.",
   "files": [
     {
       "path": "app.js",
@@ -50,8 +50,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "73759fdd22f80854165510ec02ab3d08928ca45cb14c8ac79dfb718ca1a2c9af",
-      "size": 2007
+      "sha256": "ed01020223e2cdf4e489898f8447117d8880c0eb5ead47e96fa21bf75e2f4eb4",
+      "size": 2098
     },
     {
       "path": "lib/aufgaben.js",
@@ -100,8 +100,8 @@
     },
     {
       "path": "lib/emailversand.js",
-      "sha256": "42340ee076759c43b8ae4c4f7a4490bd76b40f0efeaa1162821fdcc223476c02",
-      "size": 9011
+      "sha256": "0c15387ef2fb97429ec41b4cdd501702cad229938ca86529bd16f37f26f34e25",
+      "size": 10362
     },
     {
       "path": "lib/erechnung-schreiben.js",
@@ -340,8 +340,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "7fb69d3c8650a6b838427b1f178fd51243d968025a85c6f6e5b0adc783ad16ca",
-      "size": 27963
+      "sha256": "6a50fce9dd14e6c2bf4159c7c3425c4abddb27dcb1800fbdaef01648dc81f442",
+      "size": 28498
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -370,13 +370,13 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "d92bfdf5434d34fed0b7204241ac478472494617a7d61fbc01077eee51f4d299",
+      "sha256": "aeddc4bedf0b51d6f3f8850ef7810518241eaa25178fa72d0f59ba6e13b5a5e1",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "01905296a21756c63d881a6b16907006b0eb1131c30cb40a7973129231b7e895",
-      "size": 26012
+      "sha256": "f01e895ee4c40b8c9a5d7bf301fceaa387bf78faabbdeead95a9f6722fef0916",
+      "size": 28151
     },
     {
       "path": "recht/IMPRESSUM.md",
@@ -390,8 +390,8 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "6af58cd21f6ea404712c1385afba25268f3de41fc8d5295dd096cfe86f01c4bf",
-      "size": 29187
+      "sha256": "16c8eb82e8f2389eda16e7fb11f934a5043ea4666f213e608413d64609646800",
+      "size": 31451
     },
     {
       "path": "recht/impressum.html",
@@ -450,8 +450,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "fa081fd35ae8594b132d3a9dbc024abc0aa93324ad5543a5102deb88bd7c0a32",
-      "size": 60312
+      "sha256": "09f194c38165f77799ad569ac1b897d5fe98342940a67c882800f458e8033103",
+      "size": 60656
     },
     {
       "path": "views/jahresvergleich.js",
@@ -480,8 +480,8 @@
     },
     {
       "path": "views/rechnungen.js",
-      "sha256": "fc64036308a023a5e3fd1e93615ffb82560b183f7a9b77414741b306c65c0cdb",
-      "size": 54934
+      "sha256": "260ae7814c20e7b5c49d139a0656ef550e430ae6b9847b740e3fbbf15c0fbcd9",
+      "size": 58603
     },
     {
       "path": "views/rechnungseditor.js",
@@ -530,7 +530,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "ea56e8644f342341eadc7c9708b8f2f6e67fda18a3add6d749b56772f179d25a",
+      "sha256": "e28d6fbae63846e11575e2bcf7b6016b26a2236e4b3c46f933c8ec93a176590e",
       "size": 6906
     },
     {
@@ -540,8 +540,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "e0ca88623419af5dd98a35158ce2030a5169f0c0941874cc76205e4193123fc3",
-      "size": 54117
+      "sha256": "0291faf9970542752d75912faf828bcba6dee7702e8504153eae20373a7a7537",
+      "size": 55330
     },
     {
       "path": "web/cloud.js",
@@ -550,13 +550,13 @@
     },
     {
       "path": "web/cloudconfig.js",
-      "sha256": "d19774a46f95c0758a5671ab4bd321cd984b2d3ef71873c627e6e3f817f947a0",
-      "size": 2138
+      "sha256": "aa7c5a0995e41aa7f3fd2eedafc0cf8b56305bbbd8c0f2d378d7fd827b9e66a6",
+      "size": 2621
     },
     {
       "path": "web/dateien.js",
-      "sha256": "a61d525aa1f6984c67e4b4e8b18682ccd812fb5592bfa702120fd031a8cb81a9",
-      "size": 9691
+      "sha256": "0fac3115df7f25b3dc86e64a026dac5ebd09a4b6e0524a0452b5e5082eb80a3f",
+      "size": 10400
     },
     {
       "path": "web/druck.js",
@@ -599,14 +599,19 @@
       "size": 20134
     },
     {
+      "path": "web/mailversand.js",
+      "sha256": "fe05eb378e194ee9babbe309859445a5f6794a31638d8e98a6a2ce65e7b71342",
+      "size": 19982
+    },
+    {
       "path": "web/mobil.js",
       "sha256": "ac91b11ad13ddbcf54bddbc71f70fd1abc75bed3e91942df88e247b0f22570c7",
       "size": 5701
     },
     {
       "path": "web/netz.js",
-      "sha256": "552a9bfab97e646beca14a6abbba1bda2f5ac21ce076db6e26d0b2bbce3d6631",
-      "size": 3863
+      "sha256": "49d1d73d25ffaf3a7bfaf5bc630ccc4b5ef0a035b92a2ff75c93afdfd98b4b8c",
+      "size": 4028
     },
     {
       "path": "web/rueckmeldung.js",

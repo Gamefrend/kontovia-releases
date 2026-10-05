@@ -10,7 +10,7 @@
  *   apiKey        Der Web-API-Schlüssel von Firebase ist nach Googles eigener
  *                 Dokumentation ausdrücklich nicht geheim. Er benennt nur das
  *                 Projekt. Den Zugriff regeln Anmeldung und Storage-Regeln.
- *   clientId      Öffentlich, steht in jeder Anmelde-URL.
+ *   clientId      Öffentlich, steht in jeder Anmelde-URL (Google wie Microsoft).
  *   clientSecret  Nur beim Client für die Anmeldung per Code. Bei diesem Typ
  *                 gilt er nach Googles eigener Festlegung nicht als
  *                 vertraulich; er steht in jeder ausgelieferten Fassung.
@@ -38,6 +38,15 @@ export default Object.freeze({
   // Client-Schlüssel wird dafür nicht gebraucht.
   googleWeb: Object.freeze({
     clientId: '614129333064-56dcl6mcgliqoci1v81upe6f4o4tdt0c.apps.googleusercontent.com',
+  }),
+
+  // App-Registrierung bei Microsoft (Entra ID) für „Mit Outlook senden“
+  // (mailversand.js): Plattform „Single-Page-Anwendung“ mit denselben zwei
+  // Rückkehradressen wie googleWeb, Kontotypen „alle Organisationen und
+  // persönliche Microsoft-Konten“, delegierte Berechtigung Mail.Send. Leer:
+  // Der Weg erscheint nicht. Einrichtung siehe README.
+  microsoft: Object.freeze({
+    clientId: 'ccb33e2b-c069-4b6f-855f-4c2cfe5eb8e3',
   }),
 
   // OAuth-Client vom Typ „Fernseher und Geräte mit eingeschränkter Eingabe“:

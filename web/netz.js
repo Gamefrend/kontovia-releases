@@ -14,6 +14,10 @@ const ERLAUBT = new Set([
   'identitytoolkit.googleapis.com',
   'securetoken.googleapis.com',
   'firebasestorage.googleapis.com',
+  // E-Mail senden (mailversand.js), nur auf Klick und nach Freigabe beim Anbieter
+  'gmail.googleapis.com',
+  'login.microsoftonline.com',
+  'graph.microsoft.com',
 ]);
 
 export const HOSTS = [...ERLAUBT];

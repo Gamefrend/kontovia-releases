@@ -30,7 +30,7 @@ import {
 } from '../lib/rechnungsdateien.js';
 import { eRechnungAusDatei } from '../lib/erechnung.js';
 import {
-  WEGE, STANDARD, PLATZHALTER, mailFuer, vorlageAus, adressen, adresseOk, emlBauen, mailtoAdresse,
+  WEGE, DIREKT, STANDARD, PLATZHALTER, mailFuer, vorlageAus, adressen, adresseOk, emlBauen, mailtoAdresse, graphNachricht,
 } from '../lib/emailversand.js';
 import { base64 } from '../lib/pdfausgabe.js';
 import { prefs, setPref } from '../lib/prefs.js';
@@ -342,13 +342,29 @@ async function detailZeigen(root, r, actions) {
   $('#reVorlage', root).addEventListener('click', () => vorlageDialog(r));
 }
 
-/* Verschicken über das E-Mail-Programm des Nutzers (lib/emailversand.js). */
-const VERSANDART = { manuell: 'von Hand vermerkt', eml: 'per E-Mail-Programm', teilen: 'geteilt', mailto: 'per E-Mail-Programm' };
-const WEG_TEXT = {
-  eml: { name: 'E-Mail-Programm am Rechner', knopf: 'E-Mail erstellen', text: 'Kontovia speichert die fertige E-Mail mit Anhang als Datei. Öffnen Sie sie, dann erscheint sie in Outlook, Thunderbird oder Apple Mail zum Absenden.' },
-  teilen: { name: 'Teilen', knopf: 'Teilen', text: 'Übergibt Anhang und Text an Mail, Outlook, Gmail oder eine andere App auf diesem Gerät. Die Empfängeradresse kopiert Kontovia vorher, Sie fügen sie dort ein.' },
-  mailto: { name: 'Nur den Text übergeben', knopf: 'E-Mail-Programm öffnen', text: 'Öffnet Ihr E-Mail-Programm mit Empfänger, Betreff und Text. Den Anhang fügen Sie dort selbst hinzu, vorher speichern Sie ihn mit „PDF speichern“.' },
+/* Verschicken: direkt über Gmail oder Outlook, sonst über das E-Mail-Programm des Nutzers (lib/emailversand.js). */
+const VERSANDART = {
+  manuell: 'von Hand vermerkt', google: 'über Gmail', microsoft: 'über Outlook', eml: 'per E-Mail-Programm', teilen: 'geteilt', mailto: 'per E-Mail-Programm',
 };
+const WEG_TEXT = {
+  google: {
+    name: 'Mit Gmail senden', knopf: 'Senden',
+    text: (email) => (email
+      ? `Kontovia sendet die E-Mail direkt über Ihr Google-Konto ${email}. Sie steht danach in Gmail unter „Gesendet“.`
+      : 'Kontovia sendet die E-Mail direkt über Ihr Google-Konto. Beim ersten Mal fragt Google in einem kleinen Fenster, ob Kontovia E-Mails in Ihrem Namen senden darf. Die E-Mail steht danach in Gmail unter „Gesendet“.'),
+  },
+  microsoft: {
+    name: 'Mit Outlook senden (Outlook.com oder Microsoft 365)', knopf: 'Senden',
+    text: (email) => (email
+      ? `Kontovia sendet die E-Mail direkt über Ihr Microsoft-Konto ${email}. Sie steht danach in Outlook unter „Gesendete Elemente“.`
+      : 'Kontovia sendet die E-Mail direkt über Ihr Microsoft-Konto. Beim ersten Mal fragt Microsoft in einem kleinen Fenster, ob Kontovia E-Mails in Ihrem Namen senden darf. Die E-Mail steht danach in Outlook unter „Gesendete Elemente“.'),
+  },
+  eml: { name: 'E-Mail-Datei für Outlook, Thunderbird oder Apple Mail', knopf: 'E-Mail erstellen', text: () => 'Kontovia legt die fertige E-Mail mit Anhang in Ihren Download-Ordner. Ein Klick darauf in der Download-Leiste des Browsers öffnet sie in Ihrem E-Mail-Programm, dort senden Sie sie ab.' },
+  teilen: { name: 'Teilen', knopf: 'Teilen', text: () => 'Übergibt Anhang und Text an Mail, Outlook, Gmail oder eine andere App auf diesem Gerät. Die Empfängeradresse kopiert Kontovia vorher, Sie fügen sie dort ein.' },
+  mailto: { name: 'Nur den Text übergeben', knopf: 'E-Mail-Programm öffnen', text: () => 'Öffnet Ihr E-Mail-Programm mit Empfänger, Betreff und Text. Den Anhang fügen Sie dort selbst hinzu, vorher speichern Sie ihn mit „PDF speichern“.' },
+};
+/* Microsoft nimmt Anfragen bis 4 MB an; Base64 macht Anhänge um ein Drittel größer. */
+const MS_ANHANG_MAX = 2.8 * 1024 * 1024;
 
 const mitTouch = () => globalThis.matchMedia?.('(pointer: coarse)').matches;
 
@@ -366,7 +382,8 @@ async function sendenDialog(r, { offen = true } = {}) {
       <div class="field"><label>Anhang</label>
         <label class="check"><input type="checkbox" id="reMitPdf" checked> PDF mit E-Rechnung (ZUGFeRD)</label>
         <label class="check"><input type="checkbox" id="reMitXml" ${behoerde ? 'checked' : ''}> XRechnung als eigene Datei${behoerde ? '' : ' (meist nur für Behörden nötig)'}</label></div>
-      <div class="field mb0"><label>Weg</label><div id="reWege"></div><span class="hint" id="reWegText"></span></div>`,
+      <div class="field mb0"><label>Weg</label><div id="reWege"></div>
+        <span class="hint"><span id="reWegText"></span> <a href="#" id="reKontoWechseln" hidden>Anderes Konto</a></span></div>`,
     foot: `<button class="btn left ghost" data-vermerk title="Wenn Sie die Rechnung anders verschickt haben">Als versendet vermerken</button>
       <button class="btn" data-pdf>${icon('pdf', 15).__raw} PDF speichern</button>
       <button class="btn primary" data-senden disabled>${icon('external', 15).__raw} <span>Wird vorbereitet …</span></button>`,
@@ -390,22 +407,45 @@ async function sendenDialog(r, { offen = true } = {}) {
     teilbar[liste.map((d) => d.name).join('|')] = await api.file.canShare(liste.map(({ name, mime }) => ({ name, mime }))).catch(() => false);
   }
   const kannTeilen = (liste) => liste.length > 0 && !!teilbar[liste.map((d) => d.name).join('|')];
+  // Gmail und Outlook gibt es nur, wenn Kontovia dafür eingerichtet ist und das Gerät das Anmeldefenster kann.
+  let konten = await api.mail.status().catch(() => null);
+  if (!m.root.isConnected) return;
 
-  const wege = WEGE.filter((w) => w !== 'teilen' || kannTeilen([dateien.pdf]));
-  let weg = wege.includes(prefs.mailWeg) ? prefs.mailWeg : (mitTouch() && wege.includes('teilen') ? 'teilen' : 'eml');
+  const wege = WEGE.filter((w) => (DIREKT.includes(w) ? !!konten?.[w]?.verfuegbar : w !== 'teilen' || kannTeilen([dateien.pdf])));
+  const vorschlag = () => DIREKT.find((w) => wege.includes(w) && konten?.[w]?.email)
+    || (mitTouch() && wege.includes('teilen') ? 'teilen' : 'eml');
+  let weg = wege.includes(prefs.mailWeg) ? prefs.mailWeg : vorschlag();
 
   const zeigen = () => {
     $m('#reWege').innerHTML = wege.map((w) => `<label class="check"><input type="radio" name="reWeg" value="${w}" ${w === weg ? 'checked' : ''}> ${esc(WEG_TEXT[w].name)}</label>`).join('');
     const liste = gewaehlt();
-    let hinweis = WEG_TEXT[weg].text;
-    if (weg === 'teilen' && liste.length && !kannTeilen(liste)) hinweis = 'Dieses Gerät kann die XRechnung nicht teilen. Nehmen Sie sie aus dem Anhang oder wählen Sie einen anderen Weg.';
+    const email = konten?.[weg]?.email || '';
+    let hinweis = WEG_TEXT[weg].text(email);
+    let gesperrt = weg !== 'mailto' && !liste.length;
+    if (weg === 'teilen' && liste.length && !kannTeilen(liste)) {
+      hinweis = 'Dieses Gerät kann die XRechnung nicht teilen. Nehmen Sie sie aus dem Anhang oder wählen Sie einen anderen Weg.';
+      gesperrt = true;
+    }
+    if (weg === 'microsoft' && sum(liste, (d) => d.bytes.length) > MS_ANHANG_MAX) {
+      hinweis = 'Der Anhang ist für Outlook zu groß. Wählen Sie einen anderen Weg, etwa die E-Mail-Datei.';
+      gesperrt = true;
+    }
     $m('#reWegText').textContent = hinweis;
+    $m('#reKontoWechseln').hidden = !(DIREKT.includes(weg) && email);
     const knopf = $m('[data-senden]');
     knopf.querySelector('span').textContent = WEG_TEXT[weg].knopf;
-    knopf.disabled = (weg !== 'mailto' && !liste.length) || (weg === 'teilen' && !kannTeilen(liste));
+    knopf.disabled = gesperrt;
   };
   zeigen();
   $m('#reWege').addEventListener('change', (e) => { if (e.target.name === 'reWeg') { weg = e.target.value; setPref('mailWeg', weg); zeigen(); } });
+  $m('#reKontoWechseln').addEventListener('click', async (e) => {
+    e.preventDefault();
+    try {
+      konten = await api.mail.abmelden(weg);
+      zeigen();
+      ok('Beim nächsten Senden wählen Sie das Konto neu');
+    } catch (ex) { err('Das hat nicht geklappt', ex.message); }
+  });
   $m('#reMitPdf').addEventListener('change', zeigen);
   $m('#reMitXml').addEventListener('change', zeigen);
 
@@ -452,6 +492,20 @@ async function sendenDialog(r, { offen = true } = {}) {
     const empfaenger = ziel.join(', ');
     knopf.disabled = true;
     try {
+      if (DIREKT.includes(weg)) {
+        // Ohne Freigabe öffnet api.mail.senden das Fenster beim Anbieter: Das muss im selben Zug wie der Klick geschehen.
+        const auftrag = weg === 'google'
+          ? api.mail.senden({ anbieter: 'google', mimeBase64: base64(emlBauen({ an: ziel, betreff, text, anhaenge: liste }, { entwurf: false })) })
+          : api.mail.senden({ anbieter: 'microsoft', nachricht: graphNachricht({ an: ziel, betreff, text, anhaenge: liste }) });
+        knopf.querySelector('span').textContent = konten?.[weg]?.bereit ? 'Wird gesendet …' : 'Bitte im Fenster bestätigen …';
+        const erg = await auftrag;
+        m.close();
+        ok('E-Mail gesendet', erg.von ? `über ${erg.von}` : '');
+        // Hier weiß Kontovia, dass die E-Mail abging: gleich vermerken.
+        try { await versandVermerken(r.id, weg, (erg.an || ziel).join(', ')); } catch (ex) { warn('Gesendet, aber nicht vermerkt', ex.message); }
+        refresh();
+        return;
+      }
       if (weg === 'teilen') {
         // Das Teilen-Menü kennt keinen Empfänger: die Adresse liegt dann in der Zwischenablage.
         // Nicht abwarten: Das Teilen-Menü muss ohne Umweg auf den Klick folgen.
@@ -460,8 +514,8 @@ async function sendenDialog(r, { offen = true } = {}) {
         if (geteilt) nachfragen('teilen', empfaenger, empfaenger ? `Die Adresse ${empfaenger} ist kopiert. Fügen Sie sie in der E-Mail als Empfänger ein.` : 'Die Dateien sind übergeben.');
       } else if (weg === 'eml') {
         const eml = emlBauen({ an: ziel, betreff, text, anhaenge: liste });
-        const name = await api.file.save({ dataBase64: base64(eml), defaultName: `E-Mail_${String(r.nummer).replace(/[^\w.-]+/g, '_')}.eml`, filters: [{ name: 'E-Mail', extensions: ['eml'] }] });
-        if (name) nachfragen('eml', empfaenger, `„${name}“ ist gespeichert. Öffnen Sie die Datei mit einem Doppelklick, prüfen Sie die E-Mail und senden Sie sie ab.`);
+        const name = await api.file.download({ dataBase64: base64(eml), defaultName: `E-Mail_${String(r.nummer).replace(/[^\w.-]+/g, '_')}.eml` });
+        if (name) nachfragen('eml', empfaenger, `„${name}“ liegt in Ihrem Download-Ordner. Klicken Sie in der Download-Leiste des Browsers darauf, dann öffnet sich die E-Mail in Ihrem E-Mail-Programm. Prüfen Sie sie dort und senden Sie sie ab.`);
       } else {
         const { url, gekuerzt } = mailtoAdresse({ an: ziel, betreff, text });
         if (gekuerzt) navigator.clipboard?.writeText(text).catch(() => {});
@@ -473,9 +527,12 @@ async function sendenDialog(r, { offen = true } = {}) {
           : 'Ihr E-Mail-Programm sollte sich geöffnet haben. Den Anhang fügen Sie dort selbst hinzu.');
       }
     } catch (ex) {
-      err('Das hat nicht geklappt', ex.message);
+      if (ex.code === 'ABGEBROCHEN') warn('Nicht gesendet', ex.message);
+      else if (ex.code === 'ERNEUT') warn('Bitte noch einmal senden', ex.message);
+      else err('Nicht gesendet', ex.message);
+      if (DIREKT.includes(weg)) konten = await api.mail.status().catch(() => konten);
     }
-    if (knopf.isConnected) knopf.disabled = false;
+    if (knopf.isConnected) { knopf.disabled = false; zeigen(); }
   });
 }
 

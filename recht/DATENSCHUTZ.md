@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 5. Oktober 2026, Programmversion 2.15.0
+Stand: 5. Oktober 2026, Programmversion 2.16.0
 
 ---
 
@@ -333,6 +333,38 @@ Google steht dort nicht. Die Kennung wird bei der Rückkehr sofort gelöscht.
 Ohne Google-Konto lassen sich Termine als Kalenderdatei (.ics) exportieren und
 importieren; dabei entsteht keine Verbindung ins Netz.
 
+## Rechnungen per E-Mail senden (freiwillig)
+
+Kontovia hat keinen eigenen Mailserver. Eine Rechnung per E-Mail geht immer
+über Ihr eigenes Konto oder Programm, nie über einen Server des Herstellers.
+
+**Über Gmail oder Outlook direkt:** Wählen Sie diesen Weg, spricht Ihr Browser
+direkt mit Google (`accounts.google.com` für die Freigabe,
+`gmail.googleapis.com` für das Senden) bzw. Microsoft
+(`login.microsoftonline.com` für die Freigabe, `graph.microsoft.com` für das
+Senden). Beim ersten Mal fragt der Anbieter in einem eigenen Fenster, ob
+Kontovia in Ihrem Namen E-Mails senden darf. Kontovia erhält nur das Recht zu
+**senden**, nicht, Ihre E-Mails zu lesen. Übertragen werden Empfänger, Betreff,
+Text und die gewählten Anhänge (Rechnung als PDF, auf Wunsch die XRechnung).
+Die E-Mail liegt danach in Ihrem Konto unter „Gesendet“. Der Zugriff gilt rund
+eine Stunde, liegt nur im Arbeitsspeicher des Browsers und verfällt, sobald
+Kontovia sich sperrt. Im Tresor merkt sich Kontovia auf diesem Gerät nur die
+Adresse des Kontos, mit dem zuletzt gesendet wurde; „Anderes Konto“ löscht sie.
+Bei Google gilt die Freigabe zusammen mit der für Google Kalender: Trennen Sie
+dort den Kalender, endet auch das Senden.
+
+**Über Ihr E-Mail-Programm:** Kontovia legt die fertige E-Mail als Datei in
+Ihren Download-Ordner, übergibt sie über das Teilen-Menü Ihres Geräts oder
+öffnet Ihr E-Mail-Programm mit Empfänger, Betreff und Text. Dabei entsteht
+keine Verbindung ins Netz; gesendet wird erst aus Ihrem Programm.
+
+**Rechtsgrundlage:** Erfüllung Ihrer Verträge mit Ihren Kunden bzw. Ihr
+berechtigtes Interesse am Versand Ihrer Rechnungen (Art. 6 Abs. 1 lit. b und f
+DSGVO). Für die Verarbeitung bei Google oder Microsoft gelten deren
+Bedingungen; bei geschäftlicher Nutzung sollte das Konto von einem
+Auftragsverarbeitungsvertrag gedeckt sein (etwa Google Workspace oder
+Microsoft 365). Der Hersteller von Kontovia erhält dabei keine Daten.
+
 ## Programmaktualisierung (freiwillig)
 
 Kontovia bringt die Adresse einer Versionsdatei mit. Abgefragt wird sie
@@ -433,9 +465,11 @@ keine automatisierte Entscheidungsfindung und kein Profiling (Art. 22 DSGVO).
 
 Die Auslieferung der Web-App läuft über GitHub (GitHub, Inc., USA) und die
 Cloud-Anmeldung, der Cloud-Speicher und der Kalenderabgleich über Google
-(Google Ireland Limited bzw. Google LLC, USA). Die Übermittlung in die USA stützt
-sich auf den Angemessenheitsbeschluss der EU-Kommission zum EU-US Data Privacy
-Framework, bei dem beide Unternehmen zertifiziert sind, und ergänzend auf
+(Google Ireland Limited bzw. Google LLC, USA). Senden Sie Rechnungen direkt über
+Gmail oder Outlook, geht die E-Mail über Google bzw. Microsoft (Microsoft
+Ireland Operations Limited bzw. Microsoft Corporation, USA). Die Übermittlung in
+die USA stützt sich auf den Angemessenheitsbeschluss der EU-Kommission zum
+EU-US Data Privacy Framework, bei dem diese Unternehmen zertifiziert sind, und ergänzend auf
 Standardvertragsklauseln. Die Buchhaltung selbst verlässt Ihr Gerät nur
 verschlüsselt.
 
