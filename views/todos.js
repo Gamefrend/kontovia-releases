@@ -20,6 +20,7 @@ import { openAppointmentDialog } from './calendar.js';
 import { expandAppointments } from '../lib/termine.js';
 import { prefs, setPref } from '../lib/prefs.js';
 import { openPopover } from '../lib/popover.js';
+import { zeileWeg } from '../lib/bewegung.js';
 import { richEditor, bilderEntfernen } from '../lib/richeditor.js';
 import { aufgabenHtml, klartext, bildIds } from '../lib/richtext.js';
 import {
@@ -157,15 +158,18 @@ export function todoRow(todo, { compact = false } = {}) {
   const art = aufgabenArt(todo);
   const wdh = art === 'wiederholend'
     ? `<span class="badge tiny" title="Nach dem Abhaken kommt die Aufgabe von selbst wieder${todo.wiederholung?.anzahl ? `, bisher ${int(todo.wiederholung.anzahl)}-mal erledigt` : ''}">${icon('refresh', 11).__raw} ${esc(wiederholungText(todo.wiederholung))}</span>` : '';
-  return `<div class="todo-item${todo.done ? ' done' : ''}" data-todo="${esc(todo.id)}">
+  // In der großen Liste steht die Fälligkeit rechts in einer eigenen Spalte, damit sie bündig untereinander liegt.
+  const faellig = dueBadge(todo);
+  return `<div class="todo-item${compact ? '' : ' todo-voll'}${todo.done ? ' done' : ''}" data-todo="${esc(todo.id)}">
     <input type="checkbox" class="todo-check" data-toggle-todo="${esc(todo.id)}" ${todo.done ? 'checked' : ''}
       aria-label="${esc(todo.title)} ${todo.done ? 'wieder öffnen' : art === 'ziel' ? 'als geschafft abhaken' : 'als erledigt abhaken'}">
     <div class="todo-main" data-edit-todo="${esc(todo.id)}" role="button" tabindex="0">
       <div class="todo-title">${esc(todo.title || '(ohne Titel)')}</div>
-      <div class="todo-meta">${dueBadge(todo)}${wdh}${teile}${bilder}${apptChip(todo)}${compact ? '' : linkChips(todo)}${notiz}</div>
+      <div class="todo-meta">${compact ? faellig : ''}${wdh}${teile}${bilder}${apptChip(todo)}${compact ? '' : linkChips(todo)}${notiz}</div>
       ${art === 'ziel' ? zielBlock(todo, compact) : ''}
       ${unter}
     </div>
+    ${!compact && faellig ? `<div class="todo-side">${faellig}</div>` : ''}
   </div>`;
 }
 
@@ -175,10 +179,20 @@ export function todoRow(todo, { compact = false } = {}) {
  */
 export function wireTodoRows(root, redraw) {
   $$('[data-toggle-todo]', root).forEach((c) => c.addEventListener('change', async () => {
-    await setTodoDone(c.dataset.toggleTodo, c.checked);
+    // Die Zeile gleitet sofort weg, das Speichern läuft daneben. Scheitert es (etwa wegen der Rolle), kommt sie zurück.
+    const zeile = c.closest('.todo-item');
+    const weg = zeileWeg(zeile);
+    try {
+      await setTodoDone(c.dataset.toggleTodo, c.checked);
+    } catch (e) {
+      zeile?.getAnimations().forEach((a) => a.cancel());
+      c.checked = !c.checked;
+      throw e;
+    }
     const t = sel.todo(c.dataset.toggleTodo);
     if (c.checked && t && aufgabenArt(t) === 'wiederholend') ok('Erledigt', `${t.title}, nächstes Mal am ${fmtDate(t.dueDate)}`);
     else if (c.checked) ok('Erledigt', t?.title || '');
+    await weg;
     redraw();
   }));
   $$('[data-ziel-add]', root).forEach((b) => {
@@ -251,20 +265,7 @@ export function aufgabenAbschnitt(el, typ, id, { titel = 'Aufgaben dazu', vorgab
 /* -------------------------------------------------------------------------- */
 
 export async function render(root, params, { actions } = {}) {
-  actions.innerHTML = html`
-    <div class="seg" role="group" aria-label="Welche Aufgaben">
-      ${raw([['open', 'Offen'], ['done', 'Erledigt'], ['all', 'Alle']].map(([k, t]) =>
-        `<button data-show="${k}" class="${state.show === k ? 'active' : ''}" aria-pressed="${state.show === k}">${t}</button>`).join(''))}
-    </div>
-    <button class="btn primary" id="newTodo">${icon('plus', 16)} Aufgabe</button>`;
-  $$('[data-show]', actions).forEach((b) => b.addEventListener('click', () => {
-    state.show = b.dataset.show;
-    $$('[data-show]', actions).forEach((x) => {
-      x.classList.toggle('active', x === b);
-      x.setAttribute('aria-pressed', String(x === b));
-    });
-    draw(root);
-  }));
+  actions.innerHTML = html`<button class="btn primary" id="newTodo">${icon('plus', 16)} Aufgabe</button>`;
   $('#newTodo', actions).addEventListener('click', () => openTodoDialog(null));
   draw(root);
 }
@@ -325,47 +326,51 @@ function draw(root) {
   const hz = horizont();
   const ende = horizontEnde(today, hz);
 
+  const leer = (titel, text) => `<div class="card">${emptyState(titel, text).__raw}</div>`;
   let body;
   if (!alle.length) {
-    body = emptyState('Noch keine Aufgaben', 'Mit „Aufgabe“ oben rechts legen Sie die erste an. Aufgaben können Text, Bilder und Unteraufgaben enthalten und lassen sich mit Terminen, Buchungen, Kontakten und Rechnungen verknüpfen.').__raw;
+    body = leer('Noch keine Aufgaben', 'Mit „Aufgabe“ oben rechts legen Sie die erste an. Aufgaben können Text, Bilder und Unteraufgaben enthalten und lassen sich mit Terminen, Buchungen, Kontakten und Rechnungen verknüpfen.');
   } else if (state.show === 'done') {
     const rows = erledigt.filter(matches).sort((a, b) => String(b.doneAt || '').localeCompare(String(a.doneAt || '')));
-    body = rows.length ? group('Erledigt', rows) : emptyState('Nichts gefunden', state.q ? 'Keine erledigte Aufgabe passt zur Suche.' : 'Noch nichts abgehakt.').__raw;
+    body = rows.length ? group('Erledigt', rows, 'pos') : leer('Nichts gefunden', state.q ? 'Keine erledigte Aufgabe passt zur Suche.' : 'Noch nichts abgehakt.');
   } else {
     const sorted = openTodosSorted(today).filter(matches);
     const teile = [
-      ['Überfällig', sorted.filter((t) => { const d = dueOf(t, today).date; return d && d < today; })],
-      ['Heute', sorted.filter((t) => dueOf(t, today).date === today)],
-      [horizontTitel(hz), sorted.filter((t) => { const d = dueOf(t, today).date; return d > today && d <= ende; })],
-      ['Später', sorted.filter((t) => dueOf(t, today).date > ende)],
-      ['Ohne Datum', sorted.filter((t) => !dueOf(t, today).date)],
+      ['Überfällig', 'neg', sorted.filter((t) => { const d = dueOf(t, today).date; return d && d < today; })],
+      ['Heute', 'warn', sorted.filter((t) => dueOf(t, today).date === today)],
+      [horizontTitel(hz), 'accent', sorted.filter((t) => { const d = dueOf(t, today).date; return d > today && d <= ende; })],
+      ['Später', 'muted', sorted.filter((t) => dueOf(t, today).date > ende)],
+      ['Ohne Datum', 'muted', sorted.filter((t) => !dueOf(t, today).date)],
     ];
-    body = teile.filter(([, rows]) => rows.length).map(([title, rows]) => group(title, rows)).join('');
+    body = teile.filter(([, , rows]) => rows.length).map(([title, ton, rows]) => group(title, rows, ton)).join('');
     if (state.show === 'all') {
       const fertig = erledigt.filter(matches).sort((a, b) => String(b.doneAt || '').localeCompare(String(a.doneAt || '')));
-      if (fertig.length) body += group('Erledigt', fertig);
+      if (fertig.length) body += group('Erledigt', fertig, 'pos');
     }
     if (!body) {
       body = state.q
-        ? emptyState('Nichts gefunden', 'Keine Aufgabe passt zur Suche.').__raw
-        : emptyState('Alles erledigt', erledigt.length ? `${int(erledigt.length)} erledigte Aufgaben stehen unter „Erledigt“.` : 'Keine offenen Aufgaben.').__raw;
+        ? leer('Nichts gefunden', 'Keine Aufgabe passt zur Suche.')
+        : leer('Alles erledigt', erledigt.length ? `${int(erledigt.length)} erledigte Aufgaben stehen unter „Erledigt“.` : 'Keine offenen Aufgaben.');
     }
   }
 
+  const reiter = [['open', 'Offen', offen.length], ['done', 'Erledigt', erledigt.length], ['all', 'Alle', alle.length]];
   root.innerHTML = html`
-    <div class="card">
-      <div class="card-head">
-        <h3>Aufgaben</h3>
-        <span class="sub">${int(offen.length)} offen · ${int(erledigt.length)} erledigt</span>
-        <div class="spacer"></div>
-        ${alle.length > 6 ? raw(`<input type="search" class="search" id="todoSearch" placeholder="Suchen …" aria-label="Aufgaben durchsuchen" value="${esc(state.q)}" style="max-width:220px">`) : ''}
-        ${alle.length && state.show !== 'done' ? raw(`<button class="btn sm" id="todoHorizont" aria-haspopup="dialog" aria-expanded="false" title="Wie weit die Liste vorausschaut">${icon('calendar', 14).__raw} Vorschau: ${esc(horizontText(hz))} ${icon('down', 13).__raw}</button>`) : ''}
+    <div class="todo-bar">
+      <div class="seg todo-seg" role="group" aria-label="Welche Aufgaben">
+        ${raw(reiter.map(([k, t, n]) =>
+          `<button type="button" data-show="${k}" class="${state.show === k ? 'active' : ''}" aria-pressed="${state.show === k}">${t}<span class="zahl">${int(n)}</span></button>`).join(''))}
       </div>
-      <div class="card-body">
-        <div id="todoList">${raw(body)}</div>
-      </div>
-    </div>`;
+      ${alle.length ? raw(`<input type="search" class="search todo-suche" id="todoSearch" placeholder="Aufgaben durchsuchen …" aria-label="Aufgaben durchsuchen" value="${esc(state.q)}">`) : ''}
+      <div class="spacer"></div>
+      ${alle.length && state.show !== 'done' ? raw(`<button class="btn sm" id="todoHorizont" aria-haspopup="dialog" aria-expanded="false" title="Wie weit die Liste vorausschaut">${icon('calendar', 14).__raw} Vorschau: ${esc(horizontText(hz))} ${icon('down', 13).__raw}</button>`) : ''}
+    </div>
+    <div id="todoList">${raw(body)}</div>`;
 
+  $$('[data-show]', root).forEach((b) => b.addEventListener('click', () => {
+    state.show = b.dataset.show;
+    draw(root);
+  }));
   $('#todoHorizont', root)?.addEventListener('click', (e) => zeitraumWaehlen(e.currentTarget, root));
   const suche = $('#todoSearch', root);
   suche?.addEventListener('input', () => {
@@ -379,11 +384,12 @@ function draw(root) {
   wireTodoRows(root, () => draw(root));
 }
 
-function group(title, rows) {
-  return `<div class="todo-group">
-    <div class="todo-group-title">${esc(title)} <span class="muted">${rows.length}</span></div>
-    ${rows.map((t) => todoRow(t)).join('')}
-  </div>`;
+/** Eine Gruppe als eigene Karte; der Punkt vor dem Namen zeigt die Dringlichkeit. */
+function group(title, rows, ton = 'muted') {
+  return `<section class="card todo-group">
+    <header class="todo-group-title"><i class="todo-punkt ${esc(ton)}" aria-hidden="true"></i><h3>${esc(title)}</h3><span class="badge tiny">${rows.length}</span></header>
+    <div class="todo-liste">${rows.map((t) => todoRow(t)).join('')}</div>
+  </section>`;
 }
 
 /* -------------------------------------------------------------------------- */

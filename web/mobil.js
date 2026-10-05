@@ -2,41 +2,65 @@
  * Kontovia – Bedienung auf schmalen Bildschirmen.
  *
  * Auf dem iPhone ist kein Platz für eine feste Seitenleiste. web.css macht sie
- * dort zu einer ausklappbaren Leiste; hier kommt der Knopf dazu, der sie
- * öffnet. Die Oberfläche selbst bleibt unverändert – der Knopf wird in die
- * Kopfzeile gesetzt, sobald sie nach dem Entsperren aufgebaut ist.
+ * dort zu einem Blatt von unten: „Mehr“ in der Leiste unten öffnet es, mit allen
+ * Bereichen als Kacheln und darunter Konto, Erscheinungsbild und Sperren. Die
+ * Oberfläche selbst bleibt unverändert; Leiste und Hintergrund werden eingesetzt,
+ * sobald die Hülle nach dem Entsperren aufgebaut ist.
  */
 
 import { markierung } from '../lib/bewegung.js';
 
-const SYMBOL = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
-
 function einsetzen() {
   const shell = document.querySelector('.shell');
   const top = shell?.querySelector('.topbar');
-  if (!top || top.querySelector('.kv-menu')) return;
-
-  const knopf = document.createElement('button');
-  knopf.className = 'icon-btn kv-menu';
-  knopf.type = 'button';
-  knopf.setAttribute('aria-label', 'Menü öffnen');
-  knopf.innerHTML = SYMBOL;
-  top.prepend(knopf);
+  if (!top || shell.querySelector('.kv-nav-hg')) return;
 
   const hg = document.createElement('div');
   hg.className = 'kv-nav-hg';
   shell.append(hg);
 
   const zu = () => shell.classList.remove('nav-offen');
-  knopf.addEventListener('click', () => shell.classList.toggle('nav-offen'));
   hg.addEventListener('click', zu);
   // Nach der Wahl eines Eintrags wieder einklappen.
-  shell.querySelector('.sidebar')?.addEventListener('click', (e) => {
+  const blatt = shell.querySelector('.sidebar');
+  blatt?.addEventListener('click', (e) => {
     if (e.target.closest('[data-view], #lockBtn, #updateBtn')) zu();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') zu(); });
+  if (blatt) blattWegwischen(blatt, shell, zu);
   kopfzeileBeobachten();
   tabsEinsetzen(shell, zu);
+}
+
+/**
+ * Das Blatt folgt dem Finger nach unten und schließt, wenn man weit genug gezogen
+ * hat. Nur wenn es ganz oben steht: Sonst gehört die Bewegung dem Scrollen darin.
+ */
+function blattWegwischen(blatt, shell, zu) {
+  let start = null;
+  let weg = 0;
+  blatt.addEventListener('touchstart', (e) => {
+    start = blatt.scrollTop <= 0 && e.touches.length === 1 ? e.touches[0].clientY : null;
+    weg = 0;
+  }, { passive: true });
+  blatt.addEventListener('touchmove', (e) => {
+    if (start === null) return;
+    weg = e.touches[0].clientY - start;
+    if (weg <= 0) { blatt.style.transform = ''; return; }
+    blatt.style.transition = 'none';
+    blatt.style.transform = `translateY(${weg}px)`;
+    e.preventDefault();
+  }, { passive: false });
+  const ende = () => {
+    if (start === null) return;
+    start = null;
+    blatt.style.transition = '';
+    blatt.style.transform = '';
+    if (weg > 90) zu();
+    weg = 0;
+  };
+  blatt.addEventListener('touchend', ende);
+  blatt.addEventListener('touchcancel', ende);
 }
 
 const SVG = (d) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;

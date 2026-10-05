@@ -45,18 +45,37 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
 @media (max-width: 820px) {
   .shell { grid-template-columns: 1fr; position: relative; }
 
-  /* Die Seitenleiste wird zur ausklappbaren Leiste (Knopf oben links). */
+  /* Die Seitenleiste wird zum Blatt von unten („Mehr“ in der Leiste unten): alle Bereiche als
+     Kacheln, darunter Konto, Erscheinungsbild und Sperren. Ein Wisch nach unten schließt es (mobil.js). */
   .sidebar {
-    position: fixed; inset: 0 auto 0 0; width: min(290px, 84vw); z-index: 160;
-    transform: translateX(-102%); transition: transform .45s var(--aus), box-shadow .45s; box-shadow: none;
+    position: fixed; inset: auto 0 0 0; width: auto; z-index: 160;
+    max-height: min(88dvh, 720px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+    gap: 14px; padding: 10px 16px calc(14px + env(safe-area-inset-bottom));
+    border-right: 0; border-top: 1px solid var(--border); border-radius: 22px 22px 0 0;
+    transform: translateY(104%); visibility: hidden;
+    transition: transform .42s var(--aus), visibility 0s .42s;
     box-shadow: var(--shadow-lg);
-    padding-bottom: env(safe-area-inset-bottom);
   }
-  .shell.nav-offen .sidebar { transform: none; box-shadow: var(--shadow-lg); }
-  /* Der Hintergrund hinter der Leiste blendet ein und aus, statt zu springen. */
+  .shell.nav-offen .sidebar { transform: none; visibility: visible; transition: transform .42s var(--aus), visibility 0s; }
+  /* Griff oben am Blatt, wie bei den Fenstern. */
+  .sidebar::before { content: ''; flex: none; width: 38px; height: 4px; margin: 0 auto 2px; border-radius: 3px; background: var(--border-strong); }
+  .sidebar .such-knopf, .sidebar .nav-sep, .sidebar .nav-spacer, .sidebar .nav .marke { display: none; }
+  .sidebar .brand-wechsel { margin: 0; padding: 8px; }
+  .sidebar .nav { flex: none; overflow: visible; gap: 10px; }
+  .sidebar .nav-group { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .sidebar .nav-item {
+    flex-direction: column; justify-content: center; gap: 7px; height: auto; min-height: 78px; padding: 12px 6px;
+    text-align: center; font-size: 12.5px; line-height: 1.25; border-radius: 14px; background: var(--surface-2);
+  }
+  .sidebar .nav-item .ico { width: 22px; height: 22px; }
+  .sidebar .nav .nav-item.active { background: var(--accent-soft); color: var(--accent); }
+  .sidebar-foot { padding-top: 12px; }
+  .sidebar-foot .foot-knoepfe .btn { height: 44px; }
+  /* Der Hintergrund hinter dem Blatt blendet ein und aus, statt zu springen. */
   .kv-nav-hg { display: block; position: fixed; inset: 0; z-index: 150; background: rgba(4, 3, 2, .5); opacity: 0; pointer-events: none; transition: opacity .35s var(--aus); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); }
   .shell.nav-offen .kv-nav-hg { opacity: 1; pointer-events: auto; }
-  .kv-menu { display: grid; margin-left: -6px; }
+  /* Das Menü liegt in der Leiste unten; der Knopf oben links entfällt. */
+  .kv-menu { display: none; }
 
   /* Kopf der Ansicht. Die Leiste mit Menü, Titel und Suche ist immer gleich hoch und
      bleibt oben stehen; es gibt keinen Zustand „kleiner“, der beim Scrollen
@@ -280,4 +299,16 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   table.tx-list td.col-kat { grid-row: 2; grid-column: 2; font-size: 12px; }
   table.tx-list td.col-status { grid-row: 2; grid-column: 3; justify-self: end; }
   table.tx-list tr.empty-row, table.tx-list tr.empty-row > td { display: block; }
+}
+
+/* Das Blatt „Mehr“: die Kacheln kommen beim Öffnen nacheinander hoch. */
+@keyframes kachel-auf { from { opacity: 0; transform: translateY(14px) scale(.96); } }
+@media (max-width: 820px) {
+  .shell.nav-offen .sidebar .nav-item { animation: kachel-auf .46s var(--aus) both; }
+  .shell.nav-offen .sidebar .nav-item:nth-child(1) { animation-delay: .06s; }
+  .shell.nav-offen .sidebar .nav-item:nth-child(2) { animation-delay: .09s; }
+  .shell.nav-offen .sidebar .nav-item:nth-child(3) { animation-delay: .12s; }
+  .shell.nav-offen .sidebar .nav-item:nth-child(4) { animation-delay: .15s; }
+  .shell.nav-offen .sidebar .nav-item:nth-child(5) { animation-delay: .18s; }
+  .shell.nav-offen .sidebar .nav-item:nth-child(6) { animation-delay: .21s; }
 }

@@ -15,6 +15,7 @@ import { renderCloudCard, renderUpdateCard } from './cloudpanel.js';
 import { renderCalendarCard } from './calendarsync.js';
 import { mahnKarte } from './mahneinstellungen.js';
 import { table, mountTables } from '../lib/table.js';
+import { bereichEin } from '../lib/bewegung.js';
 
 const api = window.kontovia;
 
@@ -24,6 +25,57 @@ const FELDER = [
   'taxMode', 'accountingBasis', 'defaultVatRate', 'vatPeriod', 'vatDeadline', 'chartOfAccounts', 'fiscalYear',
   'autoLockMinutes', 'startView',
 ];
+
+/**
+ * Die Einstellungen sind in vier Bereiche geteilt, die nebeneinander (am Telefon
+ * als Reiterzeile) zur Wahl stehen. Alle Karten liegen immer in der Seite, nur der
+ * gewählte Bereich ist zu sehen; so behalten Eingaben und Verdrahtung ihren Platz.
+ */
+const BEREICHE = [
+  { id: 'firma', icon: 'building', titel: 'Firma & Steuern', sub: 'Firmendaten, Steuer, Mahnwesen, Festschreibung' },
+  { id: 'sicherheit', icon: 'shield', titel: 'Sicherheit & Zugang', sub: 'Sperre, Geräte, Benutzer, Konten' },
+  { id: 'daten', icon: 'archive', titel: 'Daten & Cloud', sub: 'Sicherung, Speicherort, Abgleich, Kalender' },
+  { id: 'darstellung', icon: 'settings', titel: 'Darstellung & Update', sub: 'Erscheinungsbild, Start, Programmfassung' },
+];
+/** Wohin ein Sprung aus anderen Ansichten (`abschnitt`) führt. */
+const ABSCHNITT_BEREICH = { cloud: 'daten', speicher: 'daten', mahnwesen: 'firma', benutzer: 'sicherheit', konten: 'sicherheit' };
+const HINWEIS = 'Firmendaten, Steuer, Sicherheit und Darstellung gelten erst nach dem Übernehmen.';
+let bereich = BEREICHE[0].id;
+
+/** Zeigt einen Bereich und merkt ihn sich für das nächste Öffnen der Seite. */
+function bereichZeigen(root, id, { animiert = false } = {}) {
+  if (!BEREICHE.some((b) => b.id === id)) id = BEREICHE[0].id;
+  bereich = id;
+  for (const p of $$('[data-panel]', root)) p.hidden = p.dataset.panel !== id;
+  for (const t of $$('.set-tab', root)) {
+    const an = t.dataset.tab === id;
+    t.classList.toggle('active', an);
+    t.setAttribute('aria-selected', String(an));
+    t.tabIndex = an ? 0 : -1;
+  }
+  if (animiert) bereichEin($('#panel_' + id, root));
+}
+
+function tabsVerdrahten(root) {
+  const nav = $('#setNav', root);
+  nav.addEventListener('click', (e) => {
+    const t = e.target.closest('.set-tab');
+    if (!t) return;
+    if (t.dataset.tab !== bereich) bereichZeigen(root, t.dataset.tab, { animiert: true });
+    t.scrollIntoView({ block: 'nearest', inline: 'center' });
+  });
+  // Pfeiltasten wechseln zwischen den Reitern, wie bei einer Reiterleiste üblich.
+  nav.addEventListener('keydown', (e) => {
+    const schritt = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[e.key];
+    if (!schritt) return;
+    e.preventDefault();
+    const i = BEREICHE.findIndex((b) => b.id === bereich);
+    const neu = BEREICHE[(i + schritt + BEREICHE.length) % BEREICHE.length].id;
+    bereichZeigen(root, neu, { animiert: true });
+    $('#tab_' + neu, root).focus();
+  });
+  bereichZeigen(root, bereich);
+}
 
 /* Noch nicht übernommene Eingaben. Sie überstehen ein Neuzeichnen der Seite –
    etwa nachdem der Kalender verbunden wurde –, und wer die Seite verlässt,
@@ -43,13 +95,11 @@ export async function render(root, params, { actions } = {}) {
     await saveNow();
     ok('Gespeichert');
   });
+  if (ABSCHNITT_BEREICH[params?.abschnitt]) bereich = ABSCHNITT_BEREICH[params.abschnitt];
   await draw(root);
   // Aus der Statusleiste („Cloud-Sicherung einrichten“) direkt zur Cloud-Karte.
-  if (params?.abschnitt === 'cloud') $('#cloudCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-  if (params?.abschnitt === 'speicher') $('#speicherCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-  if (params?.abschnitt === 'mahnwesen') $('#mahnCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-  if (params?.abschnitt === 'benutzer') $('#benutzerCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
-  if (params?.abschnitt === 'konten') $('#kontenCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  const ZIEL = { cloud: '#cloudCard', speicher: '#speicherCard', mahnwesen: '#mahnCard', benutzer: '#benutzerCard', konten: '#kontenCard' };
+  if (ZIEL[params?.abschnitt]) $(ZIEL[params.abschnitt], root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
 async function draw(root) {
@@ -59,7 +109,13 @@ async function draw(root) {
   const until = lockedUntil();
 
   root.innerHTML = html`
-    <div class="grid c2">
+    <div class="set-layout">
+    <nav class="set-nav" id="setNav" role="tablist" aria-label="Bereiche der Einstellungen">
+      ${raw(BEREICHE.map((b) => `<button type="button" class="set-tab" role="tab" id="tab_${b.id}" data-tab="${b.id}" aria-controls="panel_${b.id}">
+        ${icon(b.icon, 18).__raw}<span class="set-tab-text"><span class="set-tab-name">${esc(b.titel)}</span><span class="set-tab-sub">${esc(b.sub)}</span></span></button>`).join(''))}
+    </nav>
+    <div class="set-body">
+    <section class="set-panel" id="panel_firma" data-panel="firma" role="tabpanel" aria-labelledby="tab_firma">
       <div class="card">
         <div class="card-head"><h3>${icon('building', 16)} Firmendaten</h3><span class="sub">erscheinen im Kopf jedes Berichts</span></div>
         <div class="card-body">
@@ -138,9 +194,46 @@ async function draw(root) {
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="card mt16">
+      <div class="card" id="mahnCard"></div>
+
+      <div class="card">
+        <div class="card-head"><h3>${icon('history', 16)} Unveränderbarkeit und Festschreibung</h3><span class="sub">GoBD</span></div>
+        <div class="card-body">
+          <div class="grid c2">
+            <div>
+              <div class="field">
+                <label>Buchungen festschreiben bis einschließlich</label>
+                <div class="row" style="gap:8px">
+                  <input type="date" id="lockDate" value="${until || ''}" max="${todayISO()}" style="flex:1">
+                  <button class="btn" id="btnLockPeriod">Festschreiben</button>
+                </div>
+                <span class="hint">Festgeschriebene Buchungen lassen sich nicht mehr ändern oder löschen,
+                sondern nur noch stornieren. Das ist der übliche Umgang mit einem abgeschlossenen
+                und ans Finanzamt gemeldeten Zeitraum. Noch offene Rechnungen daraus lassen sich
+                weiterhin als bezahlt vermerken.</span>
+              </div>
+              ${until ? raw(`<div class="notice ok">Festgeschrieben bis <strong>${esc(fmtDate(until))}</strong>.</div>`) : raw('<div class="notice">Bisher ist nichts festgeschrieben.</div>')}
+            </div>
+            <div>
+              <p class="small muted mt0">
+                Jede Änderung landet im Änderungsjournal. Die Einträge sind über Prüfsummen
+                miteinander verkettet. Wird nachträglich etwas verändert, passen sie nicht
+                mehr zusammen.
+              </p>
+              <div class="row wrap" style="gap:8px">
+                <button class="btn" id="btnVerify">${icon('check', 15)} Journal prüfen</button>
+                <button class="btn" id="btnJournal">${icon('eye', 15)} Journal ansehen (${int((store.db.auditLog || []).length)})</button>
+              </div>
+              <div id="verifyResult" class="mt8"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="set-panel" id="panel_sicherheit" data-panel="sicherheit" role="tabpanel" aria-labelledby="tab_sicherheit" hidden>
+      <div class="card">
       <div class="card-head"><h3>${icon('shield', 16)} Sicherheit</h3></div>
       <div class="card-body">
         <div class="grid c2">
@@ -172,19 +265,19 @@ async function draw(root) {
       </div>
     </div>
 
-    <div class="card mt16" id="mahnCard"></div>
+    <div class="card" id="zugaengeCard"></div>
 
-    <div class="card mt16" id="zugaengeCard"></div>
+    <div class="card" id="geraeteCard"></div>
 
-    <div class="card mt16" id="geraeteCard"></div>
+    <div class="card" id="zulassungCard"></div>
 
-    <div class="card mt16" id="zulassungCard"></div>
+    <div class="card" id="benutzerCard"></div>
 
-    <div class="card mt16" id="benutzerCard"></div>
+    <div class="card" id="kontenCard"></div>
+    </section>
 
-    <div class="card mt16" id="kontenCard"></div>
-
-    <div class="card mt16" id="speicherCard">
+    <section class="set-panel" id="panel_daten" data-panel="daten" role="tabpanel" aria-labelledby="tab_daten" hidden>
+    <div class="card" id="speicherCard">
       <div class="card-head"><h3>${icon('archive', 16)} Sicherung und Speicherort</h3></div>
       <div class="card-body">
         <div class="grid c2">
@@ -223,45 +316,12 @@ async function draw(root) {
       </div>
     </div>
 
-    <div id="cloudCard" class="mt16"></div>
-    <div id="calendarCard" class="mt16"></div>
-    <div id="updateCard" class="mt16"></div>
+    <div id="cloudCard"></div>
+    <div id="calendarCard"></div>
+    </section>
 
-    <div class="card mt16">
-      <div class="card-head"><h3>${icon('history', 16)} Unveränderbarkeit und Festschreibung</h3><span class="sub">GoBD</span></div>
-      <div class="card-body">
-        <div class="grid c2">
-          <div>
-            <div class="field">
-              <label>Buchungen festschreiben bis einschließlich</label>
-              <div class="row" style="gap:8px">
-                <input type="date" id="lockDate" value="${until || ''}" max="${todayISO()}" style="flex:1">
-                <button class="btn" id="btnLockPeriod">Festschreiben</button>
-              </div>
-              <span class="hint">Festgeschriebene Buchungen lassen sich nicht mehr ändern oder löschen,
-              sondern nur noch stornieren. Das ist der übliche Umgang mit einem abgeschlossenen
-              und ans Finanzamt gemeldeten Zeitraum. Noch offene Rechnungen daraus lassen sich
-              weiterhin als bezahlt vermerken.</span>
-            </div>
-            ${until ? raw(`<div class="notice ok">Festgeschrieben bis <strong>${esc(fmtDate(until))}</strong>.</div>`) : raw('<div class="notice">Bisher ist nichts festgeschrieben.</div>')}
-          </div>
-          <div>
-            <p class="small muted mt0">
-              Jede Änderung landet im Änderungsjournal. Die Einträge sind über Prüfsummen
-              miteinander verkettet. Wird nachträglich etwas verändert, passen sie nicht
-              mehr zusammen.
-            </p>
-            <div class="row" style="gap:8px">
-              <button class="btn" id="btnVerify">${icon('check', 15)} Journal prüfen</button>
-              <button class="btn" id="btnJournal">${icon('eye', 15)} Journal ansehen (${int((store.db.auditLog || []).length)})</button>
-            </div>
-            <div id="verifyResult" class="mt8"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="card mt16">
+    <section class="set-panel" id="panel_darstellung" data-panel="darstellung" role="tabpanel" aria-labelledby="tab_darstellung" hidden>
+    <div class="card">
       <div class="card-head"><h3>${icon('settings', 16)} Darstellung</h3></div>
       <div class="card-body">
         <div class="form-grid">
@@ -286,15 +346,20 @@ async function draw(root) {
         </div>
       </div>
     </div>
+    <div id="updateCard"></div>
+    </section>
 
     <div class="row end mt16 mb16 apply-bar" id="applyBar">
-      <span class="muted small" id="saveHint">Firmendaten, Steuer, Sicherheit und Darstellung gelten erst nach dem Übernehmen.</span>
+      <span class="muted small" id="saveHint">${HINWEIS}</span>
       <button class="btn" id="btnDiscard" hidden>Verwerfen</button>
       <button class="btn primary lg" id="btnApply">Einstellungen übernehmen</button>
+    </div>
+    </div>
     </div>`;
 
   seite = root;
   wire(root);
+  tabsVerdrahten(root);
   trackChanges(root);
   // Cloud und Updates laden ihre Karten selbst nach – beide fragen den
   // Web-Schicht und sollen die übrige Ansicht nicht aufhalten.
@@ -332,7 +397,10 @@ function trackChanges(root) {
     $('#btnDiscard', root).hidden = n === 0;
     hint.textContent = n
       ? `${n === 1 ? 'Eine Änderung ist' : `${n} Änderungen sind`} noch nicht übernommen.`
-      : 'Firmendaten, Steuer, Sicherheit und Darstellung gelten erst nach dem Übernehmen.';
+      : HINWEIS;
+    // Ein Punkt am Reiter verrät, in welchem Bereich noch etwas offen ist.
+    const betroffen = new Set(Object.keys(offen).map((id) => $('#s_' + id, root)?.closest('[data-panel]')?.dataset.panel));
+    for (const t of $$('.set-tab', root)) t.classList.toggle('geaendert', betroffen.has(t.dataset.tab));
     router.leaveGuard = n ? verlassen : null;
   };
   for (const id of FELDER) {

@@ -1,7 +1,7 @@
 {
-  "version": "2.17.0",
-  "released": "2026-10-05T19:21:32.613Z",
-  "notes": "Ziele und wiederkehrende Aufgaben\n\n- Neue Art von Aufgabe: ein Ziel. Zum Beispiel 20 Seiten in 10 Tagen. Sie tragen ein, was Sie geschafft haben, und sehen, wie viel pro Tag noch nötig ist.\n- Kontovia zeigt, ob Sie im Plan oder im Rückstand sind, und was bei Ihrem bisherigen Tempo am Ende herauskommt.\n- Aufgaben können sich wiederholen, zum Beispiel jede Woche oder jeden Monat. Nach dem Abhaken kommt die nächste von selbst.",
+  "version": "2.18.0",
+  "released": "2026-10-05T19:57:12.735Z",
+  "notes": "Aufgeräumter: Aufgaben, Einstellungen und Menü am Telefon\n\n- Die Aufgaben sind übersichtlicher: Jede Gruppe hat ihre eigene Karte, und die Fälligkeit steht immer rechts.\n- Die Einstellungen sind in vier Bereiche geteilt. Ein Punkt zeigt, wo noch etwas nicht übernommen ist.\n- Am Telefon öffnet „Mehr“ jetzt ein Menü von unten statt von links. Ein Wisch nach unten schließt es.\n- Kleine Bewegungen helfen beim Orientieren: Abgehakte Aufgaben gleiten aus der Liste, Bereiche blenden sanft ein.",
   "files": [
     {
       "path": "app.js",
@@ -65,8 +65,8 @@
     },
     {
       "path": "lib/bewegung.js",
-      "sha256": "5b2a7a435117fc94125a71d088e2e115d4ec98d4d2a7824621777a7deabd124f",
-      "size": 21325
+      "sha256": "7027b401d94b0645d4054823aeaf7f69b4733a950a9a07b414c834159444a912",
+      "size": 22874
     },
     {
       "path": "lib/bildschirmfoto.js",
@@ -340,8 +340,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "52352ce9cb494dfa99bc4dc7c7c230328004962aaa878c338d5905be7babb42f",
-      "size": 29266
+      "sha256": "45e445e57441955764720a872a6548487fa76dbeed45f94fc01752bd0029c410",
+      "size": 29889
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -370,12 +370,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "0b0577f0a7e174e67371ba829075fd49fb0982673f13889f970c98af3ce91a83",
+      "sha256": "6d339a783cfa07721ce8f6f98c954634bb02938798e4b97c989685226df62179",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "7d04bd1ff76ef9b1c77206c8be88cfcdfe7e771285a0b1a23a998f9c7dc8d533",
+      "sha256": "44c10e861262b3e2b69569d1ad47136ef26c58be74d50b90ff6a9544ecb9b624",
       "size": 28151
     },
     {
@@ -390,7 +390,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "76b6b56a6ba5c7a8f63d149baa78c40e7ed9e144bce3b030a09bdead6f0aff58",
+      "sha256": "a09aa512908805be0426e8bb3217da0d44edb43f0f5c69be1fd5d0f6ca3797dd",
       "size": 31451
     },
     {
@@ -405,8 +405,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "de8cf4d1132d2567abd95a7f059ea015cd5f9dfb126bcc0812c3b7cee016e13d",
-      "size": 93863
+      "sha256": "8ee6a4069847b0236a3cb70e25d6972b31538eac9eaa898605c3e2b1dcbe2511",
+      "size": 99238
     },
     {
       "path": "views/anlageform.js",
@@ -500,8 +500,8 @@
     },
     {
       "path": "views/settings.js",
-      "sha256": "72846da82b631d607f3d074f94268a13d8956a980c90989b9f669d0f6b5354f7",
-      "size": 38808
+      "sha256": "2ae2785418307e0a8d8d045f0740c87b1b8ce8b1414b9924dd72a8dd05d787f2",
+      "size": 42318
     },
     {
       "path": "views/spruenge.js",
@@ -510,8 +510,8 @@
     },
     {
       "path": "views/todos.js",
-      "sha256": "dd207bf7a1a351704ded6e829b8dbb97829ea81d2b3c0f43ad953f0b3fb51f14",
-      "size": 38971
+      "sha256": "014709b31109a8f7b995cfe5abddb3af8f18056fe40277b8095dac684a7fb876",
+      "size": 39727
     },
     {
       "path": "views/transactions.js",
@@ -530,7 +530,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "3fcde4d11ee5bfce9ceb2229462b20ed652ab075f26aa284c7d3125ecaf9335e",
+      "sha256": "577366a7bbf3f0cf83fe6d3726141cdae6b73fc96f735854f475a99d7bb09fce",
       "size": 6906
     },
     {
@@ -605,8 +605,8 @@
     },
     {
       "path": "web/mobil.js",
-      "sha256": "ac91b11ad13ddbcf54bddbc71f70fd1abc75bed3e91942df88e247b0f22570c7",
-      "size": 5701
+      "sha256": "28ad7fab84f1529646dcabec6bb94f4ec470fedcb9cd9b73cb4ccb5cf8e53a1f",
+      "size": 6381
     },
     {
       "path": "web/netz.js",
@@ -655,8 +655,8 @@
     },
     {
       "path": "web/web.css",
-      "sha256": "21791f1f173df5f6a3382a9389079eefe3256b953fa09f4a26a4b51c3e4bd0a5",
-      "size": 16632
+      "sha256": "384b2f9fcf22c52625b99951cb785961c8d9ef4f7930705377727f5f3e58d4e8",
+      "size": 18863
     },
     {
       "path": "web/weiterleitung.js",
