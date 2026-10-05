@@ -738,6 +738,8 @@ const api = {
     abbrechen: handle(async () => cloud.koppelnAbbrechen(), { needsUnlock: false }),
     geraete: handle(async () => kopie(cloud.koppelnGeraete())),
     geraetEntfernen: handle(async (id) => kopie(await cloud.koppelnGeraetEntfernen(str(id, 40)))),
+    /** Das neue Gerät ist trotz Fehlermeldung verbunden: in die Liste aufnehmen. */
+    vermerken: handle(async (name) => kopie(await cloud.koppelnVermerken(str(name, 60)))),
     /** Auf dem neuen Gerät, nach der Anmeldung bei Google: Liegt ein Code aus der Kamera-App bereit? */
     codeBereit: handle(async () => !!KP.codeGemerkt(), { needsUnlock: false }),
     /** Mit dem gescannten oder eingegebenen Code (leer: der aus der Kamera-App) die Buchhaltung laden. */

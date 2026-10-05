@@ -10,7 +10,10 @@
  *     geheimes Merkmal heraus (WebAuthn, Erweiterung „prf“). Daraus entsteht
  *     ein Schlüssel, der den Datenschlüssel umhüllt. Die Hülle liegt nur in
  *     diesem Browser; das Merkmal verlässt das Gerät nie. Das ist so sicher
- *     wie das Passwort, nur bequemer.
+ *     wie das Passwort, nur bequemer. Der Zugang wird als auffindbarer
+ *     Passkey angelegt (residentKey „required“), weil Handys das Merkmal nur
+ *     dafür herausgeben; gibt ein Gerät es nicht her, wird der Zugang wieder
+ *     verworfen und nichts eingerichtet.
  *
  *   Google-Konto (jedes Gerät, das sich bei Google anmelden kann)
  *     Eine Datei im eigenen Zweig des Cloud-Speichers (entsperrung.kv) enthält
@@ -61,11 +64,20 @@ function prfErgebnis(cred) {
   return r ? bytesVon(r) : null;
 }
 
-function webauthnFehler(e) {
+/** Geht „abgelehnt“ schneller zurück, als ein Mensch reagieren kann, hat der Browser die Anfrage selbst verweigert. */
+const SOFORT_MS = 700;
+
+function webauthnFehler(e, dauerMs = Infinity) {
   if (e?.code) return e;
+  if (e?.name === 'NotAllowedError' && dauerMs < SOFORT_MS) {
+    return fehler('BIO_FEHLER', 'Der Browser hat die Bestätigung nicht zugelassen. Prüfen Sie, ob auf diesem Gerät eine Bildschirmsperre mit Fingerabdruck, Gesicht oder PIN eingerichtet ist, und versuchen Sie es noch einmal.');
+  }
   if (e?.name === 'NotAllowedError' || e?.name === 'AbortError') return fehler('ABGEBROCHEN', 'Die Bestätigung wurde abgebrochen.');
   if (e?.name === 'InvalidStateError') return fehler('BIO_VORHANDEN', 'Für dieses Gerät ist schon ein Zugang eingerichtet.');
-  return fehler('BIO_FEHLER', e?.message || 'Die Bestätigung per Fingerabdruck oder Gesicht hat nicht geklappt.');
+  if (e?.name === 'NotSupportedError') return fehler('BIO_NICHT_MOEGLICH', 'Dieses Gerät oder dieser Browser unterstützt das nicht. Das Passwort funktioniert weiterhin.');
+  if (e?.name === 'ConstraintError') return fehler('BIO_NICHT_MOEGLICH', 'Auf diesem Gerät ist keine Bildschirmsperre mit Fingerabdruck, Gesicht oder PIN eingerichtet. Richten Sie sie in den Einstellungen des Geräts ein und versuchen Sie es noch einmal.');
+  if (e?.name === 'SecurityError') return fehler('BIO_FEHLER', 'Hier lässt sich das nicht einrichten. Öffnen Sie Kontovia über die gewohnte Internetadresse.');
+  return fehler('BIO_FEHLER', 'Die Bestätigung per Fingerabdruck oder Gesicht hat nicht geklappt. Das Passwort funktioniert weiterhin.');
 }
 
 /**
@@ -80,26 +92,33 @@ export async function biometrieEinrichten(dek, g = globalThis) {
   const salt = K.randomBytes(32);
   const host = g.location?.hostname || 'localhost';
   let cred;
+  const start = Date.now();
   try {
     cred = await creds.create({
       publicKey: {
         challenge: K.randomBytes(32),
         rp: { name: 'Kontovia', id: host },
-        user: { id: K.randomBytes(16), name: 'kontovia', displayName: 'Kontovia auf diesem Gerät' },
+        user: { id: K.randomBytes(16), name: 'Kontovia', displayName: 'Kontovia (Entsperren auf diesem Gerät)' },
         pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
-        authenticatorSelection: { authenticatorAttachment: 'platform', residentKey: 'discouraged', userVerification: 'required' },
+        // Ein auffindbarer Zugang (Passkey): Nur so liefern Handy und Rechner das geheime Merkmal zuverlässig heraus.
+        authenticatorSelection: { authenticatorAttachment: 'platform', residentKey: 'required', requireResidentKey: true, userVerification: 'required' },
         timeout: 120000,
         extensions: { prf: { eval: { first: salt } } },
       },
     });
-  } catch (e) { throw webauthnFehler(e); }
+  } catch (e) { throw webauthnFehler(e, Date.now() - start); }
   const rawId = bytesVon(cred.rawId);
+  const nichtMoeglich = fehler('BIO_NICHT_MOEGLICH', 'Dieses Gerät kann den Tresor nicht per Fingerabdruck oder Gesicht öffnen, weil es das nötige geheime Merkmal nicht herausgibt. Das Passwort funktioniert weiterhin.');
   let geheim = prfErgebnis(cred);
-  if (!geheim) {
-    if (cred.getClientExtensionResults?.()?.prf?.enabled === false) {
-      throw fehler('BIO_NICHT_MOEGLICH', 'Dieses Gerät kann den Tresor nicht per Fingerabdruck oder Gesicht öffnen. Das Passwort funktioniert weiterhin.');
+  try {
+    if (!geheim) {
+      if (cred.getClientExtensionResults?.()?.prf?.enabled === false) throw nichtMoeglich;
+      geheim = await geheimHolen(g, rawId, salt);
     }
-    geheim = await geheimHolen(g, rawId, salt);
+  } catch (e) {
+    // Der eben angelegte Zugang taugt nicht; dem Gerät sagen, dass er weg kann (wo es das kennt).
+    try { await g.PublicKeyCredential?.signalUnknownCredential?.({ rpId: host, credentialId: K.toBase64(rawId).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '') }); } catch { /* nicht überall vorhanden */ }
+    throw e;
   }
   const kek = await K.subKey(geheim, BIO_INFO);
   try {
@@ -111,6 +130,7 @@ export async function biometrieEinrichten(dek, g = globalThis) {
 
 async function geheimHolen(g, rawId, salt) {
   let cred;
+  const start = Date.now();
   try {
     cred = await g.navigator.credentials.get({
       publicKey: {
@@ -122,7 +142,7 @@ async function geheimHolen(g, rawId, salt) {
         extensions: { prf: { eval: { first: salt } } },
       },
     });
-  } catch (e) { throw webauthnFehler(e); }
+  } catch (e) { throw webauthnFehler(e, Date.now() - start); }
   const geheim = prfErgebnis(cred);
   if (!geheim) throw fehler('BIO_NICHT_MOEGLICH', 'Dieses Gerät kann den Tresor nicht per Fingerabdruck oder Gesicht öffnen. Das Passwort funktioniert weiterhin.');
   return geheim;

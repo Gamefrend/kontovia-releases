@@ -48,7 +48,8 @@ function anleitung(root) {
               E-Rechnungen mit Ihrem Logo. Beim Ausstellen entsteht die offene Einnahme von selbst; sie
               taucht in der Übersicht und im Kalender auf, bis sie bezahlt ist.</li>
           <li><strong>Auswerten.</strong> Unter <a data-go="reports">Auswertungen</a> sehen Sie Gewinn,
-              Umsatzsteuer und Vermögen für jeden beliebigen Zeitraum.</li>
+              Umsatzsteuer und Vermögen für jeden beliebigen Zeitraum, und im Jahresvergleich, wie sich
+              Ausgaben oder Einnahmen von Jahr zu Jahr entwickeln. Listen und Berichte drucken Sie oder sichern sie als PDF.</li>
           <li><strong>Abgeben.</strong> Unter <a data-go="export">Export</a> erzeugen Sie einen Ordner
               mit allen Zahlen für ELSTER und für Ihre Steuerkanzlei.</li>
         </ol>

@@ -502,13 +502,30 @@ export class Cloud {
     const s = await g.abfragen();
     if (s.zustand === 'fertig' && !g.eingetragen && !this.vault.isLocked) {
       g.eingetragen = true;
-      const c = this.cfg();
-      const eintrag = { id: K.toHex(K.randomBytes(6)), name: s.name, seit: new Date().toISOString() };
-      c.gekoppelt = [...(Array.isArray(c.gekoppelt) ? c.gekoppelt : []), eintrag].slice(-20);
-      await this.vault.save(this.vault.db);
-      return { ...s, geraet: eintrag };
+      return { ...s, geraet: await this.koppelnEintragen(s.name) };
     }
     return s;
+  }
+
+  /** Trägt ein verbundenes Gerät in die Liste dieses Geräts ein. Das Speichern darf das Verbinden nie nachträglich scheitern lassen. */
+  async koppelnEintragen(name) {
+    const c = this.cfg();
+    const eintrag = { id: K.toHex(K.randomBytes(6)), name: KP.geraeteNameBereinigen(name), seit: new Date().toISOString() };
+    c.gekoppelt = [...(Array.isArray(c.gekoppelt) ? c.gekoppelt : []), eintrag].slice(-20);
+    try { await this.vault.save(this.vault.db); } catch { /* bleibt im Speicher und geht mit dem nächsten Speichern mit */ }
+    return eintrag;
+  }
+
+  /**
+   * Der Nutzer sagt, dass das neue Gerät trotz Fehlermeldung verbunden ist: in die Liste aufnehmen.
+   * Zweimal derselbe Name kurz hintereinander ergibt nur einen Eintrag.
+   */
+  async koppelnVermerken(name) {
+    this.vault.assertUnlocked();
+    const sauber = KP.geraeteNameBereinigen(name);
+    const c = this.cfg();
+    const vorhanden = (Array.isArray(c.gekoppelt) ? c.gekoppelt : []).find((e) => e.name === sauber && Date.now() - Date.parse(e.seit) < 10 * 60 * 1000);
+    return vorhanden ? { id: String(vorhanden.id), name: String(vorhanden.name), seit: String(vorhanden.seit) } : this.koppelnEintragen(sauber);
   }
 
   /** Das Gerät ist erkannt: den Datenschlüssel für genau dieses Gerät ablegen. */

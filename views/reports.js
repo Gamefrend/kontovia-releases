@@ -20,6 +20,7 @@ import { pdfSpeichern, pdfZeigen, drucken, druckenMoeglich } from '../lib/pdfaus
 import { table, mountTables } from '../lib/table.js';
 import { openTransactionDialog } from './transactions.js';
 import { checkNotice, wireCheckLinks } from './spruenge.js';
+import { vergleich, vergleichEinstellung } from './jahresvergleich.js';
 
 const api = window.kontovia;
 const period = defaultPeriod();
@@ -35,6 +36,7 @@ const TABS = {
   opos: 'Offene Posten',
   konten: 'Konten',
   anlagen: 'Anlagevermögen',
+  vergleich: 'Jahresvergleich',
 };
 
 export async function render(root, params, { actions } = {}) {
@@ -46,6 +48,7 @@ export async function render(root, params, { actions } = {}) {
     <button class="btn" id="btnPreview">${icon('eye', 16)} Vorschau</button>
     <button class="btn primary" id="btnPdf">${icon('pdf', 16)} Als PDF</button>`;
   periodCtl = periodControl($('#rpPeriod', actions), period, () => draw(root));
+  periodAnzeigen();
   actions.querySelector('#btnPdf').addEventListener('click', () => exportPdf('speichern'));
   actions.querySelector('#btnPreview').addEventListener('click', () => exportPdf('zeigen'));
   actions.querySelector('#btnPrint')?.addEventListener('click', () => exportPdf('drucken'));
@@ -78,10 +81,17 @@ function draw(root) {
   }));
   wireScopeToggle(root, () => draw(root));
 
+  periodAnzeigen();
   const body = $('#tabBody', root);
-  ({ guv, euer, ust, bilanz, opos, konten, anlagen }[tab] || guv)(body, db);
+  ({ guv, euer, ust, bilanz, opos, konten, anlagen, vergleich }[tab] || guv)(body, db);
   mountCharts(body);
   mountTables(body);
+}
+
+/** Der Jahresvergleich hat seine eigene Jahreswahl; die Zeitraumwahl oben gälte dort nicht. */
+function periodAnzeigen() {
+  const feld = document.getElementById('rpPeriod');
+  if (feld) feld.style.display = tab === 'vergleich' ? 'none' : '';
 }
 
 /**
@@ -706,6 +716,10 @@ async function exportPdf(wie) {
     opos: () => [R.openItemsPdf(db, todayISO()), `Offene-Posten_${todayISO()}.pdf`],
     konten: () => [R.accountsPdf(db, period), `Kontenblaetter_${period.from}_${period.to}.pdf`],
     anlagen: () => [R.assetsPdf(db, period), `Anlagenverzeichnis_${period.to}.pdf`],
+    vergleich: () => {
+      const v = vergleichEinstellung(db);
+      return [R.vergleichPdf(db, v), `Jahresvergleich-${v.art === 'income' ? 'Einnahmen' : 'Ausgaben'}_${v.jahre.join('-')}.pdf`];
+    },
   };
   const [doc, name] = (makers[tab] || makers.guv)();
   if (st.count) {

@@ -45,6 +45,8 @@ const TOLERANZ_MS = 10 * 60 * 1000;
 const REST_MS = 15 * 60 * 1000;
 const ABFRAGE_MS = 1500;
 const MAX_NETZFEHLER = 12;
+/** So oft muss der Geber nach der Freigabe beide Dateien weg sehen, bevor er „fehlgeschlagen“ meldet. */
+const LEER_BIS_MISSERFOLG = 4;
 
 /** Ohne 0, 1, I und O, damit sich nichts verwechseln lässt. */
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -176,6 +178,7 @@ export class Geber {
     this.anfrage = null;
     this.ende = '';
     this.netzfehler = 0;
+    this.leer = 0;
   }
 
   /** Erzeugt Geheimnis und Kennung. Es geht noch nichts ins Netz. @returns {{code:string, gueltigBis:number}} */
@@ -213,10 +216,13 @@ export class Geber {
         const roh = await this.backend.koppelnLesen(`${this.pid}.antwort`);
         this.netzfehler = 0;
         // Der Nehmer löscht die Antwort, sobald er sie hat. Bleibt seine Anfrage stehen, hat es geklappt;
-        // hat er auch sie entfernt, brach er ab oder die Antwort passte nicht.
-        if (!roh) {
+        // hat er auch sie entfernt, brach er ab oder die Antwort passte nicht. Ein einzelner leerer Blick
+        // zählt nicht als Misserfolg (Verzögerungen im Speicher): erst mehrere hintereinander.
+        if (roh) this.leer = 0;
+        else {
           const anfrageNoch = await this.backend.koppelnLesen(`${this.pid}.anfrage`);
-          await this.beenden(anfrageNoch ? 'fertig' : 'fehlgeschlagen');
+          if (anfrageNoch) await this.beenden('fertig');
+          else if (++this.leer >= LEER_BIS_MISSERFOLG) await this.beenden('fehlgeschlagen');
         }
       }
     } catch (e) {
@@ -374,7 +380,8 @@ export async function aufraeumen(backend, jetzt = () => Date.now()) {
   let n = 0;
   for (const e of liste) {
     const t = Date.parse(e.updated || '') || 0;
-    if (t && jetzt() - t <= GUELTIG_MS + REST_MS) continue;
+    // Ohne verlässliches Datum bleibt die Datei liegen: Lieber ein Rest mehr als ein Paket mitten im Verbinden weg.
+    if (!t || jetzt() - t <= GUELTIG_MS + REST_MS) continue;
     try { await backend.koppelnLoeschen(e.name); n++; } catch { /* beim nächsten Mal */ }
   }
   return n;

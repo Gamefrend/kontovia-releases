@@ -19,6 +19,8 @@ import { eRechnungHtml, zeigeERechnung } from './erechnung.js';
 import { regelAusBuchung, TURNUS } from '../lib/wiederkehrend.js';
 import { faelligeAnbieten } from './wiederkehrend.js';
 import { aufgabenAbschnitt } from './todos.js';
+import { journalPdf } from '../lib/reports.js';
+import { pdfSpeichern, pdfZeigen, drucken, druckenMoeglich } from '../lib/pdfausgabe.js';
 
 const api = window.kontovia;
 
@@ -83,12 +85,45 @@ export async function render(root, params = {}, { actions } = {}) {
   // ein Filter darauf würde sonst unsichtbar weiterwirken.
   if (st.filters.location && !knownLocations().includes(st.filters.location)) delete st.filters.location;
 
-  actions.innerHTML = html`<div id="txPeriod"></div>`;
+  actions.innerHTML = html`<div id="txPeriod"></div>
+    ${druckenMoeglich() ? raw(`<button class="btn" id="txDruck">${icon('print', 16).__raw} Drucken</button>`) : ''}
+    <button class="btn" id="txPdf">${icon('pdf', 16)} Als PDF</button>`;
   periodCtl = periodControl($('#txPeriod', actions), period, () => list?.render());
+  $('#txDruck', actions)?.addEventListener('click', () => listeAusgeben('drucken'));
+  $('#txPdf', actions).addEventListener('click', () => listeAusgeben('speichern'));
 
   root.innerHTML = '<div class="card" id="txCard"></div>';
   list = mountTable($('#txCard', root), listSpec());
   if (params.focusId) setTimeout(() => openTransactionDialog(params.focusId), 60);
+}
+
+/**
+ * Die Liste, wie sie gerade zu sehen ist (Zeitraum, Filter, Suche, Sortierung), als Buchungsjournal
+ * drucken oder als PDF sichern.
+ * @param {'drucken'|'speichern'} wie
+ */
+async function listeAusgeben(wie) {
+  const zeilen = list?.rows() || [];
+  if (!zeilen.length) { warn('Nichts zu drucken', 'Die Liste ist leer. Ändern Sie Zeitraum oder Filter.'); return; }
+  const doc = journalPdf(store.db, period, zeilen);
+  doc.titel = 'Buchungen';
+  // Der Standardhinweis des Journals gilt für die vollständige Auflistung, nicht für eine gefilterte Liste.
+  doc.bloecke = doc.bloecke.filter((b) => b.art !== 'hinweis');
+  doc.bloecke.push({ art: 'hinweis', inhalt: [{ t: 'Auszug der Buchungsliste so, wie sie bei Erstellung eingestellt war (Zeitraum, Filter, Suche, Sortierung). Stornierte Buchungen sind durchgestrichen.' }] });
+  if (zeilen.some((t) => t.unlisted)) {
+    doc.bloecke.push({
+      art: 'hinweis',
+      inhalt: [{ t: 'Enthält private Buchungen.', fett: true }, { t: ' Diese Liste ist nur für den eigenen Gebrauch; für das Finanzamt gelten die Unterlagen unter „Export & Finanzamt“.' }],
+    });
+  }
+  const name = `Buchungen_${todayISO()}.pdf`;
+  try {
+    if (wie === 'drucken') { await drucken(doc, name); return; }
+    const pfad = await pdfSpeichern(doc, name);
+    if (pfad) ok('PDF gespeichert', pfad);
+  } catch (e) {
+    err('PDF konnte nicht erstellt werden', e.message);
+  }
 }
 
 /** Alle bisher vergebenen Orte – als Filterliste und als Eingabevorschlag. */
