@@ -132,6 +132,7 @@ function makeSeed(settings = {}) {
     bankTemplates: [],
     users: [],
     imports: [],
+    elsterMeldungen: [],
     auditLog: [],
     counters: { invoice: 1 },
     // Die Bezeichnungen der Zeilen setzt die Oberfläche beim Laden (euer.js).

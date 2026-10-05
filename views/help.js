@@ -330,12 +330,38 @@ function anleitung(root) {
         <ul>
           <li><strong>Anlage EÜR:</strong> Ihre Zahlen, sortiert nach den Zeilennummern des amtlichen
               Formulars. In „Mein ELSTER" nur noch abschreiben.</li>
-          <li><strong>Umsatzsteuer-Voranmeldung:</strong> die Kennzahlen 81, 86, 66, 83 und weitere.</li>
+          <li><strong>Umsatzsteuer-Voranmeldung:</strong> die Kennzahlen 81, 86, 66, 83 und weitere, auf Wunsch als Datei für
+              „Mein ELSTER“. Dort öffnen Sie das Formular, wählen das Jahr und laden die Datei über den Reiter „XML-Import“ hoch.
+              Wählen Sie dafür oben einen Monat oder ein Quartal.</li>
           <li><strong>DATEV-Buchungsstapel:</strong> eine Datei, die Ihre Steuerkanzlei direkt einliest.</li>
+          <li><strong>Excel-Mappe:</strong> Buchungen, Anlage EÜR, Umsatzsteuer, offene Posten und Kontakte in einer Datei,
+              mit Datums- und Eurozellen, mit denen Excel rechnen kann.</li>
+          <li><strong>Zusammenfassende Meldung:</strong> Lieferungen und Leistungen an Unternehmen im EU-Ausland als Datei für das
+              Online-Portal des Bundeszentralamts für Steuern. Dafür braucht jeder dieser Kunden seine USt-IdNr. in den Stammdaten.</li>
+          <li><strong>Kontakte und Produkte:</strong> als Visitenkarten (vCard) und als Tabelle.</li>
           <li><strong>GoBD-Prüfungsordner:</strong> alle Daten maschinell auswertbar samt
               <code>index.xml</code>, so wie es bei einer Betriebsprüfung verlangt wird.</li>
         </ul>
         <p class="small">Kontovia übermittelt <strong>nichts</strong> an die Finanzverwaltung.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body" id="hilfe-datenimport">
+        <h3 class="mt0">Daten aus einem anderen Programm übernehmen</h3>
+        <p>Unter <a data-go="datenimport">Daten übernehmen</a> ziehen Sie eine Datei hinein. Kontovia erkennt selbst, was darin steht,
+        liest sie nur auf diesem Gerät und übernimmt erst, wenn Sie es bestätigen.</p>
+        <ul>
+          <li><strong>DATEV-Format:</strong> Buchungsstapel von Ihrer Steuerkanzlei oder aus Programmen wie Lexware Office und sevDesk.
+              Die Kategorie folgt aus dem Sachkonto, der Steuersatz aus dem Steuerschlüssel oder der Kategorie. Rechnung und Zahlung
+              in derselben Datei werden zu einer bezahlten Buchung. Umbuchungen zwischen Sachkonten, etwa Abschreibungen, bleiben draußen.</li>
+          <li><strong>Excel und CSV:</strong> Tabellen mit Buchungen, Kontakten oder Produkten. Spalten wie Datum, Betrag, Netto,
+              Steuersatz, Kategorie und Kunde erkennt Kontovia an der Überschrift, auch die eigenen Exporte.</li>
+          <li><strong>ELSTER:</strong> die XML-Datei einer Umsatzsteuer-Voranmeldung. Kontovia stellt die gemeldeten Werte neben die
+              eigenen Buchungen und zeigt jede Abweichung. „Mein ELSTER“ selbst gibt nur einen Ausdruck als PDF aus; daraus lassen
+              sich keine Werte lesen.</li>
+          <li><strong>Kontakte:</strong> Visitenkarten (vCard) aus Outlook, Google oder vom Telefon und DATEV-Debitoren und -Kreditoren.</li>
+        </ul>
+        <p class="small">Was schon einmal übernommen wurde, erkennt Kontovia wieder; dieselbe Datei zweimal einzulesen, bucht nichts doppelt.
+        Festgeschriebene Zeiträume bleiben unverändert.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">

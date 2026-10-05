@@ -499,10 +499,11 @@ export async function exportIcs() {
   }
 }
 
-export async function importIcs() {
-  let file;
+/** @param {{name:string, dataBase64:string}|null} gewaehlt  schon gewählte Datei (Daten übernehmen), sonst fragt ein Dialog. */
+export async function importIcs(gewaehlt = null) {
+  let file = gewaehlt;
   try {
-    file = await api.file.pickImport([{ name: 'Kalenderdatei', extensions: ['ics'] }]);
+    file ??= await api.file.pickImport([{ name: 'Kalenderdatei', extensions: ['ics'] }]);
   } catch (e) {
     err('Datei nicht lesbar', e.message);
     return false;

@@ -496,8 +496,9 @@ function eingang(root) {
   });
 }
 
-async function eingangHinzufuegen() {
-  const datei = await api.file.pickImport([{ name: 'E-Rechnung', extensions: ['xml', 'pdf'] }]).catch(() => null);
+/** @param {{name:string, dataBase64:string}|null} gewaehlt  schon gewählte Datei (Daten übernehmen), sonst fragt ein Dialog. */
+export async function eingangHinzufuegen(gewaehlt = null) {
+  const datei = gewaehlt?.dataBase64 ? gewaehlt : await api.file.pickImport([{ name: 'E-Rechnung', extensions: ['xml', 'pdf'] }]).catch(() => null);
   if (!datei) return;
   const bytes = base64ZuBytes(datei.dataBase64);
   const mime = /\.pdf$/i.test(datei.name) ? 'application/pdf' : 'application/xml';

@@ -11,7 +11,8 @@ import { navigate } from '../lib/router.js';
 import { appInfo } from '../app.js';
 import * as X from '../lib/exports.js';
 import * as R from '../lib/reports.js';
-import { pdfSpeichern, pdfZeigen, pdfFuerPaket } from '../lib/pdfausgabe.js';
+import { pdfSpeichern, pdfZeigen, pdfFuerPaket, base64 } from '../lib/pdfausgabe.js';
+import { ustvaXml, ustvaZeitraum, latin9, steuernummerElster, landAusPlz, BUNDESLAENDER } from '../lib/elster.js';
 
 const api = window.kontovia;
 const period = defaultPeriod();
@@ -127,6 +128,32 @@ function draw(root) {
         button: `<button class="btn" id="btnCsvTx">Buchungen (CSV)</button>
                  <button class="btn" id="btnCsvContacts">Kontakte (CSV)</button>
                  <button class="btn" id="btnJson">Alles (JSON)</button>`,
+      }))}
+
+      ${klein ? '' : raw(card({
+        title: 'Voranmeldung für „Mein ELSTER“', sub: ustvaZeitraum(period) ? 'XML-Datei' : 'Monat oder Quartal wählen',
+        body: `Die Umsatzsteuer-Voranmeldung als Datei, die „Mein ELSTER“ direkt einliest: Formular
+          „Umsatzsteuer-Voranmeldung“ öffnen, Jahr wählen, Reiter „XML-Import“, Datei hochladen, prüfen, absenden.
+          Bemessungsgrundlagen stehen darin wie verlangt in vollen Euro.${ustvaZeitraum(period) ? '' : ' <strong>Wählen Sie dafür oben einen Monat oder ein Quartal.</strong>'}`,
+        button: `<button class="btn primary" id="btnElster" ${ustvaZeitraum(period) ? '' : 'disabled'}>${icon('euro', 16).__raw} ELSTER-Datei erstellen</button>`,
+      }))}
+
+      ${raw(card({
+        title: 'Excel und weitere Formate', sub: 'zum Weitergeben',
+        body: `Eine Excel-Mappe mit Buchungen, Anlage EÜR${klein ? '' : ', Umsatzsteuer'}, offenen Posten und Kontakten,
+          mit echten Datums- und Eurozellen. Dazu die Kontakte als Visitenkarten (vCard) für Outlook, Google oder das Telefon
+          und die Produkte als Tabelle.${klein ? '' : ' Wer an Unternehmen im EU-Ausland liefert oder leistet, bekommt die Zusammenfassende Meldung als Datei für das Online-Portal des Bundeszentralamts für Steuern.'}`,
+        button: `<button class="btn primary" id="btnXlsx">${icon('table', 16).__raw} Excel-Mappe</button>
+                 <button class="btn" id="btnVcf">Kontakte (vCard)</button>
+                 <button class="btn" id="btnProdukte">Produkte (CSV)</button>
+                 ${klein ? '' : '<button class="btn" id="btnZm">Zusammenfassende Meldung</button>'}`,
+      }))}
+
+      ${raw(card({
+        title: 'Daten übernehmen', sub: 'Import',
+        body: `Buchungen aus DATEV-Dateien, Excel- oder CSV-Tabellen, Voranmeldungen aus ELSTER, Kontakte und Produkte
+          aus anderen Programmen einlesen.`,
+        button: `<button class="btn" id="btnImport">${icon('folder', 16).__raw} Zu „Daten übernehmen“</button>`,
       }))}
     </div>
 
@@ -289,6 +316,63 @@ function wire(root, db, rows) {
     if (p) ok('Export gespeichert', p);
   }));
 
+  $('#btnImport', root).addEventListener('click', () => navigate('datenimport'));
+
+  $('#btnElster', root)?.addEventListener('click', (e) => busy(e.currentTarget, async () => {
+    const stnr = await steuernummerDialog(db);
+    if (!stnr) return;
+    const xml = ustvaXml(listedOnly(db), period, { steuernummer: stnr });
+    const code = ustvaZeitraum(period);
+    const p = await api.file.save({
+      defaultName: `UStVA_${period.from.slice(0, 4)}_${code}.xml`,
+      filters: [{ name: 'ELSTER-Datei', extensions: ['xml'] }],
+      dataBase64: base64(latin9(xml)),
+    });
+    if (p) ok('ELSTER-Datei gespeichert', `${p}. In „Mein ELSTER“: Umsatzsteuer-Voranmeldung, Reiter „XML-Import“.`);
+  }));
+
+  $('#btnXlsx', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
+    const p = await api.file.save({
+      defaultName: `Kontovia_${period.from}_${period.to}.xlsx`,
+      filters: [{ name: 'Excel-Mappe', extensions: ['xlsx'] }],
+      dataBase64: base64(X.excelMappe(db, period, appInfo.version)),
+    });
+    if (p) ok('Excel-Mappe gespeichert', p);
+  }));
+
+  $('#btnVcf', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
+    if (!db.contacts.length) { warn('Noch keine Kontakte'); return; }
+    const p = await api.file.save({ defaultName: 'Kontakte.vcf', filters: [{ name: 'Visitenkarten', extensions: ['vcf'] }], text: X.contactsVcf(db) });
+    if (p) ok('Kontakte gespeichert', p);
+  }));
+
+  $('#btnProdukte', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
+    if (!(db.products || []).length) { warn('Noch keine Produkte'); return; }
+    const p = await api.file.save({ defaultName: 'Produkte.csv', filters: [{ name: 'CSV-Tabelle', extensions: ['csv'] }], text: X.productsCsv(db) });
+    if (p) ok('Tabelle gespeichert', p);
+  }));
+
+  $('#btnZm', root)?.addEventListener('click', (e) => busy(e.currentTarget, async () => {
+    const zm = X.zmMeldung(db, period);
+    if (zm.fehlend.length) {
+      const weiter = await confirmDialog({
+        title: 'Angaben fehlen',
+        text: `${int(zm.fehlend.length)} ${zm.fehlend.length === 1 ? 'Buchung gehört' : 'Buchungen gehören'} in die Zusammenfassende Meldung, aber beim Kontakt fehlt eine ausländische USt-IdNr.
+          (${zm.fehlend.slice(0, 5).map((f) => `${f.t.description || f.t.invoiceNumber} ${money(f.t.net)} €`).join('; ')}${zm.fehlend.length > 5 ? ' …' : ''}).
+          Ergänzen Sie die Nummer unter Stammdaten. Ohne sie fehlen diese Beträge in der Datei.`,
+        confirmLabel: zm.zeilen.length ? 'Trotzdem erstellen' : 'Verstanden',
+      });
+      if (!weiter || !zm.zeilen.length) return;
+    }
+    if (!zm.zeilen.length) { warn('Nichts zu melden', 'Im Zeitraum gibt es keine Lieferungen oder Leistungen an Unternehmen im EU-Ausland.'); return; }
+    const p = await api.file.save({
+      defaultName: `ZM_${period.from}_${period.to}.csv`,
+      filters: [{ name: 'CSV-Tabelle', extensions: ['csv'] }],
+      text: zm.text, encoding: 'latin1',
+    });
+    if (p) ok('Zusammenfassende Meldung gespeichert', `${p}. Im Online-Portal des Bundeszentralamts für Steuern beim Formular über „Import“ einlesen.`);
+  }));
+
   $$('[data-pdf]', root).forEach((b) => b.addEventListener('click', () => busy(b, async () => {
     const y = period.from.slice(0, 4);
     const map = {
@@ -329,6 +413,61 @@ async function datevOptions(db) {
     return { beraterNr: s.datevBerater, mandantNr: s.datevMandant, steuerschluessel: !!s.datevSteuerschluessel };
   }
   return datevNumbersDialog(db, false);
+}
+
+/**
+ * Steuernummer im 13-stelligen ELSTER-Format. Aus der Schreibweise des
+ * Bescheids wird sie mit dem Bundesland umgerechnet; das Land schlägt die
+ * Postleitzahl vor und lässt sich ändern.
+ * @returns {Promise<string|null>}
+ */
+function steuernummerDialog(db) {
+  const s = db.settings;
+  return new Promise((resolve) => {
+    let fertig = false;
+    const land0 = s.bundesland || landAusPlz(s.zip) || '';
+    const m = modal({
+      title: 'Steuernummer für ELSTER',
+      size: 'slim',
+      body: html`
+        <p class="mt0 small muted">ELSTER erwartet die Steuernummer in einer einheitlichen Schreibweise mit 13 Ziffern.
+        Kontovia rechnet sie aus der Nummer auf Ihrem Steuerbescheid um; dafür braucht es das Bundesland Ihres Finanzamts.</p>
+        <div class="field"><label for="el_stnr">Steuernummer</label><input id="el_stnr" value="${s.taxNumber || ''}" placeholder="z. B. 12/345/67890" inputmode="numeric"></div>
+        <div class="field"><label for="el_land">Bundesland des Finanzamts</label>
+          <select id="el_land"><option value="">Bitte wählen</option>${raw(Object.entries(BUNDESLAENDER).map(([k, l]) => `<option value="${k}" ${k === land0 ? 'selected' : ''}>${esc(l.name)}</option>`).join(''))}</select></div>
+        <p class="small mb0" id="el_vorschau" role="status"></p>`,
+      foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Datei erstellen</button>',
+      onClose: () => { if (!fertig) resolve(null); },
+    });
+    const wert = () => steuernummerElster(m.root.querySelector('#el_stnr').value, m.root.querySelector('#el_land').value);
+    const zeigen = () => {
+      const w = wert();
+      const v = m.root.querySelector('#el_vorschau');
+      v.textContent = w ? `Für ELSTER: ${w}` : 'Steuernummer und Bundesland passen noch nicht zusammen.';
+      v.className = `small mb0 ${w ? '' : 'neg'}`;
+      m.root.querySelector('[data-yes]').disabled = !w;
+    };
+    m.root.querySelector('#el_stnr').addEventListener('input', zeigen);
+    m.root.querySelector('#el_land').addEventListener('change', zeigen);
+    zeigen();
+    m.root.querySelector('[data-no]').addEventListener('click', () => { fertig = true; m.close(); resolve(null); });
+    m.root.querySelector('[data-yes]').addEventListener('click', async () => {
+      const w = wert();
+      if (!w) return;
+      const land = m.root.querySelector('#el_land').value;
+      const stnr = m.root.querySelector('#el_stnr').value.trim();
+      if (land !== s.bundesland || (!s.taxNumber && stnr)) {
+        // Merken darf nur, wer Einstellungen ändern darf; die Datei entsteht trotzdem.
+        try {
+          const { commit } = await import('../lib/store.js');
+          await commit('einstellung.elster', (d) => { d.settings.bundesland = land; if (!d.settings.taxNumber) d.settings.taxNumber = stnr; }, { silent: true });
+        } catch { /* ohne Recht nur für dieses Mal */ }
+      }
+      fertig = true;
+      m.close();
+      resolve(w);
+    });
+  });
 }
 
 function datevNumbersDialog(db, einzeln) {

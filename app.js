@@ -29,6 +29,7 @@ import * as viewTodos from './views/todos.js';
 import * as viewRechnungen from './views/rechnungen.js';
 import * as viewReports from './views/reports.js';
 import * as viewExport from './views/export.js';
+import * as viewDatenimport from './views/datenimport.js';
 import * as viewMaster from './views/master.js';
 import * as viewSettings from './views/settings.js';
 import * as viewHelp from './views/help.js';
@@ -47,6 +48,7 @@ const VIEWS = {
   rechnungen: { title: 'Rechnungen', icon: 'invoice', mod: viewRechnungen, key: '8' },
   reports: { title: 'Auswertungen', icon: 'chart', mod: viewReports, key: '4' },
   export: { title: 'Export & Finanzamt', icon: 'export', mod: viewExport, key: '5' },
+  datenimport: { title: 'Daten übernehmen', icon: 'folder', mod: viewDatenimport },
   master: { title: 'Stammdaten', icon: 'master', mod: viewMaster, key: '6' },
   settings: { title: 'Einstellungen', icon: 'settings', mod: viewSettings, key: ',' },
   help: { title: 'Hilfe', icon: 'help', mod: viewHelp },
@@ -1146,7 +1148,7 @@ function renderShell() {
           </div>
           <div class="nav-sep"></div>
           <div class="nav-group">
-            ${raw(['reports', 'export'].map(navItem).join(''))}
+            ${raw(['reports', 'export', 'datenimport'].map(navItem).join(''))}
           </div>
           <div class="nav-spacer"></div>
           <div class="nav-group">

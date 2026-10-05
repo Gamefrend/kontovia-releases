@@ -1,12 +1,12 @@
 {
-  "version": "2.13.0",
-  "released": "2026-10-05T10:59:54.661Z",
-  "notes": "Jahresvergleich, Drucken und ein sicheres Verbinden\n\n- Neu: Unter Auswertungen vergleichen Sie Ausgaben oder Einnahmen über mehrere Jahre, je Kategorie und im Verlauf der Monate. Das laufende Jahr zählt nur bis zum gleichen Tag, damit es fair bleibt.\n- Die Buchungsliste lässt sich drucken oder als PDF sichern, genau so, wie Sie sie gerade eingestellt haben.\n- Ein weiteres Gerät verbinden: Kontovia meldet nicht mehr zu früh „fehlgeschlagen“. Ist das Gerät trotzdem verbunden, nehmen Sie es mit einem Klick in die Liste auf.\n- Fingerabdruck oder Gesicht einrichten klappt auf mehr Geräten, und die Meldungen sagen jetzt, woran es liegt.\n- Der leere Knopf unter „Feedback“ in der Seitenleiste ist weg.",
+  "version": "2.14.0",
+  "released": "2026-10-05T14:41:35.393Z",
+  "notes": "Daten übernehmen und neue Dateien für ELSTER und Excel\n\n- Neu: Unter „Daten übernehmen“ holen Sie Buchungen, Kunden und Produkte aus Ihrem bisherigen Programm, von der Steuerkanzlei, aus Excel oder als Visitenkarten. Was schon da ist, wird nicht doppelt übernommen.\n- Die Umsatzsteuer-Voranmeldung gibt es als Datei, die „Mein ELSTER“ direkt einliest. Umgekehrt liest Kontovia solche Dateien ein und zeigt, ob sie zu Ihren Buchungen passen.\n- Neu im Export: eine Excel-Datei mit Buchungen und Auswertungen, Ihre Kontakte als Visitenkarten und die Zusammenfassende Meldung für Lieferungen ins EU-Ausland.\n- Auf sehr kleinen Handys passt die Buchungsliste wieder ganz auf den Bildschirm.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "eece51b9d26875f540cde6ebad72963f801a712eac9c2d952c6150f180f59986",
-      "size": 71711
+      "sha256": "aea46cda8ac2344d693eab23933db28a9af3249e5b4f074ca91e31f9742cd406",
+      "size": 71870
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -79,9 +79,24 @@
       "size": 50352
     },
     {
+      "path": "lib/datenimport.js",
+      "sha256": "555f071a49f006e070fe068a64ffd63cba9814922e61a108905661f0956366ae",
+      "size": 42011
+    },
+    {
+      "path": "lib/datenimportaktionen.js",
+      "sha256": "f18d3e2ad6c1689ab1d7c31f329f801f51b91c080532c6ff5b0a23a465a96ac2",
+      "size": 6504
+    },
+    {
       "path": "lib/dokument.js",
       "sha256": "54d4115e8df56d7c8fb5aad48df46e287a8ebc689cf77cf58c864bd5018fdb9a",
       "size": 27144
+    },
+    {
+      "path": "lib/elster.js",
+      "sha256": "eee662dea403e92bff14fc034846bf57eb4ddb8dcf7d94382bafd1c3bac17671",
+      "size": 17044
     },
     {
       "path": "lib/erechnung-schreiben.js",
@@ -100,8 +115,8 @@
     },
     {
       "path": "lib/exports.js",
-      "sha256": "d0dd4a476dcffecc7c71241e3e5817e6ff321b9d1073f31cafc2c8fbe9161e91",
-      "size": 37943
+      "sha256": "872bf05c5e4cb8ce771ce84905aa65a56d25caa3dec5368be164f5a85bb75664",
+      "size": 48420
     },
     {
       "path": "lib/feedback.js",
@@ -170,8 +185,8 @@
     },
     {
       "path": "lib/merge.js",
-      "sha256": "0b56cc6e631a34844219b8015a2089a5e451528bd33bfa8da5b4e70c52f0649e",
-      "size": 14406
+      "sha256": "02fc57364c5c05a0590ccdaa5ed3d1fd5764cffc9ec467b2d788139d25225afa",
+      "size": 14595
     },
     {
       "path": "lib/pdf.js",
@@ -245,8 +260,8 @@
     },
     {
       "path": "lib/reports.js",
-      "sha256": "aa6cf8f0e6ea6641f906db7aa36eb36550d5011745de23a09637ca336b99fb58",
-      "size": 31098
+      "sha256": "d73b82dd9c273226a8997c4e481eb1c8674e53a179e0f74dfb8281e2fc519bfa",
+      "size": 31625
     },
     {
       "path": "lib/richeditor.js",
@@ -270,8 +285,8 @@
     },
     {
       "path": "lib/store.js",
-      "sha256": "6cf627d187a66894da48f2675a4c42fa677cbda5f2867f1cc65937366b1e7c1e",
-      "size": 36379
+      "sha256": "4a12619eefc51b5d519ee1511ffbb4c587112e1733d066e5968c372a826b56bf",
+      "size": 36402
     },
     {
       "path": "lib/suche.js",
@@ -280,8 +295,8 @@
     },
     {
       "path": "lib/suchindex.js",
-      "sha256": "f90e6fdc464a6458b6aca4cb5eb4855d823b26f59105f93a882496c2ea2ebff4",
-      "size": 8601
+      "sha256": "aefe9cd6fa9e31b09d0c96d55b9026468c81f4a1315089fa2596656f2e11deb4",
+      "size": 8816
     },
     {
       "path": "lib/sync.js",
@@ -320,13 +335,18 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "85b8f345b632c3e5b0a5b98dccc5e388f89d8bd1df65be38e9960238b7bbc5f1",
-      "size": 26544
+      "sha256": "ee619f1ed2560017289c44a4ab793f62fcfc6e76aba46da2866eae523ee3fb0b",
+      "size": 27362
     },
     {
       "path": "lib/wiederkehrend.js",
       "sha256": "3c440cf907522329fb92e0d307d5dbb3d60d5aff45cd6f735285dfb92f6491af",
       "size": 4378
+    },
+    {
+      "path": "lib/xlsx.js",
+      "sha256": "aef006db1786ba117fe2abe1384d284389b85987676fe249afec98bb224e13ed",
+      "size": 19550
     },
     {
       "path": "lib/zugaenge.js",
@@ -345,12 +365,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "d59da686ae7b668bc6ebcedd4a4f328e65cc0b6abf2e85c2d7cc8eb37a8e4bb1",
+      "sha256": "599573f722423bedf277ce5cb8c6d67ddba77be90578d93e74da548ee5ff5283",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "12a4779e7d881eae29dd29a63c9454bf4dead88c5b7b01ca659f697ce4a92829",
+      "sha256": "3da82390e76bb0c80eaa3f77dd8304ecdebca73376c5fc984a6941da86bf0bdb",
       "size": 26012
     },
     {
@@ -365,7 +385,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "fffdd7120e96aff06d69d4f3512ab4d482ab3a3a94c25369f29f00509a174f1b",
+      "sha256": "d05ea5ea5418017a7bc44c5b8f60818bd9f42fedaef5d1c1200bfdfc0c507557",
       "size": 29187
     },
     {
@@ -380,8 +400,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "738ee9e8c25e5592216b474df11915849b28316c728ffbc05025a47d9a5681c9",
-      "size": 92853
+      "sha256": "98f023102401932c387996659dd1793011f2e2ad83e8b0cdac43936f0585bd0c",
+      "size": 93369
     },
     {
       "path": "views/anlageform.js",
@@ -395,8 +415,8 @@
     },
     {
       "path": "views/calendarsync.js",
-      "sha256": "a7ec5fdc216ed6531be3375c11248d2e92f29d62dd86fe9a7065d2d8f6e99b98",
-      "size": 28845
+      "sha256": "853190b6a9fa6b268cb59b8c0f21ffbe34f04f7035f1bc29969878c1d6a6e092",
+      "size": 29004
     },
     {
       "path": "views/cloudpanel.js",
@@ -409,19 +429,24 @@
       "size": 39004
     },
     {
+      "path": "views/datenimport.js",
+      "sha256": "7083a9aaf4ea93c9788d419f8b38c1e013967d02d62854be6539d65a6905b326",
+      "size": 39876
+    },
+    {
       "path": "views/erechnung.js",
       "sha256": "bfc2f75cb27270a81e1ef6c4b218c3e69fcd6ddee23e393dda2f3050acd30122",
       "size": 5057
     },
     {
       "path": "views/export.js",
-      "sha256": "a064314b7bc6620f0f6c7c74a3b363ec920bed49b152d222c3b02c9cd0fff663",
-      "size": 19782
+      "sha256": "096957c2b0f44abbef014aa9a2ac0483bc1bbfc45aa57a54fdfea906076c4aca",
+      "size": 28137
     },
     {
       "path": "views/help.js",
-      "sha256": "81d0d6d681f674e97a74fda4c6d89965c4093f8da4e71c2b0445cfda6ddce724",
-      "size": 57111
+      "sha256": "a483f774c9fae0fc82586547abfc5f8bf144d54a0953c50af2d5544cc4c6ed97",
+      "size": 59662
     },
     {
       "path": "views/jahresvergleich.js",
@@ -450,8 +475,8 @@
     },
     {
       "path": "views/rechnungen.js",
-      "sha256": "c7f005fb26908106157653fb395799b36e983efbd9bebec05602d9253ef82891",
-      "size": 45092
+      "sha256": "efcbaabb9bc042c3bc4cc52824063b7cba0f750c4633f553db56ed3fedff5049",
+      "size": 45279
     },
     {
       "path": "views/rechnungseditor.js",
@@ -485,8 +510,8 @@
     },
     {
       "path": "views/transactions.js",
-      "sha256": "48c7871b68616d684bed9c0c93bd40b37fad6162b77e613103f422d53c8cebad",
-      "size": 75772
+      "sha256": "a5b1691e2723c32aa7e4cacde7d6cce7acc5d3600334aaa8116dabed7df88b1b",
+      "size": 76046
     },
     {
       "path": "views/wiederkehrend.js",
@@ -500,7 +525,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "d33ca752f7d2800078fe6ba30738268472a21b0c893ba4763693378ff4361869",
+      "sha256": "18e3fb297724a7e3d74e3dafdd4bbde3c28c1523c301cff739e0cd4a13683a19",
       "size": 6906
     },
     {
@@ -595,8 +620,8 @@
     },
     {
       "path": "web/seed.js",
-      "sha256": "ac26cdf726f19fa2888109fd2fd9ab1a0572f6ca525db2a8c5c666a9a92a22ff",
-      "size": 5728
+      "sha256": "8ada08ba83817f647941cf33b49b50f4983e3551fa1850625f45b357a14d8b5c",
+      "size": 5753
     },
     {
       "path": "web/sperre.js",

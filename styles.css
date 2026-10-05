@@ -243,6 +243,8 @@ table.data td, .help, .notice, .stat .value, .modal-body pre { user-select: text
 .card-head h3 { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
 .card-head .sub { color: var(--muted); font-size: 12.5px; }
 .card-body { padding: 14px 20px 20px; }
+/* Lange Knopftexte im Kartenkopf brechen auf kleinen Telefonen um, statt über den Rand zu ragen. */
+@media (max-width: 400px) { .card-head .btn { white-space: normal; height: auto; min-height: 32px; padding-block: 6px; text-align: left; max-width: 100%; } }
 .card-body.tight { padding: 0; }
 
 .grid { display: grid; gap: 20px; }
@@ -874,6 +876,9 @@ table.data th.num .th-sort { flex-direction: row-reverse; margin-left: 0; margin
 .chip-x:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); }
 .chip-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .tx-sum { display: flex; align-items: center; gap: 6px 16px; flex-wrap: wrap; font-size: 13px; }
+/* Auf sehr schmalen Telefonen (320 px) darf die Summenzeile umbrechen, auch im Hinweis zu offenen Posten. */
+.dt-sum, .tx-sum { min-width: 0; }
+.tx-sum .badge { white-space: normal; height: auto; min-height: 22px; padding-block: 2px; line-height: 1.35; }
 table.data.fixed tr.empty-row td { white-space: normal; }
 table.data tbody tr.empty-row:hover { background: none; }
 
