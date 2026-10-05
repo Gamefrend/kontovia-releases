@@ -1,7 +1,7 @@
 {
-  "version": "2.16.0",
-  "released": "2026-10-05T16:53:36.385Z",
-  "notes": "Rechnungen direkt mit Gmail oder Outlook senden\n\n- Neu: Rechnungen direkt aus Kontovia senden, über Ihr Gmail- oder Outlook-Konto. Die E-Mail steht danach bei Ihnen unter „Gesendet“.\n- Beim ersten Mal fragt Google oder Microsoft, ob Kontovia in Ihrem Namen senden darf. Lesen kann Kontovia Ihre E-Mails nicht.\n- Die E-Mail für Ihr E-Mail-Programm landet jetzt gleich im Download-Ordner. Ein Klick darauf öffnet sie.",
+  "version": "2.16.1",
+  "released": "2026-10-05T18:48:44.819Z",
+  "notes": "Senden mit Gmail repariert\n\n- Senden mit Gmail klappt jetzt. Bisher kam nach der Anmeldung „Keine Verbindung zum Server“.",
   "files": [
     {
       "path": "app.js",
@@ -340,8 +340,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "6a50fce9dd14e6c2bf4159c7c3425c4abddb27dcb1800fbdaef01648dc81f442",
-      "size": 28498
+      "sha256": "5ff65424edaa2f2bb10596077b0c2feb9f4e94c9f99eb840973261463d4859bd",
+      "size": 28722
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -370,12 +370,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "aeddc4bedf0b51d6f3f8850ef7810518241eaa25178fa72d0f59ba6e13b5a5e1",
+      "sha256": "d95c4e388df0267cbd469487a1d0727ae77647af4ceee7951632898361ab4947",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "f01e895ee4c40b8c9a5d7bf301fceaa387bf78faabbdeead95a9f6722fef0916",
+      "sha256": "28b62bc54acea22172a15e48d0eaa0f6dd7cc9fdea4ff8f90bdd39b6e5e9a6db",
       "size": 28151
     },
     {
@@ -390,7 +390,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "16c8eb82e8f2389eda16e7fb11f934a5043ea4666f213e608413d64609646800",
+      "sha256": "284623997c9c04c13f3b6269a2bbbd03409e4875acbe4d7b8a8310889b778c20",
       "size": 31451
     },
     {
@@ -530,7 +530,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "e28d6fbae63846e11575e2bcf7b6016b26a2236e4b3c46f933c8ec93a176590e",
+      "sha256": "edfc572c86f47f4cf5d2b97c97c3a7123b8c0ac66de1333c053c033479d12cf2",
       "size": 6906
     },
     {
@@ -600,8 +600,8 @@
     },
     {
       "path": "web/mailversand.js",
-      "sha256": "fe05eb378e194ee9babbe309859445a5f6794a31638d8e98a6a2ce65e7b71342",
-      "size": 19982
+      "sha256": "b820e678b1c9acf901f9398767192e5d79a468a2bce81debe66dafd7f7211fbf",
+      "size": 20299
     },
     {
       "path": "web/mobil.js",

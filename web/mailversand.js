@@ -31,9 +31,11 @@ import { rueckAdresse, readIdToken } from './weiterleitung.js';
 import { fensterOeffnen as googleFensterOeffnen, istApple } from './gcal.js';
 
 export const GMAIL_SCOPE = 'https://www.googleapis.com/auth/gmail.send';
-const GMAIL_SENDEN = 'https://gmail.googleapis.com/upload/gmail/v1/users/me/messages/send?uploadType=media';
-/* Gmail nimmt Nachrichten bis 35 MB an. */
-const GMAIL_MAX = 35 * 1024 * 1024;
+/* Nicht der Upload-Pfad (/upload/…): Den lässt Google aus dem Browser nicht zu (CORS, seit 2.16.1).
+   Die Nachricht geht daher als JSON mit dem Feld „raw“ (Base64url). */
+const GMAIL_SENDEN = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/send';
+/* Gmail nimmt Anhänge bis 25 MB an. */
+const GMAIL_MAX = 25 * 1024 * 1024;
 
 const MS_AUTH = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
 const MS_TOKEN = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
@@ -304,7 +306,7 @@ export class MailVersand {
     if (anbieter === 'google') {
       inhalt = vonBase64(mimeBase64);
       if (!inhalt.length) throw new Error('Die E-Mail ist leer.');
-      if (inhalt.length > GMAIL_MAX) throw fehler('Die E-Mail ist für Gmail zu groß (höchstens 35 MB).', 'ZU_GROSS');
+      if (inhalt.length > GMAIL_MAX) throw fehler('Die E-Mail ist für Gmail zu groß (höchstens 25 MB).', 'ZU_GROSS');
       if (!mimeEmpfaenger(inhalt).length) throw fehler('Bitte eine Empfängeradresse eingeben.', 'KEIN_EMPFAENGER');
     } else {
       inhalt = JSON.stringify({ message: msNachrichtPruefen(nachricht), saveToSentItems: true });
@@ -377,8 +379,8 @@ export class MailVersand {
   async gmailSenden(t, mime) {
     const res = await this.roh(GMAIL_SENDEN, {
       method: 'POST',
-      headers: { authorization: `Bearer ${t.accessToken}`, 'content-type': 'message/rfc822', accept: 'application/json' },
-      body: mime,
+      headers: { authorization: `Bearer ${t.accessToken}`, 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ raw: base64url(mime) }),
       timeoutMs: 120000,
     });
     let d = null;
@@ -391,6 +393,7 @@ export class MailVersand {
       throw fehler('Der Versand über Gmail ist für Kontovia noch nicht freigeschaltet. Bitte einen anderen Weg wählen.', 'SCHNITTSTELLE_AUS');
     }
     if (res.status === 403) throw Object.assign(fehler('Google erlaubt Kontovia das Senden nicht. Bitte noch einmal auf Senden klicken und das Senden erlauben.', 'ERNEUT'), { status: 401 });
+    if (res.status === 413) throw fehler('Die E-Mail ist für Gmail zu groß. Bitte einen anderen Weg wählen.', 'ZU_GROSS');
     if (res.status === 429) throw fehler('Gmail nimmt gerade keine weiteren E-Mails an. Bitte später erneut versuchen.', 'ZU_VIELE');
     throw fehler(`Gmail hat die E-Mail nicht angenommen${grund ? `: ${grund}` : ''}.`, 'ANBIETER');
   }
