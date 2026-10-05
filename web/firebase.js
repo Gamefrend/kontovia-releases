@@ -308,6 +308,22 @@ export class FirebaseBackend {
     return true;
   }
 
+  /**
+   * Löscht das Anmeldekonto (E-Mail-Adresse und Kontokennung) bei Firebase Authentication.
+   * Das Recht auf Löschung (Art. 17 DSGVO) schließt diese Angaben ein; ohne diesen Schritt
+   * bliebe nach dem Löschen der Ablage der Eintrag der Anmeldung stehen.
+   */
+  async kontoLoeschen() {
+    const idToken = await this.idToken();
+    await requestJson(`${IDENTITY}/accounts:delete?key=${enc(this.cfg.apiKey)}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+      timeoutMs: 30000,
+    });
+    return true;
+  }
+
   async quota() {
     const attachments = await this.listAttachments();
     const backups = await this.listBackups().catch(() => []);

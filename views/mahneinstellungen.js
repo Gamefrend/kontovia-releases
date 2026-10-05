@@ -45,7 +45,7 @@ export function mahnKarte(host) {
         <div class="field" id="mw_pauschaleBox">
           <label for="mw_pauschale">Feste Pauschale in €</label>
           <input id="mw_pauschale" inputmode="decimal" value="${esc(moneyInput(e.aufschlag.pauschale))}">
-          <span class="hint">Vorgabe 40 €: die gesetzliche Verzugspauschale bei Geschäftskunden (§ 288 Abs. 5 BGB). Sie wird höchstens einmal je Rechnung berechnet.</span>
+          <span class="hint">Vorgabe 40 €: die gesetzliche Verzugspauschale bei Geschäftskunden (§ 288 Abs. 5 BGB), nur gegenüber Unternehmen. Sie wird höchstens einmal je Rechnung berechnet.</span>
         </div>
         <div class="field">
           <label for="mw_ab">Vorschlagen ab</label>
@@ -53,7 +53,7 @@ export function mahnKarte(host) {
           <span class="hint">Ab diesem Schreiben ist der Verzugsaufschlag vorausgewählt.</span>
         </div>
       </div>
-      <div class="notice mt8">Bei Privatkunden gelten andere Sätze (Basiszinssatz plus 5 Prozentpunkte, keine Pauschale). Welche Beträge Sie verlangen, verantworten Sie selbst. Kontovia rechnet nach Ihren Angaben und ersetzt keine Rechtsberatung.
+      <div class="notice mt8">Beim Erstellen einer Mahnung wählen Sie, ob der Kunde ein Unternehmen oder eine Privatperson ist. Bei Privatkunden (Verbrauchern) gilt der Basiszinssatz plus 5 Prozentpunkte, die Pauschale wird <strong>nie</strong> berechnet, und eine Mahngebühr darf nur den tatsächlichen Aufwand abdecken. Verzug setzt außerdem voraus, dass die Zahlungsfrist abgelaufen ist (§ 286 BGB). Welche Beträge Sie verlangen, verantworten Sie selbst. Kontovia rechnet nach Ihren Angaben und ersetzt keine Rechtsberatung.
         Mahngebühr und Verzugsaufschlag sind kein Entgelt für eine Leistung: Sie werden ohne Umsatzsteuer gebucht, erst wenn das Geld eingegangen ist.</div>
       <div class="row end mt16"><button class="btn primary" id="mw_speichern">Mahnwesen speichern</button></div>
     </div>`;

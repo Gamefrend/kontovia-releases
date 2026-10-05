@@ -1102,6 +1102,16 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       fieldError(form.querySelector('#i_repeatUntil'), 'Das Ende liegt vor dem Datum der Buchung.');
       return false;
     }
+    // Eine Betriebseinnahme als „privat“ zu kennzeichnen, hielte sie aus EÜR und Umsatzsteuer heraus. Dann
+    // fragt Kontovia einmal nach, bevor es geschieht (§ 146 Abs. 1 AO).
+    if (tx.unlisted && !existing?.unlisted && tx.type === 'income' && !sel.category(tx.categoryId)?.private) {
+      const weiter = await confirmDialog({
+        title: 'Ist diese Einnahme wirklich privat?',
+        text: 'Als „privat“ gekennzeichnet steht sie weder in der EÜR noch in der Umsatzsteuer noch in den Unterlagen fürs Finanzamt. Das ist nur richtig, wenn sie nicht zum Betrieb gehört, etwa beim Verkauf eigener Privatsachen. Einnahmen aus Ihrer betrieblichen Tätigkeit müssen vollständig erklärt werden (§ 146 Abs. 1 AO).',
+        confirmLabel: 'Ja, sie ist privat', cancelLabel: 'Zurück',
+      });
+      if (!weiter) return false;
+    }
     saved = true;
     // Eine neue Wiederholung: Diese Buchung ist ihr erstes Vorkommen.
     const regel = wiederholung.freq && !tx.recurringId ? regelAusBuchung(tx, wiederholung.freq, { id: uid('rec'), until: wiederholung.until }) : null;

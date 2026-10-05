@@ -78,9 +78,11 @@ self.addEventListener('fetch', (event) => {
     const version = await zeigerLesen();
     if (version) {
       const cache = await caches.open(PREFIX + version);
-      // Aufrufe der Startseite – auch mit Parametern – bekommen index.html.
-      const ziel = req.mode === 'navigate' || rel === '' ? new URL('index.html', s).href : url.origin + url.pathname;
-      const hit = await cache.match(ziel);
+      // Aufrufe der Startseite – auch mit Parametern – bekommen index.html. Eine eigene Seite der
+      // Fassung (etwa recht/impressum.html) bekommt sich selbst; nur was es nicht gibt, fällt auf die Startseite zurück.
+      const start = new URL('index.html', s).href;
+      let hit = await cache.match(rel === '' ? start : url.origin + url.pathname);
+      if (!hit && req.mode === 'navigate') hit = await cache.match(start);
       if (hit) return hit;
     }
     return fetch(req);

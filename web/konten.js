@@ -6,7 +6,8 @@
  * hier steht nur die Liste: welche Konten es auf diesem Gerät gibt und welches
  * gerade offen ist. Die Liste liegt, wie die Gerätekennung, im Klartext, denn
  * sie wird vor dem Entsperren gebraucht. Pro Konto steht darin ein Name zur
- * Wiedererkennung (Name des Betriebs, sonst die Google-Adresse), sonst nichts.
+ * Wiedererkennung (Name des Betriebs, sonst die Google-Adresse), auf Wunsch
+ * eine eigene Bezeichnung, und wann es zuletzt geöffnet war; sonst nichts.
  *
  * Gewechselt wird mit einem Neustart der Seite: Der Browser liest dann
  * ausschließlich die Datenbank des gewählten Kontos. So kann nichts von einem
@@ -24,7 +25,7 @@ const EINTRAG = 'konten';
 const ID = /^[a-z0-9]{1,16}$/;
 const kurz = (v, max = 120) => String(v ?? '').trim().slice(0, max);
 
-/** @type {{aktiv:string, zuletzt:string, liste:{id:string,name:string,email:string,seit:string,geoeffnet:number}[]}} */
+/** @type {{aktiv:string, zuletzt:string, liste:{id:string,name:string,alias:string,email:string,seit:string,geoeffnet:number}[]}} */
 let stand = { aktiv: A.HAUPTKONTO, zuletzt: '', liste: [] };
 
 async function speichern() {
@@ -44,7 +45,7 @@ export async function laden() {
     const liste = [];
     for (const k of e.liste) {
       if (!k || typeof k.id !== 'string' || !ID.test(k.id) || liste.some((x) => x.id === k.id)) continue;
-      liste.push({ id: k.id, name: kurz(k.name), email: kurz(k.email), seit: kurz(k.seit, 40), geoeffnet: Number(k.geoeffnet) || 0 });
+      liste.push({ id: k.id, name: kurz(k.name), alias: kurz(k.alias, 60), email: kurz(k.email), seit: kurz(k.seit, 40), geoeffnet: Number(k.geoeffnet) || 0 });
     }
     const aktiv = typeof e.aktiv === 'string' && ID.test(e.aktiv) ? e.aktiv : (liste[0]?.id || A.HAUPTKONTO);
     stand = { aktiv, zuletzt: typeof e.zuletzt === 'string' && ID.test(e.zuletzt) ? e.zuletzt : '', liste };
@@ -67,7 +68,10 @@ export function uebersicht() {
     konten: stand.liste.map((k) => ({
       id: k.id,
       name: k.name,
+      alias: k.alias,
       email: k.email,
+      seit: k.seit,
+      geoeffnet: k.geoeffnet,
       aktiv: k.id === stand.aktiv,
     })),
   };
@@ -83,7 +87,7 @@ export async function beschriften({ name, email } = {}, { geoeffnet = false } = 
   let k = eintrag(stand.aktiv);
   let neu = false;
   if (!k) {
-    k = { id: stand.aktiv, name: '', email: '', seit: new Date().toISOString(), geoeffnet: 0 };
+    k = { id: stand.aktiv, name: '', alias: '', email: '', seit: new Date().toISOString(), geoeffnet: 0 };
     stand.liste.push(k);
     neu = true;
   }
@@ -170,6 +174,34 @@ export async function aktivEntfernen() {
   if (id !== A.HAUPTKONTO) await A.kontoLoeschen(id).catch(() => {});
   await speichern();
   return weiter?.id || null;
+}
+
+/**
+ * Gibt einem Konto eine eigene Bezeichnung für die Listen (leer: wieder der Name
+ * des Betriebs). Berührt die Buchhaltung selbst nicht.
+ */
+export async function umbenennen(id, alias) {
+  const k = eintrag(String(id));
+  if (!k) throw new Error('Dieses Konto gibt es auf diesem Gerät nicht (mehr).');
+  k.alias = kurz(alias, 60);
+  await speichern();
+  return uebersicht();
+}
+
+/**
+ * Entfernt ein anderes als das offene Konto von diesem Gerät: Buchhaltung, Belege,
+ * Sicherungen und Zugänge. Das offene Konto geht nur über „Abmelden“ (abgleichen, dann entfernen).
+ * Erst aus der Liste, dann die Daten: Bleibt etwas zurück, ist es unsichtbar und nur Speicherplatz.
+ */
+export async function entfernen(id) {
+  const kennung = String(id);
+  if (kennung === stand.aktiv) throw new Error('Das offene Konto lässt sich nur mit „Abmelden“ entfernen.');
+  if (!eintrag(kennung)) throw new Error('Dieses Konto gibt es auf diesem Gerät nicht (mehr).');
+  stand.liste = stand.liste.filter((k) => k.id !== kennung);
+  if (stand.zuletzt === kennung) stand.zuletzt = '';
+  await speichern();
+  await A.kontoLoeschen(kennung);
+  return uebersicht();
 }
 
 /** Hat ein anderes Konto auf diesem Gerät schon dieses Google-Konto? Gibt dessen Namen zurück. */

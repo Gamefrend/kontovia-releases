@@ -130,6 +130,7 @@ function makeSeed(settings = {}) {
     reminders: [],
     bankRules: [],
     bankTemplates: [],
+    users: [],
     imports: [],
     auditLog: [],
     counters: { invoice: 1 },

@@ -15,6 +15,8 @@ import { startCalendarSync, stopCalendarSync } from './lib/gcalsync.js';
 import { VERSIONEN } from './lib/versionen.js';
 import { abmelden, entsperrWege, kontenMenue, kontenAufSperrbildschirm, nachrichtHolen, kontoName, kontoSchluessel } from './lib/zugaenge.js';
 import { feedbackOeffnen, feedbackNachsenden, entwicklerKlick } from './lib/feedback.js';
+import { rechtsfuss, rechtslinks, nutzungPruefen, nutzungVermerken } from './lib/recht.js';
+import { nutzerWaehlen, nutzerMenue, nutzerAnzeigen, kannSchreiben } from './lib/benutzer.js';
 import { sucheOeffnen, SUCHE_KUERZEL } from './lib/suche.js';
 import { seite, seitenwechsel, beobachten, markierung, themaWechsel, schuetteln } from './lib/bewegung.js';
 
@@ -250,6 +252,8 @@ function renderSetup(konten = null) {
     vatPeriod: 'vierteljährlich', chartOfAccounts: 'SKR03',
     // Bewusst ohne Vorgabe: eine vorausgewählte Zustimmung wäre keine.
     updateCheckOnStart: undefined,
+    // Zustimmung zu den Nutzungsbedingungen: Bewusst nicht vorangekreuzt.
+    nutzungOk: false,
   };
 
   const stepsHtml = () => `<div class="steps">${[0, 1, 2].map((i) => `<i class="${i <= step ? 'done' : ''}"></i>`).join('')}</div>`;
@@ -456,6 +460,11 @@ function renderSetup(konten = null) {
         Bestätigung. Ohne Antwort fragt Kontovia beim ersten Entsperren noch einmal. Jederzeit
         unter Einstellungen → Programmaktualisierung änderbar.</span>
       </div>
+      <div class="field mt16">
+        <label class="check"><input type="checkbox" id="f_nutzungOk" ${data.nutzungOk ? 'checked' : ''}>
+          <span>Ich habe die <a href="#" data-recht="nutzung">Nutzungsbedingungen</a> und die
+          <a href="#" data-recht="datenschutz">Datenschutzhinweise</a> gelesen und bin einverstanden.</span></label>
+      </div>
       <div class="err small mt8" id="pwerr"></div>`,
   ];
 
@@ -473,9 +482,11 @@ function renderSetup(konten = null) {
             <div class="spacer"></div>
             <button class="btn primary lg" id="next">${step === 2 ? 'Tresor anlegen' : 'Weiter'}</button>
           </div>
+          ${raw(rechtsfuss())}
         </div>
       </div>`;
 
+    rechtslinks(app);
     kastenZeichnen();
     $('#setupZurueck')?.addEventListener('click', async () => {
       try { await api.konten.zurueck(); } catch (e) { err('Zurück nicht möglich', e.message); return; }
@@ -510,12 +521,15 @@ function renderSetup(konten = null) {
       const errEl = $('#pwerr');
       if (pw1.length < 10) { errEl.textContent = 'Das Passwort muss mindestens 10 Zeichen haben.'; return; }
       if (pw1 !== pw2) { errEl.textContent = 'Die beiden Eingaben stimmen nicht überein.'; return; }
+      if (!data.nutzungOk) { errEl.textContent = 'Bitte stimmen Sie den Nutzungsbedingungen und den Datenschutzhinweisen zu, um fortzufahren.'; return; }
       const btn = $('#next');
       btn.disabled = true;
       btn.textContent = 'Verschlüssele …';
       try {
-        const db = await api.vault.create(pw1, { ...data, defaultVatRate: Number(data.defaultVatRate) });
+        const { nutzungOk, ...einstellungen } = data;
+        const db = await api.vault.create(pw1, { ...einstellungen, defaultVatRate: Number(data.defaultVatRate) });
         setDb(db);
+        await nutzungVermerken(appInfo.version).catch(() => {});
         applyTheme();
         renderShell();
         navigate('dashboard', {}, { ersetzen: true });
@@ -603,8 +617,10 @@ function renderCloudLaden(st, { neu }) {
           <button class="btn ghost sm" id="cloudAbmelden">Abmelden</button>
           <button class="btn ghost sm" id="cloudNeu">Stattdessen neu anfangen</button>
         </div>
+        ${raw(rechtsfuss())}
       </div>
     </div>`;
+  rechtslinks(app);
 
   const pw = $('#cloudPw');
   const btn = $('#cloudLaden');
@@ -810,8 +826,10 @@ function renderUnlock(message = '') {
           <p class="muted">Die automatischen Sicherungen sind mit dem Tresorpasswort verschlüsselt, das zu ihrer Zeit galt.</p>
         </details>
         <div id="kontenWahl" class="mt16"></div>
+        ${raw(rechtsfuss())}
       </div>
     </div>`;
+  rechtslinks(app);
 
   const pw = $('#pw');
   const errEl = $('#unlockerr');
@@ -859,7 +877,7 @@ async function announceMigrations() {
   for (const h of hinweise) {
     const [titel, aktion] = ART[h.art] || ART.euer;
     toast(titel, h.text, 'warn', 20000);
-    await commit(aktion, () => null, { entity: 'bestand', summary: h.text });
+    await commit(aktion, () => null, { entity: 'bestand', summary: h.text, system: true });
   }
 }
 
@@ -898,6 +916,10 @@ async function sicherungsHinweis() {
 
 /** Läuft nach jedem erfolgreichen Entsperren. */
 async function afterUnlock() {
+  // Erst die Nutzungsbedingungen: Wer sie nicht annimmt, wird gesperrt, bevor irgendetwas anderes passiert.
+  if (!await nutzungPruefen({ sperren: lockNow, appVersion: appInfo.version })) return;
+  // Hat das Konto Benutzer, jetzt klären, wer arbeitet; alles Weitere (auch das Journal) kennt dann den Namen.
+  if (!await nutzerWaehlen({ konto: appInfo.konto, sperren: lockNow })) return;
   api.cloud.status().then((st) => setCloudVerbunden(st.configured ? !!st.linked : null)).catch(() => {});
   // Web-Fassung: eben per Weiterleitung verbunden – der erste Abgleich entscheidet, welcher Stand gilt.
   api.cloud.rueckmeldung?.().then((rm) => {
@@ -1053,6 +1075,7 @@ let neuHoerer = null;
 
 /** Der eine Hauptknopf der Seitenleiste: eine neue Buchung, Einnahme oder Ausgabe. */
 export function neueBuchungMenue(anker) {
+  if (!kannSchreiben()) { warn('Nur lesen', 'Mit Ihrer Rolle lassen sich keine Buchungen anlegen.'); return; }
   openPopover(anker, {
     label: 'Neue Buchung',
     className: 'menu neu-menu',
@@ -1112,6 +1135,8 @@ function renderShell() {
           <div id="updateSlot"></div>
           <div id="themeSlot"></div>
           <button class="btn ghost block" id="feedbackBtn" title="Rückmeldung geben, auf Wunsch mit Bildschirmfoto">${icon('chat', 16)} Feedback</button>
+          <button class="btn ghost block nutzer-knopf" id="nutzerBtn" type="button" aria-haspopup="menu" hidden></button>
+          ${raw(rechtsfuss())}
           <div class="foot-knoepfe">
             <button class="btn ghost" id="lockBtn" title="Sperren (${MOD}+L)">${icon('lock', 16)} Sperren</button>
             <button class="btn ghost" id="logoutBtn" title="Dieses Konto von diesem Gerät abmelden (vorher wird abgeglichen)">${icon('logout', 16)} Abmelden</button>
@@ -1126,6 +1151,7 @@ function renderShell() {
           </header>
           <div id="topActions" class="row"></div>
         </div>
+        <div class="rolle-banner" id="rolleBanner" role="status" hidden></div>
         <div class="content" id="content"></div>
         <div class="statusbar">
           <span class="row" style="gap:6px"><i class="save-dot" id="saveDot"></i><span id="saveText">gespeichert</span></span>
@@ -1141,6 +1167,7 @@ function renderShell() {
       </main>
     </div>`;
 
+  rechtslinks(app);
   $('#nav').addEventListener('click', (e) => {
     const item = e.target.closest('[data-view]');
     if (item) navigate(item.dataset.view);
@@ -1154,6 +1181,9 @@ function renderShell() {
   markierung($('#nav'), { aktiv: '.nav-item.active' });
   beobachten($('#content'));
   $('#brandBtn').addEventListener('click', (e) => kontenMenue(e.currentTarget));
+  $('#nutzerBtn').addEventListener('click', (e) => nutzerMenue(e.currentTarget, { konto: appInfo.konto }));
+  subscribe((ev) => { if (ev?.type === 'nutzer' || ev?.type === 'db') nutzerAnzeigen(); });
+  nutzerAnzeigen();
   $('#lockBtn').addEventListener('click', () => lockNow());
   $('#logoutBtn').addEventListener('click', () => abmelden());
   $('#feedbackBtn').addEventListener('click', () => feedbackOeffnen());

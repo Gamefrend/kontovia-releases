@@ -151,7 +151,11 @@ export class Cloud {
   async disconnect({ keepRemote = true } = {}) {
     const be = this.be();
     if (!keepRemote) {
-      try { await be.removeAll(); } catch { /* auch dann wird lokal getrennt */ }
+      let alles = true;
+      try { await be.removeAll(); } catch { alles = false; /* auch dann wird lokal getrennt */ }
+      // Wer alles löschen lässt, will auch seine Anmeldedaten (E-Mail-Adresse) los sein, aber nur,
+      // wenn die Ablage wirklich leer ist: Ohne die Anmeldung ließe sich ein Rest nicht mehr entfernen.
+      if (alles && typeof be.kontoLoeschen === 'function') { try { await be.kontoLoeschen(); } catch { /* bleibt auf Anfrage beim Betreiber */ } }
     }
     // Abmelden, nicht widerrufen: Google widerriefe die Freigabe aller Geräte.
     await be.disconnect({ widerrufen: false });

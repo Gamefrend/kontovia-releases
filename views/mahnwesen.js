@@ -14,7 +14,7 @@ import { navigate, refresh } from '../lib/router.js';
 import { mountTable } from '../lib/table.js';
 import { betragText, titel as titelVon } from '../lib/rechnung.js';
 import {
-  MAHNSTUFEN, mahneinstellungen, mahnungKurz, mahnverlauf, stufenName, MAHNTEXTE, AUFSCHLAG_ARTEN,
+  MAHNSTUFEN, mahneinstellungen, mahnungKurz, mahnverlauf, stufenName, MAHNTEXTE, AUFSCHLAG_ARTEN, KUNDENARTEN, kundenartVon,
 } from '../lib/mahnwesen.js';
 import {
   mahnungen, ueberfaelligeRechnungen, mahnstand, mahnkostenVon, mahnungVorbereiten, mahnungErstellen, mahnungVerwerfen,
@@ -242,6 +242,7 @@ export function mahnungDialog(rechnungId, { onFertig } = {}) {
   const stufeStart = stand0.vorschlag;
   const stufenHtml = [1, 2, 3].map((st) => `<option value="${st}" ${st === stufeStart ? 'selected' : ''}>${esc(MAHNSTUFEN[st].name)}</option>`).join('');
   const kundenName = r.kaeufer?.name || '';
+  const kundenart0 = kundenartVon(r, mahnungen());
   const satzOk = einst.aufschlag.prozent > 0;
   const m = modal({
     title: `Mahnung zu ${titelVon(r)} ${r.nummer}`,
@@ -250,6 +251,8 @@ export function mahnungDialog(rechnungId, { onFertig } = {}) {
       ${stand0.fristLaeuft ? `<div class="notice mb16">Die Frist der letzten Mahnung läuft noch bis ${esc(fmtDate(stand0.fristBis))}.</div>` : ''}
       <div class="form-grid">
         <div class="field"><label for="mh_stufe">Stufe</label><select id="mh_stufe">${stufenHtml}</select></div>
+        <div class="field"><label for="mh_kundenart">Der Kunde ist</label><select id="mh_kundenart">${Object.entries(KUNDENARTEN).map(([k, t]) => `<option value="${k}" ${k === kundenart0 ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>
+          <span class="hint" id="mh_kundenartHinweis"></span></div>
         <div class="field"><label for="mh_datum">Datum des Schreibens</label><input type="date" id="mh_datum" value="${esc(todayISO())}"></div>
         <div class="field"><label for="mh_frist">Zahlen bis</label><input type="date" id="mh_frist"></div>
         <div class="field"><label for="mh_gebuehr">Mahngebühr €</label><input id="mh_gebuehr" inputmode="decimal" autocomplete="off">
@@ -286,6 +289,7 @@ export function mahnungDialog(rechnungId, { onFertig } = {}) {
     gebuehr: g('gebuehr').value.trim() === '' ? 0 : Math.max(0, parseMoney(g('gebuehr').value)),
     prozent: g('prozent').checked,
     pauschale: g('pauschale').checked,
+    kundenart: g('kundenart').value,
     kopf: textVonHand ? g('kopf').value : undefined,
     schluss: textVonHand ? g('schluss').value : undefined,
   });
@@ -299,7 +303,7 @@ export function mahnungDialog(rechnungId, { onFertig } = {}) {
     const art = einst.aufschlag.art;
     const ab = st >= einst.aufschlag.abStufe;
     if (!prozentVonHand) g('prozent').checked = (art === 'prozent' || art === 'beides') && ab && satzOk;
-    if (!pauschaleVonHand) g('pauschale').checked = (art === 'pauschale' || art === 'beides') && ab;
+    if (!pauschaleVonHand) g('pauschale').checked = (art === 'pauschale' || art === 'beides') && ab && g('kundenart').value === 'unternehmen';
     if (!textVonHand) {
       g('kopf').value = MAHNTEXTE[st].kopf;
       g('schluss').value = MAHNTEXTE[st].schluss;
@@ -315,7 +319,13 @@ export function mahnungDialog(rechnungId, { onFertig } = {}) {
     g('prozentText').textContent = satzOk ? `Prozent pro Jahr (${String(einst.aufschlag.prozent).replace('.', ',')} %), tageweise ab Fälligkeit` : 'Prozent pro Jahr (in den Einstellungen ist noch kein Satz eingetragen)';
     g('prozent').disabled = !satzOk;
     g('pauschaleText').textContent = pauschaleSchon ? `Pauschale (${money(b.aufschlag.pauschale)} €, schon früher berechnet, bleibt in der Forderung)` : `Feste Pauschale (${money(einst.aufschlag.pauschale)} €, höchstens einmal je Rechnung)`;
-    g('pauschale').disabled = pauschaleSchon;
+    // Gegenüber Privatpersonen gibt es keine Pauschale (§ 288 Abs. 5 BGB).
+    const privat = b.kundenart === 'privat';
+    g('kundenartHinweis').textContent = privat
+      ? 'Verbraucher: Basiszinssatz plus 5 Prozentpunkte, keine Pauschale, Mahngebühr nur für tatsächlichen Aufwand. Wählen Sie „Unternehmen“, wenn der Kunde gewerblich bestellt hat.'
+      : 'Unternehmen: Basiszinssatz plus 9 Prozentpunkte, dazu die Pauschale von 40 € (§ 288 BGB).';
+    if (privat && !pauschaleSchon) g('pauschale').checked = false;
+    g('pauschale').disabled = pauschaleSchon || privat;
     if (pauschaleSchon) g('pauschale').checked = true;
     g('aufschlagHinweis').textContent = einst.aufschlag.art === 'aus' && !g('prozent').checked && !g('pauschale').checked
       ? 'In den Einstellungen ist der Verzugsaufschlag ausgeschaltet. Hier lässt er sich für dieses eine Schreiben einschalten.' : '';
@@ -332,6 +342,7 @@ export function mahnungDialog(rechnungId, { onFertig } = {}) {
   }
 
   g('stufe').addEventListener('change', () => { vorgabenSetzen(); zeichnen(); });
+  g('kundenart').addEventListener('change', () => { vorgabenSetzen(); zeichnen(); });
   g('datum').addEventListener('change', () => { vorgabenSetzen(); zeichnen(); });
   g('frist').addEventListener('input', () => { fristVonHand = true; zeichnen(); });
   g('gebuehr').addEventListener('input', () => { gebuehrVonHand = true; zeichnen(); });

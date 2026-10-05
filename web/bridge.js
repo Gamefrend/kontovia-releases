@@ -68,6 +68,14 @@ let fortsetzen = null;
 let lockTimer = null;
 let failedUnlocks = 0;
 
+/** Rechtstexte, die die Oberfläche anzeigen darf, und wo sie bei den Programmdateien liegen. */
+const RECHTSTEXTE = {
+  datenschutz: 'recht/DATENSCHUTZ.md',
+  impressum: 'recht/IMPRESSUM.md',
+  nutzung: 'recht/NUTZUNGSBEDINGUNGEN.md',
+  schrift: 'fonts/LICENSE-Geist.txt',
+};
+
 const kopie = (v) => (v === undefined ? v : structuredClone(v));
 const str = (v, max = 500) => String(v ?? '').slice(0, max);
 
@@ -452,11 +460,12 @@ const api = {
     openLicense: handle(async () => {
       throw new Error('Die Web-Fassung läuft in Ihrem Browser; es gelten dessen Lizenzbedingungen.');
     }, { needsUnlock: false }),
-    /** Die Datenschutzhinweise als Text – Kontovia zeigt sie selbst an. */
+    /** Die Rechtstexte (Datenschutz, Impressum, Nutzungsbedingungen, Schriftlizenz) – Kontovia zeigt sie selbst an, auch ohne Netz. */
     legalText: handle(async (which) => {
-      if (String(which) !== 'datenschutz') throw new Error('Unbekanntes Dokument.');
-      const res = await fetch(new URL('../recht/DATENSCHUTZ.md', import.meta.url).href, { cache: 'no-cache' });
-      if (!res.ok) throw new Error('Die Datenschutzhinweise sind in dieser Fassung nicht enthalten.');
+      const datei = RECHTSTEXTE[String(which)];
+      if (!datei) throw new Error('Unbekanntes Dokument.');
+      const res = await fetch(new URL(`../${datei}`, import.meta.url).href, { cache: 'no-cache' });
+      if (!res.ok) throw new Error('Dieser Text ist in dieser Fassung nicht enthalten.');
       return res.text();
     }, { needsUnlock: false }),
     activity: async () => { resetLockTimer(); return true; },
@@ -726,6 +735,18 @@ const api = {
     }, { needsUnlock: false }),
     /** Das Hinzufügen abbrechen und zum Konto davor zurückkehren. */
     zurueck: handle(async () => KO.ausstehendVerwerfen(), { needsUnlock: false }),
+    /** Einem Konto eine eigene Bezeichnung geben (nur für die Listen). */
+    umbenennen: handle(async (id, alias) => KO.umbenennen(String(id), String(alias ?? '')), { needsUnlock: false }),
+    /** Ein anderes als das offene Konto von diesem Gerät entfernen. Das Abmelden des offenen Kontos geht über app.abmelden. */
+    entfernen: handle(async (id) => {
+      const kennung = String(id);
+      const stand = await KO.entfernen(kennung);
+      try {
+        // Merker dieses Kontos auf dem Gerät (…<Konto>) gehen mit ihm.
+        for (const k of Object.keys(localStorage)) if (k.startsWith('kontovia.') && k.endsWith(`.${kennung}`)) localStorage.removeItem(k);
+      } catch { /* ohne Speicher gibt es nichts zu löschen */ }
+      return stand;
+    }, { needsUnlock: false }),
     /** Gehört dieses Google-Konto schon zu einem anderen Konto auf diesem Gerät? Dessen Name oder null. */
     googleBelegt: handle(async (email) => KO.googleBelegt(String(email ?? '')), { needsUnlock: false }),
   },

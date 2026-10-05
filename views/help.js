@@ -7,6 +7,7 @@ import { navigate } from '../lib/router.js';
 import { EUER, formLine } from '../lib/calc.js';
 import { VERSIONEN } from '../lib/versionen.js';
 import { markdownZuHtml } from '../lib/markdown.js';
+import { rechtstextZeigen } from '../lib/recht.js';
 import { appInfo } from '../app.js';
 
 const api = window.kontovia;
@@ -139,6 +140,15 @@ function anleitung(root) {
         seine Gründe und eine Sicherheit: <em>sicher</em> (Nummer und Betrag passen), <em>wahrscheinlich</em> (Betrag und Name passen),
         <em>unsicher</em>. Angekreuzt sind nur sichere Treffer und Ihre eigenen Regeln. Für den Rest legen Sie Regeln an: „Wenn der
         Verwendungszweck Adobe enthält, dann Kategorie Software“. Sie liegen verschlüsselt in Ihrem Tresor.</p>
+        <p><strong>Kategorien vorschlagen.</strong> Für Umsätze ohne Rechnung schlägt Kontovia selbst eine Kategorie vor, ganz auf Ihrem
+        Gerät und ohne dass ein Text irgendwohin gesendet wird. Zuerst gilt, was Sie bei derselben Gegenseite früher am häufigsten gewählt
+        haben. Sonst erkennt Kontovia bekannte Händler und Stichwörter und ordnet sie groben Gruppen zu, etwa Lebensunterhalt,
+        Abonnements, Unterhaltung, Mobilität, Wohnen, Software oder Telefon. Private Ausgaben schlägt Kontovia als Privatentnahme vor,
+        damit nie etwas Privates als Betriebsausgabe landet. Vorschläge sind nie angekreuzt: Mit „Vorschläge auswählen“ übernehmen Sie sie
+        auf einmal, mit „Ändern“ korrigieren Sie einzelne.</p>
+        <p><strong>Wenig Zeit?</strong> Mit „Rest ohne Kategorie auswählen“ buchen Sie alles, was übrig ist, ohne Kategorie, und ordnen später in
+        der Buchungsliste zu. Solche Buchungen zählen in der Steuerübersicht (Anlage EÜR) erst mit, wenn eine Kategorie gesetzt ist, und
+        werden ohne Umsatzsteuer gebucht. Die Prüfung vor dem Jahresabschluss erinnert Sie daran.</p>
         <p><strong>Doppelt gebucht wird nichts.</strong> Jeder Umsatz bekommt einen Prüfwert. Dieselbe Datei noch einmal oder eine Datei mit
         überlappendem Zeitraum bucht nichts doppelt. Buchungen, die es schon gibt (auch von Hand erfasste), melden sich als mögliche Dublette.</p>
         <p><strong>Herkunft und Festschreibung.</strong> Jede Buchung nennt die Datei und den Zeitpunkt, im Journal steht sie ebenfalls. Der Zahlungseingang
@@ -160,8 +170,13 @@ function anleitung(root) {
         <p><strong>Verzugsaufschlag.</strong> Er ist ausgeschaltet, bis Sie ihn einschalten. Möglich sind Prozent pro Jahr auf den
         offenen Betrag (tageweise ab Fälligkeit), eine feste Pauschale (Vorgabe 40 €, höchstens einmal je Rechnung) oder
         beides. Bei Geschäftskunden gilt gesetzlich üblich der Basiszinssatz plus 9 Prozentpunkte. Der Basiszinssatz ändert
-        sich halbjährlich, deshalb tragen Sie den Satz selbst ein. Bei Privatkunden gelten andere Sätze. Welche Beträge
-        Sie verlangen, verantworten Sie selbst; Kontovia ersetzt keine Rechtsberatung.</p>
+        sich halbjährlich, deshalb tragen Sie den Satz selbst ein.</p>
+        <p><strong>Unternehmen oder Privatperson.</strong> Im Fenster wählen Sie, ob der Kunde ein Unternehmen oder eine Privatperson
+        ist. Bei Privatkunden gilt der Basiszinssatz plus 5 Prozentpunkte, die Pauschale von 40 € gibt es nicht (§ 288 Abs. 5 BGB),
+        und eine Mahngebühr darf nur den tatsächlichen Aufwand abdecken. Kontovia berechnet die Pauschale deshalb bei Privatkunden
+        nie und warnt vor auffällig hohen Sätzen und Gebühren. Ohne USt-IdNr. oder Leitweg-ID geht Kontovia vorsichtshalber von einer
+        Privatperson aus. Verzug setzt voraus, dass die Zahlungsfrist abgelaufen ist (§ 286 BGB). Welche Beträge Sie verlangen,
+        verantworten Sie selbst; Kontovia ersetzt keine Rechtsberatung.</p>
         <p><strong>Buchhaltung.</strong> Gebühr und Verzugsaufschlag sind kein Entgelt für eine Leistung. Sie ändern weder die
         Rechnung noch deren Umsatzsteuer, und eine festgeschriebene Rechnung bleibt, wie sie ist. Beim Erstellen der Mahnung
         wird nichts gebucht. Sobald das Geld da ist, buchen Sie es in der Rechnung mit „Mahnkosten als eingegangen buchen“: als
@@ -393,7 +408,16 @@ function cloud(root) {
         <p><strong>Mehrere Konten:</strong> Mit einem Klick auf den Namen oben in der Seitenleiste wechseln Sie zu einem
         anderen Konto auf diesem Gerät oder fügen ein weiteres hinzu, zum Beispiel für einen zweiten Betrieb. Jedes Konto hat sein
         eigenes Passwort und ist von den anderen getrennt. Vor dem Wechsel gleicht Kontovia ab, wenn das Konto mit Google
-        verbunden ist. Ein Google-Konto passt zu genau einem Konto auf dem Gerät.</p>
+        verbunden ist. Ein Google-Konto passt zu genau einem Konto auf dem Gerät. Unter
+        <a data-go="settings">Einstellungen → Konten auf diesem Gerät</a> sehen Sie alle Konten mit dem Zeitpunkt, zu dem sie zuletzt
+        offen waren, geben ihnen eine eigene Bezeichnung und entfernen eines, das Sie nicht mehr brauchen. Auf dem Sperrbildschirm
+        erscheinen die Namen der anderen Konten erst nach „Konto wechseln“, damit sie nicht jeder sieht, der vor dem Gerät sitzt.</p>
+        <p><strong>Mehrere Personen in einem Konto:</strong> Unter <a data-go="settings">Einstellungen → Benutzer in diesem Konto</a>
+        legen Sie Benutzer an, etwa für Mitarbeitende oder die Steuerberatung. Nach dem Entsperren fragt Kontovia dann, wer arbeitet
+        (auf Wunsch mit einer PIN), und das Änderungsjournal vermerkt bei jeder Änderung den Namen. Die Rolle bestimmt, was jemand
+        darf: <em>Inhaber</em> alles, <em>Mitarbeit</em> Buchungen, Rechnungen, Kontakte, Termine und Aufgaben, aber keine Einstellungen,
+        <em>Nur lesen</em> ansehen, auswerten und exportieren. Rollen sind keine Zugriffssperre: Wer das Passwort des Kontos kennt,
+        kommt an alle Daten. Wer getrennte Daten braucht, legt ein eigenes Konto an.</p>
         <p class="mb0">Neben dem Passwort lassen sich unter <a data-go="settings">Einstellungen → Sicherheit</a> zwei
         weitere Wege einschalten, jeder für sich ausreichend: <strong>Fingerabdruck oder Gesicht</strong> (nur auf diesem
         Gerät, der Schlüssel bleibt im Sicherheitschip) und das <strong>Google-Konto</strong> (auf jedem Gerät; dafür liegt
@@ -553,6 +577,12 @@ function neu(root) {
 
 /* -------------------------------------------------------------------------- */
 
+/** Wann dieses Konto den Nutzungsbedingungen zugestimmt hat. */
+function nutzungStand() {
+  const n = store.db?.settings?.nutzung;
+  return raw(n?.am ? `<p class="tiny muted mt8 mb0">Zugestimmt am ${esc(fmtDate(String(n.am).slice(0, 10)))}, Fassung vom ${esc(fmtDate(n.version))}.</p>` : '');
+}
+
 function recht(root) {
   root.innerHTML = html`
     <div class="content narrow" style="padding:0">
@@ -565,6 +595,17 @@ function recht(root) {
             <tr><td class="muted">Verschlüsselung</td><td>AES-256, der Schlüssel entsteht aus Ihrem Passwort</td></tr>
           </tbody>
         </table>
+      </div></div>
+
+      <div class="card mt16" id="recht-anbieter"><div class="card-body">
+        <h3 class="mt0">Anbieter und Bedingungen</h3>
+        <p>Wer Kontovia anbietet, wie Sie ihn erreichen und unter welchen Bedingungen Sie das Programm nutzen, steht im Impressum
+        und in den Nutzungsbedingungen. Beide sind auch auf der Webseite von Kontovia ohne Anmeldung abrufbar.</p>
+        <div class="row wrap" style="gap:8px">
+          <button class="btn" data-recht="impressum">${icon('file', 15)} Impressum</button>
+          <button class="btn" data-recht="nutzung">${icon('file', 15)} Nutzungsbedingungen</button>
+        </div>
+        ${nutzungStand()}
       </div></div>
 
       <div class="card mt16" id="recht-datenschutz"><div class="card-body">
@@ -618,8 +659,13 @@ function recht(root) {
 
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Lizenzen</h3>
-        <p class="mb0">Kontovia selbst enthält keinen fremden Programmcode. Kontovia läuft in Ihrem
+        <p>Kontovia selbst enthält keinen fremden Programmcode. Kontovia läuft in Ihrem
         Browser; für ihn gelten dessen Lizenzbedingungen.</p>
+        <p class="mb0"><strong>Schrift Geist.</strong> Copyright 2024 The Geist Project Authors
+        (github.com/vercel/geist-font), lizenziert unter der SIL Open Font License 1.1. Sie wird mit
+        Kontovia ausgeliefert und in die PDF-Dateien eingebettet; Verkauf der Schrift für sich allein
+        ist ausgeschlossen, Nutzung und Weitergabe im Programm sind erlaubt.
+        <a href="#" data-recht="schrift">Lizenztext lesen</a></p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -649,6 +695,7 @@ function recht(root) {
     </div>`;
 
   $('#btnDatenschutz', root).addEventListener('click', () => zeigeDatenschutz());
+  root.querySelectorAll('[data-recht]').forEach((b) => b.addEventListener('click', (e) => { e.preventDefault(); rechtstextZeigen(b.dataset.recht); }));
   wireLinks(root);
 }
 

@@ -11,6 +11,7 @@ import { store, sel, lockedUntil, wiederkehrendeAnlegen, upsertEntity, deleteEnt
 import { faellige, naechstesDatum, TURNUS } from '../lib/wiederkehrend.js';
 import { table } from '../lib/table.js';
 import { refresh } from '../lib/router.js';
+import { kannSchreiben } from '../lib/benutzer.js';
 
 /** Fällige Vorkommen, die noch nicht als Buchung bestehen. */
 export function offeneVorkommen() {
@@ -28,6 +29,8 @@ let offen = false;
  */
 export async function faelligeAnbieten() {
   if (!store.db || offen) return 0;
+  // Wer nur lesen darf, bekommt nichts angeboten; es legt dann jemand mit Schreibrecht an.
+  if (!kannSchreiben()) return 0;
   const alle = faellige(store.db, todayISO(), lockedUntil());
   // Schon da – etwa von einem anderen Gerät über den Abgleich angelegt: nur fortschreiben.
   const schon = alle.filter((e) => e.vorhanden);

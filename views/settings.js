@@ -7,7 +7,8 @@ import { icon, modal, confirmDialog, askPassword, ok, err, warn, toast, feldHinw
 import { store, sel, commit, saveNow, setDb, verifyAudit, lockedUntil } from '../lib/store.js';
 import { refresh, navigate, router } from '../lib/router.js';
 import { applyTheme, lockNow, appInfo } from '../app.js';
-import { abmelden, zugaengeKarte, kontoSchluessel } from '../lib/zugaenge.js';
+import { abmelden, zugaengeKarte, kontenKarte, kontoSchluessel } from '../lib/zugaenge.js';
+import { benutzerKarte } from '../lib/benutzer.js';
 import { renderCloudCard, renderUpdateCard } from './cloudpanel.js';
 import { renderCalendarCard } from './calendarsync.js';
 import { mahnKarte } from './mahneinstellungen.js';
@@ -45,6 +46,8 @@ export async function render(root, params, { actions } = {}) {
   if (params?.abschnitt === 'cloud') $('#cloudCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   if (params?.abschnitt === 'speicher') $('#speicherCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   if (params?.abschnitt === 'mahnwesen') $('#mahnCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  if (params?.abschnitt === 'benutzer') $('#benutzerCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  if (params?.abschnitt === 'konten') $('#kontenCard', root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
 async function draw(root) {
@@ -170,6 +173,10 @@ async function draw(root) {
     <div class="card mt16" id="mahnCard"></div>
 
     <div class="card mt16" id="zugaengeCard"></div>
+
+    <div class="card mt16" id="benutzerCard"></div>
+
+    <div class="card mt16" id="kontenCard"></div>
 
     <div class="card mt16" id="speicherCard">
       <div class="card-head"><h3>${icon('archive', 16)} Sicherung und Speicherort</h3></div>
@@ -522,6 +529,8 @@ function wire(root) {
   $('#btnAbmelden', root).addEventListener('click', () => abmelden());
   bildschirmKasten($('#bildschirmBox', root));
   zugaengeKarte($('#zugaengeCard', root));
+  benutzerKarte($('#benutzerCard', root), { konto: appInfo.konto });
+  kontenKarte($('#kontenCard', root));
 
   $('#btnPw', root).addEventListener('click', async () => {
     const oldPw = await askPassword({ title: 'Passwort ändern', text: 'Zuerst zur Sicherheit das aktuelle Passwort.', label: 'Aktuelles Passwort', confirmLabel: 'Weiter' });
@@ -676,6 +685,11 @@ const VORGAENGE = {
   'feedback.geloescht': 'Rückmeldung gelöscht',
   'wiederkehrend.fortschreiben': 'Wiederkehrende Buchungen angelegt',
   'testdaten.ergaenzen': 'Vorführdaten ergänzt',
+  'benutzer.anlegen': 'Benutzer angelegt',
+  'benutzer.aendern': 'Benutzer geändert',
+  'benutzer.loeschen': 'Benutzer gelöscht',
+  'benutzer.abschalten': 'Benutzer abgeschaltet',
+  'nutzung.zustimmen': 'Nutzungsbedingungen zugestimmt',
 };
 
 export function vorgangText(action) {
@@ -699,7 +713,7 @@ function showJournal() {
         maxHeight: '56vh',
         defaultSort: { key: 'seq', dir: -1 },
         rows: log,
-        search: { placeholder: 'Vorgang oder Beschreibung suchen …', text: (e) => [vorgangText(e.action), e.action, e.summary, e.seq].join(' ') },
+        search: { placeholder: 'Vorgang, Benutzer oder Beschreibung suchen …', text: (e) => [vorgangText(e.action), e.action, e.summary, e.user, e.seq].join(' ') },
         columns: [
           { key: 'seq', label: 'Nr.', type: 'num', tdCls: 'muted' },
           { key: 'ts', label: 'Zeitpunkt', type: 'date', tdCls: 'nowrap small', cell: (e) => esc(fmtDateTime(e.ts)) },
@@ -707,6 +721,7 @@ function showJournal() {
             key: 'action', label: 'Vorgang', type: 'text', tdCls: 'small', value: (e) => vorgangText(e.action),
             cell: (e) => `<span class="badge">${esc(vorgangText(e.action))}</span>`,
           },
+          ...(log.some((e) => e.user) ? [{ key: 'user', label: 'Benutzer', type: 'text', tdCls: 'small nowrap', value: (e) => e.user || '', cell: (e) => esc(e.user || '') }] : []),
           { key: 'summary', label: 'Beschreibung', type: 'text', tdCls: 'small', cell: (e) => `<span class="truncate" style="display:block;max-width:340px">${esc(e.summary || '')}</span>` },
           { key: 'hash', label: 'Prüfsumme', type: 'none', tdCls: 'tiny muted', cell: (e) => `<span style="font-family:var(--mono)">${esc((e.hash || '').slice(0, 12))}…</span>` },
         ],

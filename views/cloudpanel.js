@@ -184,7 +184,7 @@ function wireCloud(root, status) {
     try {
       await api.cloud.disconnect(!wahl.loeschen);
       ok('Verbindung getrennt', wahl.loeschen
-        ? 'Tresor, Belege und Sicherungen wurden auch in der Cloud gelöscht.'
+        ? 'Tresor, Belege, Sicherungen und Ihr Anmeldekonto wurden auch in der Cloud gelöscht.'
         : 'Der verschlüsselte Stand bleibt in der Cloud liegen.');
     } catch (e) {
       err('Trennen fehlgeschlagen', e.message);
@@ -209,7 +209,7 @@ function askUnlink() {
         Buchhaltung bleibt vollständig auf diesem Gerät, und Ihre anderen
         Geräte bleiben verbunden.</p>
         <label class="check mt16"><input type="checkbox" id="unlinkDelete"> Tresor, Belege und
-        Sicherungen auch in der Cloud löschen</label>
+        Sicherungen auch in der Cloud löschen, samt Ihrem Anmeldekonto dort (E-Mail-Adresse)</label>
         <p class="small muted mt8 mb0">Ohne Häkchen bleibt der verschlüsselte Stand dort liegen,
         etwa für Ihre anderen Geräte oder um sich später wieder zu verbinden. Den Zugriff von
         Kontovia auf Ihr Google-Konto entfernen Sie ganz unter myaccount.google.com/connections.</p>`,

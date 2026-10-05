@@ -1,28 +1,28 @@
 # Datenschutzhinweise zu Kontovia
 
-<!--
-  Hinweis für den Betreiber (erscheint nicht im Programm, Kontovia blendet
-  HTML-Kommentare aus): Dieser Text beschreibt zutreffend, was das Programm
-  technisch tut. Bevor er an Nutzer geht, unter „Verantwortlicher“ und
-  „Bei der Ablage in Firebase“ die eigenen Angaben eintragen und ihn juristisch
-  prüfen lassen. Rechtsberatung ist das hier nicht.
--->
-
-Stand: 4. Oktober 2026, Programmversion 2.10.0
+Stand: 5. Oktober 2026, Programmversion 2.11.0
 
 ---
 
 ## Verantwortlicher
 
-    [Name / Firma]
-    [Anschrift]
-    [E-Mail]
+Verantwortlich für die Verarbeitung nach Art. 4 Nr. 7 DSGVO, soweit sie hier
+beschrieben ist (Auslieferung der Web-App, Cloud-Anmeldung, Aktualisierung):
+
+    [bitte eintragen: name]
+    [bitte eintragen: strasse]
+    [bitte eintragen: plzort]
+    E-Mail: [bitte eintragen: email]
+
+Für die Buchhaltung selbst, also die Daten Ihrer Kundinnen, Kunden und
+Lieferanten, sind Sie als Betrieb verantwortlich (siehe unten). Wir haben
+keinen Datenschutzbeauftragten bestellt; dazu besteht keine Pflicht.
 
 ## Kurzfassung
 
 Kontovia ist eine Web-App, die in Ihrem Browser auf Ihrem eigenen Gerät läuft
-und sich dort wie ein Programm installieren lässt. Es gibt kein Benutzerkonto
-beim Anbieter und keine Auswertung Ihrer Nutzung. Ohne den ausdrücklich
+und sich dort wie ein Programm installieren lässt. Ohne Cloud-Abgleich gibt es
+kein Benutzerkonto beim Anbieter, und es gibt in keinem Fall eine Auswertung Ihrer Nutzung. Ohne den ausdrücklich
 eingerichteten Cloud-Abgleich und ohne verbundenen Google Kalender verlässt
 keine Angabe aus Ihrer Buchhaltung Ihr Gerät; die Suche nach neuen Versionen
 läuft nur mit Ihrer Zustimmung.
@@ -33,6 +33,9 @@ Sie geben Ihre Buchhaltung ein: Beträge, Belege, Kategorien, Termine und die
 Kontaktdaten Ihrer Kunden und Lieferanten. Darunter sind personenbezogene Daten
 Dritter. Verantwortlich für diese Verarbeitung sind **Sie als Betrieb**, nicht
 der Anbieter des Programms. An ihn fließt nichts.
+
+Rechtsgrundlage für das Speichern der Buchhaltung auf Ihrem Gerät ist Ihre eigene
+Entscheidung als Verantwortliche. Wir verarbeiten diese Daten nicht.
 
 Alle Daten liegen verschlüsselt auf Ihrem Gerät: im Speicher des Browsers oder,
 wenn Sie das in Chrome oder Edge wählen, in einem Ordner Ihrer Wahl (siehe
@@ -54,13 +57,28 @@ genannten: der Cloud-Abgleich, der Abgleich mit Google Kalender und die Suche
 nach einer neuen Programmversion. Alle drei laufen erst, wenn Sie ihnen
 ausdrücklich zustimmen.
 
+## Speicher im Browser (Cookies und ähnliche Technologien)
+
+Kontovia setzt **keine Cookies** und bindet kein Tracking, keine Werbung und
+keine Analyse ein. Es speichert in Ihrem Browser (IndexedDB, lokaler Speicher,
+Zwischenspeicher und Sitzungsspeicher) nur, was für den Betrieb der App
+unbedingt erforderlich ist und was Sie ausdrücklich verlangen: die verschlüsselte
+Buchhaltung, die Liste Ihrer Konten, Einstellungen wie das Erscheinungsbild und
+die Programmdateien für den Betrieb ohne Netz. Dafür ist nach § 25 Abs. 2 Nr. 2
+TDDDG keine Einwilligung nötig. Alles lässt sich in den Einstellungen Ihres
+Browsers löschen; ohne Sicherung ist die Buchhaltung dann weg.
+
+Schriften und alle anderen Dateien lädt Kontovia von der eigenen Adresse, nicht
+von Schriftenanbietern oder Content-Delivery-Netzen.
+
 ## Kontoauszüge einlesen
 
 Wenn Sie einen Kontoauszug einlesen (CSV, CAMT.053 oder MT940), liest Kontovia die Datei im Browser auf Ihrem Gerät.
 Die Datei wird nicht hochgeladen und nirgends abgelegt. Ihr Inhalt liegt nur im Arbeitsspeicher, bis Sie gebucht
 oder die Ansicht verlassen haben, und wird beim Sperren verworfen. Es gibt keinen Abruf bei der Bank und keine
 Verbindung zu einem Dienst: Sie laden die Datei selbst bei Ihrer Bank herunter. Die Zuordnung zu Rechnungen folgt
-festen Regeln und keinem lernenden Verfahren.
+festen Regeln und keinem lernenden Verfahren. Auch die Kategorie-Vorschläge entstehen auf Ihrem Gerät, aus Ihren
+früheren Buchungen und einer festen Liste bekannter Händlernamen. Dafür wird kein Text an einen Dienst gesendet.
 
 Gebucht wird nur, was Sie bestätigen. Die Buchungen stehen danach wie alle anderen verschlüsselt in Ihrem Tresor,
 mit dem Namen der Datei und dem Zeitpunkt als Herkunft, mit einem Prüfwert je Umsatz, damit derselbe Umsatz nie
@@ -97,7 +115,7 @@ Buchhaltung, berechtigtes Interesse an einer Datensicherung).
 
 ### Wo die Daten liegen
 
-Empfänger ist [Anbieter eintragen] als Betreiber des Firebase-Projekts sowie
+Empfänger ist [bitte eintragen: name] als Betreiber des Firebase-Projekts sowie
 Google Ireland Limited beziehungsweise Google LLC als Auftragsverarbeiter.
 Gespeichert werden:
 
@@ -114,15 +132,35 @@ zertifiziert ist.
 
 **Auftragsverarbeitung:** Für den Cloud-Speicher besteht zwischen dem Betreiber
 des Firebase-Projekts und Google ein Auftragsverarbeitungsvertrag. Setzen Sie
-Kontovia gewerblich ein, regelt [Anbieter eintragen] mit Ihnen, in welcher Rolle
-er Ihre verschlüsselten Daten speichert.
+Kontovia gewerblich ein, gilt die Anlage zur Auftragsverarbeitung in den
+Nutzungsbedingungen: Für Ihre verschlüsselten Daten sind wir dann Ihr
+Auftragsverarbeiter, für E-Mail-Adresse und Kontokennung selbst Verantwortliche.
 
 **Widerruf:** In den Einstellungen unter „Verbindung trennen“. Das Gerät meldet
 sich dann von der Cloud ab; Ihre anderen Geräte bleiben verbunden. Im selben
 Dialog können Sie wählen, ob der verschlüsselte Tresor samt Belegen und
-Sicherungen in der Cloud gelöscht werden soll. Die Freigabe für Kontovia in
+Sicherungen in der Cloud gelöscht werden soll; dann löscht Kontovia auch Ihr
+Anmeldekonto bei Firebase Authentication (E-Mail-Adresse und Kontokennung). Gelingt
+Letzteres nicht, etwa ohne Netz, löschen wir es auf Ihre Nachricht an die oben
+genannte Adresse unverzüglich. Die Freigabe für Kontovia in
 Ihrem Google-Konto entfernen Sie unter *Sicherheit → Verbindungen zu
 Drittanbieter-Apps* (myaccount.google.com/connections).
+
+### Google-Anmeldung und die Google API Services User Data Policy
+
+Die Nutzung und Weitergabe von Informationen, die Kontovia von Google-APIs
+erhält, folgt der Google API Services User Data Policy
+(developers.google.com/terms/api-services-user-data-policy) einschließlich der
+Anforderungen an die eingeschränkte Nutzung (Limited Use). In der Sprache der
+Richtlinie: Kontovia's use and transfer to any other app of information received
+from Google APIs will adhere to the Google API Services User Data Policy,
+including the Limited Use requirements. Konkret: Kontovia
+verwendet Daten aus Ihrem Google-Konto (Name, E-Mail-Adresse, Kalendertermine)
+ausschließlich, um die von Ihnen gewählte Funktion bereitzustellen. Sie werden
+nicht an Dritte weitergegeben, nicht für Werbung verwendet, nicht zur Entwicklung
+oder zum Training von Modellen genutzt und nicht von Menschen gelesen, außer Sie
+verlangen das ausdrücklich oder es ist aus Sicherheitsgründen oder zur Erfüllung
+von Gesetzen nötig.
 
 ## Weitere Wege zum Entsperren (freiwillig)
 
@@ -180,6 +218,15 @@ dahin bleibt die Rückmeldung nur bei Ihnen. Rückmeldungen, die Sie vor Version
 Sicherungen und allen Zugängen von diesem Gerät. Ist es mit Google verbunden,
 gleicht Kontovia vorher noch einmal ab. Weitere Konten auf dem Gerät bleiben
 unberührt. In der Cloud bleibt, was dort liegt.
+
+## Benutzer in einem Konto
+
+In einem Konto lassen sich mehrere Benutzer anlegen (Name und Rolle), etwa für
+Mitarbeitende oder die Steuerberatung. Die Namen liegen verschlüsselt im Tresor.
+Das Änderungsjournal vermerkt bei jeder Änderung, welcher Benutzer sie gemacht hat;
+das dient dem Nachweis der Ordnungsmäßigkeit (GoBD) und ist deshalb Teil der
+Buchführungsunterlagen. Wer Benutzer anlegt, informiert diese Personen darüber und
+ist dafür verantwortlich. Rechtsgrundlage ist Art. 6 Abs. 1 lit. c und f DSGVO.
 
 ## Mehrere Konten auf einem Gerät
 
@@ -318,12 +365,41 @@ Bücher und Abschlüsse zehn Jahre. Ein Löschverlangen nach Art. 17 DSGVO tritt
 für diese Zeit hinter die Aufbewahrungspflicht zurück (Art. 17 Abs. 3 lit. b
 DSGVO). Praktisch: Kontaktdaten dürfen Sie bereinigen, die Buchung selbst nicht.
 
-## Rechte betroffener Personen
+## Ihre Rechte
 
-Personen, deren Daten in Ihrer Buchhaltung stehen, haben Ihnen gegenüber die
-Rechte aus Art. 15 bis 21 DSGVO: Auskunft, Berichtigung, Löschung im Rahmen der
-gesetzlichen Grenzen, Einschränkung, Datenübertragbarkeit und Widerspruch. Für
-die Auskunft hilft der Kontakt-Export unter „Export → Rohdaten".
+**Gegenüber uns.** Soweit wir Ihre Daten verarbeiten (E-Mail-Adresse und
+Kontokennung bei der Cloud-Anmeldung, IP-Adresse bei Auslieferung und
+Aktualisierung), haben Sie das Recht auf Auskunft (Art. 15 DSGVO), Berichtigung
+(Art. 16), Löschung (Art. 17), Einschränkung der Verarbeitung (Art. 18),
+Datenübertragbarkeit (Art. 20) und Widerspruch (Art. 21). Eine erteilte
+Einwilligung können Sie jederzeit mit Wirkung für die Zukunft widerrufen
+(Art. 7 Abs. 3 DSGVO); die Verarbeitung bis dahin bleibt rechtmäßig. Wenden Sie
+sich dazu an die oben genannte E-Mail-Adresse.
+
+**Beschwerde.** Sie können sich bei einer Datenschutz-Aufsichtsbehörde
+beschweren (Art. 77 DSGVO), insbesondere in dem Mitgliedstaat Ihres Aufenthalts,
+Ihres Arbeitsplatzes oder des Orts des mutmaßlichen Verstoßes.
+
+**Gegenüber Ihnen als Betrieb.** Personen, deren Daten in Ihrer Buchhaltung
+stehen, haben Ihnen gegenüber dieselben Rechte aus Art. 15 bis 21 DSGVO: Auskunft,
+Berichtigung, Löschung im Rahmen der gesetzlichen Grenzen, Einschränkung,
+Datenübertragbarkeit und Widerspruch. Für die Auskunft hilft der Kontakt-Export
+unter „Export → Rohdaten“.
+
+**Pflicht zur Bereitstellung, automatisierte Entscheidungen.** Sie müssen uns
+keine Daten bereitstellen: Kontovia läuft ohne Cloud und ohne Anmeldung. Für den
+Cloud-Abgleich ist ein Google-Konto nötig, ohne das er nicht möglich ist. Es gibt
+keine automatisierte Entscheidungsfindung und kein Profiling (Art. 22 DSGVO).
+
+## Übermittlung in Drittländer
+
+Die Auslieferung der Web-App läuft über GitHub (GitHub, Inc., USA) und die
+Cloud-Anmeldung, der Cloud-Speicher und der Kalenderabgleich über Google
+(Google Ireland Limited bzw. Google LLC, USA). Die Übermittlung in die USA stützt
+sich auf den Angemessenheitsbeschluss der EU-Kommission zum EU-US Data Privacy
+Framework, bei dem beide Unternehmen zertifiziert sind, und ergänzend auf
+Standardvertragsklauseln. Die Buchhaltung selbst verlässt Ihr Gerät nur
+verschlüsselt.
 
 ## Technische und organisatorische Maßnahmen
 

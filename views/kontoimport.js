@@ -281,6 +281,7 @@ const FILTER = [
   ['sicher', 'Sicher', (z) => !z.schonImportiert && z.sicherheit === 'sicher'],
   ['pruefen', 'Zu prüfen', (z) => !z.schonImportiert && (z.sicherheit === 'wahrscheinlich' || z.sicherheit === 'unsicher')],
   ['regel', 'Eigene Regel', (z) => !z.schonImportiert && (z.sicherheit === 'regel' || z.sicherheit === 'hand')],
+  ['vorschlag', 'Kategorie-Vorschlag', (z) => !z.schonImportiert && z.sicherheit === 'vorschlag'],
   ['keine', 'Ohne Zuordnung', (z) => !z.schonImportiert && z.sicherheit === 'keine'],
   ['dublette', 'Mögliche Dublette', (z) => !z.schonImportiert && !!z.dublette],
   ['schon', 'Schon importiert', (z) => z.schonImportiert],
@@ -295,11 +296,19 @@ function zielText(z) {
   }
   if (z.art === 'ausgabe') return `Offene Ausgabe: ${sel.transaction(z.txId)?.description || ''}`;
   if (z.art === 'wiederkehrend') return `Wiederkehrende Buchung ${sel.recurringRule(z.wiederkehrendId)?.template?.description || ''}`;
-  if (z.art === 'regel' || z.art === 'neu') return `Neue ${z.u.betrag > 0 ? 'Einnahme' : 'Ausgabe'}, Kategorie ${kategorieName(z.kategorieId)}`;
-  return 'Bitte zuordnen oder eine Kategorie wählen';
+  if (z.art === 'regel' || z.art === 'neu') {
+    const was = z.u.betrag > 0 ? 'Einnahme' : 'Ausgabe';
+    if (!z.kategorieId) return `Neue ${was}, ohne Kategorie`;
+    return `Neue ${was}, Kategorie ${kategorieName(z.kategorieId)}${z.sicherheit === 'vorschlag' && z.gruppe && z.gruppe !== kategorieName(z.kategorieId) ? ` (erkannt: ${z.gruppe})` : ''}`;
+  }
+  return 'Bitte zuordnen, eine Kategorie wählen oder ohne Kategorie buchen';
 }
 
-const BADGE = { sicher: 'pos', wahrscheinlich: 'info', unsicher: 'warn', regel: 'info', hand: 'info', keine: 'plain' };
+const BADGE = { sicher: 'pos', wahrscheinlich: 'info', unsicher: 'warn', regel: 'info', vorschlag: 'info', hand: 'info', keine: 'plain' };
+
+/** Zeilen, die ohne Zuordnung dastehen und sich im Eiltempo ohne Kategorie buchen lassen. */
+const ohneZuordnung = (z) => !z.schonImportiert && !z.dublette && !z.ausgeschlossen && z.art === 'keine' && pruefen({ ...z, art: 'neu', ohneKategorie: true }).ok;
+const vorschlaege = (z) => !z.schonImportiert && !z.dublette && z.sicherheit === 'vorschlag' && pruefen(z).ok;
 
 function schrittPruefen(host, root) {
   const g = st.gelesen;
@@ -316,7 +325,7 @@ function schrittPruefen(host, root) {
         <div><strong>${esc(st.name)}</strong><div class="small muted">${esc(g.format === 'csv' ? 'CSV' : g.format === 'camt' ? 'CAMT.053' : 'MT940')}, ${int(z.anzahl)} Umsätze vom ${esc(fmtDate(z.von))} bis ${esc(fmtDate(z.bis))}, Konto ${esc(konto?.name || '')}</div></div>
         <button class="btn sm" id="kiAnders">${icon('left', 14).__raw} Andere Datei</button>
       </div>
-      <p class="small mb0 mt8">Nichts ist gebucht. Ausgewählt sind nur sichere Treffer und Ihre eigenen Regeln. Prüfen Sie den Rest und haken Sie an, was gebucht werden soll.</p>
+      <p class="small mb0 mt8">Nichts ist gebucht. Ausgewählt sind nur sichere Treffer und Ihre eigenen Regeln. Kategorie-Vorschläge entstehen auf diesem Gerät aus Ihren früheren Buchungen und bekannten Händlernamen, nichts davon wird übertragen. Prüfen Sie den Rest und haken Sie an, was gebucht werden soll. Wer es eilig hat, bucht den Rest auch ohne Kategorie und ordnet später zu.</p>
     </div></div>
     <div class="ki-filter mb8" role="group" aria-label="Anzeige">${FILTER.map(([k, t, f]) => {
     const anz = k === 'alle' ? n.gesamt : st.zeilen.filter(f).length;
@@ -324,6 +333,8 @@ function schrittPruefen(host, root) {
   }).join('')}</div>
     <div class="row wrap mb8" style="gap:8px">
       <button class="btn sm" id="kiSichere">Alle sicheren auswählen</button>
+      <button class="btn sm" id="kiVorschlaege" ${st.zeilen.some(vorschlaege) ? '' : 'disabled'}>Vorschläge auswählen (${int(st.zeilen.filter(vorschlaege).length)})</button>
+      <button class="btn sm" id="kiOhne" ${st.zeilen.some(ohneZuordnung) ? '' : 'disabled'} title="Bucht diese Umsätze ohne Kategorie. Die Kategorie lässt sich später in der Buchungsliste ergänzen.">Rest ohne Kategorie auswählen (${int(st.zeilen.filter(ohneZuordnung).length)})</button>
       <button class="btn sm ghost" id="kiNichts">Auswahl aufheben</button>
     </div>
     <div class="card" id="kiTabelle"></div>
@@ -337,6 +348,14 @@ function schrittPruefen(host, root) {
   });
   $$('[data-filter]', host).forEach((b) => b.addEventListener('click', () => { st.filter = b.dataset.filter; schrittPruefen(host, root); }));
   $('#kiSichere', host).addEventListener('click', () => { for (const x of st.zeilen) if (vorausgewaehlt(x) && pruefen(x).ok) x.gewaehlt = true; schrittPruefen(host, root); });
+  $('#kiVorschlaege', host).addEventListener('click', () => { for (const x of st.zeilen) if (vorschlaege(x)) x.gewaehlt = true; schrittPruefen(host, root); });
+  $('#kiOhne', host).addEventListener('click', () => {
+    for (const x of st.zeilen) {
+      if (!ohneZuordnung(x)) continue;
+      Object.assign(x, { art: 'neu', ohneKategorie: true, kategorieId: '', sicherheit: 'hand', gruende: ['Von Ihnen gewählt: ohne Kategorie'], gewaehlt: true });
+    }
+    schrittPruefen(host, root);
+  });
   $('#kiNichts', host).addEventListener('click', () => { for (const x of st.zeilen) x.gewaehlt = false; schrittPruefen(host, root); });
   $('#kiBuchen', host).addEventListener('click', () => buchenFrage(root));
 
@@ -435,7 +454,8 @@ function zeileDialog(z, fertig) {
       </div>
       <div id="zdNeu" ${modus === 'neu' ? '' : 'hidden'}>
         <div class="form-grid">
-          <div class="field full"><label for="zdKat">Kategorie</label><select id="zdKat"><option value="">Bitte wählen</option>${kategorieOptionen(u.betrag, z.kategorieId)}</select></div>
+          <div class="field full"><label for="zdKat">Kategorie</label><select id="zdKat"><option value="">Ohne Kategorie buchen (später zuordnen)</option>${kategorieOptionen(u.betrag, z.kategorieId)}</select>
+            <span class="hint" id="zdKatHinweis" ${z.kategorieId ? 'hidden' : ''}>Ohne Kategorie zählt die Buchung in der Steuerübersicht (EÜR) noch nicht mit und wird ohne Umsatzsteuer gebucht. Die Kategorie lässt sich in der Buchungsliste jederzeit ergänzen.</span></div>
           <div class="field"><label for="zdKontakt">Kontakt</label><select id="zdKontakt"><option value="">Keiner</option>${kontakte.map((c) => `<option value="${esc(c.id)}" ${z.kontaktId === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
           <div class="field"><label for="zdText">Beschreibung</label><input id="zdText" value="${esc(z.beschreibung || '')}" placeholder="${esc([u.gegenseite, u.zweck].filter(Boolean).join(': ').slice(0, 80))}"></div>
         </div>
@@ -466,8 +486,9 @@ function zeileDialog(z, fertig) {
         k.mahnkosten = r && g('zdKosten').checked ? r.nebenOffen : 0;
       } else { k.art = 'ausgabe'; k.txId = g('zdZiel').value; k.ziele = []; k.mahnkosten = 0; }
     } else if (modus === 'neu') {
-      k.art = 'neu'; k.ziele = []; k.txId = ''; k.mahnkosten = 0; k.kategorieId = g('zdKat').value; k.kontaktId = g('zdKontakt').value; k.beschreibung = g('zdText').value.trim();
+      k.art = 'neu'; k.ziele = []; k.txId = ''; k.mahnkosten = 0; k.kategorieId = g('zdKat').value; k.ohneKategorie = !k.kategorieId; k.kontaktId = g('zdKontakt').value; k.beschreibung = g('zdText').value.trim();
     } else { k.art = 'keine'; k.ziele = []; k.txId = ''; k.mahnkosten = 0; }
+    if (modus !== 'neu') k.ohneKategorie = false;
     return k;
   };
   const aktualisieren = () => {
@@ -487,6 +508,7 @@ function zeileDialog(z, fertig) {
   g('zdZiel')?.addEventListener('change', () => { g('zdKosten').dataset.beruehrt = ''; aktualisieren(); });
   g('zdKosten').addEventListener('change', () => { g('zdKosten').dataset.beruehrt = '1'; aktualisieren(); });
   g('zdRegel').addEventListener('change', () => { g('zdRegelFelder').hidden = !g('zdRegel').checked; });
+  g('zdKat').addEventListener('change', () => { g('zdKatHinweis').hidden = !!g('zdKat').value; });
   g('zdTrotzdem')?.addEventListener('change', aktualisieren);
   if (modus === 'zuordnen') aktualisieren();
 
@@ -494,8 +516,8 @@ function zeileDialog(z, fertig) {
   m.root.querySelector('[data-yes]').addEventListener('click', async () => {
     const k = entwurf();
     if (modus === 'neu') {
-      if (!k.kategorieId) { warn('Bitte eine Kategorie wählen'); return; }
       if (g('zdRegel').checked) {
+        if (!k.kategorieId) { warn('Für eine Regel bitte eine Kategorie wählen'); return; }
         try {
           await regelSpeichern({ name: g('zdRegelText').value.trim(), feld: g('zdRegelFeld').value, enthaelt: g('zdRegelText').value.trim(), richtung: ein ? 'ein' : 'aus', kategorieId: k.kategorieId, kontaktId: k.kontaktId, beschreibung: k.beschreibung });
           ok('Regel gemerkt', `Wenn „${g('zdRegelText').value.trim()}“ vorkommt, schlägt Kontovia diese Kategorie vor.`);
@@ -505,7 +527,9 @@ function zeileDialog(z, fertig) {
     if (modus === 'zuordnen' && !(k.ziele.length || k.txId)) { warn('Bitte wählen'); return; }
     Object.assign(z, k);
     z.sicherheit = modus === 'aus' ? 'keine' : 'hand';
-    z.gruende = modus === 'aus' ? [] : ['Von Ihnen gewählt'];
+    z.gruppe = '';
+    z.ausgeschlossen = modus === 'aus';
+    z.gruende = modus === 'aus' ? [] : [k.ohneKategorie ? 'Von Ihnen gewählt: ohne Kategorie' : 'Von Ihnen gewählt'];
     z.regel = null; z.hinweis = '';
     z.gewaehlt = modus !== 'aus' && pruefen(z).ok && (!z.schonImportiert || !!z.trotzdem);
     m.close();
@@ -522,9 +546,10 @@ async function buchenFrage(root) {
   const zahlungen = gew.filter((x) => x.art === 'rechnung' || x.art === 'ausgabe');
   const neu = gew.filter((x) => !(x.art === 'rechnung' || x.art === 'ausgabe'));
   const unsicher = gew.filter((x) => ['unsicher', 'wahrscheinlich'].includes(x.sicherheit)).length;
+  const ohneKat = neu.filter((x) => !x.kategorieId && (x.art === 'neu' || x.art === 'regel')).length;
   const ja = await confirmDialog({
     title: `${int(gew.length)} ${gew.length === 1 ? 'Umsatz' : 'Umsätze'} buchen?`,
-    text: `${int(zahlungen.length)} ${zahlungen.length === 1 ? 'Zahlung wird' : 'Zahlungen werden'} offenen Rechnungen und Ausgaben zugeordnet, ${int(neu.length)} neue ${neu.length === 1 ? 'Buchung wird' : 'Buchungen werden'} angelegt, jeweils mit Hinweis auf die Datei „${st.name}“.${unsicher ? ` ${int(unsicher)} davon ${unsicher === 1 ? 'ist' : 'sind'} nicht sicher zugeordnet, Sie haben ${unsicher === 1 ? 'sie' : 'sie'} selbst angehakt.` : ''} Eine Buchung lässt sich danach nur noch stornieren.`,
+    text: `${int(zahlungen.length)} ${zahlungen.length === 1 ? 'Zahlung wird' : 'Zahlungen werden'} offenen Rechnungen und Ausgaben zugeordnet, ${int(neu.length)} neue ${neu.length === 1 ? 'Buchung wird' : 'Buchungen werden'} angelegt, jeweils mit Hinweis auf die Datei „${st.name}“.${unsicher ? ` ${int(unsicher)} davon ${unsicher === 1 ? 'ist' : 'sind'} nicht sicher zugeordnet, Sie haben ${unsicher === 1 ? 'sie' : 'sie'} selbst angehakt.` : ''} ${ohneKat ? ` ${int(ohneKat)} ${ohneKat === 1 ? 'Buchung bekommt' : 'Buchungen bekommen'} keine Kategorie: ${ohneKat === 1 ? 'Sie zählt' : 'Sie zählen'} in der Steuerübersicht erst mit, wenn Sie eine Kategorie ergänzen.` : ''} Eine Buchung lässt sich danach nur noch stornieren.`,
     confirmLabel: 'Jetzt buchen',
   });
   if (!ja) return;
