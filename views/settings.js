@@ -8,6 +8,8 @@ import { store, sel, commit, saveNow, setDb, verifyAudit, lockedUntil } from '..
 import { refresh, navigate, router } from '../lib/router.js';
 import { applyTheme, lockNow, appInfo } from '../app.js';
 import { abmelden, zugaengeKarte, kontenKarte, kontoSchluessel } from '../lib/zugaenge.js';
+import { geraeteKarte } from '../lib/koppeln.js';
+import { zulassungKarte } from '../lib/zulassung.js';
 import { benutzerKarte } from '../lib/benutzer.js';
 import { renderCloudCard, renderUpdateCard } from './cloudpanel.js';
 import { renderCalendarCard } from './calendarsync.js';
@@ -173,6 +175,10 @@ async function draw(root) {
     <div class="card mt16" id="mahnCard"></div>
 
     <div class="card mt16" id="zugaengeCard"></div>
+
+    <div class="card mt16" id="geraeteCard"></div>
+
+    <div class="card mt16" id="zulassungCard"></div>
 
     <div class="card mt16" id="benutzerCard"></div>
 
@@ -529,6 +535,8 @@ function wire(root) {
   $('#btnAbmelden', root).addEventListener('click', () => abmelden());
   bildschirmKasten($('#bildschirmBox', root));
   zugaengeKarte($('#zugaengeCard', root));
+  geraeteKarte($('#geraeteCard', root));
+  zulassungKarte($('#zulassungCard', root));
   benutzerKarte($('#benutzerCard', root), { konto: appInfo.konto });
   kontenKarte($('#kontenCard', root));
 

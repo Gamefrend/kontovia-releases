@@ -1,12 +1,12 @@
 {
-  "version": "2.11.0",
-  "released": "2026-10-05T07:58:32.261Z",
-  "notes": "Benutzer, Rechtliches und richtige Zahlen\n\n- Die hochzählenden Zahlen auf der Übersicht enden jetzt auf dem richtigen Wert. Vorher liefen sie auf einen falschen zu und sprangen erst am Schluss um.\n- Neu: Benutzer in einem Konto mit Rollen (alles, buchen, nur lesen). Das Änderungsjournal zeigt, wer etwas geändert hat. Konten auf dem Gerät lassen sich umbenennen und entfernen.\n- Impressum, Nutzungsbedingungen und Datenschutz sind überall erreichbar, auch vor dem Entsperren. Den Nutzungsbedingungen stimmen Sie einmal zu. Beim Löschen der Cloud-Daten verschwindet auch Ihr Anmeldekonto dort.\n- Mahnwesen: Sie wählen, ob der Kunde ein Unternehmen oder eine Privatperson ist. Die Pauschale von 40 € gibt es nur bei Unternehmen, und Kontovia warnt vor zu hohen Sätzen.\n- Kontoauszug: Kontovia schlägt Kategorien vor (etwa Lebensunterhalt oder Software), nur auf Ihrem Gerät. Eilige buchen auch ohne Kategorie und ordnen später zu. Angekreuzt wird nichts von selbst.",
+  "version": "2.12.0",
+  "released": "2026-10-05T10:32:53.878Z",
+  "notes": "Zweites Gerät per QR-Code\n\n- Neu: Ein zweites Gerät, etwa Ihr Handy, öffnen Sie mit einem QR-Code. Er erscheint am ersten Gerät unter Einstellungen, am Handy scannen Sie ihn. Weder Google noch wir können Ihre Buchhaltung dabei lesen.\n- Es braucht beides, Ihr Google-Konto und den QR-Code. Der Code gilt fünf Minuten und nur einmal, und das erste Gerät fragt nach, bevor das neue hineinkommt.\n- Unter Einstellungen sehen Sie die Geräte, die Sie von diesem aus verbunden haben.\n- Mit Google verbundene Geräte bestätigen alle 30 Tage von selbst, dass das Konto zugelassen ist. Ohne Internet passiert nichts. Entfernt wird Ihre Buchhaltung nie, ohne dass sie gesichert in der Cloud liegt.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "e450b813a356f42ecea45f0f35576d24d89214e15d9dddb64dca42db68a24be2",
-      "size": 69552
+      "sha256": "eece51b9d26875f540cde6ebad72963f801a712eac9c2d952c6150f180f59986",
+      "size": 71711
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -149,6 +149,11 @@
       "size": 26660
     },
     {
+      "path": "lib/koppeln.js",
+      "sha256": "ac9733e6164176f6938dd66bc46f051c9ef7dc1509109bece2bc705f9eea5597",
+      "size": 23394
+    },
+    {
       "path": "lib/mahnungsaktionen.js",
       "sha256": "c22bd468552fe7495c14d0a205820db117785f9b3fec152d392509d61aa643db",
       "size": 11260
@@ -209,6 +214,11 @@
       "size": 14517
     },
     {
+      "path": "lib/qrlesen.js",
+      "sha256": "09352a0302ceee341444031353af161c454f97ec893db4aaef2f1b0ce6f74312",
+      "size": 2989
+    },
+    {
       "path": "lib/rechnung.js",
       "sha256": "c49771b4698bfd713c4816b9c7257bfcf960ef94b9b7c8f4b4dc11ad309d79ff",
       "size": 38430
@@ -250,8 +260,8 @@
     },
     {
       "path": "lib/rollen.js",
-      "sha256": "8130a7ed41ac475ca920051db5120043c87b9f7cf3e7f2064cfcd16d79467b7f",
-      "size": 6588
+      "sha256": "4b41ff5a427899ece250fd5101c2b14a5a274b93bf13007c2bccb55c1e0d7a48",
+      "size": 6671
     },
     {
       "path": "lib/router.js",
@@ -310,8 +320,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "7af66d9a5305b2258637d04a4fe895df722e4bd9961518bcea3c41887276ae0c",
-      "size": 24886
+      "sha256": "d334855d38602d9c2e094af85342f91743426a1c0d2fde4c8bce01b66c5e84f6",
+      "size": 25700
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -324,49 +334,54 @@
       "size": 28839
     },
     {
+      "path": "lib/zulassung.js",
+      "sha256": "a79452df91dde087875187725cb70dcff7646c4d98c385ffc5f807bdeb9b7094",
+      "size": 14777
+    },
+    {
       "path": "lib/zuordnung.js",
       "sha256": "d15f64f44a5dc7de6bddf34ffbfb88e1eb43aed41a7b08004bc760803b78b732",
       "size": 23148
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "8d402b31399d6cb12b7b9f456c4b29dee0a1d1a2e2b30eda51311324648bd8eb",
+      "sha256": "6991d0fbd2480797f5eca8bbbd2702d6c1eb506413440d746390544fdf698658",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "a4e58728038e7ab01a599e8101683969ff7e0fd709bd4206fa129075e96b4ebf",
-      "size": 23523
+      "sha256": "ee95971a84697070b27c5deea33a710dd886f1f99ed093aca6b045b580845714",
+      "size": 26012
     },
     {
       "path": "recht/IMPRESSUM.md",
-      "sha256": "2257cb37ee8a9340e3206a2dfe7284988ea15251982336cfdc7575cb023fa07b",
-      "size": 858
+      "sha256": "a6c7f77c3e4ec4a57a7045f485b392252e9197a5a2bd5b4da4dd2ab635c6ae9c",
+      "size": 878
     },
     {
       "path": "recht/NUTZUNGSBEDINGUNGEN.md",
-      "sha256": "04d7d7f88280829dbf69fb44d489c419506aef3d8e50b24618a2dec06faae9a5",
-      "size": 10680
+      "sha256": "80c4296287671b3ca37eec9767ce79e75e7d87defb597224dd33882c3565db2c",
+      "size": 10685
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "69b40f231c8ec34669a6cad170383718427e58f148dce35db21d749f0b5b6c1d",
-      "size": 26661
+      "sha256": "1d1dac0950f9642853f3bd83197d146c3cdd6a215cb68173bf2682b7ac9c2228",
+      "size": 29187
     },
     {
       "path": "recht/impressum.html",
-      "sha256": "750980442016e0c6cdc66f81d4988f421ce0d071bbdd477be4077f887816aafb",
-      "size": 3045
+      "sha256": "2c71a88a5c74eeda078f86306cf70f1d50716cf302e7ae52bf62367487bf6be4",
+      "size": 3061
     },
     {
       "path": "recht/nutzungsbedingungen.html",
-      "sha256": "2e3d9cf6008a605d4cc222f627c9f037d39230f99077eaa8f8ed0e7d68d973b3",
-      "size": 13298
+      "sha256": "d47259ad0094a2fad330b04d6da90047ff6665d8bc9115f1cfac0debb29aee3c",
+      "size": 13303
     },
     {
       "path": "styles.css",
-      "sha256": "3bda157fbbf64e3ae00790be8239d7108140ac115ed1454b3aa57e64db5a4359",
-      "size": 90427
+      "sha256": "e2973c6d21b219a3f9dde659ca88b8221bce09024b5ceb84a8609858fb4ec9b4",
+      "size": 91491
     },
     {
       "path": "views/anlageform.js",
@@ -385,8 +400,8 @@
     },
     {
       "path": "views/cloudpanel.js",
-      "sha256": "c0dea1af4aa45eaf2cc6c34492c411cd88381595823f5eb63d764c0a7a00dd92",
-      "size": 36760
+      "sha256": "41ae33091b32768c6e999773fd10603e797000d50b208316cc2864bff5be587b",
+      "size": 37005
     },
     {
       "path": "views/dashboard.js",
@@ -405,8 +420,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "8fc36484076d80dd486fec86277209719d402e3f21ac125b5e1c72f19da091b9",
-      "size": 53766
+      "sha256": "e456f53afa4e197d5e2e5c97cc0b12f830ba7cf694ed636c083dc886001baa67",
+      "size": 56953
     },
     {
       "path": "views/kontoimport.js",
@@ -450,8 +465,8 @@
     },
     {
       "path": "views/settings.js",
-      "sha256": "4eb65c1a5d406653fb0e8103d693cd6e2b6d6d3bd472b404c3369bce01d7134b",
-      "size": 38512
+      "sha256": "72846da82b631d607f3d074f94268a13d8956a980c90989b9f669d0f6b5354f7",
+      "size": 38808
     },
     {
       "path": "views/spruenge.js",
@@ -480,7 +495,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "03011e8390acb3cab7d5147fb7b66be4e1faf936812979258db934aaa912c5a3",
+      "sha256": "b50ab9fad667f088499278d6869cb4ac1e2a1c4124de39af81d682c1a02bcf8e",
       "size": 6906
     },
     {
@@ -490,13 +505,13 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "e85b8edea266c8edb833aa27e2dfc05be9e6ba1e576f98483ff33da42356611f",
-      "size": 49779
+      "sha256": "a974ceb257e1759ea30d1bb99ea91e77db2651ee9b14a4f334b115c395b88ef6",
+      "size": 53394
     },
     {
       "path": "web/cloud.js",
-      "sha256": "af117b12e99fa355ebf1196834d9df85b995b3d494f605328f8943855f0f9555",
-      "size": 27150
+      "sha256": "019db5a7a4ba7562a833a129fae958880040f68c83e8e8ec9ca4d4b10590916d",
+      "size": 36520
     },
     {
       "path": "web/cloudconfig.js",
@@ -520,8 +535,8 @@
     },
     {
       "path": "web/firebase.js",
-      "sha256": "817945e46574bc4b9a3abee6a083f3423239dfe05ac373d8566d3885505846e0",
-      "size": 13592
+      "sha256": "282261df9088db2e3ba521b139080938d60a9e4d829c0df8a06a6e00e3c29c61",
+      "size": 17395
     },
     {
       "path": "web/gcal.js",
@@ -542,6 +557,11 @@
       "path": "web/konten.js",
       "sha256": "5a03837e76be3923b3d13bcbe0c676b037872893a8487ba7450aefdfed4a2bd8",
       "size": 8418
+    },
+    {
+      "path": "web/koppeln.js",
+      "sha256": "ca310001a3581fe336d0a87966e19466db6c7fef0099fb3f6b7aab338feda780",
+      "size": 19626
     },
     {
       "path": "web/mobil.js",
@@ -612,6 +632,11 @@
       "path": "web/zugang.js",
       "sha256": "8ba1b1f5a24ac93585ad0253d3543140a20190bc6a1ede9b3a2321f8d8a2f522",
       "size": 5965
+    },
+    {
+      "path": "web/zulassung.js",
+      "sha256": "1d7f210757ffdeca843ad33ddb809201a8a9433c9f8bae7ee98f2cf8d0d817d2",
+      "size": 6886
     }
   ]
 }

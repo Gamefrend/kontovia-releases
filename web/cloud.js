@@ -21,7 +21,9 @@ import { FirebaseBackend } from './firebase.js';
 import BUILTIN from './cloudconfig.js';
 import { journalNachEinspielen, fuerSicherung, altlastenEntfernen } from './zugang.js';
 import * as W from './weiterleitung.js';
-import { googlePaket, googleSchluessel, googleMerken, googleVergessen, googleMerker } from './entsperrung.js';
+import * as KP from './koppeln.js';
+import * as Z from './zulassung.js';
+import { googlePaket, googleSchluessel, googleMerken, googleVergessen, googleMerker, biometrieEntfernen } from './entsperrung.js';
 
 const BASIS = 'sync-basis.bin';
 const BASIS_AAD = K.utf8('kontovia/sync-basis');
@@ -64,6 +66,12 @@ export class Cloud {
     /** Was nach einer Weiterleitung zu Google an die Oberfläche geht (einmalig). */
     this.meldung = null;
     this.ebenVerbunden = null;
+    /** Weiteres Gerät koppeln: auf dem offenen Gerät (Geber) und auf dem neuen (Abbruchschalter). */
+    this.geber = null;
+    this.koppelnAbbruch = null;
+    /** Wann lag der lokale Stand zuletzt gesichert in der Cloud, wann wurde zuletzt lokal etwas geändert (zulassung.js)? */
+    this.abgeglichenUm = 0;
+    this.lokalGeaendertUm = 0;
   }
 
   cfg() {
@@ -164,6 +172,9 @@ export class Cloud {
     delete c.lastSyncAt;
     this.backend = null;
     await A.loeschen('dateien', BASIS).catch(() => {});
+    // Ohne Verbindung gibt es nichts zu bestätigen: Die Frist der Zulassung endet damit, ein offener Code ebenso.
+    await Z.vergessen();
+    await this.koppelnAbbrechen().catch(() => {});
     await this.vault.save(this.vault.db);
     return true;
   }
@@ -393,6 +404,190 @@ export class Cloud {
     return true;
   }
 
+  /* ---------------------------------------------------------------------- */
+  /* Befristete Zulassung (zulassung.js)                                     */
+  /* ---------------------------------------------------------------------- */
+
+  /** Hat sich lokal etwas geändert? Dann gilt der Stand erst nach dem nächsten Abgleich wieder als gesichert. */
+  lokalGeaendert() {
+    this.lokalGeaendertUm = Date.now();
+  }
+
+  /** Der Stand für die Anzeige. Geht auch gesperrt: Er stammt aus dem Merkbuch außerhalb des Tresors. */
+  async zulassungStatus() {
+    const rec = await Z.lesen();
+    const verbunden = this.vault.db ? !!this.cfg().state?.firebase?.refreshToken : !!rec?.uid;
+    if (!verbunden && !rec?.lokalGesperrt) return { aktiv: false, zustand: 'aus', stufe: 0 };
+    return { aktiv: verbunden, ...Z.stand(rec) };
+  }
+
+  /**
+   * Fragt den Cloud-Speicher, ob dieses Konto noch zugelassen ist. Löscht nie selbst.
+   * @returns {Promise<object>} der Stand, dazu `aktion` ('loeschen' erst nach zweifach bestätigter Sperre)
+   *   und `netz` (true: der Speicher war nicht erreichbar)
+   */
+  async zulassungPruefen() {
+    this.vault.assertUnlocked();
+    const st = this.cfg().state?.firebase || {};
+    if (!st.refreshToken || !st.uid) return { aktiv: false, zustand: 'aus', stufe: 0, aktion: 'nichts', netz: false };
+    const antwort = await this.be().zulassungLesen();
+    const r = Z.verarbeiten(await Z.lesen(), st.uid, antwort, Date.now());
+    await Z.schreiben(r.rec);
+    return { aktiv: true, ...Z.stand(r.rec), aktion: r.aktion, netz: antwort.art === 'netz', antwort: antwort.art };
+  }
+
+  /** Liegt der lokale Stand gesichert in der Cloud? Nur dann darf etwas gelöscht werden. */
+  async zulassungAbgesichert() {
+    try {
+      const meta = await this.be().vaultMeta();
+      const c = this.cfg();
+      if (!meta?.exists || !c.remoteVersion || meta.version !== c.remoteVersion) return false;
+      return this.abgeglichenUm > 0 && this.abgeglichenUm >= this.lokalGeaendertUm;
+    } catch { return false; }
+  }
+
+  /**
+   * Letzte Prüfung vor dem Löschen: Die Sperre muss jetzt noch gelten und zweifach bestätigt
+   * sein, und die Buchhaltung muss gesichert in der Cloud liegen.
+   * @returns {Promise<{erlaubt:boolean, grund?:string}>}
+   */
+  async zulassungFreigabe() {
+    this.vault.assertUnlocked();
+    const st = this.cfg().state?.firebase || {};
+    if (!st.refreshToken || !st.uid) return { erlaubt: false, grund: 'nicht-verbunden' };
+    const antwort = await this.be().zulassungLesen();
+    if (antwort.art !== 'gesperrt' || !(antwort.serverZeit > 0)) return { erlaubt: false, grund: 'nicht-mehr-gesperrt' };
+    const rec = await Z.lesen();
+    const b = rec?.uid === st.uid ? rec.beobachtet || [] : [];
+    if (!(b.length >= 2 && b[b.length - 1] - b[0] >= Z.BEOBACHTUNG_ABSTAND_MS)) return { erlaubt: false, grund: 'nicht-bestaetigt' };
+    if (!await this.zulassungAbgesichert()) return { erlaubt: false, grund: 'nicht-gesichert' };
+    return { erlaubt: true };
+  }
+
+  /**
+   * Das Gerät sperren, statt zu löschen: Cloud-Verbindung, Fingerabdruck und Google-Zugang
+   * dieses Geräts entfernen. Die verschlüsselte Datei bleibt, das Passwort öffnet sie weiter.
+   */
+  async zulassungSperren() {
+    this.vault.assertUnlocked();
+    await this.disconnect({ keepRemote: true });
+    await biometrieEntfernen().catch(() => {});
+    await googleVergessen().catch(() => {});
+    await Z.schreiben({ v: 1, lokalGesperrt: { seit: new Date().toISOString() } });
+    return Z.stand(await Z.lesen());
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Weiteres Gerät koppeln (koppeln.js)                                     */
+  /* ---------------------------------------------------------------------- */
+
+  /** Auf dem offenen Gerät: einen Code erzeugen, der ein neues Gerät mit demselben Google-Konto freischaltet. */
+  async koppelnStart() {
+    this.vault.assertUnlocked();
+    const st = this.cfg().state?.firebase || {};
+    if (!st.refreshToken || !st.uid) throw Object.assign(new Error('Dazu muss Kontovia mit Ihrem Google-Konto verbunden sein.'), { code: 'NICHT_VERBUNDEN' });
+    await this.koppelnAbbrechen();
+    const be = this.be();
+    const geber = new KP.Geber({ backend: be, uid: st.uid, dekHolen: () => { this.vault.assertUnlocked(); return this.vault.dek; } });
+    const r = await geber.starten();
+    this.geber = geber;
+    KP.aufraeumen(be).catch(() => {});
+    return { adresse: KP.kopplungsAdresse(W.rueckAdresse(globalThis.location?.href || 'https://kontovia.invalid/'), r.code), anzeige: KP.codeAnzeige(r.code), gueltigBis: r.gueltigBis };
+  }
+
+  /** Meldet sich ein Gerät? Nach dem Abschluss wird es in die Liste dieses Geräts eingetragen. */
+  async koppelnAbfragen() {
+    const g = this.geber;
+    if (!g) return { zustand: 'keiner' };
+    const s = await g.abfragen();
+    if (s.zustand === 'fertig' && !g.eingetragen && !this.vault.isLocked) {
+      g.eingetragen = true;
+      const c = this.cfg();
+      const eintrag = { id: K.toHex(K.randomBytes(6)), name: s.name, seit: new Date().toISOString() };
+      c.gekoppelt = [...(Array.isArray(c.gekoppelt) ? c.gekoppelt : []), eintrag].slice(-20);
+      await this.vault.save(this.vault.db);
+      return { ...s, geraet: eintrag };
+    }
+    return s;
+  }
+
+  /** Das Gerät ist erkannt: den Datenschlüssel für genau dieses Gerät ablegen. */
+  async koppelnBestaetigen() {
+    this.vault.assertUnlocked();
+    if (!this.geber) throw Object.assign(new Error('Es läuft gerade keine Kopplung.'), { code: 'KOPPELN_ZUSTAND' });
+    return this.geber.bestaetigen();
+  }
+
+  /** Abbruch, „Das bin nicht ich“, Sperren: alles löschen, das Geheimnis überschreiben. */
+  async koppelnAbbrechen() {
+    const g = this.geber;
+    this.geber = null;
+    if (g) await g.beenden('abgebrochen');
+    return true;
+  }
+
+  /** Angeschlossene Geräte (nur die Liste dieses Geräts; sie entscheidet über nichts). */
+  koppelnGeraete() {
+    const c = this.vault.db ? this.cfg() : {};
+    return (Array.isArray(c.gekoppelt) ? c.gekoppelt : []).map((e) => ({ id: String(e.id), name: String(e.name), seit: String(e.seit) }));
+  }
+
+  async koppelnGeraetEntfernen(id) {
+    this.vault.assertUnlocked();
+    const c = this.cfg();
+    const vorher = this.koppelnGeraete();
+    const weg = vorher.find((e) => e.id === String(id));
+    c.gekoppelt = vorher.filter((e) => e.id !== String(id));
+    await this.vault.save(this.vault.db);
+    return weg || null;
+  }
+
+  /** Liegengebliebene Pakete aus früheren Versuchen entfernen (beim Entsperren). */
+  async koppelnAufraeumen() {
+    const st = this.vault.db ? this.cfg().state?.firebase : null;
+    if (!st?.refreshToken) return 0;
+    // Nicht bei jedem Abgleich nachsehen: alle zehn Minuten genügt.
+    if (Date.now() - (this.aufgeraeumtUm || 0) < 10 * 60 * 1000) return 0;
+    this.aufgeraeumtUm = Date.now();
+    return KP.aufraeumen(this.be());
+  }
+
+  /**
+   * Auf dem neuen Gerät, nach der Anmeldung bei Google: mit dem Code vom anderen Gerät
+   * den Datenschlüssel holen und die Buchhaltung laden. Kehrt erst zurück, wenn das
+   * andere Gerät bestätigt hat (oder die Zeit um ist).
+   */
+  async koppelnVerbinden({ code, name }) {
+    const a = this.anmeldung;
+    if (!a?.meta.exists) throw new Error('In Ihrem Konto liegt keine Buchhaltung, die sich laden ließe.');
+    if (this.koppelnAbbruch) this.koppelnAbbruch.abort();
+    const abbruch = new AbortController();
+    this.koppelnAbbruch = abbruch;
+    let dek;
+    try {
+      dek = await KP.verbinden({ backend: a.be, uid: a.state.uid, code, name, abbruch: abbruch.signal });
+    } finally {
+      if (this.koppelnAbbruch === abbruch) this.koppelnAbbruch = null;
+    }
+    if (a.schluessel) K.wipe(a.schluessel);
+    a.schluessel = dek;
+    let db;
+    try {
+      db = await this.ausCloudLadenOhnePasswort();
+    } catch (err) {
+      K.wipe(dek);
+      throw err;
+    }
+    this.cfg().geraeteName = KP.geraeteNameBereinigen(name);
+    await this.vault.save(this.vault.db);
+    return db;
+  }
+
+  koppelnVerbindenAbbrechen() {
+    this.koppelnAbbruch?.abort();
+    return true;
+  }
+
   async ausCloudLaden(password) {
     const a = this.anmeldung;
     if (!a?.meta.exists) throw new Error('In Ihrem Konto liegt keine Buchhaltung, die sich laden ließe.');
@@ -406,6 +601,8 @@ export class Cloud {
     this.anmeldung = null;
     const c = (db.cloud && typeof db.cloud === 'object') ? db.cloud : (db.cloud = {});
     for (const k of VERBINDUNG) delete c[k];
+    delete c.gekoppelt;
+    delete c.geraeteName;
     c.provider = a.provider;
     c.state = { [a.provider]: a.state };
     c.linkedAt = new Date().toISOString();
@@ -468,6 +665,7 @@ export class Cloud {
     // Kostenbremse: drüben unverändert und hier nichts Neues – nicht laden.
     if (!force && meta.version && meta.version === c.remoteVersion && !dirty) {
       this.pending = null;
+      this.abgeglichenUm = Date.now();
       return { state: 'aktuell', remoteVersion: meta.version };
     }
 
@@ -488,6 +686,8 @@ export class Cloud {
   async commit(db, onProgress = () => {}) {
     this.vault.assertUnlocked();
     if (!this.pending) throw new Error('Kein laufender Abgleich. Bitte erneut starten.');
+    // Was ab jetzt lokal geändert wird, ist nicht mehr im Hochgeladenen.
+    const gesichertStand = Date.now();
     const be = this.be();
 
     if (this.pending.hadRemote) {
@@ -531,6 +731,7 @@ export class Cloud {
 
     this.pending = null;
     this.lastError = null;
+    this.abgeglichenUm = gesichertStand;
     return { remoteVersion: up.version, bytes: container.length, attachments };
   }
 
@@ -579,7 +780,14 @@ export class Cloud {
   /** Wie früher unter Windows: ohne Anmeldemerkmale in die Cloud. */
   async verpacken(db) {
     const header = { ...this.vault.header, savedAt: new Date().toISOString() };
-    return K.packContainer(header, await K.sealBody(this.vault.dek, fuerSicherung(db), header));
+    // Was zu diesem Gerät gehört (Liste verbundener Geräte, eigener Gerätename), geht nicht in den gemeinsamen Stand.
+    const stand = fuerSicherung(db);
+    if (stand?.cloud && typeof stand.cloud === 'object') {
+      const { gekoppelt, geraeteName, ...rest } = stand.cloud;
+      void gekoppelt; void geraeteName;
+      stand.cloud = rest;
+    }
+    return K.packContainer(header, await K.sealBody(this.vault.dek, stand, header));
   }
 
   /* ---------------------------------------------------------------------- */

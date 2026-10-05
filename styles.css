@@ -1462,3 +1462,15 @@ table.data tbody tr { transition: background .15s; }
 .rolle-banner { padding: 8px 20px; font-size: 13px; background: var(--warn-bg, var(--surface-2)); color: var(--text); border-bottom: 1px solid var(--border); }
 .rolle-banner[hidden] { display: none; }
 body[data-rolle="lesen"] .cta { opacity: .5; }
+
+/* Weiteres Gerät verbinden (lib/koppeln.js): der QR-Code ist immer schwarz auf weiß, auch im dunklen Thema. */
+.kopplung-schritte { margin: 0 0 14px; padding-left: 20px; line-height: 1.6; }
+.kopplung-schritte li + li { margin-top: 4px; }
+.kopplung-qr { display: block; width: min(100%, 300px); height: auto; margin: 0 auto; border-radius: 10px; border: 1px solid var(--border-strong); }
+.kopplung-code { font: 600 15px/1.4 var(--mono); letter-spacing: .08em; text-align: center; user-select: all; word-break: break-all; padding: 8px 10px; border: 1px dashed var(--border-strong); border-radius: 8px; }
+.kopplung-video { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; background: #000; border-radius: 10px; }
+
+/* Hinweis zur Zulassung (lib/zulassung.js): ruhig, aber nicht zu übersehen */
+.zulassung-banner { display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; line-height: 1.5; }
+.zulassung-banner[hidden] { display: none; }
+.zulassung-knoepfe { display: inline-flex; gap: 6px; flex-wrap: wrap; }

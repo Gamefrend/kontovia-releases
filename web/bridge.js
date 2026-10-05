@@ -19,6 +19,7 @@ import * as G from './gcal.js';
 import * as Z from './sperre.js';
 import * as UE from './uebergabe.js';
 import * as EN from './entsperrung.js';
+import * as KP from './koppeln.js';
 import * as KO from './konten.js';
 import BUILTIN from './cloudconfig.js';
 import * as D from './dateien.js';
@@ -60,6 +61,9 @@ const rueckkehrFertig = (() => {
   const antwort = W.antwortAusAdresse();
   return antwort ? cloud.rueckkehr(antwort).catch((e) => console.error('Anmeldung nach Weiterleitung:', e)) : Promise.resolve();
 })();
+/* Öffnete die Kamera-App des Handys die Adresse aus dem QR-Code, steht das Geheimnis im Anker: sofort aus der
+   Adresse entfernen und nur für diesen Tab, nur kurz merken (koppeln.js). */
+if (!nurGoogleFenster) { const c = KP.codeAusAdresse(); if (c) KP.codeMerken(c); }
 const device = { id: '', name: '' };
 
 let autoLockMinutes = 10;
@@ -185,6 +189,10 @@ function doLock(reason) {
 function nachSperre(reason) {
   if (reason !== 'aktualisierung') UE.verwerfen().catch(() => {});
   gcal.vergessen();
+  // Ein offener QR-Code für ein weiteres Gerät gilt nicht über das Sperren hinaus.
+  cloud.koppelnAbbrechen().catch(() => {});
+  cloud.koppelnVerbindenAbbrechen();
+  KP.codeVergessen();
   Z.bildschirmBeenden();
   if (lockTimer) clearTimeout(lockTimer);
   lockTimer = null;
@@ -317,6 +325,7 @@ function restartAutoSync() {
   if (autoSyncTimer) clearInterval(autoSyncTimer);
   autoSyncTimer = null;
   if (vault.isLocked) return;
+  cloud.koppelnAufraeumen().catch(() => {});
   const st = cloud.status();
   if (!st.linked || st.autoSync === false) return;
   const minutes = Math.min(720, Math.max(5, Number(st.autoSyncMinutes) || 15));
@@ -575,6 +584,7 @@ const api = {
       // Der Cloud-Block wird ausschließlich hier geführt;
       // die Kopie der Oberfläche darf ihn nicht überschreiben.
       neu.cloud = vault.db?.cloud || neu.cloud || {};
+      cloud.lokalGeaendert();
       const res = await vault.save(neu);
       autoLockMinutes = Number(neu?.settings?.autoLockMinutes ?? autoLockMinutes);
       resetLockTimer();
@@ -716,6 +726,58 @@ const api = {
       sperreBeobachten();
       return kopie(fuerOberflaeche(db));
     }, { needsUnlock: false }),
+  },
+
+  /* Weiteres Gerät koppeln (koppeln.js): Das Geheimnis des QR-Codes entsteht und bleibt in der Web-Schicht;
+     nur die Adresse für den QR-Code geht an die Oberfläche, solange er angezeigt wird. */
+  koppeln: {
+    /** Auf dem offenen Gerät. */
+    start: handle(async () => kopie(await cloud.koppelnStart())),
+    abfragen: handle(async () => kopie(await cloud.koppelnAbfragen())),
+    bestaetigen: handle(async () => kopie(await cloud.koppelnBestaetigen())),
+    abbrechen: handle(async () => cloud.koppelnAbbrechen(), { needsUnlock: false }),
+    geraete: handle(async () => kopie(cloud.koppelnGeraete())),
+    geraetEntfernen: handle(async (id) => kopie(await cloud.koppelnGeraetEntfernen(str(id, 40)))),
+    /** Auf dem neuen Gerät, nach der Anmeldung bei Google: Liegt ein Code aus der Kamera-App bereit? */
+    codeBereit: handle(async () => !!KP.codeGemerkt(), { needsUnlock: false }),
+    /** Mit dem gescannten oder eingegebenen Code (leer: der aus der Kamera-App) die Buchhaltung laden. */
+    verbinden: handle(async (opts = {}) => {
+      if (anderesFenster) throw new Error('Kontovia ist in einem anderen Fenster geöffnet. Bitte dort weiterarbeiten oder dieses Fenster neu laden.');
+      await rueckkehrFertig;
+      const code = opts?.code ? str(opts.code, 200) : KP.codeGemerkt();
+      try {
+        const db = await cloud.koppelnVerbinden({ code, name: str(opts?.name, 60) });
+        KP.codeVergessen();
+        autoLockMinutes = Number(db?.settings?.autoLockMinutes ?? 10);
+        resetLockTimer();
+        restartAutoSync();
+        A.dauerhaftAnfordern();
+        sperreBeobachten();
+        return kopie(fuerOberflaeche(db));
+      } catch (err) {
+        if (/^KOPPELN_(CODE|BELEGT|ABGELAUFEN|FALSCH)$/.test(err?.code || '')) KP.codeVergessen();
+        throw err;
+      }
+    }, { needsUnlock: false }),
+    verbindenAbbrechen: handle(async () => cloud.koppelnVerbindenAbbrechen(), { needsUnlock: false }),
+  },
+
+  /* Befristete Zulassung (zulassung.js): Alle 30 Tage bestätigt das Gerät beim Cloud-Speicher, dass das Konto
+     zugelassen ist. Gelöscht wird nur nach eindeutiger, zweifach bestätigter Sperre und gesicherter Buchhaltung. */
+  zulassung: {
+    status: handle(async () => kopie(await cloud.zulassungStatus()), { needsUnlock: false }),
+    pruefen: handle(async () => kopie(await cloud.zulassungPruefen())),
+    /** Das Konto von diesem Gerät entfernen, wenn die Web-Schicht es nach eigener Prüfung erlaubt. */
+    loeschen: handle(async () => {
+      const f = await cloud.zulassungFreigabe();
+      if (!f.erlaubt) return { geloescht: false, grund: f.grund };
+      await geraetLeeren();
+      return { geloescht: true };
+    }),
+    /** Statt zu löschen: Verbindung, Fingerabdruck und Google-Zugang dieses Geräts entfernen. */
+    sperren: handle(async () => kopie(await cloud.zulassungSperren())),
+    /** Die Frist ist um und es gibt keine Verbindung: sperren, bis eine Prüfung gelungen ist. */
+    fristSperre: handle(async () => { doLock('zulassung'); return true; }),
   },
 
   /* Mehrere Konten auf einem Gerät (konten.js). Gewechselt wird mit einem Neustart der Seite, den die Oberfläche auslöst. */

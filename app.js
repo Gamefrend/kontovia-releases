@@ -13,6 +13,8 @@ import { closePopover, openPopover } from './lib/popover.js';
 import { scope } from './lib/prefs.js';
 import { startCalendarSync, stopCalendarSync } from './lib/gcalsync.js';
 import { VERSIONEN } from './lib/versionen.js';
+import { mitCodeVerbinden, nachDemVerbinden } from './lib/koppeln.js';
+import { beimEntsperren, hinweisKasten, hinweisVerdrahten } from './lib/zulassung.js';
 import { abmelden, entsperrWege, kontenMenue, kontenAufSperrbildschirm, nachrichtHolen, kontoName, kontoSchluessel } from './lib/zugaenge.js';
 import { feedbackOeffnen, feedbackNachsenden, entwicklerKlick } from './lib/feedback.js';
 import { rechtsfuss, rechtslinks, nutzungPruefen, nutzungVermerken } from './lib/recht.js';
@@ -266,6 +268,8 @@ function renderSetup(konten = null) {
   let weiterleitung = false;
   /** …und der Code als Rückfallweg? */
   let mitCodeMoeglich = false;
+  /** Die Kamera-App hat einen Code übergeben: erst bei Google anmelden, dann verbinden. */
+  let codeWartet = false;
   let anmeldung = null;
   let wartet = false;
   let abgebrochen = false;
@@ -304,10 +308,12 @@ function renderSetup(konten = null) {
           : 'Geben Sie den angezeigten Code bei Google ein.'}</div></div>
         <button class="btn sm" id="g_abbrechen">Abbrechen</button></div>`;
     }
-    return `<div class="signin-box mb16">
+    return `${codeWartet ? `<div class="notice ok mb16" role="status"><strong>Der QR-Code ist angekommen.</strong>
+      Melden Sie sich jetzt mit Ihrem Google-Konto an. Danach geht es weiter.</div>` : ''}<div class="signin-box mb16">
       <div><strong>Kontovia schon auf einem anderen Gerät?</strong>
       <div class="small muted">Mit Google anmelden und Ihre Buchhaltung aus der Cloud laden, oder
-      eine neue gleich verschlüsselt in Ihrem Konto sichern. Das geht auch später in den Einstellungen.</div></div>
+      eine neue gleich verschlüsselt in Ihrem Konto sichern. Das geht auch später in den Einstellungen.
+      Ein mit Google verbundenes Gerät bestätigt alle 30 Tage von selbst, dass das Konto noch zugelassen ist; dabei wird nur gelesen.</div></div>
       <div class="stack" style="gap:4px;align-items:flex-end">
         <button class="btn" id="g_anmelden">${icon('key', 15).__raw} Mit Google anmelden</button>
         ${weiterleitung && mitCodeMoeglich ? '<button class="btn ghost sm" id="g_code">Stattdessen mit Code</button>' : ''}
@@ -319,7 +325,8 @@ function renderSetup(konten = null) {
   function kastenZeichnen() {
     const box = $('#g_box');
     if (!box) return;
-    box.innerHTML = anmeldeKasten() + ordnerKasten();
+    box.innerHTML = (step === 0 ? hinweisKasten() : '') + anmeldeKasten() + ordnerKasten();
+    hinweisVerdrahten(box, kastenZeichnen);
     $('#o_oeffnen', box)?.addEventListener('click', () => vorhandenenOrdnerOeffnen());
     $('#g_anmelden', box)?.addEventListener('click', () => anmelden());
     $('#g_code', box)?.addEventListener('click', () => anmelden({ mitCode: true }));
@@ -562,6 +569,7 @@ function renderSetup(konten = null) {
 
   draw();
   api.speicher?.status().then((sp) => { ordnerMoeglich = !!sp?.moeglich; kastenZeichnen(); }).catch(() => {});
+  api.koppeln?.codeBereit().then((b) => { codeWartet = !!b; kastenZeichnen(); }).catch(() => {});
   // Ob sich diese Fassung bei Google anmelden kann, steht erst nach der Abfrage fest.
   api.cloud.signinStatus?.().then((st) => {
     anmeldenMoeglich = !!st?.moeglich;
@@ -599,12 +607,16 @@ function renderCloudLaden(st, { neu }) {
         <p class="lead">Angemeldet als <strong>${st.email || 'Google-Konto'}</strong>. In Ihrem Konto
         liegt eine Kontovia-Buchhaltung${st.stand ? raw(`, Stand ${esc(fmtDateTime(st.stand))}`) : ''}${st.groesse ? raw(` (${esc(bytes(st.groesse))})`) : ''}.
         Sie ist mit dem Passwort verschlüsselt, das Sie auf Ihrem anderen Gerät festgelegt haben.</p>
+        <button class="btn primary lg block" id="cloudKoppeln">${icon('eye', 18).__raw} Mit QR-Code vom anderen Gerät öffnen</button>
+        <p class="tiny muted mt8" style="text-align:center">Scannen Sie den QR-Code auf Ihrem anderen Gerät: unter Einstellungen, Sicherheit, „Neues Gerät hinzufügen“.
+        Der Code allein und Ihr Google-Konto allein genügen nicht, beides zusammen öffnet Ihre Buchhaltung.</p>
+        <div class="entsperr-oder"><span>oder mit Passwort</span></div>
         <div class="field">
           <label>Passwort der Buchhaltung</label>
           ${passwordInput('cloudPw', { autocomplete: 'current-password' })}
         </div>
         <div class="err small mb16" id="cloudErr"></div>
-        <button class="btn primary lg block" id="cloudLaden">Laden und entsperren</button>
+        <button class="btn lg block" id="cloudLaden">Laden und entsperren</button>
         ${st.schluessel ? raw('<button class="btn lg block mt8" id="cloudOhnePw">Ohne Passwort laden (Anmeldung bei Google genügt)</button>') : ''}
         <p class="tiny muted mt16" style="text-align:center">Die Belege kommen danach im Hintergrund nach.</p>
         <details class="forgot small mt8">
@@ -637,6 +649,14 @@ function renderCloudLaden(st, { neu }) {
     afterUnlock();
     toast('Buchhaltung geladen', 'Dieses Gerät ist jetzt mit Ihrem Google-Konto verbunden. Belege werden im Hintergrund geholt.', 'ok', 8000);
   };
+  $('#cloudKoppeln').addEventListener('click', async () => {
+    const db = await mitCodeVerbinden();
+    if (!db) return;
+    geladen(db);
+    nachDemVerbinden();
+  });
+  // Die Kamera-App hat den Code schon übergeben: gleich weiter.
+  api.koppeln?.codeBereit().then((b) => { if (b && $('#cloudKoppeln')) $('#cloudKoppeln').click(); }).catch(() => {});
   $('#cloudOhnePw')?.addEventListener('click', async (ev) => {
     ev.currentTarget.disabled = true;
     btn.disabled = true;
@@ -916,6 +936,8 @@ async function sicherungsHinweis() {
 
 /** Läuft nach jedem erfolgreichen Entsperren. */
 async function afterUnlock() {
+  // Ist die Frist der Zulassung überfällig und das Gerät kommt nicht ins Netz, sperrt es sich wieder, bevor irgendetwas angezeigt wird.
+  if (!await beimEntsperren()) return;
   // Erst die Nutzungsbedingungen: Wer sie nicht annimmt, wird gesperrt, bevor irgendetwas anderes passiert.
   if (!await nutzungPruefen({ sperren: lockNow, appVersion: appInfo.version })) return;
   // Hat das Konto Benutzer, jetzt klären, wer arbeitet; alles Weitere (auch das Journal) kennt dann den Namen.
@@ -1152,6 +1174,7 @@ function renderShell() {
           <div id="topActions" class="row"></div>
         </div>
         <div class="rolle-banner" id="rolleBanner" role="status" hidden></div>
+        <div class="rolle-banner zulassung-banner" id="zulassungBanner" role="status" hidden></div>
         <div class="content" id="content"></div>
         <div class="statusbar">
           <span class="row" style="gap:6px"><i class="save-dot" id="saveDot"></i><span id="saveText">gespeichert</span></span>
@@ -1311,6 +1334,7 @@ api.on.locked(async ({ reason }) => {
     hintergrund: 'Kontovia war einige Minuten im Hintergrund und wurde deshalb gesperrt.',
     'anderes-fenster': 'Kontovia wurde in einem anderen Fenster geöffnet und hier gesperrt. Laden Sie diese Seite neu, um hier weiterzuarbeiten.',
     aktualisierung: 'Die neue Fassung wird geladen …',
+    zulassung: 'Kontovia muss sich nach längerer Zeit einmal mit dem Internet verbinden, um zu prüfen, ob Ihr Konto noch zugelassen ist. Verbinden Sie das Gerät mit dem Internet und entsperren Sie noch einmal. Ihre Buchhaltung ist unverändert.',
     'cloud-uebernahme': 'Der Stand aus der Cloud ist übernommen. Entsperren Sie ihn mit dem Passwort, das auf Ihrem anderen Gerät gilt.',
     'sicherung-uebernommen': 'Die Sicherung gehörte zu einer anderen Buchhaltung und ist jetzt geladen. Entsperren Sie sie mit dem Passwort der Sicherung.',
     manuell: '',

@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 5. Oktober 2026, Programmversion 2.11.0
+Stand: 5. Oktober 2026, Programmversion 2.12.0
 
 ---
 
@@ -9,10 +9,11 @@ Stand: 5. Oktober 2026, Programmversion 2.11.0
 Verantwortlich für die Verarbeitung nach Art. 4 Nr. 7 DSGVO, soweit sie hier
 beschrieben ist (Auslieferung der Web-App, Cloud-Anmeldung, Aktualisierung):
 
-    [bitte eintragen: name]
-    [bitte eintragen: strasse]
-    [bitte eintragen: plzort]
-    E-Mail: [bitte eintragen: email]
+    Beispielbetrieb (Platzhalter, noch keine Firma)
+    Musterstraße 1
+    12345 Musterstadt
+    Deutschland
+    E-Mail: platzhalter@example.org
 
 Für die Buchhaltung selbst, also die Daten Ihrer Kundinnen, Kunden und
 Lieferanten, sind Sie als Betrieb verantwortlich (siehe unten). Wir haben
@@ -115,12 +116,17 @@ Buchhaltung, berechtigtes Interesse an einer Datensicherung).
 
 ### Wo die Daten liegen
 
-Empfänger ist [bitte eintragen: name] als Betreiber des Firebase-Projekts sowie
+Empfänger ist Beispielbetrieb (Platzhalter, noch keine Firma) als Betreiber des Firebase-Projekts sowie
 Google Ireland Limited beziehungsweise Google LLC als Auftragsverarbeiter.
 Gespeichert werden:
 
 * der verschlüsselte Tresor und die verschlüsselten Belege im Cloud Storage
   (Standort: Europäische Union, Rechenzentren in Finnland und den Niederlanden)
+* nur wenige Minuten und nur verschlüsselt: beim Verbinden eines weiteren
+  Geräts eine Anfrage und eine Antwort in Ihrem Bereich (siehe „Weiteres Gerät
+  verbinden“)
+* ein Eintrag zu Ihrer Zulassung (siehe „Befristete Zulassung“), den nur der
+  Betreiber setzen kann und den Kontovia nur liest
 * über Firebase Authentication Ihre E-Mail-Adresse und eine Kontokennung.
   Diese liegen unverschlüsselt vor und dienen allein dazu, Ihnen beim Anmelden
   Ihren eigenen Bereich zuzuordnen
@@ -183,6 +189,38 @@ Ihrem Google-Konto anmeldet, bekommt sie und kann Kontovia ohne Passwort
 zugreifen kann, kommen dann an Ihre Buchhaltung. Ohne diesen Schalter hat nur
 Ihr Passwort den Schlüssel. Mit „Ausschalten“ wird die Datei gelöscht. Auch
 „Verbindung trennen“ mit Löschen der Cloud-Daten entfernt sie.
+
+## Weiteres Gerät verbinden (freiwillig)
+
+Wer Kontovia auf einem zweiten Gerät öffnen möchte, meldet sich dort mit
+demselben Google-Konto an und scannt am ersten Gerät einen QR-Code. Dabei legen
+beide Geräte kurzzeitig zwei kleine Dateien in Ihrem Bereich des Cloud-Speichers
+ab: eine Anfrage und eine Antwort. Beide sind mit einem Geheimnis verschlüsselt,
+das **nur im QR-Code** steht und nie über das Netz geht. Der Name, den Sie dem
+neuen Gerät geben, liegt deshalb nur verschlüsselt dort. Sichtbar sind für den
+Betreiber der Ablage allein Dateiname (eine zufällige Kennung), Größe und
+Zeitpunkt. Die Dateien werden nach der Übernahme, bei Abbruch und nach spätestens
+fünf Minuten vom Gerät gelöscht; liegt eine einmal länger, räumt das nächste
+Gerät sie ab. Ohne den QR-Code sind sie wertlos. Die Liste der verbundenen
+Geräte (Name, Datum) steht nur in Ihrem verschlüsselten Tresor auf dem Gerät, von
+dem aus Sie verbunden haben, und wird nicht in die Cloud abgeglichen.
+Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.
+
+## Befristete Zulassung (bei Verbindung mit Google)
+
+Ist ein Gerät mit einem Google-Konto verbunden, fragt Kontovia beim Entsperren und
+danach alle sechs Stunden, spätestens aber alle 30 Tage bei Ihrem Konto im
+Cloud-Speicher nach, ob es noch zugelassen ist (eine kleine Datei, die nur der
+Betreiber setzen kann). Dabei werden ausschließlich die Anmeldung und das Lesen
+dieser einen Datei übertragen: keine Angaben zu Ihrer Buchhaltung, zu Ihrem Gerät
+oder zu Ihrer Nutzung. Das Gerät merkt sich den Zeitpunkt der letzten Bestätigung
+auf dem Gerät. Der Zweck: Ein verlorenes, gestohlenes oder nicht mehr berechtigtes
+Gerät kann vom Konto getrennt werden. Ist das Konto ausdrücklich gesperrt,
+entfernt Kontovia die Buchhaltung von diesem Gerät, jedoch erst nach
+wiederholter Bestätigung im Abstand von mindestens 24 Stunden und nachdem sie
+gesichert in der Cloud liegt; die Cloud-Kopie bleibt erhalten. Bei Störungen oder
+ohne Netz geschieht nichts dergleichen. Mit „Verbindung trennen“ endet die
+Prüfung. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (Sicherheit der Daten).
 
 ## Rückmeldungen
 

@@ -71,7 +71,9 @@ export async function renderCloudCard(root) {
             : `Kontovia zeigt einen kurzen Code, den Sie auf google.com/device eingeben, auf
           diesem oder einem anderen Gerät. Dort sehen Sie in der Adresszeile, dass Sie Ihr
           Passwort bei Google eingeben und nicht bei Kontovia.`} Ihre Buchhaltung bleibt dabei, wie sie ist. Ist das
-          Konto noch leer, wird sie hochgeladen; liegt dort schon eine, fragt Kontovia, welche gelten soll.</p>`) : ''}
+          Konto noch leer, wird sie hochgeladen; liegt dort schon eine, fragt Kontovia, welche gelten soll.</p>
+          <p class="small muted mt8 mb0">Mit der Verbindung bestätigt dieses Gerät alle 30 Tage von selbst bei Ihrem Konto, dass es noch zugelassen ist.
+          Dabei wird nur gelesen, es gehen keine Angaben zu Ihrer Buchhaltung hinaus.</p>`) : ''}
 
         ${status.linked ? raw(`
           <div class="grid c2">

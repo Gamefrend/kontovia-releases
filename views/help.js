@@ -452,14 +452,43 @@ function cloud(root) {
 
       <div class="card mt16"><div class="card-body">
         <h3 class="mt0">Zweites Gerät anschließen</h3>
-        <p>Installieren Sie Kontovia dort und klicken Sie beim ersten Start auf
-        <strong>Mit Google anmelden</strong>. Kontovia findet Ihre Buchhaltung im Konto und
-        lädt sie, sobald Sie das Passwort eingeben (das Passwort des ersten Geräts). Ab da
-        arbeiten beide Geräte auf demselben Bestand; die Belege kommen beim ersten Abgleich nach.</p>
+        <p>Öffnen Sie Kontovia dort und klicken Sie beim ersten Start auf
+        <strong>Mit Google anmelden</strong>, mit demselben Google-Konto wie auf dem ersten Gerät. Kontovia findet Ihre Buchhaltung im Konto.
+        Zum Öffnen haben Sie zwei Wege:</p>
+        <ul>
+          <li><strong>Mit QR-Code (empfohlen):</strong> Auf dem ersten Gerät zeigen Sie unter
+              <a data-go="settings">Einstellungen → Weitere Geräte</a> mit <em>Neues Gerät hinzufügen</em> einen QR-Code.
+              Auf dem neuen Gerät wählen Sie <em>Mit QR-Code vom anderen Gerät öffnen</em> und scannen ihn. Das erste Gerät zeigt den Namen des neuen
+              und wartet auf Ihr Ja. Weder Google noch wir können Ihre Buchhaltung dabei lesen: Das Google-Konto allein genügt nicht, der Code allein auch nicht.
+              Der Code gilt fünf Minuten und nur einmal. Kann der Browser den Code nicht lesen (etwa Safari auf dem iPhone), halten Sie die Kamera-App
+              Ihres Handys auf den Code oder tippen Sie den Code von Hand ein.</li>
+          <li><strong>Mit Passwort:</strong> Geben Sie das Passwort des ersten Geräts ein.</li>
+        </ul>
+        <p>Ab da arbeiten beide Geräte auf demselben Bestand; die Belege kommen beim ersten Abgleich nach.
+        Auf dem neuen Gerät können Sie danach Fingerabdruck oder Gesicht einschalten, dann entfällt das Tippen des Passworts.</p>
+        <div class="notice warn"><strong>Gut zu wissen.</strong> Ein verbundenes Gerät kann Ihre Buchhaltung dauerhaft öffnen, solange es entsperrt ist.
+        Schützen Sie es mit einer Bildschirmsperre. Geht es verloren, lässt sich sein Zugang derzeit nicht einzeln zurückrufen.</div>
         <p class="small muted mb0">Haben Sie dort schon einen Tresor angelegt: unter
         <a data-go="settings">Einstellungen → Cloud-Abgleich</a> verbinden. Kontovia erkennt die
         Buchhaltung in der Cloud und bietet <strong>Cloud-Stand übernehmen</strong> an; der
         Tresor des Geräts wird vorher gesichert.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
+        <h3 class="mt0">Bestätigung alle 30 Tage</h3>
+        <p>Ein mit Google verbundenes Gerät fragt von selbst, beim Entsperren und danach alle paar Stunden, bei Ihrem Konto nach, ob es noch zugelassen ist.
+        Dabei wird nur gelesen; es gehen keine Angaben zu Ihrer Buchhaltung hinaus. So kann der Betreiber ein verlorenes oder nicht mehr berechtigtes Gerät
+        vom Konto trennen. Sie müssen nichts tun. Haben Sie ein Gerät länger als drei Wochen nicht geöffnet, erinnert Kontovia freundlich; unter
+        <a data-go="settings">Einstellungen → Zulassung dieses Geräts</a> bestätigen Sie mit einem Klick.</p>
+        <ul>
+          <li>Ohne Internet oder bei einer Störung <strong>passiert nichts</strong> außer Hinweisen. Ihre Buchhaltung wird nie gelöscht, nur weil eine Prüfung nicht klappt.</li>
+          <li>Nur wenn Ihr Konto ausdrücklich gesperrt wird, entfernt Kontovia die Buchhaltung von diesem Gerät, frühestens nach einem Tag,
+              und erst, nachdem sie gesichert in der Cloud liegt. Die Cloud-Kopie bleibt erhalten; nach einer Klärung melden Sie sich wieder an und laden sie.
+              Lässt sie sich nicht sichern, wird nichts gelöscht, sondern das Gerät nur vom Abgleich getrennt. Dann legen Sie bitte eine Vollsicherung an.</li>
+          <li>Ist die Bestätigung lange überfällig und ein Gerät hat gar kein Internet, öffnet Kontovia erst wieder, wenn es einmal online war. Ihre Buchhaltung ist dabei unverändert.</li>
+          <li>Mit <em>Verbindung trennen</em> endet die Prüfung.</li>
+        </ul>
+        <p class="small muted mb0">Das ist kein vollständiger Schutz: Wer ein Gerät nie öffnet, wird auch nicht gefragt. Es hilft vor allem bei der gewöhnlichen Nutzung eines abhandengekommenen Geräts.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">

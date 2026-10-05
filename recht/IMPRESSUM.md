@@ -4,13 +4,14 @@ Angaben nach § 5 Digitale-Dienste-Gesetz (DDG)
 
 ## Anbieter
 
-    [bitte eintragen: name]
-    [bitte eintragen: strasse]
-    [bitte eintragen: plzort]
+    Beispielbetrieb (Platzhalter, noch keine Firma)
+    Musterstraße 1
+    12345 Musterstadt
+    Deutschland
 
 ## Kontakt
 
-* E-Mail: [bitte eintragen: email]
+* E-Mail: platzhalter@example.org
 
 ## Streitbeilegung
 

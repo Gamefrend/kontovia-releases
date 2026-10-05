@@ -4,7 +4,7 @@ Fassung vom 5. Oktober 2026
 
 ## 1. Anbieter und Geltungsbereich
 
-Anbieter von Kontovia ist [bitte eintragen: name], [bitte eintragen: strasse], [bitte eintragen: plzort] (im Folgenden
+Anbieter von Kontovia ist Beispielbetrieb (Platzhalter, noch keine Firma), Musterstraße 1, 12345 Musterstadt (im Folgenden
 „wir“). Diese Bedingungen gelten für die Nutzung der Web-App Kontovia
 einschließlich ihrer freiwilligen Zusatzfunktionen (Cloud-Abgleich, Google
 Kalender, Programmaktualisierung) durch Sie als Nutzerin oder Nutzer.

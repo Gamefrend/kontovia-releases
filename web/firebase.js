@@ -8,6 +8,9 @@
 
 import { requestJson, request, form } from './netz.js';
 import * as gauth from './anmeldung.js';
+import { DATEI_RE } from './koppeln.js';
+import { einordnen } from './zulassung.js';
+import { readIdToken } from './weiterleitung.js';
 
 const IDENTITY = 'https://identitytoolkit.googleapis.com/v1';
 const SECURETOKEN = 'https://securetoken.googleapis.com/v1';
@@ -295,7 +298,95 @@ export class FirebaseBackend {
     return true;
   }
 
+  /**
+   * Kurzlebige Dateien für das Koppeln eines weiteren Geräts (koppeln.js):
+   * tresore/<uid>/koppeln/<20 Hex>.anfrage|antwort. Der Inhalt ist verschlossen
+   * und ohne den QR-Code wertlos; hier liegt nur der Transport.
+   */
+  koppelnPfad(name) {
+    if (!DATEI_RE.test(String(name))) throw new Error('Ungültiger Name einer Kopplungsdatei.');
+    return `${this.base()}/koppeln/${name}`;
+  }
+
+  async koppelnLesen(name) {
+    const headers = await this.auth();
+    try {
+      const res = await request(this.objectUrl(this.koppelnPfad(name), '?alt=media'), { headers, timeoutMs: 20000 });
+      if (res.status === 404) return null;
+      if (res.status !== 200) throw Object.assign(new Error(`Die Kopplungsdatei ließ sich nicht lesen (HTTP ${res.status}).`), { status: res.status });
+      return res.body;
+    } catch (err) {
+      if (err.status === 404) return null;
+      throw err;
+    }
+  }
+
+  async koppelnSchreiben(name, bytes) {
+    const headers = { ...(await this.auth()), 'content-type': 'application/octet-stream' };
+    await requestJson(
+      `${STORAGE}/${enc(this.cfg.bucket)}/o?uploadType=media&name=${enc(this.koppelnPfad(name))}`,
+      { method: 'POST', headers, body: bytes, timeoutMs: 30000 },
+    );
+    return true;
+  }
+
+  async koppelnLoeschen(name) {
+    const headers = await this.auth();
+    try {
+      await requestJson(this.objectUrl(this.koppelnPfad(name)), { method: 'DELETE', headers, timeoutMs: 20000 });
+    } catch (err) {
+      if (err.status !== 404) throw err;
+    }
+    return true;
+  }
+
+  async koppelnListe() {
+    const headers = await this.auth();
+    const prefix = `${this.base()}/koppeln/`;
+    const out = [];
+    let pageToken = '';
+    do {
+      const url = `${STORAGE}/${enc(this.cfg.bucket)}/o?prefix=${enc(prefix)}&maxResults=200`
+        + (pageToken ? `&pageToken=${enc(pageToken)}` : '');
+      const data = await requestJson(url, { headers, timeoutMs: 30000 });
+      for (const item of data?.items || []) {
+        const name = String(item.name || '').slice(prefix.length);
+        if (DATEI_RE.test(name)) out.push({ name, updated: item.updated || item.timeCreated || '' });
+      }
+      pageToken = data?.nextPageToken || '';
+    } while (pageToken && out.length < 1000);
+    return out;
+  }
+
+  /**
+   * Die Zulassung dieses Kontos lesen (zulassung.js): zulassung/<uid>.json, nur lesbar für das
+   * eigene Konto. Die Zeit des Servers ist die Ausstellungszeit eines frischen Tokens; die Uhr
+   * des Geräts zählt dafür nicht.
+   * @returns {Promise<{art:'zugelassen'|'gesperrt'|'unklar'|'netz'|'anmeldung', serverZeit:number, status?:number}>}
+   */
+  async zulassungLesen() {
+    let idToken;
+    try {
+      this.token = null; // erzwingt ein frisches Token
+      idToken = await this.idToken();
+    } catch (err) {
+      // Antwortete der Server (abgelaufene oder widerrufene Anmeldung), ist das etwas anderes als kein Netz.
+      return { art: err?.code === 'NEU_ANMELDEN' || err?.status ? 'anmeldung' : 'netz', serverZeit: 0 };
+    }
+    const serverZeit = (Number(readIdToken(idToken).iat) || 0) * 1000;
+    if (!this.state.uid) return { art: 'unklar', serverZeit };
+    try {
+      const res = await request(this.objectUrl(`zulassung/${this.state.uid}.json`, '?alt=media'), {
+        headers: { authorization: `Firebase ${idToken}` }, timeoutMs: 20000, maxBytes: 64 * 1024,
+      });
+      return { art: einordnen(res.status, new TextDecoder().decode(res.body)), serverZeit, status: res.status };
+    } catch {
+      return { art: 'netz', serverZeit };
+    }
+  }
+
   async removeAll() {
+    for (const e of await this.koppelnListe().catch(() => [])) await this.koppelnLoeschen(e.name).catch(() => {});
     for (const a of await this.listAttachments()) await this.attachmentRemove(a.id).catch(() => {});
     for (const s of await this.listBackups().catch(() => [])) await this.backupRemove(s.name).catch(() => {});
     const headers = await this.auth();
