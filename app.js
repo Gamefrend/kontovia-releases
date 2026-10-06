@@ -1173,9 +1173,12 @@ function renderShell() {
         <button class="cta" id="newTxBtn" type="button" aria-haspopup="menu">
           ${icon('plus', 18)}<span class="grow">Neue Buchung</span>${icon('down', 15)}
         </button>
-        <button class="such-knopf" id="searchBtn" type="button" aria-haspopup="dialog" title="Alles durchsuchen (${SUCHE_KUERZEL})">
-          ${icon('search', 16)}<span class="grow">Suchen</span><kbd>${SUCHE_KUERZEL}</kbd>
-        </button>
+        <div class="such-zeile">
+          <button class="such-knopf" id="searchBtn" type="button" aria-haspopup="dialog" title="Alles durchsuchen (${SUCHE_KUERZEL})">
+            ${icon('search', 16)}<span class="grow">Suchen</span><kbd>${SUCHE_KUERZEL}</kbd>
+          </button>
+          <button class="icon-btn nav-schmal-knopf" id="navSchmalBtn" type="button" aria-pressed="${istSchmal()}">${icon('sidebar', 18)}</button>
+        </div>
         <nav class="nav" id="nav" aria-label="Hauptnavigation">
           ${raw(navHtml())}
         </nav>
@@ -1189,7 +1192,6 @@ function renderShell() {
             <button class="btn ghost" id="lockBtn" title="Sperren (${MOD}+L)">${icon('lock', 16)}<span class="knopf-text">Sperren</span></button>
             <button class="btn ghost" id="logoutBtn" title="Dieses Konto von diesem Gerät abmelden (vorher wird abgeglichen)">${icon('logout', 16)}<span class="knopf-text">Abmelden</span></button>
           </div>
-          <button class="btn ghost block nav-schmal-knopf" id="navSchmalBtn" type="button" aria-pressed="${istSchmal()}">${icon('sidebar', 16)}<span class="knopf-text">Einklappen</span></button>
         </div>
       </aside>
       <main class="main">

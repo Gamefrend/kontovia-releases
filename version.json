@@ -1,12 +1,12 @@
 {
-  "version": "2.19.0",
-  "released": "2026-10-06T08:27:03.189Z",
-  "notes": "Seitenleiste nach Ihrem Geschmack\n\n- Die Seitenleiste lässt sich einklappen: Dann bleiben nur die Symbole, und ein Klick klappt sie wieder aus.\n- Bereiche lassen sich per Rechtsklick (am Telefon langes Drücken) aus- und einblenden und verschieben. Auch ziehen geht, wenn Sie einen Eintrag kurz halten.\n- Die Einstellungen brauchen weniger Platz: Die Bereiche stehen jetzt als Reiter oben statt in einer breiten Spalte.\n- In der Übersicht zeichnet sich beim Umschalten einer Diagrammart nur noch diese Karte neu. Einnahmen und Ausgaben zeigen weniger Text.\n- Aufgaben mit Ziel zeigen den Stand als Zahl: eintippen und Enter drücken oder mit den Pfeilen ändern.",
+  "version": "2.19.1",
+  "released": "2026-10-06T09:44:41.814Z",
+  "notes": "Kleine Verbesserungen\n\n- Der Knopf zum Einklappen der Seitenleiste sitzt jetzt neben der Suche.\n- Die Reiter in den Stammdaten wechseln mit einer gleitenden Markierung.\n- Über den Reitern der Einstellungen scheint beim Scrollen nichts mehr durch.\n- Die Zahlen in der Übersicht springen am Ende nicht mehr ein Stück nach unten.\n- Die Belegquote passt jetzt auch in die kleine Kachel, und die Karten für Einnahmen und Ausgaben haben jeweils ihre eigene Höhe.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "9a7a049ff0f99cce330c8f9af15727f5eb01fd19f904ab31799762ab2492eb06",
-      "size": 73555
+      "sha256": "a9b2db3a79982e951ac4ebfddd25e43e1213b82e19566e4a502f3f58d51d5970",
+      "size": 73560
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -345,8 +345,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "29980876c6ba55862b539df752bdd9fcca4bf09d52e5e2119702ba267ae65322",
-      "size": 30680
+      "sha256": "93c3e95600b9bf0720c655810fd793bd02b60788533fb9b664322203c0f00ed7",
+      "size": 31268
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -375,12 +375,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "c9c14fc617dc8099ad4edb60019449ac0b466488a27191aaad40dd174b54a95f",
+      "sha256": "b3427e166d6a1c80adc853c7a3d9e65ebfa3511396f9152e1b45b50b71a8cc8b",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "5545f699a1fdf089f6cc2e65f5f241a0b1ca01420e33d1a4e34157f578573e26",
+      "sha256": "254f09751bdbc5a05c6df43ca2104904225c79f6e0ea6280d263176f49f062de",
       "size": 28151
     },
     {
@@ -395,7 +395,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "2fc1774a62b2d479f63ae12a51a98ea030772ce8760c8093fc1e44663bdc9677",
+      "sha256": "60851e832f150d4c2e853f115c137100f15b29fa2dc7486ff2851adbe1ceafdb",
       "size": 31451
     },
     {
@@ -410,8 +410,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "8870648c5d5f54e989e22ecdd979f5c09726e1de41e4a263d09974691106c923",
-      "size": 101923
+      "sha256": "d0c6d3342f7bd060318b4088d7750a490974bca63a2faf609308b6046a56c16f",
+      "size": 103663
     },
     {
       "path": "views/anlageform.js",
@@ -435,8 +435,8 @@
     },
     {
       "path": "views/dashboard.js",
-      "sha256": "55a6e082b72dd09e26242957373b01cf4051dbe1142fc77083d383df2765060a",
-      "size": 40085
+      "sha256": "74fd2726080424f09be499fffd1167c65dfa25ca0fd6587c966c2e74a9069195",
+      "size": 40069
     },
     {
       "path": "views/datenimport.js",
@@ -480,8 +480,8 @@
     },
     {
       "path": "views/master.js",
-      "sha256": "1eece0e079eacda110387c17fe4d428763e95107dbf2dbce4fff7f72908ac4f3",
-      "size": 33401
+      "sha256": "e64bedabb3e43af5567113f659985914185410439fb2274a3bed5a2f762ec7ba",
+      "size": 33781
     },
     {
       "path": "views/rechnungen.js",
@@ -500,8 +500,8 @@
     },
     {
       "path": "views/reports.js",
-      "sha256": "fc64d05de33a717c9ddc780df5e2cae4bbc4a32cc6dd04687cd6310d419f5be7",
-      "size": 43525
+      "sha256": "b2f0ace2a03208e040b2f22b4f025b2469390cc8b9430aa68bacd41c5ab65ef2",
+      "size": 43537
     },
     {
       "path": "views/settings.js",
@@ -535,7 +535,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "a84cf8fbec779ce5307b5f94b8387cd39a515a73b66862df2db696db73fa0faa",
+      "sha256": "e4c4907686790b8be5772630ac41beb9bba7926995188aad691f19c84fe9035d",
       "size": 6906
     },
     {
@@ -660,8 +660,8 @@
     },
     {
       "path": "web/web.css",
-      "sha256": "d23dc10335d3f1953e44e68d26afd4810dbd5f3968842aef33c825f1876d4820",
-      "size": 18891
+      "sha256": "46ed725eee06bc947fa4ab8de28b65dfff437a4cbb5d569ffebae677ca7ce327",
+      "size": 18913
     },
     {
       "path": "web/weiterleitung.js",

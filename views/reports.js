@@ -214,7 +214,7 @@ function guv(root, db) {
       </div>
     </div>
 
-    <div class="grid c2">
+    <div class="grid c2 start">
       <div class="card">
         <div class="card-head"><h3>Betriebseinnahmen</h3><div class="spacer"></div><span class="badge pos">${money(current.incomeForProfit)} €</span></div>
         ${catTable('income', incomeCats, current.incomeForProfit, current.countIncome, current.incomeVat, avg.income)}
@@ -343,7 +343,7 @@ function euer(root, db) {
       Kategorie lässt sich unter Stammdaten anpassen.
     </div>
 
-    <div class="grid c2">
+    <div class="grid c2 start">
       <div class="card">
         <div class="card-head"><h3>Betriebseinnahmen</h3></div>
         <div class="table-wrap"><table class="data">

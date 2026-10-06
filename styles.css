@@ -246,9 +246,15 @@ table.data td, .help, .notice, .stat .value, .modal-body pre { user-select: text
 /* Lange Knopftexte im Kartenkopf brechen auf kleinen Telefonen um, statt über den Rand zu ragen. */
 @media (max-width: 400px) { .card-head .btn { white-space: normal; height: auto; min-height: 32px; padding-block: 6px; text-align: left; max-width: 100%; } }
 .card-body.tight { padding: 0; }
+/* Belegquote in der Übersicht: Ring und Text nebeneinander, in schmaler Kachel untereinander statt über den Rand. */
+.ordnung-quote { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.ordnung-quote .stack { flex: 1 1 140px; min-width: 0; }
+.ordnung-quote .btn { height: auto; min-height: 32px; padding-block: 6px; white-space: normal; text-align: left; }
+.card-head h3 { overflow-wrap: anywhere; }
 
 .grid { display: grid; gap: 20px; }
 .grid.c2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid.start { align-items: start; } /* Karten behalten ihre eigene Höhe, statt der längsten zu folgen */
 .grid.c3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .grid.c4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .grid.side { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
@@ -1435,6 +1441,12 @@ html[data-theme="dark"] .gate-card { --shadow-lg-aussen: 0 18px 48px -12px rgba(
   transition: transform .6s var(--feder-weich), width .4s var(--aus), height .4s var(--aus), opacity .25s;
 }
 .marke.ohne-weg { transition: none; }
+/* Umschalter mit gleitender Marke (Stammdaten): die Marke ersetzt den Hintergrund des aktiven Knopfs. */
+.seg.hat-marke { position: relative; }
+.seg.hat-marke button { position: relative; z-index: 1; }
+.seg.hat-marke button.active, html[data-theme="dark"] .seg.hat-marke button.active { background: transparent; box-shadow: none; }
+.seg.hat-marke .marke { background: var(--surface); box-shadow: 0 1px 2px rgba(16, 24, 40, .1); border-radius: 8px; }
+html[data-theme="dark"] .seg.hat-marke .marke { background: var(--surface-3); box-shadow: none; }
 .nav .marke::before {
   content: ''; position: absolute; left: 0; top: 22%; bottom: 22%; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent);
 }
@@ -1454,6 +1466,8 @@ table.data tbody tr { transition: background .15s; }
 .todo-item.done .todo-title { transition: color .3s; }
 
 /* Zahl, die gerade auf ihren Wert läuft: der echte Text bleibt unsichtbar stehen, die laufende Zahl liegt darüber. */
+/* inline-block, damit „top: 0“ die Zeilenoberkante der Kennzahl ist: bei inline läge die Zahl beim Ende ein paar Pixel tiefer. */
+.stat .value .zahl { display: inline-block; vertical-align: baseline; }
 .zahl[data-lauf] { position: relative; color: transparent; }
 .zahl[data-lauf]::after { content: attr(data-lauf); position: absolute; left: 0; top: 0; color: var(--zf); white-space: pre; }
 
@@ -1536,11 +1550,11 @@ body[data-rolle="lesen"] .cta { opacity: .5; }
 /* Die Bereiche stehen als flache Reiterzeile über dem Inhalt: keine Spalte, die der Seite Breite nimmt. */
 .set-layout { display: block; }
 .set-nav {
-  position: sticky; top: 0; z-index: 25; display: flex; flex-direction: row; gap: 2px;
+  /* .content hat 4px Polster oben; ohne den Ausgleich klebt die Zeile 4px tiefer und darüber scheint der Inhalt durch. */
+  position: sticky; top: -4px; z-index: 25; display: flex; flex-direction: row; gap: 2px;
   overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
-  margin-bottom: 14px; border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 94%, transparent);
-  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+  margin: -4px 0 14px; padding-top: 4px; border-bottom: 1px solid var(--border);
+  background: var(--bg);
 }
 .set-nav::-webkit-scrollbar { display: none; }
 .set-tab {
@@ -1576,7 +1590,10 @@ body[data-rolle="lesen"] .cta { opacity: .5; }
 .nav-menue .menu-opt .ico { visibility: visible; color: var(--muted); }
 .nav-menue .menu-opt:disabled { opacity: .4; pointer-events: none; }
 .nav-menue .menu-title { text-transform: none; letter-spacing: 0; font-size: 12px; }
-.nav-schmal-knopf { justify-content: flex-start; margin-top: 4px; }
+/* Der Einklappknopf sitzt wie in anderen Programmen neben der Suche. */
+.such-zeile { display: flex; align-items: center; gap: 6px; flex: none; }
+.such-zeile .such-knopf { flex: 1; min-width: 0; width: auto; }
+.nav-schmal-knopf { flex: none; width: 36px; height: 36px; padding: 0; }
 
 /* Einstellungen: Liste der Bereiche der Seitenleiste */
 .leiste-gruppe { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 10px; }
@@ -1597,6 +1614,9 @@ body[data-rolle="lesen"] .cta { opacity: .5; }
   .shell.nav-schmal .nutzer-knopf .nutzer-text, .shell.nav-schmal .nutzer-knopf > .ico { display: none; }
   .shell.nav-schmal .brand-wechsel { justify-content: center; padding: 6px 0; }
   .shell.nav-schmal .cta, .shell.nav-schmal .such-knopf { justify-content: center; padding: 0; }
+  .shell.nav-schmal .such-zeile { flex-direction: column; align-items: stretch; }
+  .shell.nav-schmal .such-zeile .such-knopf { flex: none; }
+  .shell.nav-schmal .nav-schmal-knopf { width: auto; }
   .shell.nav-schmal .nav-item { justify-content: center; padding: 0; }
   .shell.nav-schmal .nav-sep { margin-inline: 4px; }
   .shell.nav-schmal .nav { scrollbar-width: none; }

@@ -367,8 +367,8 @@ const WIDGETS = {
       const cov = receiptCoverage(c.db, period.from, period.to);
       const checks = c.checks();
       return card('Ordnung und Vollständigkeit', `
-        <div class="row" style="gap:16px;align-items:center">
-          <span class="klick"${z('transactions', buchungen({ receipt: 'ohne' }), { titel: 'Buchungen ohne Beleg ansehen' })}>${donut(cov.ratio, { color: cov.ratio > 0.9 ? 'var(--pos)' : cov.ratio > 0.6 ? 'var(--warn)' : 'var(--neg)' }).__raw}</span>
+        <div class="ordnung-quote">
+          <span class="klick"${z('transactions', buchungen({ receipt: 'ohne' }), { titel: 'Buchungen ohne Beleg ansehen' })}>${donut(cov.ratio, { size: 80, color: cov.ratio > 0.9 ? 'var(--pos)' : cov.ratio > 0.6 ? 'var(--warn)' : 'var(--neg)' }).__raw}</span>
           <div class="stack">
             <strong>Belegquote</strong>
             <span class="small muted">${int(cov.withDoc)} von ${int(cov.total)} Buchungen haben einen Beleg.</span>

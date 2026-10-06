@@ -15,6 +15,7 @@ import { openTransactionDialog } from './transactions.js';
 import { refresh } from '../lib/router.js';
 import { table, mountTable, mountTables } from '../lib/table.js';
 import { aufgabenAbschnitt } from './todos.js';
+import { markierung } from '../lib/bewegung.js';
 
 
 let tab = 'categories';
@@ -44,7 +45,18 @@ function draw(root) {
       ${raw(Object.entries(TABS).map(([k, v]) => `<button data-tab="${k}" class="${tab === k ? 'active' : ''}">${esc(v)}</button>`).join(''))}
     </div>
     <div id="body"></div>`;
-  $$('[data-tab]', root).forEach((b) => b.addEventListener('click', () => { tab = b.dataset.tab; draw(root); }));
+  // Die Leiste bleibt beim Wechsel stehen, damit die Marke zum neuen Reiter gleiten kann.
+  markierung($('.seg.tabs', root), { aktiv: 'button.active' });
+  $$('[data-tab]', root).forEach((b) => b.addEventListener('click', () => {
+    if (tab === b.dataset.tab) return;
+    tab = b.dataset.tab;
+    $$('[data-tab]', root).forEach((x) => x.classList.toggle('active', x === b));
+    zeigen(root);
+  }));
+  zeigen(root);
+}
+
+function zeigen(root) {
   ({ categories, contacts, accounts, assets, recurring }[tab])($('#body', root));
 }
 
