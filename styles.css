@@ -960,6 +960,18 @@ table.data tbody tr.empty-row:hover { background: none; }
 }
 .dash.editing .dash-item:hover { outline-color: var(--accent); }
 .dash.editing .dash-item.dragging { opacity: .35; }
+.dash.editing { user-select: none; -webkit-user-select: none; }
+.dash.editing .dash-grip { touch-action: none; cursor: grab; }
+.dash-item { -webkit-touch-callout: none; }
+/* Das Modul „in der Hand“: eine Kopie, die dem Zeiger folgt (views/dashboard.js: aufnehmen). */
+.dash-geist {
+  position: fixed; left: 0; top: 0; z-index: 1000; margin: 0; pointer-events: none;
+  display: flex; flex-direction: column;
+  transform: translate(var(--x, 0), var(--y, 0)) scale(var(--massstab, 1)) rotate(1.5deg);
+  filter: drop-shadow(0 18px 30px rgba(0, 0, 0, .22)); opacity: .96;
+}
+.dash-geist .dash-body { opacity: 1; }
+html.dash-zieht, html.dash-zieht * { cursor: grabbing !important; user-select: none; -webkit-user-select: none; }
 .dash.editing .dash-body { opacity: .6; pointer-events: none; }
 .dash-edit {
   display: flex; align-items: center; gap: 4px 6px; flex-wrap: wrap;
@@ -1278,6 +1290,8 @@ textarea.invalid { border-color: var(--neg); }
 /* Stand als Zahl: Feld mit „von 20 Seiten“ daneben, rechts davon, was noch fehlt. */
 .todo-ziel-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 8px; }
 .todo-ziel-zeile .todo-ziel-text { margin-top: 0; flex: 1 1 200px; min-width: 0; }
+.todo-ziel-prog { margin-top: 4px; font-size: 12.5px; color: var(--muted); }
+.todo-ziel-prog .verzug { color: var(--warn); font-weight: 600; }
 .todo-ziel-stand { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); white-space: nowrap; }
 .todo-ziel-stand input { width: 84px; height: 32px; padding: 0 8px 0 10px; font-variant-numeric: tabular-nums; font-weight: 600; }
 

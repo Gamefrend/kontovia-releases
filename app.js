@@ -29,8 +29,7 @@ import * as viewCalendar from './views/calendar.js';
 import * as viewTodos from './views/todos.js';
 import * as viewRechnungen from './views/rechnungen.js';
 import * as viewReports from './views/reports.js';
-import * as viewExport from './views/export.js';
-import * as viewDatenimport from './views/datenimport.js';
+import * as viewImportExport from './views/importexport.js';
 import * as viewMaster from './views/master.js';
 import * as viewSettings from './views/settings.js';
 import * as viewHelp from './views/help.js';
@@ -48,8 +47,7 @@ export const VIEWS = {
   todos: { title: 'Aufgaben', icon: 'todo', mod: viewTodos, key: '7' },
   rechnungen: { title: 'Rechnungen', icon: 'invoice', mod: viewRechnungen, key: '8' },
   reports: { title: 'Auswertungen', icon: 'chart', mod: viewReports, key: '4' },
-  export: { title: 'Export & Finanzamt', icon: 'export', mod: viewExport, key: '5' },
-  datenimport: { title: 'Daten übernehmen', icon: 'folder', mod: viewDatenimport },
+  export: { title: 'Import & Export', icon: 'export', mod: viewImportExport, key: '5' },
   master: { title: 'Stammdaten', icon: 'master', mod: viewMaster, key: '6' },
   settings: { title: 'Einstellungen', icon: 'settings', mod: viewSettings, key: ',' },
   help: { title: 'Hilfe', icon: 'help', mod: viewHelp },
@@ -1317,7 +1315,15 @@ function updateStatus() {
 // Die Zurück-Taste des Browsers schließt zuerst ein offenes Fenster.
 router.vorZurueck = obersteSchliessen;
 
+/** Frühere eigene Bereiche, die heute Reiter eines anderen sind (Verweise in Hilfe, Suche, Verlauf). */
+const UMLEITUNG = { datenimport: ['export', { reiter: 'import' }] };
+
 onNavigate(async (view, params) => {
+  if (UMLEITUNG[view]) {
+    const [ziel, extra] = UMLEITUNG[view];
+    view = router.view = ziel;
+    params = router.params = { ...params, ...extra };
+  }
   const conf = VIEWS[view] || VIEWS.dashboard;
   const content = $('#content');
   if (!content) return;

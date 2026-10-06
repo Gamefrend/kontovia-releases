@@ -356,7 +356,7 @@ function anleitung(root) {
 
       <div class="card mt16"><div class="card-body" id="hilfe-datenimport">
         <h3 class="mt0">Daten aus einem anderen Programm übernehmen</h3>
-        <p>Unter <a data-go="datenimport">Daten übernehmen</a> ziehen Sie eine Datei hinein. Kontovia erkennt selbst, was darin steht,
+        <p>Unter <a data-go="datenimport">Import & Export</a>, Reiter „Import“, ziehen Sie eine Datei hinein. Kontovia erkennt selbst, was darin steht,
         liest sie nur auf diesem Gerät und übernimmt erst, wenn Sie es bestätigen.</p>
         <ul>
           <li><strong>DATEV-Format:</strong> Buchungsstapel von Ihrer Steuerkanzlei oder aus Programmen wie Lexware Office und sevDesk.

@@ -26,7 +26,7 @@ import { aufgabenHtml, klartext, bildIds } from '../lib/richtext.js';
 import {
   teilaufgaben, neueTeilaufgabe, fortschritt, verknuepfungen, verknuepfungHinzu, verknuepfungenRoh, aufgabenZu,
   horizontNormal, horizontEnde, horizontText, horizontTitel, aufgabenText, EINHEITEN, VERKNUEPFUNG_ARTEN,
-  ARTEN, aufgabenArt, zielRechnung, zielSatz, zielRest, zielNormal, mengeText, wiederholungNormal, wiederholungText, WIEDERHOLUNG_EINHEITEN,
+  ARTEN, aufgabenArt, zielRechnung, zielPrognose, zielSatz, zielRest, zielNormal, mengeText, wiederholungNormal, wiederholungText, WIEDERHOLUNG_EINHEITEN,
 } from '../lib/aufgaben.js';
 import { sucheIndex, suchen } from '../lib/suchindex.js';
 
@@ -120,20 +120,33 @@ const ZIEL_STATUS = {
   ohneDatum: ['', ''],
 };
 
+/** Hochrechnung in einer eigenen Zeile: „fertig zum …“ oder „… Tage in Verzug“; leer, wenn es nichts hochzurechnen gibt. */
+function prognoseText(todo, heute) {
+  const p = zielPrognose(todo, heute);
+  if (!p) return '';
+  const r = zielRechnung(todo, heute);
+  const e = r.einheit ? ` ${r.einheit}` : '';
+  const titel = `Hochgerechnet aus dem bisherigen Tempo (${mengeText(r.tempo)}${e} pro Tag)`;
+  return p.verzug
+    ? `<span class="verzug" title="${esc(`${titel}: fertig am ${fmtDate(p.fertig)}`)}">${p.verzug} ${p.verzug === 1 ? 'Tag' : 'Tage'} in Verzug</span>`
+    : `<span title="${esc(titel)}">Fertig zum ${esc(fmtDate(p.fertig))}</span>`;
+}
+
 /** Fortschrittsbalken, Satz zum Stand und Eintragen des Fortschritts bei einem Ziel. */
 function zielBlock(todo, compact) {
   const heute = todayISO();
   const r = zielRechnung(todo, heute);
   const [kl, text] = ZIEL_STATUS[r.status];
   const e = r.einheit ? ` ${r.einheit}` : '';
-  const prog = r.prognose !== null && r.status !== 'geschafft' && r.status !== 'verfehlt'
-    ? `<span class="muted" title="Hochgerechnet aus dem bisherigen Tempo (${esc(mengeText(r.tempo))}${esc(e)} pro Tag)">Mit diesem Tempo: ${esc(mengeText(r.prognose))}${esc(e)}</span>` : '';
+  const pt = prognoseText(todo, heute);
+  const prog = `<div class="todo-ziel-prog" data-ziel-prog${pt ? '' : ' hidden'}>${pt}</div>`;
   const balken = `<div class="bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(r.anteil * 100)}"><div class="bar-fill" style="width:${Math.round(r.anteil * 100)}%;background:var(--${r.status === 'hinten' ? 'warn' : r.status === 'verfehlt' ? 'neg' : 'accent'}, var(--accent))"></div></div>`;
   const badge = text ? `<span class="badge tiny ${kl}">${esc(text)}</span> ` : '';
   // Klein (Übersicht): nur Balken und Satz. Groß: der Stand steht als Zahl im Feld, das sich tippen oder mit den Pfeilen ändern lässt.
   if (compact) {
     return `<div class="todo-ziel">${balken}
-      <div class="todo-ziel-text">${badge}${esc(zielSatz(todo, heute))}${prog ? ` · ${prog}` : ''}</div>
+      <div class="todo-ziel-text">${badge}${esc(zielSatz(todo, heute))}</div>
+      ${prog}
     </div>`;
   }
   return `<div class="todo-ziel">${balken}
@@ -142,8 +155,9 @@ function zielBlock(todo, compact) {
         <input type="number" min="0" step="any" value="${esc(String(r.stand))}" data-ziel-stand="${esc(todo.id)}" aria-label="Stand${esc(e)}">
         <span>von ${esc(mengeText(r.gesamt))}${esc(e)}</span>
       </label>
-      <div class="todo-ziel-text" data-ziel-text>${badge}${esc(zielRest(todo, heute))}${prog ? ` · ${prog}` : ''}</div>
+      <div class="todo-ziel-text" data-ziel-text>${badge}${esc(zielRest(todo, heute))}</div>
     </div>
+    ${prog}
   </div>`;
 }
 
@@ -233,6 +247,9 @@ export function wireTodoRows(root, redraw) {
       block.querySelector('[role="progressbar"]').setAttribute('aria-valuenow', String(Math.round(r.anteil * 100)));
       const [kl, text] = ZIEL_STATUS[r.status];
       block.querySelector('[data-ziel-text]').innerHTML = `${text ? `<span class="badge tiny ${kl}">${esc(text)}</span> ` : ''}${esc(zielRest(jetzt, todayISO()))}`;
+      const prog = block.querySelector('[data-ziel-prog]');
+      prog.innerHTML = prognoseText(jetzt, todayISO());
+      prog.hidden = !prog.innerHTML;
     });
   });
   $$('[data-toggle-sub]', root).forEach((c) => c.addEventListener('change', async () => {

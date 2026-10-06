@@ -148,13 +148,6 @@ function draw(root) {
                  <button class="btn" id="btnProdukte">Produkte (CSV)</button>
                  ${klein ? '' : '<button class="btn" id="btnZm">Zusammenfassende Meldung</button>'}`,
       }))}
-
-      ${raw(card({
-        title: 'Daten übernehmen', sub: 'Import',
-        body: `Buchungen aus DATEV-Dateien, Excel- oder CSV-Tabellen, Voranmeldungen aus ELSTER, Kontakte und Produkte
-          aus anderen Programmen einlesen.`,
-        button: `<button class="btn" id="btnImport">${icon('folder', 16).__raw} Zu „Daten übernehmen“</button>`,
-      }))}
     </div>
 
     <div class="card mt16">
@@ -315,8 +308,6 @@ function wire(root, db, rows) {
     const p = await api.file.save({ defaultName: `Kontovia-Daten_${todayISO()}.json`, filters: [{ name: 'JSON', extensions: ['json'] }], text: X.jsonExport(store.db) });
     if (p) ok('Export gespeichert', p);
   }));
-
-  $('#btnImport', root).addEventListener('click', () => navigate('datenimport'));
 
   $('#btnElster', root)?.addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const stnr = await steuernummerDialog(db);

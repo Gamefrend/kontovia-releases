@@ -1,12 +1,12 @@
 {
-  "version": "2.20.0",
-  "released": "2026-10-06T10:28:46.556Z",
-  "notes": "Seitenleiste mit Knopf am Rand, Reiter mit Bewegung\n\n- Die Seitenleiste klappen Sie jetzt mit einem kleinen runden Knopf auf ihrer Kante ein und aus. Auch ein Klick auf die Kante selbst genügt.\n- Beim Ein- und Ausklappen gleitet die Leiste weich auf ihre neue Breite.\n- In der Auswertung, der Hilfe, den Rechnungen, den Aufgaben und überall sonst mit Reitern gleitet die Markierung zum gewählten Reiter.\n- Auch die kleinen Umschalter, etwa für Einnahme und Ausgabe oder Hell und Dunkel, wechseln jetzt mit Bewegung.\n- In den Einstellungen gleitet der Strich unter dem gewählten Bereich mit.",
+  "version": "2.21.0",
+  "released": "2026-10-06T11:37:08.908Z",
+  "notes": "Import und Export an einem Ort, Kacheln schneller verschieben\n\n- Import und Export sind jetzt ein Bereich in der Seitenleiste, mit je einem Reiter.\n- Halten Sie eine Kachel der Übersicht gedrückt, haben Sie sie sofort in der Hand und können sie an ihren neuen Platz ziehen. Das geht auch am Telefon.\n- Einträge der Seitenleiste lassen sich nach kürzerem Halten verschieben.\n- Bei Zielen in den Aufgaben steht in einer eigenen Zeile, wann Sie bei Ihrem bisherigen Tempo fertig sind oder wie viele Tage Sie in Verzug wären.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "8109bdbac5fa02c843ae6cbcb39d659b358bc58d14390d12690a893008548d8b",
-      "size": 73790
+      "sha256": "057e0c1ba29b39a04fa99d127fce4668270f8c2cc5994be78879386ae877e38c",
+      "size": 73994
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -55,8 +55,8 @@
     },
     {
       "path": "lib/aufgaben.js",
-      "sha256": "17e8769a6ff7cbbc07a26d7fe45a3dc7d124ac6da4fd50cb5e77a1ead3ba8814",
-      "size": 10645
+      "sha256": "62ff49a710697cd524f42784cae26f96dbccbaf7adbcf343c1fc8c0a459add6d",
+      "size": 11314
     },
     {
       "path": "lib/benutzer.js",
@@ -290,8 +290,8 @@
     },
     {
       "path": "lib/seitenleiste.js",
-      "sha256": "816a3ff2c9b3f120df1cd451a35b9e6817dfbf592cd0968d055d919bf135cfe8",
-      "size": 10203
+      "sha256": "e7e50e7ff24a7e748f96698636640c32abc0d19b3621f334d541d2a207d99ba1",
+      "size": 10188
     },
     {
       "path": "lib/store.js",
@@ -305,8 +305,8 @@
     },
     {
       "path": "lib/suchindex.js",
-      "sha256": "aefe9cd6fa9e31b09d0c96d55b9026468c81f4a1315089fa2596656f2e11deb4",
-      "size": 8816
+      "sha256": "9c4d14d17a158399a53e5efe5573ccbd645104ae9d66ada29b018af81f889ac1",
+      "size": 8881
     },
     {
       "path": "lib/sync.js",
@@ -345,8 +345,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "9cdfcef22372868e67ded263339dfa6f67a21bac7a888b4dcd3b52417a4c4057",
-      "size": 31990
+      "sha256": "892d567b6a077ff1ac049c818a900d79547a70e49bfc0b23b32aff018f424060",
+      "size": 32637
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -375,12 +375,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "bc0dc622c8a3cf58ae96aee0e77133c91b3acb291f0f0cfdd050d064328dc703",
+      "sha256": "fa48f23aa7b7ea8cfc576723a4e5d7ee4df251a647cb684a62f138860fb98748",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "a3405731b2ce0e4943ee93bebf9db62a92cae33db7963d8fe55fdf691ab2f0ce",
+      "sha256": "7410c6eb700b866a14ce10c022578bacf95cb0c2a9f722b087322926e23f30d5",
       "size": 28151
     },
     {
@@ -395,7 +395,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "da11d71f3a53c7fceac941244be1ec1399726001ee3eca918ee176e138b128f7",
+      "sha256": "ebbf774d075c6b11e864c91eecf753cbf87204ad7248d5ab51cddcffad5c1c76",
       "size": 31451
     },
     {
@@ -410,8 +410,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "a56ac4d6f2b411bef9795fb055e428a860a655771024d4820282606e740add9d",
-      "size": 106933
+      "sha256": "88d9d41dbb2673193d76b2ce07ab12123f5f4682b12f3ce6cddcd3642414bc7f",
+      "size": 107802
     },
     {
       "path": "views/anlageform.js",
@@ -435,8 +435,8 @@
     },
     {
       "path": "views/dashboard.js",
-      "sha256": "74fd2726080424f09be499fffd1167c65dfa25ca0fd6587c966c2e74a9069195",
-      "size": 40069
+      "sha256": "7572f5690470fef25c0790b5d542cae6f44534692910f2ad829ca8402b5babbb",
+      "size": 46278
     },
     {
       "path": "views/datenimport.js",
@@ -450,13 +450,18 @@
     },
     {
       "path": "views/export.js",
-      "sha256": "096957c2b0f44abbef014aa9a2ac0483bc1bbfc45aa57a54fdfea906076c4aca",
-      "size": 28137
+      "sha256": "6cfa84c9e4e419fb69ede24566a88bf78820473b38324810b4fc449e04d131b5",
+      "size": 27690
     },
     {
       "path": "views/help.js",
-      "sha256": "09f194c38165f77799ad569ac1b897d5fe98342940a67c882800f458e8033103",
-      "size": 60656
+      "sha256": "ed97a049f9d3fba3fe21386709c4e62f92e22ec3009a11d1598b1289ed348400",
+      "size": 60676
+    },
+    {
+      "path": "views/importexport.js",
+      "sha256": "e7fce25644bbf88718638544b5495c33f305f8e1948971b654ad370a5bdf6e9d",
+      "size": 2297
     },
     {
       "path": "views/jahresvergleich.js",
@@ -515,13 +520,13 @@
     },
     {
       "path": "views/todos.js",
-      "sha256": "ac007cb3a97c90ecfaa9ce96742cbc89f228d47fa00519de858e101171b083d6",
-      "size": 41408
+      "sha256": "074508a1dd2607c167ce56cb18a9d35115b6a5118d5c380b4700084fa891e79e",
+      "size": 42066
     },
     {
       "path": "views/transactions.js",
-      "sha256": "a5b1691e2723c32aa7e4cacde7d6cce7acc5d3600334aaa8116dabed7df88b1b",
-      "size": 76046
+      "sha256": "b71fd0f54c60ee35dad8827f9ce60fa60ed6e8551c151954797802f4751270b0",
+      "size": 76043
     },
     {
       "path": "views/wiederkehrend.js",
@@ -535,7 +540,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "2685e3fb82bf7e948ee8abc8ba90c1e9b07b4bf2793a40d4988e62b341a90aa1",
+      "sha256": "a22b6028607474da0253f9fa51939e63bc3d295882005e37b72d1d2f84cd89a8",
       "size": 6906
     },
     {

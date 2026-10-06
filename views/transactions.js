@@ -113,7 +113,7 @@ async function listeAusgeben(wie) {
   if (zeilen.some((t) => t.unlisted)) {
     doc.bloecke.push({
       art: 'hinweis',
-      inhalt: [{ t: 'Enthält private Buchungen.', fett: true }, { t: ' Diese Liste ist nur für den eigenen Gebrauch; für das Finanzamt gelten die Unterlagen unter „Export & Finanzamt“.' }],
+      inhalt: [{ t: 'Enthält private Buchungen.', fett: true }, { t: ' Diese Liste ist nur für den eigenen Gebrauch; für das Finanzamt gelten die Unterlagen unter „Import & Export“.' }],
     });
   }
   const name = `Buchungen_${todayISO()}.pdf`;

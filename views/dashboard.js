@@ -2,8 +2,10 @@
  * Kontovia – Übersicht: die wichtigsten Zahlen auf einen Blick.
  *
  * Die Übersicht besteht aus Modulen, die sich über „Anpassen“ verschieben,
- * in der Breite ändern, aus- und wieder einblenden lassen. Die Anordnung
- * bleibt auf diesem Gerät (prefs.js); ohne eigene gilt die Voreinstellung.
+ * in der Breite ändern, aus- und wieder einblenden lassen. Wer eine Kachel
+ * gedrückt hält, landet direkt im Anpassen-Modus und hat sie in der Hand.
+ * Die Anordnung bleibt auf diesem Gerät (prefs.js); ohne eigene gilt die
+ * Voreinstellung.
  */
 
 import {
@@ -481,7 +483,7 @@ function draw(root) {
           <button type="button" class="icon-btn" data-move="1" data-id="${e.id}" ${i === sichtbar.length - 1 ? 'disabled' : ''} aria-label="${esc(w.title)} nach hinten" title="Nach hinten">${icon('right', 16).__raw}</button>
         </div>
       </div>` : '';
-    return `<section class="dash-item w-${e.size}" data-widget="${e.id}"${editing ? ' draggable="true"' : ''} aria-label="${esc(w.title)}">
+    return `<section class="dash-item w-${e.size}" data-widget="${e.id}" aria-label="${esc(w.title)}">
       ${bar}<div class="dash-body"${editing ? ' inert' : ''}>${w.render(c)}</div>
     </section>`;
   };
@@ -514,7 +516,7 @@ function draw(root) {
       </div>
       <div class="spacer"></div>
       ${scopeToggleHtml(store.db, period.from, period.to).__raw}
-      <button type="button" class="btn ghost" id="dashEdit" title="Module anordnen, Größe ändern, ein- und ausblenden">${icon('layout', 16).__raw} Anpassen</button>
+      <button type="button" class="btn ghost" id="dashEdit" title="Module anordnen, Größe ändern, ein- und ausblenden. Oder eine Kachel gedrückt halten und gleich verschieben.">${icon('layout', 16).__raw} Anpassen</button>
     </div>`)}
 
     ${faellig ? raw(`<div class="notice warn mb16 row between wrap" style="gap:8px">
@@ -535,6 +537,7 @@ function draw(root) {
     wireRaster(root);
     wireContent(root, redraw, c);
   }
+  wireZiehen(root, redraw);
 }
 
 /** Der Kontext der zuletzt gezeichneten Übersicht, damit ein einzelnes Modul sich allein neu zeichnen kann. */
@@ -695,48 +698,176 @@ function wireEditing(root, lay, redraw) {
     speichern(`[data-move="${b.dataset.move}"][data-id="${id}"]`, `[data-move="${-b.dataset.move}"][data-id="${id}"]`);
   }));
 
-  wireDrag($('#dashGrid', root), (order) => {
+  ablegen = (order) => {
     // Die neue Reihenfolge der sichtbaren Module; ausgeblendete behalten ihren Platz dazwischen.
     const sichtbar = order.map((id) => lay.find((e) => e.id === id));
     let k = 0;
     for (let i = 0; i < lay.length; i++) if (!lay[i].hidden) lay[i] = sichtbar[k++];
     speichern();
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Ziehen                                                                      */
+/* -------------------------------------------------------------------------- */
+
+const HALTEN_MS = 300;
+const WEG_PX = 6;
+const RAND_PX = 56;
+/** Das Modul, das gerade „in der Hand“ ist, mit seiner schwebenden Kopie. */
+let zug = null;
+/** Ein Druck, der noch auf das Halten wartet. */
+let warten = false;
+/** Legt die neue Reihenfolge ab; wireEditing setzt es bei jedem Zeichnen. */
+let ablegen = null;
+
+/**
+ * Ziehen mit Maus, Stift oder Finger. Wer eine Kachel gedrückt hält, kommt in
+ * den Anpassen-Modus und hat die Kachel gleich in der Hand. Im Anpassen-Modus
+ * zieht die Maus ohne Halten, der Finger am Griff ebenso; sonst braucht der
+ * Finger das kurze Halten, damit die Seite weiter scrollt.
+ */
+function wireZiehen(root, redraw) {
+  const grid = $('#dashGrid', root);
+  if (!grid) return;
+  // Solange etwas in der Hand ist, scrollt die Seite nicht unter dem Finger weg. Der Zuhörer hängt
+  // am Raster: Die Berührung bleibt beim alten Element, auch wenn die Übersicht neu gezeichnet wurde.
+  grid.addEventListener('touchmove', (e) => { if (zug) e.preventDefault(); }, { passive: false });
+  grid.addEventListener('contextmenu', (e) => { if (zug || warten) e.preventDefault(); });
+  grid.addEventListener('selectstart', (e) => { if (zug || warten) e.preventDefault(); });
+  grid.addEventListener('pointerdown', (e) => {
+    if (zug || !e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    const item = e.target.closest('.dash-item');
+    if (!item || (editing && e.target.closest('button, input, select, textarea, a'))) return;
+    const sofort = editing && (e.pointerType === 'mouse' || !!e.target.closest('.dash-grip'));
+    anfassen(e, item.dataset.widget, root, redraw, sofort);
   });
 }
 
+/** Wartet auf Halten (oder bei `sofort` auf die erste Bewegung) und nimmt dann das Modul auf. */
+function anfassen(e, id, root, redraw, sofort) {
+  const start = { x: e.clientX, y: e.clientY };
+  const p = { x: e.clientX, y: e.clientY, pointerId: e.pointerId, pointerType: e.pointerType };
+  let uhr = null;
+  const ende = () => {
+    clearTimeout(uhr);
+    warten = false;
+    removeEventListener('pointermove', bewegt);
+    removeEventListener('pointerup', los);
+    removeEventListener('pointercancel', los);
+  };
+  const bewegt = (ev) => {
+    if (ev.pointerId !== p.pointerId) return;
+    p.x = ev.clientX;
+    p.y = ev.clientY;
+    if (Math.hypot(p.x - start.x, p.y - start.y) <= WEG_PX) return;
+    // Wer vor dem Halten wegzieht, scrollt oder markiert Text, und will nichts verschieben.
+    ende();
+    if (sofort) aufnehmen(id, p, root, redraw);
+  };
+  const los = (ev) => { if (ev.pointerId === p.pointerId) ende(); };
+  addEventListener('pointermove', bewegt);
+  addEventListener('pointerup', los);
+  addEventListener('pointercancel', los);
+  if (sofort) return;
+  warten = true;
+  uhr = setTimeout(() => { ende(); aufnehmen(id, p, root, redraw); }, HALTEN_MS);
+}
+
+/** Nimmt das Modul in die Hand: Es bleibt blass an seinem Platz, eine Kopie folgt dem Zeiger. */
+function aufnehmen(id, p, root, redraw) {
+  if (!editing) {
+    editing = true;
+    redraw();
+  }
+  const grid = $('#dashGrid', root);
+  const item = grid && $(`[data-widget="${id}"]`, grid);
+  if (!item) return;
+  const r = item.getBoundingClientRect();
+  const dx = Math.min(Math.max(p.x - r.left, 12), r.width - 12);
+  const dy = Math.min(Math.max(p.y - r.top, 12), r.height - 12);
+  const geist = item.cloneNode(true);
+  geist.removeAttribute('data-widget');
+  geist.querySelectorAll('[id]').forEach((n) => n.removeAttribute('id'));
+  geist.classList.add('dash-geist');
+  geist.setAttribute('aria-hidden', 'true');
+  geist.inert = true;
+  Object.assign(geist.style, { width: `${r.width}px`, height: `${r.height}px`, transformOrigin: `${dx}px ${dy}px` });
+  geist.style.setProperty('--massstab', String(Math.max(0.4, Math.min(1, 360 / r.width, 320 / r.height))));
+  document.body.append(geist);
+  item.classList.add('dragging');
+  document.documentElement.classList.add('dash-zieht');
+  // Nach dem Neuzeichnen gibt es das Element unter dem Finger nicht mehr; das Raster übernimmt den Zeiger.
+  try { grid.setPointerCapture(p.pointerId); } catch { /* der Zeiger ist schon weg */ }
+  if (p.pointerType === 'touch') navigator.vibrate?.(8);
+
+  let scroller = grid.parentElement;
+  while (scroller && scroller !== document.body && !/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) scroller = scroller.parentElement;
+  if (!scroller || scroller === document.body) scroller = document.scrollingElement;
+
+  const bewegt = (ev) => {
+    if (ev.pointerId !== p.pointerId) return;
+    zug.x = ev.clientX;
+    zug.y = ev.clientY;
+    setzen();
+    einordnen();
+  };
+  const los = (ev) => { if (ev.pointerId === p.pointerId) loslassen(ev.type === 'pointercancel'); };
+  const taste = (ev) => { if (ev.key === 'Escape') { ev.preventDefault(); loslassen(true); } };
+  // Am oberen oder unteren Rand scrollt die Übersicht mit, solange der Zeiger dort steht.
+  const rollen = () => {
+    if (!zug) return;
+    const b = scroller === document.scrollingElement ? { top: 0, bottom: innerHeight } : scroller.getBoundingClientRect();
+    const v = zug.y < b.top + RAND_PX ? -(b.top + RAND_PX - zug.y) / 4 : zug.y > b.bottom - RAND_PX ? (zug.y - b.bottom + RAND_PX) / 4 : 0;
+    if (v) { scroller.scrollTop += v; einordnen(); }
+    zug.rahmen = requestAnimationFrame(rollen);
+  };
+  const loslassen = (abbrechen) => {
+    if (!zug) return;
+    cancelAnimationFrame(zug.rahmen);
+    removeEventListener('pointermove', bewegt);
+    removeEventListener('pointerup', los);
+    removeEventListener('pointercancel', los);
+    removeEventListener('keydown', taste, true);
+    geist.remove();
+    item.classList.remove('dragging');
+    document.documentElement.classList.remove('dash-zieht');
+    zug = null;
+    // Der Klick, der auf das Loslassen folgt, soll nichts öffnen.
+    const schlucken = (ev) => { ev.stopPropagation(); ev.preventDefault(); };
+    addEventListener('click', schlucken, true);
+    setTimeout(() => removeEventListener('click', schlucken, true), 0);
+    if (abbrechen || !ablegen) redraw();
+    else ablegen([...grid.querySelectorAll('.dash-item')].map((n) => n.dataset.widget));
+  };
+
+  zug = { item, grid, geist, dx, dy, x: p.x, y: p.y, rahmen: 0 };
+  addEventListener('pointermove', bewegt);
+  addEventListener('pointerup', los);
+  addEventListener('pointercancel', los);
+  addEventListener('keydown', taste, true);
+  setzen();
+  zug.rahmen = requestAnimationFrame(rollen);
+}
+
+function setzen() {
+  zug.geist.style.setProperty('--x', `${zug.x - zug.dx}px`);
+  zug.geist.style.setProperty('--y', `${zug.y - zug.dy}px`);
+}
+
 /**
- * Ziehen mit der Maus. Das gezogene Modul rückt schon während des Ziehens an
- * seinen neuen Platz: vor das Modul unter dem Zeiger, wenn der Zeiger in
- * dessen vorderer Hälfte steht, sonst dahinter. Weil nur die Lage des Zeigers
- * zählt, springt nichts hin und her, wenn Module verschieden breit sind.
+ * Das Modul rückt schon während des Ziehens an seinen neuen Platz: vor das
+ * Modul unter dem Zeiger, wenn der Zeiger in dessen vorderer Hälfte steht,
+ * sonst dahinter. Weil nur die Lage des Zeigers zählt, springt nichts hin und
+ * her, wenn Module verschieden breit sind.
  */
-function wireDrag(grid, onDone) {
-  if (!grid) return;
-  let drag = null;
-  grid.addEventListener('dragstart', (e) => {
-    drag = e.target.closest?.('.dash-item');
-    if (!drag) return;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', drag.dataset.widget);
-    requestAnimationFrame(() => drag?.classList.add('dragging'));
-  });
-  grid.addEventListener('dragover', (e) => {
-    if (!drag) return;
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    const over = e.target.closest?.('.dash-item');
-    if (!over || over === drag) return;
-    const r = over.getBoundingClientRect();
-    const breit = r.width > grid.clientWidth * 0.7;
-    const vorn = breit ? e.clientY < r.top + r.height / 2 : e.clientX < r.left + r.width / 2;
-    if (vorn && over.previousElementSibling !== drag) over.before(drag);
-    else if (!vorn && over.nextElementSibling !== drag) over.after(drag);
-  });
-  grid.addEventListener('drop', (e) => { if (drag) e.preventDefault(); });
-  grid.addEventListener('dragend', () => {
-    if (!drag) return;
-    drag.classList.remove('dragging');
-    drag = null;
-    onDone([...grid.querySelectorAll('.dash-item')].map((n) => n.dataset.widget));
-  });
+function einordnen() {
+  const { item, grid, x, y } = zug;
+  const unter = document.elementFromPoint(x, y)?.closest?.('.dash-item');
+  if (!unter || unter === item || unter.parentElement !== grid) return;
+  const r = unter.getBoundingClientRect();
+  const breit = r.width > grid.clientWidth * 0.7;
+  const vorn = breit ? y < r.top + r.height / 2 : x < r.left + r.width / 2;
+  if (vorn && unter.previousElementSibling !== item) unter.before(item);
+  else if (!vorn && unter.nextElementSibling !== item) unter.after(item);
 }
