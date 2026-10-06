@@ -62,17 +62,37 @@ async function laden(id, modell) {
   melden({ art: 'geladen', id, modell });
 }
 
+/** Die gerade laufende Antwort. WebLLM sperrt `resetChat` nicht dagegen: Mitten in einer Antwort räumt es deren Zwischenwerte weg („Object has already been disposed“). */
+let laufend = null;
+
+const entsorgt = (e) => /already been disposed/i.test(String(e?.message || e));
+
 async function chat(id, anfrage) {
   if (!motor || !geladen) throw new Error('Es ist kein Modell gestartet.');
-  const strom = await motor.chat.completions.create({ ...anfrage, stream: true, stream_options: { include_usage: true } });
-  let nutzung = null;
-  let ende = '';
-  for await (const stueck of strom) {
-    const text = stueck.choices?.[0]?.delta?.content || '';
-    if (text) melden({ art: 'teil', id, text });
-    if (stueck.choices?.[0]?.finish_reason) ende = stueck.choices[0].finish_reason;
-    if (stueck.usage) nutzung = stueck.usage;
+  let gesendet = false;
+  const einmal = async () => {
+    const strom = await motor.chat.completions.create({ ...anfrage, stream: true, stream_options: { include_usage: true } });
+    let nutzung = null;
+    let ende = '';
+    for await (const stueck of strom) {
+      const text = stueck.choices?.[0]?.delta?.content || '';
+      if (text) { gesendet = true; melden({ art: 'teil', id, text }); }
+      if (stueck.choices?.[0]?.finish_reason) ende = stueck.choices[0].finish_reason;
+      if (stueck.usage) nutzung = stueck.usage;
+    }
+    return { nutzung, ende };
+  };
+  let ergebnis;
+  try {
+    ergebnis = await einmal();
+  } catch (e) {
+    if (!entsorgt(e)) throw e;
+    // Die Laufzeit ist beschädigt: Modell neu starten (kommt aus dem Cache), und wenn noch nichts gesendet wurde, nochmal versuchen.
+    await motor.reload(geladen);
+    if (gesendet) throw e;
+    ergebnis = await einmal();
   }
+  const { nutzung, ende } = ergebnis;
   melden({
     art: 'fertig', id, ende,
     nutzung: nutzung ? {
@@ -88,9 +108,15 @@ self.addEventListener('message', async (ev) => {
   const n = ev.data || {};
   try {
     if (n.art === 'laden') await laden(n.id, n.modell);
-    else if (n.art === 'chat') await chat(n.id, n.anfrage);
+    else if (n.art === 'chat') {
+      laufend = chat(n.id, n.anfrage);
+      try { await laufend; } finally { laufend = null; }
+    }
     else if (n.art === 'abbrechen') motor?.interruptGenerate();
-    else if (n.art === 'vergessen') { if (motor && geladen) await motor.resetChat(); }
+    else if (n.art === 'vergessen') {
+      if (laufend) await laufend.catch(() => {});
+      if (motor && geladen) await motor.resetChat();
+    }
     else if (n.art === 'entladen') {
       if (motor) await motor.unload();
       geladen = '';

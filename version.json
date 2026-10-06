@@ -1,7 +1,7 @@
 {
-  "version": "2.23.0",
-  "released": "2026-10-06T15:40:08.127Z",
-  "notes": "Der Assistent, der nur auf Ihrem Gerät rechnet\n\n- Neu: der Assistent. Fragen Sie in Ihren Worten nach offenen Rechnungen, Umsatz, Umsatzsteuer oder Terminen, oder lassen Sie Buchungen, Aufgaben und Termine vorbereiten. Öffnen mit Strg+J oder über die Seitenleiste.\n- Alles bleibt auf Ihrem Gerät: Fragen und Buchhaltung werden nirgendwohin gesendet. Die Stufe Basis braucht keinen Download, größere Stufen laden ein Sprachmodell einmalig nach Ihrer Zustimmung.\n- Zahlen rechnet immer Kontovia selbst. Unter jeder Antwort sehen Sie, was gesucht und gerechnet wurde. Gespeichert wird erst, wenn Sie im gewohnten Fenster bestätigen.\n- Der Assistent ist noch in Erprobung und kann eine Frage falsch verstehen.",
+  "version": "2.23.1",
+  "released": "2026-10-06T16:56:36.816Z",
+  "notes": "Der Assistent versteht Rückfragen\n\n- Kurze Rückfragen wie „Und 2023?“ oder „Und im April?“ beantwortet der Assistent jetzt mit der Frage davor und dem neuen Zeitraum.\n- Behoben: Nach „Neues Gespräch“ während einer laufenden Antwort konnte der Assistent nur noch Fehler melden. Er startet sich jetzt selbst neu.",
   "files": [
     {
       "path": "app.js",
@@ -55,13 +55,13 @@
     },
     {
       "path": "lib/assistent.js",
-      "sha256": "51f8149b21faf360c529035111fec01acf514069e2bcf0c3a70c086e78490d16",
-      "size": 17096
+      "sha256": "ed012c924962655d5303b81310bef8c2e94171062c2b0f55889e4e4433b752d1",
+      "size": 17165
     },
     {
       "path": "lib/assistentdeutung.js",
-      "sha256": "f7e3f33300700aab625c3357219ad8651e050142acfd7d30661d6fc705d6c125",
-      "size": 37649
+      "sha256": "9c5298f4feb347a6db620bec52052c50bb3a62860f34ca6da505ee9828833747",
+      "size": 38429
     },
     {
       "path": "lib/assistentfenster.js",
@@ -375,8 +375,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "0653b52cd0b01705c8453085dab470ba66f9e7f6ec13ee31341c7bf381d97bff",
-      "size": 34762
+      "sha256": "2eaf81bbf5731924285cc03afcdf516231c82c59eb1eac2f6b9610bfe135e4c0",
+      "size": 35194
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -405,12 +405,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "12e3abb830f0fcadec9bb2c53a268dfe205f593f5bf9e68ed5f385dd3c239680",
+      "sha256": "df63014adfe080275fdd9e9bde5c1bc7d1a984f444b44399e244545748a07688",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "d57874988d2e1b17814dee479a5f1f8da6ac02696ea9cf9bcf2de541d0ea63c0",
+      "sha256": "7e081f9be9433ec3477b40c89d83cb2ec16d3e17039629af231340bba616d150",
       "size": 30318
     },
     {
@@ -425,7 +425,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "a587014e7714247271ca88b2159e2dbfec091ddd6b973fbe68e24d5013adc5ae",
+      "sha256": "783f4184668ba609be7a98fa8cf82f331d3adbb10caae7207c813ce1d77a568e",
       "size": 33972
     },
     {
@@ -580,7 +580,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "d7511c4e060411f3c9c6c4a624649bf7ab6a2f1dfe1bd03290b1684aa5b1318f",
+      "sha256": "519af255d361437d951803bf76e2697d0e3cca8a212fec322ba6d54ef0dfbe83",
       "size": 6906
     },
     {
@@ -640,8 +640,8 @@
     },
     {
       "path": "web/ki-worker.js",
-      "sha256": "4df02195de58ddfe27ef08ff79c63dc5efb6713c536bb8466412d26fe134f092",
-      "size": 5493
+      "sha256": "f34624eef126e98b00fb9a10cc264faab7affce1e1d351fb291c1218ff7073d3",
+      "size": 6406
     },
     {
       "path": "web/ki.js",
