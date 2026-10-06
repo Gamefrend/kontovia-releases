@@ -1,12 +1,12 @@
 {
-  "version": "2.22.0",
-  "released": "2026-10-06T13:21:50.214Z",
-  "notes": "Schneller startklar, leichter zu bedienen\n\n- Kontovia startet schneller: Die einzelnen Bereiche werden erst geladen, wenn Sie sie öffnen.\n- Besser mit Tastatur und Bildschirmleser bedienbar: Jedes Eingabefeld trägt seinen Namen, Überschriften sind sauber gegliedert, und kleine Links und Knöpfe sind leichter zu treffen.\n- Das Buchungsfenster ist aufgeräumt: Beleg oben, zuletzt verwendete Kategorien zuerst, Kontakte nach Kunden und Lieferanten getrennt. Über „Neue Buchung“ legen Sie eine Buchung auch direkt aus einem Beleg an.\n- „Von diesem Gerät entfernen“ finden Sie jetzt im Kontomenü oben links, und die Hilfe hat eine Suche.\n- Im Kalender sind Termine in eigenen Farben und die Tage der Nachbarmonate besser lesbar.",
+  "version": "2.22.1",
+  "released": "2026-10-06T14:00:41.497Z",
+  "notes": "Hinweis zur Testphase\n\n- Kontovia ist noch in Entwicklung. Ein Hinweis auf dem Startbildschirm und eine Leiste über jeder Ansicht erinnern daran, dass es für Ihre Daten noch keine Haftung und keine Gewährleistung gibt.\n- Legen Sie bitte regelmäßig Sicherungen an und prüfen Sie Ergebnisse, bevor Sie sie verwenden.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "6ff59df5f71ba31f56bf367b0b82ecda8bd2cd5c20e05b0fa939ab48deb91901",
-      "size": 77217
+      "sha256": "7939946e17bb88d0bfc8d9142835999b0d3eb204ebc380296775f2c4c090d018",
+      "size": 77602
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -50,8 +50,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "5b1e563fb1f01e8cdc98c63cbd07a1ee317bedea5f90ad2a90b88aa6ee23a8fe",
-      "size": 4485
+      "sha256": "87e4f04473629d3327607355f3eb69e99fcdbe1721f89061cb1aad83aa11a775",
+      "size": 4658
     },
     {
       "path": "lib/aufgaben.js",
@@ -260,8 +260,8 @@
     },
     {
       "path": "lib/recht.js",
-      "sha256": "08f6664070dd2195836f4b967c27053ddbeb698a2239f83ab9a3291396d7bd78",
-      "size": 6133
+      "sha256": "f3d770a1e72527e25beb78326fdb7dcdb540b4a8699881d5fa813e72d5304e26",
+      "size": 7485
     },
     {
       "path": "lib/reports.js",
@@ -345,8 +345,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "6f1accfe3a001f351ea20b5129e493f6a1a8f77016da5ee0880b010e14fc1d6d",
-      "size": 33504
+      "sha256": "9d5105af936537b4b3cf4ae367848227dfb7f8d671dcdd35f9b391112af5cb12",
+      "size": 33930
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -375,12 +375,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "1b7ff05f75ae3d436f426ef076ec41480ef50ed4de1b3debf658be54106cf551",
+      "sha256": "665d331a99dc961118a1052e1b4f93ac1805bc4265d4e771861e5131be60e6b1",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "8eccf9e8e29fda22e95441251e2d705c65ab13fe89bbc95c485973e6c0bda346",
+      "sha256": "7ec14dc9c261cbb3253a7c3ab155c2d2c6322f590b4a4de4101042012e0c574b",
       "size": 28151
     },
     {
@@ -395,7 +395,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "7cc4c5999e5c6f55088b849709fef308a3ea498ba2071f4acc91b2c9381be506",
+      "sha256": "e44f7a10534a0f0e7824836de1bfc851f1b1db81a0175036551c4bde4bced0ca",
       "size": 31698
     },
     {
@@ -420,8 +420,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "26e722ca4e4fb585543de0a6111b14bce5c2d8f5ec89e5ee8f5fbb80f201663e",
-      "size": 109136
+      "sha256": "feca8c647a0e3879e1d8713b69ddd70f10a45162c4e6b35303cd00ed5d4ce068",
+      "size": 109977
     },
     {
       "path": "views/anlageform.js",
@@ -550,7 +550,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "b2c40c798dfc68fde4a70c5f0de565c78bed4cdd9ebef2321a38dd75daf49f40",
+      "sha256": "c8fcbdce86e3f6981ff2967e55fdff56e3a73b899cb116867cce1f4b995ff8e5",
       "size": 6906
     },
     {

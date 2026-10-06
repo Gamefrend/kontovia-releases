@@ -18,7 +18,7 @@ import { mitCodeVerbinden, nachDemVerbinden } from './lib/koppeln.js';
 import { beimEntsperren, hinweisKasten, hinweisVerdrahten } from './lib/zulassung.js';
 import { entsperrWege, kontenMenue, kontenAufSperrbildschirm, nachrichtHolen, kontoName, kontoSchluessel } from './lib/zugaenge.js';
 import { feedbackOeffnen, feedbackNachsenden, entwicklerKlick } from './lib/feedback.js';
-import { rechtsfuss, rechtslinks, nutzungPruefen, nutzungVermerken } from './lib/recht.js';
+import { rechtsfuss, rechtslinks, nutzungPruefen, nutzungVermerken, entwicklungsKasten, entwicklungsLeiste, ENTWICKLUNG_TITEL, ENTWICKLUNG_TEXT } from './lib/recht.js';
 import { nutzerWaehlen, nutzerMenue, nutzerAnzeigen, kannSchreiben } from './lib/benutzer.js';
 import { sucheOeffnen, SUCHE_KUERZEL } from './lib/suche.js';
 import { seite, seitenwechsel, beobachten, markierung, umschalterBeobachten, themaWechsel, schuetteln } from './lib/bewegung.js';
@@ -486,6 +486,7 @@ function renderSetup(konten = null) {
         <div class="gate-card wide">
           ${weiteres ? raw(`<button type="button" class="btn ghost sm setup-zurueck" id="setupZurueck">${icon('left', 14).__raw} Zurück zu „${esc(kontoName(vorher))}“</button>`) : ''}
           <div class="gate-logo">K</div>
+          ${raw(entwicklungsKasten())}
           ${raw(stepsHtml())}
           <div id="g_box"></div>
           ${raw(bodies[step]())}
@@ -829,6 +830,7 @@ function renderUnlock(message = '') {
         <h1>Kontovia ist gesperrt</h1>
         <p class="small muted" id="unlockKonto" style="margin:-6px 0 8px"></p>
         <p class="lead">Geben Sie Ihr Passwort ein, um die Buchhaltung zu entschlüsseln.</p>
+        ${raw(entwicklungsKasten())}
         ${message ? raw(`<div class="notice mb16">${esc(message)}</div>`) : ''}
         <div class="field">
           <label>Passwort</label>
@@ -1227,6 +1229,7 @@ function renderShell() {
           </header>
           <div id="topActions" class="row"></div>
         </div>
+        ${raw(entwicklungsLeiste())}
         <div class="rolle-banner" id="rolleBanner" role="status" hidden></div>
         <div class="rolle-banner zulassung-banner" id="zulassungBanner" role="status" hidden></div>
         <div class="content" id="content"></div>
@@ -1245,6 +1248,10 @@ function renderShell() {
     </div>`;
 
   rechtslinks(app);
+  $('[data-entwicklung-mehr]', app)?.addEventListener('click', (e) => {
+    e.preventDefault();
+    modal({ title: ENTWICKLUNG_TITEL, body: html`<p class="mt0">${ENTWICKLUNG_TEXT}</p>` });
+  });
   $('#nav').addEventListener('click', (e) => {
     const item = e.target.closest('[data-view]');
     if (item) navigate(item.dataset.view);

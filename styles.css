@@ -1558,6 +1558,18 @@ table.data tbody tr { transition: background .15s; }
 .rolle-wahl:has(input:checked) { border-color: var(--accent); background: var(--surface-2); }
 .rolle-wahl input { margin-top: 3px; }
 .rolle-wahl > span { display: flex; flex-direction: column; gap: 2px; }
+/* Hinweis auf die Entwicklungsphase (lib/recht.js): groß auf Einrichtung und Sperrbildschirm, als Leiste über den Ansichten. */
+.entwicklung-kasten {
+  margin: 0 0 18px; padding: 14px 16px; border-radius: 10px; text-align: left;
+  background: var(--warn-soft); border: 2px solid var(--warn); color: var(--text);
+}
+.entwicklung-kasten strong { display: block; font-size: 16px; margin-bottom: 4px; }
+.entwicklung-kasten p { margin: 0; font-size: 13px; line-height: 1.5; }
+.entwicklung-leiste {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 8px 20px;
+  font-size: 13px; background: var(--warn-soft); color: var(--text); border-bottom: 2px solid var(--warn);
+}
+.entwicklung-leiste a { display: inline-flex; align-items: center; min-height: 24px; color: inherit; font-weight: 600; text-decoration: underline; }
 .rolle-banner { padding: 8px 20px; font-size: 13px; background: var(--warn-bg, var(--surface-2)); color: var(--text); border-bottom: 1px solid var(--border); }
 .rolle-banner[hidden] { display: none; }
 body[data-rolle="lesen"] .cta { opacity: .5; }
