@@ -21,7 +21,7 @@ import { feedbackOeffnen, feedbackNachsenden, entwicklerKlick } from './lib/feed
 import { rechtsfuss, rechtslinks, nutzungPruefen, nutzungVermerken } from './lib/recht.js';
 import { nutzerWaehlen, nutzerMenue, nutzerAnzeigen, kannSchreiben } from './lib/benutzer.js';
 import { sucheOeffnen, SUCHE_KUERZEL } from './lib/suche.js';
-import { seite, seitenwechsel, beobachten, markierung, themaWechsel, schuetteln } from './lib/bewegung.js';
+import { seite, seitenwechsel, beobachten, markierung, umschalterBeobachten, themaWechsel, schuetteln } from './lib/bewegung.js';
 
 import * as viewDashboard from './views/dashboard.js';
 import * as viewTransactions from './views/transactions.js';
@@ -112,6 +112,8 @@ function renderThemeToggle() {
 
 async function boot() {
   applyTheme(lastTheme());
+  // Jeder Umschalter (Reiter, Einnahme/Ausgabe, Darstellung) bekommt die gleitende Marke.
+  umschalterBeobachten();
   try {
     appInfo = await api.app.info();
     // Ohne Gerätekennung könnte das Änderungsjournal beim Abgleich zweier
@@ -1173,12 +1175,9 @@ function renderShell() {
         <button class="cta" id="newTxBtn" type="button" aria-haspopup="menu">
           ${icon('plus', 18)}<span class="grow">Neue Buchung</span>${icon('down', 15)}
         </button>
-        <div class="such-zeile">
-          <button class="such-knopf" id="searchBtn" type="button" aria-haspopup="dialog" title="Alles durchsuchen (${SUCHE_KUERZEL})">
-            ${icon('search', 16)}<span class="grow">Suchen</span><kbd>${SUCHE_KUERZEL}</kbd>
-          </button>
-          <button class="icon-btn nav-schmal-knopf" id="navSchmalBtn" type="button" aria-pressed="${istSchmal()}">${icon('sidebar', 18)}</button>
-        </div>
+        <button class="such-knopf" id="searchBtn" type="button" aria-haspopup="dialog" title="Alles durchsuchen (${SUCHE_KUERZEL})">
+          ${icon('search', 16)}<span class="grow">Suchen</span><kbd>${SUCHE_KUERZEL}</kbd>
+        </button>
         <nav class="nav" id="nav" aria-label="Hauptnavigation">
           ${raw(navHtml())}
         </nav>
@@ -1194,6 +1193,9 @@ function renderShell() {
           </div>
         </div>
       </aside>
+      <div class="nav-kante" id="navKante">
+        <button class="nav-kante-knopf" id="navSchmalBtn" type="button" aria-pressed="${istSchmal()}">${icon('left', 14)}</button>
+      </div>
       <main class="main">
         <div class="kopf">
           <header class="topbar">
@@ -1237,7 +1239,8 @@ function renderShell() {
     symbol: (id) => VIEWS[id].icon,
     neu: navNeuZeichnen,
   });
-  $('#navSchmalBtn').addEventListener('click', () => { schmalSetzen(!istSchmal()); navSchmalZeigen(); });
+  // Die ganze Trennlinie ist der Griff: ein Klick auf die Linie oder den Knopf darauf klappt ein und aus.
+  $('#navKante').addEventListener('click', () => { schmalSetzen(!istSchmal()); navSchmalZeigen(); });
   navSchmalZeigen();
   beobachten($('#content'));
   $('#brandBtn').addEventListener('click', (e) => kontenMenue(e.currentTarget));

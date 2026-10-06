@@ -18,7 +18,7 @@ import { renderCloudCard, renderUpdateCard } from './cloudpanel.js';
 import { renderCalendarCard } from './calendarsync.js';
 import { mahnKarte } from './mahneinstellungen.js';
 import { table, mountTables } from '../lib/table.js';
-import { bereichEin } from '../lib/bewegung.js';
+import { bereichEin, markierung } from '../lib/bewegung.js';
 
 const api = window.kontovia;
 
@@ -79,6 +79,8 @@ function tabsVerdrahten(root) {
     $('#tab_' + neu, root).focus();
   });
   bereichZeigen(root, bereich);
+  // Der Strich unter dem gewählten Reiter gleitet zum neuen Bereich.
+  markierung(nav, { aktiv: '.set-tab.active' });
 }
 
 /* Noch nicht übernommene Eingaben. Sie überstehen ein Neuzeichnen der Seite –

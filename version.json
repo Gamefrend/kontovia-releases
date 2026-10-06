@@ -1,12 +1,12 @@
 {
-  "version": "2.19.1",
-  "released": "2026-10-06T09:44:41.814Z",
-  "notes": "Kleine Verbesserungen\n\n- Der Knopf zum Einklappen der Seitenleiste sitzt jetzt neben der Suche.\n- Die Reiter in den Stammdaten wechseln mit einer gleitenden Markierung.\n- Über den Reitern der Einstellungen scheint beim Scrollen nichts mehr durch.\n- Die Zahlen in der Übersicht springen am Ende nicht mehr ein Stück nach unten.\n- Die Belegquote passt jetzt auch in die kleine Kachel, und die Karten für Einnahmen und Ausgaben haben jeweils ihre eigene Höhe.",
+  "version": "2.20.0",
+  "released": "2026-10-06T10:28:46.556Z",
+  "notes": "Seitenleiste mit Knopf am Rand, Reiter mit Bewegung\n\n- Die Seitenleiste klappen Sie jetzt mit einem kleinen runden Knopf auf ihrer Kante ein und aus. Auch ein Klick auf die Kante selbst genügt.\n- Beim Ein- und Ausklappen gleitet die Leiste weich auf ihre neue Breite.\n- In der Auswertung, der Hilfe, den Rechnungen, den Aufgaben und überall sonst mit Reitern gleitet die Markierung zum gewählten Reiter.\n- Auch die kleinen Umschalter, etwa für Einnahme und Ausgabe oder Hell und Dunkel, wechseln jetzt mit Bewegung.\n- In den Einstellungen gleitet der Strich unter dem gewählten Bereich mit.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "a9b2db3a79982e951ac4ebfddd25e43e1213b82e19566e4a502f3f58d51d5970",
-      "size": 73560
+      "sha256": "8109bdbac5fa02c843ae6cbcb39d659b358bc58d14390d12690a893008548d8b",
+      "size": 73790
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -65,8 +65,8 @@
     },
     {
       "path": "lib/bewegung.js",
-      "sha256": "7027b401d94b0645d4054823aeaf7f69b4733a950a9a07b414c834159444a912",
-      "size": 22874
+      "sha256": "a895da9391a6d7219399f29a595a0ec8f5818f5cba51a4848dbab37d3b35f472",
+      "size": 25825
     },
     {
       "path": "lib/bildschirmfoto.js",
@@ -345,8 +345,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "93c3e95600b9bf0720c655810fd793bd02b60788533fb9b664322203c0f00ed7",
-      "size": 31268
+      "sha256": "9cdfcef22372868e67ded263339dfa6f67a21bac7a888b4dcd3b52417a4c4057",
+      "size": 31990
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -375,12 +375,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "b3427e166d6a1c80adc853c7a3d9e65ebfa3511396f9152e1b45b50b71a8cc8b",
+      "sha256": "bc0dc622c8a3cf58ae96aee0e77133c91b3acb291f0f0cfdd050d064328dc703",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "254f09751bdbc5a05c6df43ca2104904225c79f6e0ea6280d263176f49f062de",
+      "sha256": "a3405731b2ce0e4943ee93bebf9db62a92cae33db7963d8fe55fdf691ab2f0ce",
       "size": 28151
     },
     {
@@ -395,7 +395,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "60851e832f150d4c2e853f115c137100f15b29fa2dc7486ff2851adbe1ceafdb",
+      "sha256": "da11d71f3a53c7fceac941244be1ec1399726001ee3eca918ee176e138b128f7",
       "size": 31451
     },
     {
@@ -410,8 +410,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "d0c6d3342f7bd060318b4088d7750a490974bca63a2faf609308b6046a56c16f",
-      "size": 103663
+      "sha256": "a56ac4d6f2b411bef9795fb055e428a860a655771024d4820282606e740add9d",
+      "size": 106933
     },
     {
       "path": "views/anlageform.js",
@@ -505,8 +505,8 @@
     },
     {
       "path": "views/settings.js",
-      "sha256": "7c75e77084290067c8b4f65e818b4e20a2be372f19d9fae2ca80b746647ea752",
-      "size": 45810
+      "sha256": "6cac6c1f32554f25b163a44f3cd49934fffd499a2819301c3381fd93131ecbf2",
+      "size": 45942
     },
     {
       "path": "views/spruenge.js",
@@ -535,7 +535,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "e4c4907686790b8be5772630ac41beb9bba7926995188aad691f19c84fe9035d",
+      "sha256": "2685e3fb82bf7e948ee8abc8ba90c1e9b07b4bf2793a40d4988e62b341a90aa1",
       "size": 6906
     },
     {
@@ -660,8 +660,8 @@
     },
     {
       "path": "web/web.css",
-      "sha256": "46ed725eee06bc947fa4ab8de28b65dfff437a4cbb5d569ffebae677ca7ce327",
-      "size": 18913
+      "sha256": "384b2f9fcf22c52625b99951cb785961c8d9ef4f7930705377727f5f3e58d4e8",
+      "size": 18863
     },
     {
       "path": "web/weiterleitung.js",

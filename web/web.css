@@ -59,7 +59,7 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   .shell.nav-offen .sidebar { transform: none; visibility: visible; transition: transform .42s var(--aus), visibility 0s; }
   /* Griff oben am Blatt, wie bei den Fenstern. */
   .sidebar::before { content: ''; flex: none; width: 38px; height: 4px; margin: 0 auto 2px; border-radius: 3px; background: var(--border-strong); }
-  .sidebar .such-zeile, .sidebar .such-knopf, .sidebar .nav-sep, .sidebar .nav-spacer, .sidebar .nav .marke, .sidebar .nav-schmal-knopf { display: none; }
+  .sidebar .such-knopf, .sidebar .nav-sep, .sidebar .nav-spacer, .sidebar .nav .marke { display: none; }
   .sidebar .brand-wechsel { margin: 0; padding: 8px; }
   .sidebar .nav { flex: none; overflow: visible; gap: 10px; }
   .sidebar .nav-group { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
