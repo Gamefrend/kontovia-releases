@@ -6,7 +6,10 @@ import {
 import { icon, modal, confirmDialog, askPassword, ok, err, warn, toast, feldHinweis } from '../lib/ui.js';
 import { store, sel, commit, saveNow, setDb, verifyAudit, lockedUntil } from '../lib/store.js';
 import { refresh, navigate, router } from '../lib/router.js';
-import { applyTheme, lockNow, appInfo } from '../app.js';
+import { applyTheme, lockNow, appInfo, VIEWS, navNeuZeichnen } from '../app.js';
+import {
+  NAV_GRUPPEN, navFolge, istVersteckt, istAngepasst, verbergbar, verbergen, zeigen, verschieben, zuruecksetzen,
+} from '../lib/seitenleiste.js';
 import { abmelden, zugaengeKarte, kontenKarte, kontoSchluessel } from '../lib/zugaenge.js';
 import { geraeteKarte } from '../lib/koppeln.js';
 import { zulassungKarte } from '../lib/zulassung.js';
@@ -53,6 +56,7 @@ function bereichZeigen(root, id, { animiert = false } = {}) {
     t.setAttribute('aria-selected', String(an));
     t.tabIndex = an ? 0 : -1;
   }
+  $('#setSub', root).textContent = BEREICHE.find((b) => b.id === id).sub;
   if (animiert) bereichEin($('#panel_' + id, root));
 }
 
@@ -112,9 +116,10 @@ async function draw(root) {
     <div class="set-layout">
     <nav class="set-nav" id="setNav" role="tablist" aria-label="Bereiche der Einstellungen">
       ${raw(BEREICHE.map((b) => `<button type="button" class="set-tab" role="tab" id="tab_${b.id}" data-tab="${b.id}" aria-controls="panel_${b.id}">
-        ${icon(b.icon, 18).__raw}<span class="set-tab-text"><span class="set-tab-name">${esc(b.titel)}</span><span class="set-tab-sub">${esc(b.sub)}</span></span></button>`).join(''))}
+        ${icon(b.icon, 16).__raw}<span class="set-tab-name">${esc(b.titel)}</span></button>`).join(''))}
     </nav>
     <div class="set-body">
+    <p class="set-sub" id="setSub"></p>
     <section class="set-panel" id="panel_firma" data-panel="firma" role="tabpanel" aria-labelledby="tab_firma">
       <div class="card">
         <div class="card-head"><h3>${icon('building', 16)} Firmendaten</h3><span class="sub">erscheinen im Kopf jedes Berichts</span></div>
@@ -346,6 +351,7 @@ async function draw(root) {
         </div>
       </div>
     </div>
+    <div id="leistenCard"></div>
     <div id="updateCard"></div>
     </section>
 
@@ -367,6 +373,62 @@ async function draw(root) {
   renderCloudCard($('#cloudCard', root));
   renderCalendarCard($('#calendarCard', root));
   renderUpdateCard($('#updateCard', root));
+  leistenKarte($('#leistenCard', root));
+}
+
+/**
+ * Welche Bereiche die Seitenleiste zeigt und in welcher Reihenfolge. Wirkt sofort
+ * und gilt nur für dieses Gerät; dasselbe geht in der Leiste selbst per Rechtsklick.
+ */
+function leistenKarte(host) {
+  const zeile = (id, i, n) => {
+    const v = VIEWS[id];
+    const aus = istVersteckt(id);
+    return `<div class="leiste-zeile${aus ? ' aus' : ''}" data-id="${id}">
+      <span class="leiste-name">${icon(v.icon, 16).__raw}<span>${esc(v.title)}</span></span>
+      <label class="check leiste-an"><input type="checkbox" data-an="${id}" ${aus ? '' : 'checked'} ${verbergbar(id) ? '' : 'disabled'}> Anzeigen</label>
+      <button type="button" class="icon-btn" data-schieb="-1" data-id="${id}" ${aus || i === 0 ? 'disabled' : ''} aria-label="${esc(v.title)} nach oben" title="Nach oben">${icon('arrowUp', 15).__raw}</button>
+      <button type="button" class="icon-btn" data-schieb="1" data-id="${id}" ${aus || i === n - 1 ? 'disabled' : ''} aria-label="${esc(v.title)} nach unten" title="Nach unten">${icon('arrowDown', 15).__raw}</button>
+    </div>`;
+  };
+  const zeichnen = (fokus) => {
+    host.innerHTML = `<div class="card">
+      <div class="card-head"><h3>${icon('sidebar', 16).__raw} Seitenleiste</h3><span class="sub">gilt für dieses Gerät</span></div>
+      <div class="card-body">
+        <p class="muted small mt0">Blenden Sie Bereiche aus, die Sie nicht brauchen, und ordnen Sie die übrigen an. In der Seitenleiste selbst geht das auch per Rechtsklick; mit der Maus lassen sich Einträge nach kurzem Halten verschieben. Ausgeblendete Bereiche finden Sie weiterhin über die Suche.</p>
+        ${NAV_GRUPPEN.map((_, g) => {
+          const folge = navFolge(g);
+          const sichtbar = folge.filter((id) => !istVersteckt(id));
+          return `<div class="leiste-gruppe">${folge.map((id) => zeile(id, sichtbar.indexOf(id), sichtbar.length)).join('')}</div>`;
+        }).join('')}
+        <div class="row mt16"><button type="button" class="btn" id="leisteReset" ${istAngepasst() ? '' : 'disabled'}>${icon('refresh', 15).__raw} Voreinstellung</button></div>
+      </div>
+    </div>`;
+    // Mehrere Wünsche in Reihenfolge: der erste, der noch bedienbar ist, bekommt den Fokus.
+    for (const f of [fokus].flat().filter(Boolean)) {
+      const n = host.querySelector(f);
+      if (n && !n.disabled) { n.focus(); break; }
+    }
+  };
+  const geaendert = (fokus) => { navNeuZeichnen(); zeichnen(fokus); };
+  host.addEventListener('change', (e) => {
+    const c = e.target.closest('[data-an]');
+    if (!c) return;
+    if (c.checked) zeigen(c.dataset.an); else verbergen(c.dataset.an);
+    geaendert(`[data-an="${c.dataset.an}"]`);
+  });
+  host.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-schieb]');
+    if (b) {
+      const d = Number(b.dataset.schieb);
+      verschieben(b.dataset.id, d);
+      // Der Fokus bleibt beim Pfeil; ist die Grenze erreicht, wechselt er zum Gegenpfeil.
+      geaendert([`[data-schieb="${d}"][data-id="${b.dataset.id}"]`, `[data-schieb="${-d}"][data-id="${b.dataset.id}"]`]);
+      return;
+    }
+    if (e.target.closest('#leisteReset')) { zuruecksetzen(); geaendert(); ok('Seitenleiste zurückgesetzt'); }
+  });
+  zeichnen();
 }
 
 /* -------------------------------------------------------------------------- */

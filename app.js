@@ -11,6 +11,7 @@ import { updateState, onUpdate, startUpdateWatch, markNotified } from './lib/upd
 import { router, onNavigate, navigate, refresh } from './lib/router.js';
 import { closePopover, openPopover } from './lib/popover.js';
 import { scope } from './lib/prefs.js';
+import { NAV_GRUPPEN, navSichtbar, istSchmal, schmalSetzen, seitenleisteVerdrahten } from './lib/seitenleiste.js';
 import { startCalendarSync, stopCalendarSync } from './lib/gcalsync.js';
 import { VERSIONEN } from './lib/versionen.js';
 import { mitCodeVerbinden, nachDemVerbinden } from './lib/koppeln.js';
@@ -39,7 +40,7 @@ const api = window.kontovia;
 const app = document.getElementById('app');
 export let appInfo = { version: '1.0.0' };
 
-const VIEWS = {
+export const VIEWS = {
   dashboard: { title: 'Übersicht', icon: 'dashboard', mod: viewDashboard, key: '1' },
   transactions: { title: 'Buchungen', icon: 'book', mod: viewTransactions, key: '2' },
   kontoimport: { title: 'Kontoauszug', icon: 'bank', mod: viewKontoimport },
@@ -1079,7 +1080,7 @@ export function renderUpdateButton() {
   slot.innerHTML = html`
     <button class="btn block mb8" id="updateBtn"
       style="border-color:var(--warn);color:var(--warn);justify-content:flex-start">
-      ${icon('refresh', 16)} Version ${info.version} verfügbar
+      ${icon('refresh', 16)}<span class="knopf-text">Version ${info.version} verfügbar</span>
     </button>`;
   slot.querySelector('#updateBtn').addEventListener('click', openUpdate);
 }
@@ -1090,9 +1091,42 @@ export function renderUpdateButton() {
 function navItem(key) {
   const v = VIEWS[key];
   return html`
-    <div class="nav-item ${router.view === key ? 'active' : ''}" data-view="${key}" role="button" tabindex="0" aria-current="${router.view === key ? 'page' : 'false'}"${v.key ? raw(` title="${esc(v.title)} (${MOD}+${esc(v.key)})"`) : ''}>
+    <div class="nav-item ${router.view === key ? 'active' : ''}" data-view="${key}" role="button" tabindex="0" aria-current="${router.view === key ? 'page' : 'false'}" title="${v.key ? `${v.title} (${MOD}+${v.key})` : v.title}">
       ${icon(v.icon, 18)}<span>${v.title}</span>
     </div>`;
+}
+
+/** Die Einträge der Seitenleiste nach Wunsch des Geräts: Gruppen fest, darin Reihenfolge und Auswahl frei. */
+function navHtml() {
+  const [a, b, c] = NAV_GRUPPEN.map((_, g) => {
+    const ids = navSichtbar(g);
+    return ids.length ? `<div class="nav-group">${ids.map(navItem).join('')}</div>` : '';
+  });
+  return a + (a && b ? '<div class="nav-sep"></div>' : '') + b + '<div class="nav-spacer"></div>' + c;
+}
+
+/** Zeichnet die Einträge neu, nachdem Auswahl oder Reihenfolge sich geändert haben; die Marke bleibt. */
+export function navNeuZeichnen() {
+  const nav = $('#nav');
+  if (!nav) return;
+  const marke = nav.__marke;
+  nav.innerHTML = navHtml();
+  if (marke) nav.prepend(marke);
+  // Die Marke rechnet sich neu, sobald sich am Container eine Klasse ändert.
+  nav.classList.add('nav-neu');
+  requestAnimationFrame(() => nav.classList.remove('nav-neu'));
+}
+
+/** Klappt die Seitenleiste auf Symbole zusammen oder wieder aus. */
+function navSchmalZeigen() {
+  const schmal = istSchmal();
+  $('.shell')?.classList.toggle('nav-schmal', schmal);
+  const knopf = $('#navSchmalBtn');
+  if (!knopf) return;
+  const text = schmal ? 'Seitenleiste ausklappen' : 'Seitenleiste einklappen';
+  knopf.title = text;
+  knopf.setAttribute('aria-label', text);
+  knopf.setAttribute('aria-pressed', String(schmal));
 }
 
 let neuHoerer = null;
@@ -1126,7 +1160,7 @@ export function neueBuchungMenue(anker) {
 
 function renderShell() {
   app.innerHTML = html`
-    <div class="shell">
+    <div class="shell${istSchmal() ? ' nav-schmal' : ''}">
       <aside class="sidebar">
         <button type="button" class="brand brand-wechsel" id="brandBtn" aria-haspopup="menu" title="Konto wechseln oder hinzufügen">
           <div class="brand-mark">K</div>
@@ -1143,28 +1177,19 @@ function renderShell() {
           ${icon('search', 16)}<span class="grow">Suchen</span><kbd>${SUCHE_KUERZEL}</kbd>
         </button>
         <nav class="nav" id="nav" aria-label="Hauptnavigation">
-          <div class="nav-group">
-            ${raw(['dashboard', 'transactions', 'kontoimport', 'rechnungen', 'calendar', 'todos'].map(navItem).join(''))}
-          </div>
-          <div class="nav-sep"></div>
-          <div class="nav-group">
-            ${raw(['reports', 'export', 'datenimport'].map(navItem).join(''))}
-          </div>
-          <div class="nav-spacer"></div>
-          <div class="nav-group">
-            ${raw(['master', 'settings', 'help'].map(navItem).join(''))}
-          </div>
+          ${raw(navHtml())}
         </nav>
         <div class="sidebar-foot">
           <div id="updateSlot"></div>
           <div id="themeSlot"></div>
-          <button class="btn ghost block" id="feedbackBtn" title="Rückmeldung geben, auf Wunsch mit Bildschirmfoto">${icon('chat', 16)} Feedback</button>
+          <button class="btn ghost block" id="feedbackBtn" title="Rückmeldung geben, auf Wunsch mit Bildschirmfoto">${icon('chat', 16)}<span class="knopf-text">Feedback</span></button>
           <button class="btn ghost block nutzer-knopf" id="nutzerBtn" type="button" aria-haspopup="menu" hidden></button>
           ${raw(rechtsfuss())}
           <div class="foot-knoepfe">
-            <button class="btn ghost" id="lockBtn" title="Sperren (${MOD}+L)">${icon('lock', 16)} Sperren</button>
-            <button class="btn ghost" id="logoutBtn" title="Dieses Konto von diesem Gerät abmelden (vorher wird abgeglichen)">${icon('logout', 16)} Abmelden</button>
+            <button class="btn ghost" id="lockBtn" title="Sperren (${MOD}+L)">${icon('lock', 16)}<span class="knopf-text">Sperren</span></button>
+            <button class="btn ghost" id="logoutBtn" title="Dieses Konto von diesem Gerät abmelden (vorher wird abgeglichen)">${icon('logout', 16)}<span class="knopf-text">Abmelden</span></button>
           </div>
+          <button class="btn ghost block nav-schmal-knopf" id="navSchmalBtn" type="button" aria-pressed="${istSchmal()}">${icon('sidebar', 16)}<span class="knopf-text">Einklappen</span></button>
         </div>
       </aside>
       <main class="main">
@@ -1204,6 +1229,14 @@ function renderShell() {
     if (item) { e.preventDefault(); navigate(item.dataset.view); }
   });
   markierung($('#nav'), { aktiv: '.nav-item.active' });
+  // Rechtsklick (am Telefon langes Drücken): ausblenden, verschieben, einblenden; mit der Maus auch halten und ziehen.
+  seitenleisteVerdrahten($('#nav'), {
+    titel: (id) => VIEWS[id].title,
+    symbol: (id) => VIEWS[id].icon,
+    neu: navNeuZeichnen,
+  });
+  $('#navSchmalBtn').addEventListener('click', () => { schmalSetzen(!istSchmal()); navSchmalZeigen(); });
+  navSchmalZeigen();
   beobachten($('#content'));
   $('#brandBtn').addEventListener('click', (e) => kontenMenue(e.currentTarget));
   $('#nutzerBtn').addEventListener('click', (e) => nutzerMenue(e.currentTarget, { konto: appInfo.konto }));

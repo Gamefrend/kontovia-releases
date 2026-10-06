@@ -49,11 +49,6 @@ export async function render(root, params, { actions } = {}) {
 /* Module                                                                      */
 /* -------------------------------------------------------------------------- */
 
-/** Ø-Angabe unter einer Kennzahl – nur, wenn es mehr als einen Monat gibt. */
-function avgFoot(value, avg) {
-  return avg.months > 1 ? `<span class="avg-foot" title="Durchschnitt über ${avg.months} Monate">Ø ${esc(money(value))} € je Monat</span>` : '';
-}
-
 /* -------------------------------------------------------------------------- */
 /* Klickziele                                                                  */
 /* -------------------------------------------------------------------------- */
@@ -97,28 +92,32 @@ const euro = (v) => `${esc(money(v))} <span class="muted" style="font-size:15px"
 /**
  * Was hinter einer Einnahmen- oder Ausgabenzahl steckt: Zahlungen zu Buchungen
  * aus anderen Zeiträumen sind darin enthalten, noch offene Rechnungen des
- * Zeitraums nicht. Beides führt in die passend gefilterte Buchungsliste.
+ * Zeitraums nicht. Auf der Karte steht nur der kurze Hinweis auf Offenes; die
+ * Erklärung zu fremden Zeiträumen liegt im Hinweis an der Zahl (`wertHinweis`).
+ * Beides führt in die passend gefilterte Buchungsliste.
  */
 function paymentFoot(cur, kind) {
   const income = kind === 'income';
-  const fremd = cur.otherPeriod[kind];
-  const fremdN = cur.otherPeriod[kind + 'Count'];
   const offen = cur.unpaid[kind];
   const offenN = cur.unpaid[kind + 'Count'];
   const [eins, viele] = income ? ['einer Rechnung', 'Rechnungen'] : ['einem Beleg', 'Belegen'];
-  let out = '';
-  if (fremdN) {
-    out += `<button type="button" class="stat-link" data-tx-list="${kind}:fremd"
-      title="Im Zeitraum bezahlt, aber mit einem Datum davor oder danach gebucht, etwa eine Restzahlung vor dem Veranstaltungstag. Zählt am Zahlungstag, also hier.">
-      inkl. ${esc(money(fremd))} € aus ${fremdN === 1 ? `${eins} eines anderen Zeitraums` : `${fremdN} ${viele} anderer Zeiträume`}</button>`;
-  }
-  if (offenN) {
-    out += `<button type="button" class="stat-link warn" data-tx-list="${kind}:offen"
-      title="${income ? 'Rechnungen' : 'Belege'} mit Datum im Zeitraum, die noch nicht bezahlt sind. Sie zählen erst an ihrem Zahlungstag.">
-      noch offen: ${esc(money(offen))} € aus ${offenN === 1 ? eins : `${offenN} ${viele}`}</button>`;
-  }
-  return out;
+  return offenN
+    ? `<button type="button" class="stat-link warn" data-tx-list="${kind}:offen"
+      title="${income ? 'Rechnungen' : 'Belege'} mit Datum im Zeitraum, die noch nicht bezahlt sind (${offenN === 1 ? eins : `${offenN} ${viele}`}). Sie zählen erst an ihrem Zahlungstag.">
+      + ${esc(money(offen))} € offen</button>`
+    : '';
 }
+
+/** Hinweis an der Zahl: Zahlungen aus anderen Zeiträumen sind darin enthalten. */
+function wertHinweis(cur, kind) {
+  const fremd = cur.otherPeriod[kind];
+  const n = cur.otherPeriod[kind + 'Count'];
+  if (!n) return '';
+  return `Enthält ${money(fremd)} € aus ${n === 1 ? (kind === 'income' ? 'einer Rechnung' : 'einem Beleg') : `${n} ${kind === 'income' ? 'Rechnungen' : 'Belegen'}`} anderer Zeiträume, im Zeitraum bezahlt und deshalb hier gezählt.`;
+}
+
+/** Der Betrag samt Hinweis (Tooltip), falls es etwas zu erklären gibt. */
+const eurHinweis = (v, hinweis) => (hinweis ? `<span title="${esc(hinweis)}">${euro(v)}</span>` : euro(v));
 
 /**
  * Alles, was die Module brauchen – jeweils erst berechnet, wenn ein
@@ -167,21 +166,17 @@ const WIDGETS = {
   einnahmen: {
     title: 'Einnahmen', size: 3,
     render: (c) => statCard({
-      label: 'Einnahmen', icon: 'up', value: euro(c.current().incomeForProfit), tone: 'pos',
+      label: 'Einnahmen', icon: 'up', value: eurHinweis(c.current().incomeForProfit, wertHinweis(c.current(), 'income')), tone: 'pos',
       ziel: z('transactions', buchungen({ type: 'income' }), { haupt: true, titel: 'Die Zahlungseingänge dieses Zeitraums ansehen' }),
-      foot: c.delta('incomeForProfit')
-        + avgFoot(c.avg().income, c.avg())
-        + paymentFoot(c.current(), 'income'),
+      foot: c.delta('incomeForProfit') + paymentFoot(c.current(), 'income'),
     }).__raw,
   },
   ausgaben: {
     title: 'Ausgaben', size: 3,
     render: (c) => statCard({
-      label: 'Ausgaben', icon: 'down', value: euro(c.current().expenseForProfit), tone: 'neg',
+      label: 'Ausgaben', icon: 'down', value: eurHinweis(c.current().expenseForProfit, wertHinweis(c.current(), 'expense')), tone: 'neg',
       ziel: z('transactions', buchungen({ type: 'expense' }), { haupt: true, titel: 'Die Zahlungsausgänge dieses Zeitraums ansehen' }),
-      foot: c.delta('expenseForProfit')
-        + avgFoot(c.avg().expense, c.avg())
-        + paymentFoot(c.current(), 'expense'),
+      foot: c.delta('expenseForProfit') + paymentFoot(c.current(), 'expense'),
     }).__raw,
   },
   ergebnis: {
@@ -191,8 +186,7 @@ const WIDGETS = {
       return statCard({
         label: cur.profit >= 0 ? 'Gewinn' : 'Verlust', icon: 'scale', value: euro(cur.profit), tone: cur.profit >= 0 ? 'pos' : 'neg',
         ziel: z('reports', { tab: 'guv', period: zeitraum() }, { haupt: true, titel: 'Gewinn- und Verlustrechnung öffnen' }),
-        foot: (cur.margin !== null ? `<span>Marge ${esc((cur.margin * 100).toFixed(1).replace('.', ','))} %</span>` : '<span>–</span>')
-          + avgFoot(c.avg().profit, c.avg()),
+        foot: cur.margin !== null ? `<span>Marge ${esc((cur.margin * 100).toFixed(1).replace('.', ','))} %</span>` : '<span>–</span>',
       }).__raw;
     },
   },
@@ -205,8 +199,7 @@ const WIDGETS = {
         label: cur.vatPayable >= 0 ? 'Umsatzsteuer-Zahllast' : 'Vorsteuer-Erstattung', icon: 'euro',
         value: euro(Math.abs(cur.vatPayable)), tone: cur.vatPayable > 0 ? 'neg' : 'pos',
         ziel: z('reports', { tab: 'ust', period: zeitraum() }, { haupt: true, titel: 'Umsatzsteuer-Voranmeldung öffnen' }),
-        foot: `<span>${soll ? 'Umsatzsteuer' : 'vereinnahmt'} ${esc(money(cur.vatIncome))} € · Vorsteuer ${esc(money(cur.vatExpense))} €</span>`
-          + `<span class="avg-foot">${soll ? 'nach Rechnungsdatum (Soll-Versteuerung)' : 'nach Zahlungseingang (Ist-Versteuerung)'}</span>`,
+        foot: `<span title="${soll ? 'Nach Rechnungsdatum (Soll-Versteuerung)' : 'Nach Zahlungseingang (Ist-Versteuerung)'}">${soll ? 'Umsatzsteuer' : 'vereinnahmt'} ${esc(money(cur.vatIncome))} € · Vorsteuer ${esc(money(cur.vatExpense))} €</span>`,
       }).__raw;
     },
   },
@@ -537,31 +530,62 @@ function draw(root) {
   mountTables(root);
   const redraw = () => draw(root);
   if (editing) wireEditing(root, lay, redraw);
-  else wireContent(root, redraw, c);
+  else {
+    kontext = c;
+    wireRaster(root);
+    wireContent(root, redraw, c);
+  }
+}
+
+/** Der Kontext der zuletzt gezeichneten Übersicht, damit ein einzelnes Modul sich allein neu zeichnen kann. */
+let kontext = null;
+
+/**
+ * Zeichnet nur ein Modul neu – etwa nach dem Umschalten seiner Diagrammart.
+ * Die anderen Module bleiben unberührt: Sie behalten ihre Diagramme, ihre
+ * Auswahl und ihren Bildlauf, nichts flackert oder animiert neu.
+ */
+function widgetNeu(root, id) {
+  const body = $(`[data-widget="${id}"] .dash-body`, root);
+  if (!body || !kontext) { draw(root); return; }
+  body.innerHTML = WIDGETS[id].render(kontext);
+  mountCharts(body);
+  mountTables(body);
+  wireWidgets(body, () => draw(root), kontext, root);
 }
 
 /** Die Bedienung der Module selbst – im Anpassen-Modus ist sie gesperrt. */
 function wireContent(root, redraw, c) {
   wireScopeToggle(root, redraw);
-  wireVerlauf(root, redraw);
-  wireAnteil(root, 'anteilAusgaben', redraw);
-  wireAnteil(root, 'anteilEinnahmen', redraw);
   $('#dashEdit', root)?.addEventListener('click', () => {
     editing = true;
     redraw();
     $('#dashDone', root)?.focus();
   });
-  $$('[data-goto]', root).forEach((b) => b.addEventListener('click', () => navigate(b.dataset.goto)));
-  wireZiele(root);
-  const oeffnen = (sel2, fn) => $$(sel2, root).forEach((n) => {
+  $('#recDue', root)?.addEventListener('click', () => faelligeAnbieten().then(redraw));
+  wireWidgets(root, redraw, c, root);
+}
+
+/**
+ * Verdrahtet die Module innerhalb von `scope` – die ganze Übersicht oder den
+ * Inhalt eines einzelnen Moduls. Umschalter, die nur ein Modul betreffen,
+ * zeichnen auch nur dieses neu.
+ */
+function wireWidgets(scope, redraw, c, root) {
+  wireVerlauf(scope, () => widgetNeu(root, 'verlauf'));
+  wireAnteil(scope, 'anteilAusgaben', () => widgetNeu(root, 'ausgabenKat'));
+  wireAnteil(scope, 'anteilEinnahmen', () => widgetNeu(root, 'einnahmenKat'));
+  $$('[data-goto]', scope).forEach((b) => b.addEventListener('click', () => navigate(b.dataset.goto)));
+  wireZiele(scope);
+  const oeffnen = (sel2, fn) => $$(sel2, scope).forEach((n) => {
     n.addEventListener('click', () => fn(n));
     n.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === n) { e.preventDefault(); fn(n); } });
   });
   oeffnen('[data-tx]', (n) => openTransactionDialog(n.dataset.tx));
   oeffnen('[data-appt]', (n) => openAppointmentDialog(n.dataset.appt));
-  wireTodoRows(root, redraw);
-  // „inkl. … aus anderen Zeiträumen“ und „noch offen …“: dieselbe Auswahl als Buchungsliste.
-  $$('[data-tx-list]', root).forEach((b) => b.addEventListener('click', () => {
+  wireTodoRows(scope, redraw);
+  // „noch offen …“: dieselbe Auswahl als Buchungsliste.
+  $$('[data-tx-list]', scope).forEach((b) => b.addEventListener('click', () => {
     const [type, was] = b.dataset.txList.split(':');
     navigate('transactions', {
       period: { preset: period.preset, from: period.from, to: period.to },
@@ -570,26 +594,28 @@ function wireContent(root, redraw, c) {
       status: was === 'offen' ? 'offen' : 'alle',
     });
   }));
-  $('#showMissing', root)?.addEventListener('click', () => navigate('transactions', { receipt: 'ohne' }));
-  $('#recDue', root)?.addEventListener('click', () => faelligeAnbieten().then(redraw));
-  if (root.querySelector('[data-check]')) wireCheckLinks(root, c.checks(), period);
-  const termine = root.querySelector('[data-frist]') ? steuertermine(store.db.settings, todayISO(), addDays(todayISO(), 150)).slice(0, 5) : [];
+  $('#showMissing', scope)?.addEventListener('click', () => navigate('transactions', { receipt: 'ohne' }));
+  if (scope.querySelector('[data-check]')) wireCheckLinks(scope, c.checks(), period);
+  const termine = scope.querySelector('[data-frist]') ? steuertermine(store.db.settings, todayISO(), addDays(todayISO(), 150)).slice(0, 5) : [];
   oeffnen('[data-frist]', (n) => oeffneFrist(termine[Number(n.dataset.frist)]));
 }
 
-/** Verdrahtet die Klickziele (z) sowie die Säulen und Kategorien der Diagramme (data-pick). */
-function wireZiele(root) {
-  const gehe = (n) => {
-    const ziel = ziele[Number(n.dataset.ziel)];
-    if (ziel) navigate(ziel.view, ziel.params);
-  };
-  $$('[data-ziel]', root).forEach((n) => {
+const geheZiel = (n) => {
+  const ziel = ziele[Number(n.dataset.ziel)];
+  if (ziel) navigate(ziel.view, ziel.params);
+};
+
+/** Verdrahtet die Klickziele (z) innerhalb von `scope` (die Übersicht oder ein Modul). */
+function wireZiele(scope) {
+  const gehe = geheZiel;
+  $$('[data-ziel]', scope).forEach((n) => {
     n.addEventListener('click', () => gehe(n));
     n.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === n) { e.preventDefault(); gehe(n); } });
   });
 
   // Ein Klick auf eine freie Stelle der Karte führt zum Hauptziel des Moduls.
-  $$('.dash-body', root).forEach((body) => {
+  const koerper = scope.matches?.('.dash-body') ? [scope] : $$('.dash-body', scope);
+  koerper.forEach((body) => {
     const haupt = $('[data-haupt]', body);
     const karte = $('.card', body);
     if (!haupt || !karte) return;
@@ -600,8 +626,10 @@ function wireZiele(root) {
       gehe(haupt);
     });
   });
+}
 
-  // Diagramme werden neu gezeichnet; deshalb hängt die Bedienung am Raster, nicht an den Elementen.
+/** Die Säulen und Kategorien der Diagramme (data-pick). Sie hängen am Raster, nicht an den Elementen, und gelten für alle Module. */
+function wireRaster(root) {
   const raster = $('#dashGrid', root);
   const waehlen = (n) => {
     const [art, wert] = n.dataset.pick.split(':');

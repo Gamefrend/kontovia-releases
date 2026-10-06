@@ -26,7 +26,7 @@ import { aufgabenHtml, klartext, bildIds } from '../lib/richtext.js';
 import {
   teilaufgaben, neueTeilaufgabe, fortschritt, verknuepfungen, verknuepfungHinzu, verknuepfungenRoh, aufgabenZu,
   horizontNormal, horizontEnde, horizontText, horizontTitel, aufgabenText, EINHEITEN, VERKNUEPFUNG_ARTEN,
-  ARTEN, aufgabenArt, zielRechnung, zielSatz, zielNormal, mengeText, wiederholungNormal, wiederholungText, WIEDERHOLUNG_EINHEITEN,
+  ARTEN, aufgabenArt, zielRechnung, zielSatz, zielRest, zielNormal, mengeText, wiederholungNormal, wiederholungText, WIEDERHOLUNG_EINHEITEN,
 } from '../lib/aufgaben.js';
 import { sucheIndex, suchen } from '../lib/suchindex.js';
 
@@ -128,15 +128,22 @@ function zielBlock(todo, compact) {
   const e = r.einheit ? ` ${r.einheit}` : '';
   const prog = r.prognose !== null && r.status !== 'geschafft' && r.status !== 'verfehlt'
     ? `<span class="muted" title="Hochgerechnet aus dem bisherigen Tempo (${esc(mengeText(r.tempo))}${esc(e)} pro Tag)">Mit diesem Tempo: ${esc(mengeText(r.prognose))}${esc(e)}</span>` : '';
-  const eintragen = !compact && !todo.done
-    ? `<div class="todo-ziel-add">
-        <input type="number" step="any" value="1" data-ziel-menge aria-label="Menge${esc(e)}">
-        <button type="button" class="btn sm" data-ziel-add="${esc(todo.id)}">${icon('plus', 13).__raw} Eintragen</button>
-      </div>` : '';
-  return `<div class="todo-ziel">
-    <div class="bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(r.anteil * 100)}"><div class="bar-fill" style="width:${Math.round(r.anteil * 100)}%;background:var(--${r.status === 'hinten' ? 'warn' : r.status === 'verfehlt' ? 'neg' : 'accent'}, var(--accent))"></div></div>
-    <div class="todo-ziel-text">${text ? `<span class="badge tiny ${kl}">${esc(text)}</span> ` : ''}${esc(zielSatz(todo, heute))}${prog ? ` · ${prog}` : ''}</div>
-    ${eintragen}
+  const balken = `<div class="bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(r.anteil * 100)}"><div class="bar-fill" style="width:${Math.round(r.anteil * 100)}%;background:var(--${r.status === 'hinten' ? 'warn' : r.status === 'verfehlt' ? 'neg' : 'accent'}, var(--accent))"></div></div>`;
+  const badge = text ? `<span class="badge tiny ${kl}">${esc(text)}</span> ` : '';
+  // Klein (Übersicht): nur Balken und Satz. Groß: der Stand steht als Zahl im Feld, das sich tippen oder mit den Pfeilen ändern lässt.
+  if (compact) {
+    return `<div class="todo-ziel">${balken}
+      <div class="todo-ziel-text">${badge}${esc(zielSatz(todo, heute))}${prog ? ` · ${prog}` : ''}</div>
+    </div>`;
+  }
+  return `<div class="todo-ziel">${balken}
+    <div class="todo-ziel-zeile">
+      <label class="todo-ziel-stand" title="Aktuellen Stand eintippen und Enter drücken, oder mit den Pfeilen ändern">
+        <input type="number" min="0" step="any" value="${esc(String(r.stand))}" data-ziel-stand="${esc(todo.id)}" aria-label="Stand${esc(e)}">
+        <span>von ${esc(mengeText(r.gesamt))}${esc(e)}</span>
+      </label>
+      <div class="todo-ziel-text" data-ziel-text>${badge}${esc(zielRest(todo, heute))}${prog ? ` · ${prog}` : ''}</div>
+    </div>
   </div>`;
 }
 
@@ -195,17 +202,38 @@ export function wireTodoRows(root, redraw) {
     await weg;
     redraw();
   }));
-  $$('[data-ziel-add]', root).forEach((b) => {
-    const eintragen = async () => {
-      const menge = Number(String(b.parentElement.querySelector('[data-ziel-menge]').value).replace(',', '.'));
-      if (!Number.isFinite(menge) || menge === 0) { warn('Bitte eine Menge eintragen'); return; }
-      await zielFortschritt(b.dataset.zielAdd, menge);
-      const t = sel.todo(b.dataset.zielAdd);
-      if (t?.done) ok('Ziel geschafft', t.title);
-      redraw();
-    };
-    b.addEventListener('click', eintragen);
-    b.parentElement.querySelector('[data-ziel-menge]').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); eintragen(); } });
+  // Stand eines Ziels: Das Feld zeigt immer die Zahl. Eintippen mit Enter (oder das Feld verlassen) oder die Pfeile setzen sie neu;
+  // Balken und Satz folgen an Ort und Stelle, ohne dass die Liste neu aufgebaut wird oder das Feld den Fokus verliert.
+  $$('[data-ziel-stand]', root).forEach((feld) => {
+    const id = feld.dataset.zielStand;
+    feld.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); feld.blur(); }
+      else if (e.key === 'Escape') { feld.value = String(zielNormal(sel.todo(id), todayISO()).stand); feld.blur(); }
+    });
+    feld.addEventListener('change', async () => {
+      const t = sel.todo(id);
+      if (!t) return;
+      const neu = Number(String(feld.value).replace(',', '.'));
+      const alt = zielNormal(t, todayISO()).stand;
+      if (!Number.isFinite(neu) || neu < 0) { feld.value = String(alt); warn('Bitte eine Zahl ab 0 eintragen'); return; }
+      if (neu === alt) return;
+      const warFertig = !!t.done;
+      await zielFortschritt(id, neu - alt);
+      const jetzt = sel.todo(id);
+      if (jetzt?.done !== warFertig) {
+        if (jetzt?.done) ok('Ziel geschafft', jetzt.title);
+        redraw();
+        return;
+      }
+      const block = feld.closest('.todo-ziel');
+      const r = zielRechnung(jetzt, todayISO());
+      const balken = block.querySelector('.bar-fill');
+      balken.style.width = `${Math.round(r.anteil * 100)}%`;
+      balken.style.background = `var(--${r.status === 'hinten' ? 'warn' : r.status === 'verfehlt' ? 'neg' : 'accent'}, var(--accent))`;
+      block.querySelector('[role="progressbar"]').setAttribute('aria-valuenow', String(Math.round(r.anteil * 100)));
+      const [kl, text] = ZIEL_STATUS[r.status];
+      block.querySelector('[data-ziel-text]').innerHTML = `${text ? `<span class="badge tiny ${kl}">${esc(text)}</span> ` : ''}${esc(zielRest(jetzt, todayISO()))}`;
+    });
   });
   $$('[data-toggle-sub]', root).forEach((c) => c.addEventListener('change', async () => {
     const [tid, sid] = c.dataset.toggleSub.split(':');
@@ -216,7 +244,7 @@ export function wireTodoRows(root, redraw) {
   }));
   $$('[data-edit-todo]', root).forEach((n) => {
     const open = () => openTodoDialog(n.dataset.editTodo, {}, { nachSpeichern: redraw });
-    n.addEventListener('click', (e) => { if (!e.target.closest('[data-open-appt],[data-open-link],.todo-subs,.todo-ziel-add')) open(); });
+    n.addEventListener('click', (e) => { if (!e.target.closest('[data-open-appt],[data-open-link],.todo-subs,.todo-ziel-zeile')) open(); });
     n.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === n) { e.preventDefault(); open(); } });
   });
   $$('[data-open-appt]', root).forEach((b) => b.addEventListener('click', (e) => {

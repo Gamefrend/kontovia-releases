@@ -1,12 +1,12 @@
 {
-  "version": "2.18.0",
-  "released": "2026-10-05T19:57:12.735Z",
-  "notes": "Aufgeräumter: Aufgaben, Einstellungen und Menü am Telefon\n\n- Die Aufgaben sind übersichtlicher: Jede Gruppe hat ihre eigene Karte, und die Fälligkeit steht immer rechts.\n- Die Einstellungen sind in vier Bereiche geteilt. Ein Punkt zeigt, wo noch etwas nicht übernommen ist.\n- Am Telefon öffnet „Mehr“ jetzt ein Menü von unten statt von links. Ein Wisch nach unten schließt es.\n- Kleine Bewegungen helfen beim Orientieren: Abgehakte Aufgaben gleiten aus der Liste, Bereiche blenden sanft ein.",
+  "version": "2.19.0",
+  "released": "2026-10-06T08:27:03.189Z",
+  "notes": "Seitenleiste nach Ihrem Geschmack\n\n- Die Seitenleiste lässt sich einklappen: Dann bleiben nur die Symbole, und ein Klick klappt sie wieder aus.\n- Bereiche lassen sich per Rechtsklick (am Telefon langes Drücken) aus- und einblenden und verschieben. Auch ziehen geht, wenn Sie einen Eintrag kurz halten.\n- Die Einstellungen brauchen weniger Platz: Die Bereiche stehen jetzt als Reiter oben statt in einer breiten Spalte.\n- In der Übersicht zeichnet sich beim Umschalten einer Diagrammart nur noch diese Karte neu. Einnahmen und Ausgaben zeigen weniger Text.\n- Aufgaben mit Ziel zeigen den Stand als Zahl: eintippen und Enter drücken oder mit den Pfeilen ändern.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "ba7492a7f2afbd96304e1d8c8d417629f4294b96261b218be6b7dc11a0686f33",
-      "size": 71864
+      "sha256": "9a7a049ff0f99cce330c8f9af15727f5eb01fd19f904ab31799762ab2492eb06",
+      "size": 73555
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -55,8 +55,8 @@
     },
     {
       "path": "lib/aufgaben.js",
-      "sha256": "6bd9ba00fd2b9b5c13bd27d0b97210755f96886171e9642ccf1295819d1975f1",
-      "size": 10450
+      "sha256": "17e8769a6ff7cbbc07a26d7fe45a3dc7d124ac6da4fd50cb5e77a1ead3ba8814",
+      "size": 10645
     },
     {
       "path": "lib/benutzer.js",
@@ -225,8 +225,8 @@
     },
     {
       "path": "lib/prefs.js",
-      "sha256": "dc998bda02621a964fe2b56f88c586f68f16d056070dea09e1c9a18d514b9af0",
-      "size": 8301
+      "sha256": "e76ee1604c8ac62beb85314ba7b8133a625abe491ff3e9a2f7063e3e2b395999",
+      "size": 8522
     },
     {
       "path": "lib/qr.js",
@@ -289,6 +289,11 @@
       "size": 4723
     },
     {
+      "path": "lib/seitenleiste.js",
+      "sha256": "816a3ff2c9b3f120df1cd451a35b9e6817dfbf592cd0968d055d919bf135cfe8",
+      "size": 10203
+    },
+    {
       "path": "lib/store.js",
       "sha256": "ec8c3ebdf6c6f35a439df25055c5976e7b9192cb521a18ae023e88b08392f824",
       "size": 38166
@@ -325,8 +330,8 @@
     },
     {
       "path": "lib/ui.js",
-      "sha256": "8f12d3394c30fd54af7f8750210cb337328d872e33fd3b09ee4c3dcc791d4fef",
-      "size": 44411
+      "sha256": "947267e394e3070583fb1b9d5796451f34309e111c1493149c51c91d780414f0",
+      "size": 44421
     },
     {
       "path": "lib/updates.js",
@@ -340,8 +345,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "45e445e57441955764720a872a6548487fa76dbeed45f94fc01752bd0029c410",
-      "size": 29889
+      "sha256": "29980876c6ba55862b539df752bdd9fcca4bf09d52e5e2119702ba267ae65322",
+      "size": 30680
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -370,12 +375,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "6d339a783cfa07721ce8f6f98c954634bb02938798e4b97c989685226df62179",
+      "sha256": "c9c14fc617dc8099ad4edb60019449ac0b466488a27191aaad40dd174b54a95f",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "44c10e861262b3e2b69569d1ad47136ef26c58be74d50b90ff6a9544ecb9b624",
+      "sha256": "5545f699a1fdf089f6cc2e65f5f241a0b1ca01420e33d1a4e34157f578573e26",
       "size": 28151
     },
     {
@@ -390,7 +395,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "a09aa512908805be0426e8bb3217da0d44edb43f0f5c69be1fd5d0f6ca3797dd",
+      "sha256": "2fc1774a62b2d479f63ae12a51a98ea030772ce8760c8093fc1e44663bdc9677",
       "size": 31451
     },
     {
@@ -405,8 +410,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "8ee6a4069847b0236a3cb70e25d6972b31538eac9eaa898605c3e2b1dcbe2511",
-      "size": 99238
+      "sha256": "8870648c5d5f54e989e22ecdd979f5c09726e1de41e4a263d09974691106c923",
+      "size": 101923
     },
     {
       "path": "views/anlageform.js",
@@ -430,8 +435,8 @@
     },
     {
       "path": "views/dashboard.js",
-      "sha256": "ff64d81525826b57856bbd2be8ea87c1dea027e6a9a0ed78a35e5ba6b3722769",
-      "size": 39004
+      "sha256": "55a6e082b72dd09e26242957373b01cf4051dbe1142fc77083d383df2765060a",
+      "size": 40085
     },
     {
       "path": "views/datenimport.js",
@@ -500,8 +505,8 @@
     },
     {
       "path": "views/settings.js",
-      "sha256": "2ae2785418307e0a8d8d045f0740c87b1b8ce8b1414b9924dd72a8dd05d787f2",
-      "size": 42318
+      "sha256": "7c75e77084290067c8b4f65e818b4e20a2be372f19d9fae2ca80b746647ea752",
+      "size": 45810
     },
     {
       "path": "views/spruenge.js",
@@ -510,8 +515,8 @@
     },
     {
       "path": "views/todos.js",
-      "sha256": "014709b31109a8f7b995cfe5abddb3af8f18056fe40277b8095dac684a7fb876",
-      "size": 39727
+      "sha256": "ac007cb3a97c90ecfaa9ce96742cbc89f228d47fa00519de858e101171b083d6",
+      "size": 41408
     },
     {
       "path": "views/transactions.js",
@@ -530,7 +535,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "577366a7bbf3f0cf83fe6d3726141cdae6b73fc96f735854f475a99d7bb09fce",
+      "sha256": "a84cf8fbec779ce5307b5f94b8387cd39a515a73b66862df2db696db73fa0faa",
       "size": 6906
     },
     {
@@ -655,8 +660,8 @@
     },
     {
       "path": "web/web.css",
-      "sha256": "384b2f9fcf22c52625b99951cb785961c8d9ef4f7930705377727f5f3e58d4e8",
-      "size": 18863
+      "sha256": "d23dc10335d3f1953e44e68d26afd4810dbd5f3968842aef33c825f1876d4820",
+      "size": 18891
     },
     {
       "path": "web/weiterleitung.js",
