@@ -421,6 +421,26 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
+        <h2 class="mt0">Der Assistent</h2>
+        <p>Öffnen Sie ihn mit <strong>Assistent</strong> in der Seitenleiste oder <kbd>${MOD}</kbd>+<kbd>J</kbd>
+        und fragen Sie in Ihren Worten: „Was ist noch offen?“, „Wie viel Umsatzsteuer zahle ich dieses Quartal?“,
+        „Finde die Rechnung vom Fotoshooting mit dem Garten“ oder „Erinnere mich morgen an die Belege“.</p>
+        <ul>
+          <li><strong>Alles bleibt auf dem Gerät.</strong> Der Assistent rechnet auf Ihrem Gerät. Fragen und Buchhaltung gehen nirgendwohin.</li>
+          <li><strong>Stufen:</strong> Basis versteht feste Fragen ohne Download. Mini, Standard, Groß und Maximal sind
+          Sprachmodelle, die einmalig heruntergeladen werden (350 MB bis 4,6 GB) und dann offline laufen. Kontovia
+          schlägt die Stufe vor, die zu Ihrem Gerät passt.</li>
+          <li><strong>Denkweise:</strong> Schnell antwortet direkt aus Ihren Zahlen, Ausgewogen formuliert eine kurze
+          Antwort, Gründlich denkt vorher nach. Automatisch wählt je Frage.</li>
+          <li><strong>Zahlen rechnet immer Kontovia.</strong> Das Modell wählt nur aus, was gesucht oder gerechnet
+          wird. Unter jeder Antwort sehen Sie die Schritte und das Ergebnis als Karte.</li>
+          <li><strong>Nichts wird ohne Sie gespeichert.</strong> Neue Buchungen, Aufgaben, Termine, Kontakte und
+          Rechnungen öffnet der Assistent ausgefüllt im gewohnten Fenster. Speichern tun Sie.</li>
+        </ul>
+        <p class="mb0 small muted">Der Assistent ist neu und noch in Erprobung. Er kann eine Frage falsch verstehen und ersetzt keine Steuerberatung.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
         <h2 class="mt0">Tastenkürzel</h2>
         <table class="data compact">
           <tbody>
@@ -428,6 +448,7 @@ function anleitung(root) {
             <tr><td><kbd>${MOD}</kbd>+<kbd>Umschalt</kbd>+<kbd>N</kbd></td><td>Neuer Termin</td></tr>
             <tr><td><kbd>${MOD}</kbd>+<kbd>S</kbd></td><td>Sofort speichern</td></tr>
             <tr><td><kbd>${MOD}</kbd>+<kbd>K</kbd></td><td>Alles durchsuchen: Buchungen, Rechnungen, Kontakte, Termine, Aufgaben, Seiten</td></tr>
+            <tr><td><kbd>${MOD}</kbd>+<kbd>J</kbd></td><td>Assistent öffnen und schließen</td></tr>
             <tr><td><kbd>${MOD}</kbd>+<kbd>F</kbd></td><td>In Buchungen suchen</td></tr>
             <tr><td><kbd>${MOD}</kbd>+<kbd>L</kbd></td><td>Sperren</td></tr>
             <tr><td><kbd>Alt</kbd>+<kbd>1</kbd> … <kbd>8</kbd></td><td>Übersicht, Buchungen, Rechnungen, Kalender, Aufgaben, Auswertungen, Import &amp; Export, Stammdaten. In der installierten App geht auch <kbd>${MOD}</kbd> statt <kbd>Alt</kbd>.</td></tr>
@@ -740,13 +761,19 @@ function recht(root) {
 
       <div class="card mt16"><div class="card-body">
         <h2 class="mt0">Künstliche Intelligenz</h2>
-        <p><strong>Kontovia enthält keine.</strong> Es gibt kein Modell, kein Training, keine
-        Ableitung aus Daten. Jede Zuordnung folgt einer Tabelle, die Sie selbst pflegen;
-        jede Berechnung folgt festen Rechenregeln. Gleiche Eingabe ergibt immer
-        dieselbe Ausgabe.</p>
-        <p class="mb0">Damit ist die KI-Verordnung der EU (Verordnung (EU) 2024/1689) auf dieses Programm
-        nicht anwendbar: Erwägungsgrund 12 nimmt Systeme ausdrücklich aus, die auf
-        ausschließlich von Menschen definierten Regeln beruhen.</p>
+        <p><strong>Die Buchhaltung selbst arbeitet ohne.</strong> Jede Zuordnung folgt einer Tabelle,
+        die Sie selbst pflegen; jede Berechnung, jeder Bericht und jeder Export folgt festen
+        Rechenregeln. Gleiche Eingabe ergibt immer dieselbe Ausgabe. Kein Modell wird mit Ihren
+        Daten trainiert.</p>
+        <p><strong>Der Assistent ist freiwillig.</strong> In der Stufe Basis arbeitet auch er nur mit
+        festen Regeln. Wählen Sie eine der Stufen Mini bis Maximal, antwortet ein Sprachmodell
+        (Qwen3, Apache 2.0), also ein KI-System. Es läuft ausschließlich auf Ihrem Gerät, in einer
+        festen, geprüften Fassung, lernt nichts dazu und sendet nichts. Es wählt nur aus, welche
+        Suche oder Rechnung Kontovia ausführt; die Zahlen selbst rechnet Kontovia. Antworten aus
+        dem Modell sind im Assistenten als solche gekennzeichnet.</p>
+        <p class="mb0">Ohne Assistent ist die KI-Verordnung der EU (Verordnung (EU) 2024/1689) auf
+        Kontovia nicht anwendbar: Erwägungsgrund 12 nimmt Systeme aus, die auf ausschließlich von
+        Menschen definierten Regeln beruhen.</p>
       </div></div>
 
       <div class="card mt16" id="recht-export"><div class="card-body">
@@ -759,7 +786,8 @@ function recht(root) {
         <p><strong>Ein KI-Hinweis ist nicht nötig.</strong> Die Werte in den Exporten entstehen nach
         festen Rechenregeln aus Ihren Buchungen; künstliche Intelligenz wirkt dabei nicht mit. Die
         Kennzeichnungspflichten der KI-Verordnung (Art. 50, seit 2. August 2026) betreffen Inhalte, die
-        ein KI-System erzeugt. Das ist Kontovia nicht. Auch das Steuerrecht kennt keine Pflicht,
+        ein KI-System erzeugt. Exporte und Berichte erzeugt Kontovia nach festen Regeln, auch wenn Sie
+        den Assistenten nutzen. Auch das Steuerrecht kennt keine Pflicht,
         anzugeben, womit eine Erklärung vorbereitet wurde. Freiwillig und zur Transparenz trägt jeder
         Bericht einen Herkunftsvermerk.</p>
         <p><strong>Wer lieber selbst zusammenstellt,</strong> kann das: Die Tabellen unter
@@ -771,8 +799,10 @@ function recht(root) {
 
       <div class="card mt16"><div class="card-body">
         <h2 class="mt0">Lizenzen</h2>
-        <p>Kontovia selbst enthält keinen fremden Programmcode. Kontovia läuft in Ihrem
-        Browser; für ihn gelten dessen Lizenzbedingungen.</p>
+        <p>Kontovia läuft in Ihrem Browser; für ihn gelten dessen Lizenzbedingungen. Fremden
+        Programmcode enthält Kontovia nur für den Assistenten: <strong>WebLLM</strong> (MLC, Apache 2.0)
+        mit der TVM-Laufzeit und XGrammar (Apache 2.0) sowie loglevel (MIT). Die Sprachmodelle
+        <strong>Qwen3</strong> (Alibaba Cloud, Apache 2.0) werden erst auf Wunsch heruntergeladen.</p>
         <p class="mb0"><strong>Schrift Geist.</strong> Copyright 2024 The Geist Project Authors
         (github.com/vercel/geist-font), lizenziert unter der SIL Open Font License 1.1. Sie wird mit
         Kontovia ausgeliefert und in die PDF-Dateien eingebettet; Verkauf der Schrift für sich allein

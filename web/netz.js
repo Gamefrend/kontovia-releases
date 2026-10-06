@@ -22,6 +22,24 @@ const ERLAUBT = new Set([
 
 export const HOSTS = [...ERLAUBT];
 
+/*
+ * Woher der Assistent seine Sprachmodelle lädt: einmalig, nur nach
+ * Zustimmung, und nur Dateien, keine Daten (ki-worker.js, kimodelle.js).
+ * Diese Adressen stehen bewusst nicht in ERLAUBT und damit nicht in der CSP
+ * der Seite: Die Seite selbst spricht sie nie an. Geladen wird im eigenen
+ * Rechenwerk (Worker), und dort lässt eine Sperre nur diese Adressen durch.
+ * Die Dateien liegen bei Hugging Face hinter dessen Auslieferungsnetz
+ * (*.hf.co); der Programmteil kommt fest auf eine Fassung gepinnt von GitHub.
+ */
+const MODELLQUELLEN = new Set(['huggingface.co', 'raw.githubusercontent.com']);
+const MODELL_AUSLIEFERUNG = /^[a-z0-9-]+(\.[a-z0-9-]+)*\.hf\.co$/;
+
+export function modellAdresseErlaubt(url) {
+  let u;
+  try { u = new URL(url); } catch { return false; }
+  return u.protocol === 'https:' && (MODELLQUELLEN.has(u.hostname) || MODELL_AUSLIEFERUNG.test(u.hostname));
+}
+
 const MAX_BODY = 300 * 1024 * 1024;
 
 function pruefen(url) {

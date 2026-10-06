@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 6. Oktober 2026, Programmversion 2.22.1
+Stand: 6. Oktober 2026, Programmversion 2.23.0
 
 ---
 
@@ -49,14 +49,15 @@ Arbeitsspeicher, solange das Programm entsperrt ist.
 * keine Telemetrie, keine Nutzungsstatistik, keine Absturzberichte
 * keine Werbung, kein Tracking, keine Weitergabe an Dritte
 * keine automatische Übermittlung an Finanzbehörden
-* keine künstliche Intelligenz und damit keine Verarbeitung Ihrer Daten durch
-  Modelle Dritter
+* keine Verarbeitung Ihrer Daten durch Modelle Dritter: Der freiwillige
+  Assistent rechnet ausschließlich auf Ihrem Gerät (siehe „Assistent“)
 
 Kontovia baut von sich aus keine Verbindung ins Internet auf. Die einzigen
 Verbindungen, die das Programm überhaupt aufbauen kann, sind die unten
-genannten: der Cloud-Abgleich, der Abgleich mit Google Kalender und die Suche
-nach einer neuen Programmversion. Alle drei laufen erst, wenn Sie ihnen
-ausdrücklich zustimmen.
+genannten: der Cloud-Abgleich, der Abgleich mit Google Kalender, das Senden von
+Rechnungen per E-Mail, das einmalige Herunterladen eines Sprachmodells für den
+Assistenten und die Suche nach einer neuen Programmversion. Alle laufen erst,
+wenn Sie ihnen ausdrücklich zustimmen.
 
 ## Speicher im Browser (Cookies und ähnliche Technologien)
 
@@ -365,6 +366,34 @@ Bedingungen; bei geschäftlicher Nutzung sollte das Konto von einem
 Auftragsverarbeitungsvertrag gedeckt sein (etwa Google Workspace oder
 Microsoft 365). Der Hersteller von Kontovia erhält dabei keine Daten.
 
+## Assistent (freiwillig)
+
+Der Assistent beantwortet Fragen zu Ihrer Buchhaltung, sucht, rechnet und
+bereitet Einträge vor. **Er läuft ausschließlich auf Ihrem Gerät.** Ihre Fragen,
+seine Antworten und Ihre Buchhaltung werden dabei an niemanden übertragen, auch
+nicht an den Hersteller von Kontovia oder den Anbieter des Modells.
+
+In der Stufe „Basis“ arbeitet er mit festen Regeln ohne jede Verbindung. Für die
+Stufen „Mini“ bis „Maximal“ wird **einmalig und nur nach Ihrer Zustimmung** ein
+Sprachmodell (Qwen3, 350 MB bis 4,6 GB) heruntergeladen: die Gewichte von
+Hugging Face (Hugging Face, Inc., USA; Auslieferung über `huggingface.co` und
+dessen Netz unter `*.hf.co`), der passende Programmteil von GitHub
+(`raw.githubusercontent.com`). Dabei sehen diese Anbieter wie bei jedem
+Download Ihre IP-Adresse, die angefragte Datei und übliche Verbindungsdaten. Aus
+Ihrer Buchhaltung wird nichts gesendet. Kontovia lädt genau festgelegte
+Fassungen und prüft sie gegen hinterlegte Prüfsummen. Danach liegt das Modell
+im Speicher Ihres Browsers und arbeitet offline; unter „So funktioniert der
+Assistent“ lässt es sich jederzeit wieder entfernen.
+
+Das Modell lernt nichts dazu und wird mit Ihren Daten nicht trainiert. Das
+Gespräch steht nur im Arbeitsspeicher und ist beim Sperren oder mit „Neues
+Gespräch“ verworfen. Welche Stufe und Denkweise Sie gewählt haben und wie schnell
+das Modell auf Ihrem Gerät schreibt, merkt sich Kontovia unverschlüsselt im
+Speicher des Browsers; das verrät nichts über Ihre Buchhaltung.
+
+**Rechtsgrundlage** für den Download ist Ihre Einwilligung durch den Klick auf
+„Herunterladen und starten“ (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG).
+
 ## Programmaktualisierung (freiwillig)
 
 Kontovia bringt die Adresse einer Versionsdatei mit. Abgefragt wird sie
@@ -472,6 +501,11 @@ die USA stützt sich auf den Angemessenheitsbeschluss der EU-Kommission zum
 EU-US Data Privacy Framework, bei dem diese Unternehmen zertifiziert sind, und ergänzend auf
 Standardvertragsklauseln. Die Buchhaltung selbst verlässt Ihr Gerät nur
 verschlüsselt.
+
+Laden Sie ein Sprachmodell für den Assistenten, kommen die Dateien von
+Hugging Face, Inc. und GitHub, Inc. (beide USA). Dabei gehen nur
+Verbindungsdaten wie die IP-Adresse dorthin, keine Inhalte. Grundlage ist Ihre
+ausdrückliche Einwilligung vor dem Download (Art. 49 Abs. 1 lit. a DSGVO).
 
 ## Technische und organisatorische Maßnahmen
 

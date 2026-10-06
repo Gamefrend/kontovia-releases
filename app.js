@@ -21,6 +21,10 @@ import { feedbackOeffnen, feedbackNachsenden, entwicklerKlick } from './lib/feed
 import { rechtsfuss, rechtslinks, nutzungPruefen, nutzungVermerken, entwicklungsKasten, entwicklungsLeiste, ENTWICKLUNG_TITEL, ENTWICKLUNG_TEXT } from './lib/recht.js';
 import { nutzerWaehlen, nutzerMenue, nutzerAnzeigen, kannSchreiben } from './lib/benutzer.js';
 import { sucheOeffnen, SUCHE_KUERZEL } from './lib/suche.js';
+
+/* Der Assistent lädt erst, wenn ihn jemand öffnet (lib/assistentfenster.js). */
+const KI_KUERZEL = `${MOD} J`;
+const assistentUmschalten = (frage) => import('./lib/assistentfenster.js').then((m) => m.assistentUmschalten(frage)).catch((e) => err('Assistent', e.message));
 import { seite, seitenwechsel, beobachten, markierung, umschalterBeobachten, themaWechsel, schuetteln } from './lib/bewegung.js';
 
 const api = window.kontovia;
@@ -1203,6 +1207,9 @@ function renderShell() {
         <button class="such-knopf" id="searchBtn" type="button" aria-haspopup="dialog" title="Alles durchsuchen (${SUCHE_KUERZEL})">
           ${icon('search', 16)}<span class="grow">Suchen</span><kbd>${SUCHE_KUERZEL}</kbd>
         </button>
+        <button class="such-knopf as-knopf" id="asSideBtn" type="button" data-as-knopf aria-expanded="false" aria-controls="asPanel" title="Assistent fragen (${KI_KUERZEL})">
+          ${icon('sparkle', 16)}<span class="grow">Assistent</span><kbd>${KI_KUERZEL}</kbd>
+        </button>
         <nav class="nav" id="nav" aria-label="Hauptnavigation">
           ${raw(navHtml())}
         </nav>
@@ -1226,6 +1233,7 @@ function renderShell() {
             <h1 id="viewTitle">Übersicht</h1>
             <button class="icon-btn top-hilfe" id="viewHilfe" type="button" hidden aria-label="Hilfe zu diesem Bereich" title="Hilfe zu diesem Bereich">${icon('help', 18)}</button>
             <button class="icon-btn top-suche" id="topSearch" type="button" aria-label="Suchen" title="Alles durchsuchen">${icon('search', 20)}</button>
+            <button class="icon-btn top-as" id="topAs" type="button" data-as-knopf aria-expanded="false" aria-controls="asPanel" aria-label="Assistent" title="Assistent fragen">${icon('sparkle', 20)}</button>
           </header>
           <div id="topActions" class="row"></div>
         </div>
@@ -1283,6 +1291,7 @@ function renderShell() {
   $('#newTxBtn').addEventListener('click', (e) => neueBuchungMenue(e.currentTarget));
   $('#searchBtn').addEventListener('click', () => sucheOeffnen({ sperren: lockNow }));
   $('#topSearch').addEventListener('click', () => { $('.shell')?.classList.remove('nav-offen'); sucheOeffnen({ sperren: lockNow }); });
+  app.querySelectorAll('[data-as-knopf]').forEach((b) => b.addEventListener('click', () => { $('.shell')?.classList.remove('nav-offen'); assistentUmschalten(); }));
   $('#viewHilfe').addEventListener('click', (e) => navigate('help', { abschnitt: e.currentTarget.dataset.abschnitt }));
   // Die Schnellleiste der Telefonansicht (src/web/mobil.js) öffnet dasselbe Menü an ihrem Knopf.
   if (!neuHoerer) {
@@ -1543,6 +1552,12 @@ document.addEventListener('keydown', (e) => {
   if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
     e.preventDefault();
     sucheOeffnen({ sperren: lockNow });
+    return;
+  }
+  // Strg+J (am Mac ⌘J) öffnet und schließt den Assistenten.
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'j') {
+    e.preventDefault();
+    assistentUmschalten();
     return;
   }
   const inField = /^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName || '') || !!document.activeElement?.isContentEditable;

@@ -397,12 +397,15 @@ function wireRowButtons(root, collection, usageField, label) {
   }));
 }
 
-/** Öffnet einen Eintrag der Stammdaten (Kategorie, Kontakt, Konto, Anlagegut), etwa aus der Suche. */
-export function openStammdatum(collection, id) {
-  openDialog(collection, id);
+/**
+ * Öffnet einen Eintrag der Stammdaten (Kategorie, Kontakt, Konto, Anlagegut), etwa aus der Suche.
+ * `vorlage` füllt einen neuen Kontakt vor (Assistent); gespeichert wird erst im Fenster.
+ */
+export function openStammdatum(collection, id, vorlage = null) {
+  openDialog(collection, id, vorlage);
 }
 
-function openDialog(collection, id) {
+function openDialog(collection, id, vorlage = null) {
   const item = id ? store.db[collection].find((x) => x.id === id) : null;
   const forms = {
     categories: categoryForm,
@@ -410,7 +413,7 @@ function openDialog(collection, id) {
     accounts: accountForm,
     assets: assetForm,
   };
-  forms[collection](item ? structuredClone(item) : null);
+  forms[collection](item ? structuredClone(item) : null, vorlage);
 }
 
 /** Stand aller Eingabefelder eines Fensters – für die Rückfrage vor dem Verwerfen. */
@@ -520,9 +523,10 @@ function categoryForm(c) {
   });
 }
 
-function contactForm(c) {
+function contactForm(c, vorlage = null) {
   const isNew = !c;
-  c = c || { id: uid('con'), name: '', kind: 'customer', email: '', phone: '', address: '', taxId: '', notes: '' };
+  const vor = vorlage ? Object.fromEntries(Object.entries(vorlage).filter(([k]) => ['name', 'kind', 'email', 'phone', 'notes'].includes(k))) : {};
+  c = c || { id: uid('con'), name: '', kind: 'customer', email: '', phone: '', address: '', taxId: '', notes: '', ...vor };
   // Ältere Kontakte haben nur eine Anschrift als Text: Sie wird beim Öffnen auf die Felder verteilt.
   const frei = !c.street && !c.zip && !c.city && c.address ? anschriftAusText(`${c.name}\n${c.address}`) : null;
   const a = {

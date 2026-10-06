@@ -20,7 +20,7 @@ import { router, navigate, refresh } from '../lib/router.js';
 import { openMenu } from '../lib/popover.js';
 import { mountTable } from '../lib/table.js';
 import {
-  EINHEITEN, berechnen, zustand, ZUSTAENDE, faelligkeit, neueRechnung, einheitText, einheitAusText, betragText, satzText, titel as titelVon,
+  EINHEITEN, berechnen, zustand, ZUSTAENDE, faelligkeit, neueRechnung, neuePosition, einheitText, einheitAusText, betragText, satzText, titel as titelVon,
 } from '../lib/rechnung.js';
 import {
   stornieren, alsBezahlt, kopieAlsEntwurf, ausVorlage, alsVorlage, versandVermerken, produktSpeichern, rechnungSpeichern,
@@ -76,9 +76,14 @@ export async function render(root, params = {}, { actions } = {}) {
     return;
   }
   if (params.neu) {
+    // `vorgabe`: Betreff und Positionen, die der Assistent vorbereitet hat (Preise in Cent, netto).
+    const vorgabe = params.vorgabe ? {
+      betreff: String(params.vorgabe.betreff || ''),
+      ...(params.vorgabe.positionen?.length ? { positionen: params.vorgabe.positionen.map((p) => neuePosition(store.db.settings, { name: String(p.name || ''), menge: Number(p.menge) || 1, preis: Math.round(Number(p.preis) || 0) })) } : {}),
+    } : {};
     const r = params.vorlageId ? ausVorlage(sel.invoiceTemplates().find((v) => v.id === params.vorlageId) || { daten: {} })
       : params.kopieVon ? kopieAlsEntwurf(sel.invoice(params.kopieVon) || {}, params.ueberschreiben || {})
-        : neueRechnung(store.db.settings);
+        : neueRechnung(store.db.settings, vorgabe);
     if (params.kontaktId) {
       const { kaeuferAusKontakt } = await import('../lib/rechnung.js');
       r.kaeufer = kaeuferAusKontakt(sel.contact(params.kontaktId));

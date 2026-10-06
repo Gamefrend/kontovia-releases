@@ -6,7 +6,7 @@
  * Darstellung ist: Verschlüsselung (kern.js), Ablage (ablage.js, tresor.js),
  * Cloud-Abgleich (cloud.js), Google Kalender (gcal.js), E-Mail senden
  * (mailversand.js), Dateien (dateien.js),
- * Druck (druck.js), Sperre (sperre.js) und Aktualisierung (aktualisierung.js,
+ * Druck (druck.js), Sperre (sperre.js), Assistent (ki.js) und Aktualisierung (aktualisierung.js,
  * uebergabe.js). Die Oberfläche bekommt nur Kopien der Daten, nie die Objekte
  * selbst, und nie die Anmeldemerkmale (zugang.js).
  */
@@ -33,6 +33,7 @@ import { modal, toast } from '../lib/ui.js';
 import './mobil.js';
 import * as I from './installation.js';
 import * as R from './rueckmeldung.js';
+import * as KI from './ki.js';
 
 /* Läuft diese Seite nur als kleines Fenster für Google Kalender? Dann reicht
    sie die Antwort an das eigentliche Kontovia-Fenster weiter und schließt
@@ -194,6 +195,9 @@ function nachSperre(reason) {
   if (reason !== 'aktualisierung') UE.verwerfen().catch(() => {});
   gcal.vergessen();
   mail.vergessen();
+  // Der Assistent bricht ab und verwirft, was er von dieser Sitzung gesehen hat.
+  KI.abbrechen();
+  KI.vergessen();
   // Ein offener QR-Code für ein weiteres Gerät gilt nicht über das Sperren hinaus.
   cloud.koppelnAbbrechen().catch(() => {});
   cloud.koppelnVerbindenAbbrechen();
@@ -1073,6 +1077,22 @@ const api = {
       await drucken(html, { landscape: !!landscape, titel: defaultName || 'Bericht' });
       return { printed: true };
     }),
+  },
+
+  /* Assistent (ki.js, ki-worker.js): Sprachmodell auf dem Gerät. Daten gehen
+     nicht hinaus; das Netz braucht nur das erste Laden eines Modells. */
+  ki: {
+    geraet: handle(async () => kopie(await KI.geraet())),
+    fassung: handle(async (modell, f16) => KI.fassung(str(modell, 80), !!f16)),
+    imCache: handle(async (modelle = []) => kopie(await KI.imCache((Array.isArray(modelle) ? modelle : []).map((m) => str(m, 80))))),
+    laden: handle(async (modell, beiFortschritt) => kopie(await KI.laden(str(modell, 80), typeof beiFortschritt === 'function' ? beiFortschritt : null))),
+    antworten: handle(async (anfrage = {}, beiTeil) => kopie(await KI.antworten(kopie(anfrage), typeof beiTeil === 'function' ? beiTeil : null))),
+    abbrechen: handle(async () => KI.abbrechen(), { needsUnlock: false }),
+    vergessen: handle(async () => KI.vergessen(), { needsUnlock: false }),
+    entladen: handle(async () => KI.entladen(), { needsUnlock: false }),
+    loeschen: handle(async (modell) => KI.loeschen(str(modell, 80))),
+    status: handle(async () => KI.status(), { needsUnlock: false }),
+    speicher: handle(async () => KI.speicher()),
   },
 
   on: {

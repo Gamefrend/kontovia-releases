@@ -391,6 +391,8 @@ export function openAppointmentDialog(id, preset = {}) {
     recurrence: { freq: 'none', until: '' },
     reminderMinutes: 0,
     createdAt: new Date().toISOString(),
+    // Vorausgefüllt, etwa vom Assistenten: Titel, Zeit, Ort, Notiz.
+    ...Object.fromEntries(Object.entries(preset).filter(([k]) => ['title', 'allDay', 'startTime', 'endTime', 'location', 'notes', 'contactId'].includes(k))),
   };
   const isNew = !existing;
   /* Stand nach dem ersten Zeichnen; weicht die Eingabe davon ab, fragt das
