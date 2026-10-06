@@ -118,6 +118,13 @@ function wertHinweis(cur, kind) {
   return `Enthält ${money(fremd)} € aus ${n === 1 ? (kind === 'income' ? 'einer Rechnung' : 'einem Beleg') : `${n} ${kind === 'income' ? 'Rechnungen' : 'Belegen'}`} anderer Zeiträume, im Zeitraum bezahlt und deshalb hier gezählt.`;
 }
 
+/**
+ * „3 Einnahmen offen“: Gezählt werden offene Buchungen, nicht nur
+ * Rechnungen aus Kontovia. Das Wort „Rechnung“ stünde sonst neben dem Bereich
+ * Rechnungen, der etwas anderes zählt.
+ */
+const anzahlOffen = (n, eins, viele) => (n ? `${int(n)} ${n === 1 ? eins : viele} offen` : 'nichts offen');
+
 /** Der Betrag samt Hinweis (Tooltip), falls es etwas zu erklären gibt. */
 const eurHinweis = (v, hinweis) => (hinweis ? `<span title="${esc(hinweis)}">${euro(v)}</span>` : euro(v));
 
@@ -148,7 +155,7 @@ function context() {
 
 const card = (title, body, { head = '', sub = '', tight = false, ziel = '' } = {}) => `
   <div class="card">
-    <div class="card-head"><h3${ziel}>${esc(title)}</h3>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}${head ? `<div class="spacer"></div>${head}` : ''}</div>
+    <div class="card-head"><h2>${ziel ? `<span${ziel}>${esc(title)}</span>` : esc(title)}</h2>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}${head ? `<div class="spacer"></div>${head}` : ''}</div>
     <div class="card-body${tight ? ' tight' : ''}">${body}</div>
   </div>`;
 
@@ -230,15 +237,15 @@ const WIDGETS = {
       const open = c.open();
       return card('Offene Posten', `
         <div class="row between" style="align-items:flex-start">
-          <div class="stack klick"${z('transactions', offenePosten('income'), { titel: 'Unbezahlte Rechnungen ansehen' })}>
+          <div class="stack klick"${z('transactions', offenePosten('income'), { titel: 'Noch nicht bezahlte Einnahmen ansehen' })}>
             <span class="muted small">Ihre Forderungen</span>
             <span class="value num" style="font-size:20px;font-weight:650;color:var(--pos)">${esc(money(open.receivableTotal))} €</span>
-            <span class="tiny muted">${int(open.receivables.length)} unbezahlte Rechnungen</span>
+            <span class="tiny muted">${anzahlOffen(open.receivables.length, 'Einnahme', 'Einnahmen')}</span>
           </div>
-          <div class="stack right klick"${z('transactions', offenePosten('expense'), { titel: 'Offene Rechnungen ansehen' })}>
+          <div class="stack right klick"${z('transactions', offenePosten('expense'), { titel: 'Noch nicht bezahlte Ausgaben ansehen' })}>
             <span class="muted small">Ihre Verbindlichkeiten</span>
             <span class="value num" style="font-size:20px;font-weight:650;color:var(--neg)">${esc(money(open.payableTotal))} €</span>
-            <span class="tiny muted">${int(open.payables.length)} offene Rechnungen</span>
+            <span class="tiny muted">${anzahlOffen(open.payables.length, 'Ausgabe', 'Ausgaben')}</span>
           </div>
         </div>
         <hr class="sep">
@@ -247,11 +254,11 @@ const WIDGETS = {
             <div class="row between list-row" data-tx="${esc(t.id)}" role="button" tabindex="0">
               <div class="truncate">${esc(t.description)}</div>
               <div class="row nowrap" style="gap:8px">
-                ${t.overdue ? `<span class="badge neg tiny">${t.overdueDays} T</span>` : '<span class="badge tiny">im Ziel</span>'}
+                ${t.overdue ? `<span class="badge neg tiny" title="seit so vielen Tagen überfällig">${t.overdueDays === 1 ? '1 Tag' : `${int(t.overdueDays)} Tage`}</span>` : '<span class="badge tiny">noch nicht fällig</span>'}
                 <span class="num">${esc(money(t.gross))} €</span>
               </div>
             </div>`).join('')
-          : '<p class="muted small mb0">Alle Rechnungen sind bezahlt.</p>'}`, {
+          : '<p class="muted small mb0">Alle Einnahmen sind bezahlt.</p>'}`, {
         ziel: z('reports', { tab: 'opos' }, { haupt: true, titel: 'Liste der offenen Posten öffnen' }),
       });
     },
@@ -340,10 +347,10 @@ const WIDGETS = {
             <div class="truncate">${esc(t.titel)}</div>
             <div class="tiny muted">${esc(fmtDate(t.datum))} · ${esc(relativeDays(t.datum))}</div>
           </div>
-          <div class="row nowrap" style="gap:8px">${betrag}${eilig ? `<span class="badge warn tiny">${tage <= 0 ? 'heute' : `${tage} T`}</span>` : ''}</div>
+          <div class="row nowrap" style="gap:8px">${betrag}${eilig ? `<span class="badge warn tiny">${tage <= 0 ? 'heute' : 'bald'}</span>` : ''}</div>
         </div>`;
       }).join('')}</div>
-        <p class="tiny muted mt8 mb0">Fristen nach § 18 UStG und § 149 AO, verschoben auf den nächsten Werktag. ${store.db.settings.vatDeadline === 'dauerfrist' ? 'Mit Dauerfristverlängerung.' : 'Dauerfristverlängerung unter Einstellungen.'}</p>`
+        <p class="tiny muted mt8 mb0">Fällt eine Frist auf ein Wochenende oder einen Feiertag, gilt der nächste Werktag. ${store.db.settings.vatDeadline === 'dauerfrist' ? 'Mit Dauerfristverlängerung.' : 'Eine Dauerfristverlängerung stellen Sie in den Einstellungen ein.'}</p>`
         : emptyState('Keine Termine', 'In den nächsten Monaten steht keine Steuerfrist an.').__raw;
       return card('Steuertermine', body, { sub: 'nächste Fristen', tight: false, ziel: z('calendar', {}, { haupt: true, titel: 'Im Kalender ansehen' }) });
     },
@@ -373,8 +380,7 @@ const WIDGETS = {
           <span class="klick"${z('transactions', buchungen({ receipt: 'ohne' }), { titel: 'Buchungen ohne Beleg ansehen' })}>${donut(cov.ratio, { size: 80, color: cov.ratio > 0.9 ? 'var(--pos)' : cov.ratio > 0.6 ? 'var(--warn)' : 'var(--neg)' }).__raw}</span>
           <div class="stack">
             <strong>Belegquote</strong>
-            <span class="small muted">${int(cov.withDoc)} von ${int(cov.total)} Buchungen haben einen Beleg.</span>
-            ${cov.missing.length ? `<button class="btn sm mt8" id="showMissing">${cov.missing.length} ohne Beleg anzeigen</button>` : ''}
+            <span class="small muted">${int(cov.withDoc)} von ${int(cov.total)} ${cov.total === 1 ? 'Buchung hat' : 'Buchungen haben'} einen Beleg.</span>
           </div>
         </div>
         <hr class="sep">
@@ -512,7 +518,7 @@ function draw(root) {
     <div class="page-head">
       <div>
         <h2>${esc(s.companyName || s.ownerName || 'Ihre Buchhaltung')}</h2>
-        <p title="Einnahmen, Ausgaben und Gewinn zählen am Tag der Zahlung, wie in der Anlage EÜR. Eine im Zeitraum bezahlte Rechnung zählt also auch dann, wenn ihr Datum außerhalb liegt.">Einnahmen und Ausgaben nach Zahlungsdatum · ${c.klein ? 'Kleinunternehmer § 19 UStG' : c.db.settings.accountingBasis === 'soll' ? 'Umsatzsteuer nach Rechnungsdatum (Soll)' : 'Umsatzsteuer nach Zahlungseingang (Ist)'}</p>
+        <p class="nur-breit" title="Einnahmen, Ausgaben und Gewinn zählen am Tag der Zahlung, wie in der Anlage EÜR. Eine im Zeitraum bezahlte Rechnung zählt also auch dann, wenn ihr Datum außerhalb liegt.">Einnahmen und Ausgaben nach Zahlungsdatum · ${c.klein ? 'Kleinunternehmer § 19 UStG' : c.db.settings.accountingBasis === 'soll' ? 'Umsatzsteuer nach Rechnungsdatum (Soll)' : 'Umsatzsteuer nach Zahlungseingang (Ist)'}</p>
       </div>
       <div class="spacer"></div>
       ${scopeToggleHtml(store.db, period.from, period.to).__raw}
@@ -597,7 +603,6 @@ function wireWidgets(scope, redraw, c, root) {
       status: was === 'offen' ? 'offen' : 'alle',
     });
   }));
-  $('#showMissing', scope)?.addEventListener('click', () => navigate('transactions', { receipt: 'ohne' }));
   if (scope.querySelector('[data-check]')) wireCheckLinks(scope, c.checks(), period);
   const termine = scope.querySelector('[data-frist]') ? steuertermine(store.db.settings, todayISO(), addDays(todayISO(), 150)).slice(0, 5) : [];
   oeffnen('[data-frist]', (n) => oeffneFrist(termine[Number(n.dataset.frist)]));

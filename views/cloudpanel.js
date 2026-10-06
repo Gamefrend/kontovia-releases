@@ -35,7 +35,7 @@ export async function renderCloudCard(root) {
   root.innerHTML = html`
     <div class="card">
       <div class="card-head">
-        <h3>${icon('archive', 16)} Cloud-Abgleich und Sicherung</h3>
+        <h2>${icon('archive', 16)} Cloud-Abgleich und Sicherung</h2>
         <div class="spacer"></div>
         ${status.linked ? raw(`<span class="badge pos">verbunden${status.email ? ': ' + esc(status.email) : ''}</span>`)
           : raw('<span class="badge">nicht verbunden</span>')}
@@ -63,7 +63,7 @@ export async function renderCloudCard(root) {
         ${status.configured && !status.linked ? raw(`
           <div class="row wrap" style="gap:8px">
             <button class="btn primary" id="btnConnect">${icon('key', 15).__raw} Mit Google verbinden</button>
-            ${status.weiterleitung ? '<button class="btn ghost" id="btnConnectCode">Stattdessen mit Code</button>' : ''}
+            ${status.weiterleitung ? '<button class="btn ghost" id="btnConnectCode">Klappt nicht? Mit Code verbinden</button>' : ''}
           </div>
           <p class="small muted mt16 mb0">${status.weiterleitung
             ? `Sie werden zu Google weitergeleitet und kommen nach der Anmeldung hierher zurück. Kontovia
@@ -109,7 +109,7 @@ export async function renderCloudCard(root) {
           </div>
           <div id="syncStatus" class="mt16"></div>
 
-          <h4 class="mt24 mb8" style="font-size:14px">Sicherungen in der Cloud</h4>
+          <h3 class="mt24 mb8" style="font-size:14px">Sicherungen in der Cloud</h3>
           <p class="small muted mt0">Einmal am Tag legt der Abgleich zusätzlich eine Kopie des
           verschlüsselten Tresors in Ihrem Konto ab, außerdem vor jedem Überschreiben und jeder
           Wiederherstellung. Die ${SICHERUNGEN_BEHALTEN} neuesten bleiben erhalten. So lässt sich
@@ -370,7 +370,7 @@ async function decideForeign(root, begin) {
       ${fmtDateTime(begin.modifiedTime)}.</p>
       <p class="small">Auf diesem Gerät: ${int(store.db.transactions.length)} Buchungen,
       ${int(store.db.appointments.length)} Termine.</p>
-      <h4 style="margin:20px 0 6px;font-size:14px">Wie möchten Sie weitermachen?</h4>
+      <h3 style="margin:20px 0 6px;font-size:14px">Wie möchten Sie weitermachen?</h3>
       <div class="stack" style="gap:12px">
         <div class="notice">
           <strong>Cloud-Stand übernehmen</strong> ist der empfohlene Weg, wenn dieses Gerät neu
@@ -558,7 +558,7 @@ export async function renderUpdateCard(root) {
   root.innerHTML = html`
     <div class="card">
       <div class="card-head">
-        <h3>${icon('refresh', 16)} Programmaktualisierung</h3>
+        <h2>${icon('refresh', 16)} Programmaktualisierung</h2>
         <div class="spacer"></div>
         <span class="badge">Version ${appInfo.version || ''}</span>
       </div>
@@ -705,7 +705,7 @@ function neustartBild(info) {
   o.setAttribute('role', 'alert');
   o.innerHTML = `<div class="gate-card">
       <div class="gate-logo">K</div>
-      <h2>Kontovia wird neu geladen</h2>
+      <h1>Kontovia wird neu geladen</h1>
       <p class="lead">${text}</p>
       <div class="bar-track upd-warten"><div class="bar-fill"></div></div>
       ${schritte(info, 2)}

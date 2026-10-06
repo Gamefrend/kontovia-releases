@@ -15,18 +15,55 @@ let tab = 'anleitung';
 
 const TABS = { anleitung: 'Kurzanleitung', cloud: 'Cloud und Geräte', neu: 'Neuigkeiten', recht: 'Rechtliches' };
 
+/** Kennung eines Abschnitts aus seiner Überschrift: „Rechnungen schreiben“ → „rechnungen-schreiben“. */
+export function abschnittKennung(titel) {
+  return String(titel || '').toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
 export async function render(root, params = {}) {
   if (params.tab && TABS[params.tab]) tab = params.tab;
+  // Ein Sprung aus einem Bereich („?“ oben neben dem Titel) öffnet die Kurzanleitung an der passenden Stelle.
+  if (params.abschnitt && !params.tab) tab = 'anleitung';
+  const suchbar = tab === 'anleitung' || tab === 'cloud';
   root.innerHTML = html`
-    <div class="seg tabs mb16" id="helpTabs" role="group" aria-label="Hilfe">
-      ${raw(Object.entries(TABS).map(([k, v]) => `<button data-tab="${k}" class="${tab === k ? 'active' : ''}">${esc(v)}</button>`).join(''))}
+    <div class="row wrap mb16" style="gap:10px 16px">
+      <div class="seg tabs" id="helpTabs" role="group" aria-label="Hilfe">
+        ${raw(Object.entries(TABS).map(([k, v]) => `<button data-tab="${k}" class="${tab === k ? 'active' : ''}">${esc(v)}</button>`).join(''))}
+      </div>
+      ${suchbar ? raw('<input type="search" id="helpSuche" class="help-suche" placeholder="In der Hilfe suchen …" aria-label="In der Hilfe suchen">') : ''}
     </div>
+    <p class="muted small" id="helpLeer" hidden>Dazu steht hier nichts. Versuchen Sie ein anderes Wort oder den anderen Reiter.</p>
     <div id="helpBody" class="help"></div>`;
   $$('[data-tab]', root).forEach((b) => b.addEventListener('click', () => { tab = b.dataset.tab; render(root); }));
-  ({ anleitung, cloud, neu, recht }[tab] || anleitung)($('#helpBody', root));
+  const body = $('#helpBody', root);
+  ({ anleitung, cloud, neu, recht }[tab] || anleitung)(body);
+  // Jede Überschrift wird zum Sprungziel.
+  $$('h2', body).forEach((h) => { if (!h.id) h.id = `hilfe-${abschnittKennung(h.textContent)}`; });
+  if (suchbar) sucheVerdrahten(root, body);
   // Sprung zu einem Abschnitt, etwa aus der Export-Ansicht.
   // Ohne Animation: die wird bei verdecktem Fenster ausgesetzt, der Sprung bliebe dann aus.
   if (params.anker) setTimeout(() => $(`#recht-${params.anker}`, root)?.scrollIntoView({ block: 'start' }), 60);
+  if (params.abschnitt) setTimeout(() => $(`#hilfe-${params.abschnitt}`, root)?.closest('.card')?.scrollIntoView({ block: 'start' }), 60);
+}
+
+/** Blendet beim Tippen alle Karten aus, in denen nicht jedes gesuchte Wort vorkommt. */
+function sucheVerdrahten(root, body) {
+  const feld = $('#helpSuche', root);
+  const leer = $('#helpLeer', root);
+  const norm = (s) => String(s).toLowerCase().replace(/\s+/g, ' ');
+  const karten = $$('.card', body).map((k) => ({ k, text: norm(k.textContent) }));
+  feld.addEventListener('input', () => {
+    const woerter = norm(feld.value).trim().split(' ').filter(Boolean);
+    let sichtbar = 0;
+    for (const { k, text } of karten) {
+      const an = woerter.every((w) => text.includes(w));
+      k.hidden = !an;
+      if (an) sichtbar++;
+    }
+    leer.hidden = sichtbar > 0;
+  });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -36,7 +73,7 @@ function anleitung(root) {
   root.innerHTML = html`
     <div class="content narrow" style="padding:0">
       <div class="card"><div class="card-body">
-        <h3 class="mt0">In fünf Minuten startklar</h3>
+        <h2 class="mt0">In fünf Minuten startklar</h2>
         <ol>
           <li><strong>Konto anlegen.</strong> Unter <a data-go="master">Stammdaten → Zahlungskonten</a> tragen Sie
               Ihr Geschäftskonto mit dem Anfangsbestand ein. Das ist der Kontostand an dem Tag,
@@ -56,7 +93,7 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Zwei Einstellungen, auf die es ankommt</h3>
+        <h2 class="mt0">Zwei Einstellungen, auf die es ankommt</h2>
         <p><strong>Zahlungsfluss oder Rechnungsdatum.</strong> In der Einnahmen-Überschuss-Rechnung
         zählt eine Buchung erst, wenn das Geld geflossen ist (§ 11 EStG).
         Eine im Dezember gestellte und im Januar bezahlte Rechnung gehört also ins neue Jahr.
@@ -73,7 +110,7 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Belege</h3>
+        <h2 class="mt0">Belege</h2>
         <p>Keine Betriebsausgabe ohne Beleg. Kontovia speichert jede Rechnung verschlüsselt im
         Tresor und merkt sich eine Prüfsumme, mit der sich später nachweisen lässt,
         dass die Datei unverändert ist. Auf der Übersicht sehen Sie Ihre Belegquote.</p>
@@ -82,7 +119,7 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Anschaffungen über 800 €</h3>
+        <h2 class="mt0">Anschaffungen über 800 €</h2>
         <p>Eine Maschine für 5.000 € ist im Jahr des Kaufs nicht in voller Höhe abziehbar, sondern
         wird über die Nutzungsdauer verteilt. Beim Erfassen der Ausgabe wählen Sie
         „Als Anlagegut abschreiben“. Kontovia rechnet die Abschreibung monatsgenau aus, führt das
@@ -102,7 +139,7 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Rechnungen schreiben</h3>
+        <h2 class="mt0">Rechnungen schreiben</h2>
         <p>Unter <a data-go="rechnungen">Rechnungen</a> entsteht jede Rechnung als Entwurf. Kunden und Positionen
         wählen Sie aus Kontakten und Produkten oder tragen sie frei ein, auch Einheiten wie Stunden, Tage oder
         Pauschalen. Rechts sehen Sie die fertige Seite und eine Liste der Pflichtangaben, die noch fehlen.
@@ -137,7 +174,7 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body" id="hilfe-kontoauszug">
-        <h3 class="mt0">Kontoauszug einlesen</h3>
+        <h2 class="mt0">Kontoauszug einlesen</h2>
         <p>Unter <a data-go="kontoimport">Kontoauszug</a> lesen Sie die Datei ein, die Sie bei Ihrer Bank herunterladen: CSV (zum Beispiel von
         Sparkasse, Volksbank, ING oder DKB), CAMT.053 oder MT940. Die Datei wird nur im Browser auf diesem Gerät gelesen. Sie wird nicht hochgeladen
         und nirgends gespeichert, und nichts wird gebucht, bevor Sie es bestätigen.</p>
@@ -168,8 +205,8 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body" id="hilfe-mahnwesen">
-        <h3 class="mt0">Zahlungserinnerung und Mahnung</h3>
-        <p>Unter <a data-go="rechnungen">Rechnungen → Mahnwesen</a> stehen alle überfälligen Rechnungen mit dem Vorschlag für die
+        <h2 class="mt0">Zahlungserinnerung und Mahnung</h2>
+        <p>Unter <a data-go="rechnungen">Rechnungen → Mahnungen</a> stehen alle überfälligen Rechnungen mit dem Vorschlag für die
         nächste Stufe: Zahlungserinnerung, 1. Mahnung, 2. Mahnung mit letzter Frist. Ein Klick auf „Mahnen“ öffnet das
         Fenster mit Frist, Gebühr und Verzugsaufschlag. Danach liegt das Schreiben als PDF vor, mit Ihrer Vorlage, Ihrem
         Absender und einem GiroCode über den ganzen Betrag. Jede Mahnung steht auch in der Rechnung.
@@ -195,7 +232,7 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">E-Rechnungen empfangen (XRechnung, ZUGFeRD)</h3>
+        <h2 class="mt0">E-Rechnungen empfangen (XRechnung, ZUGFeRD)</h2>
         <p>Seit 2025 muss jedes Unternehmen E-Rechnungen annehmen können. Unter <a data-go="rechnungen">Rechnungen → Eingang</a>
         legen Sie erhaltene E-Rechnungen ab und buchen sie mit einem Klick. Ziehen Sie die XML-Datei oder
         das ZUGFeRD-PDF einfach als Beleg in die Buchung: Kontovia erkennt die Rechnung und bietet an,
@@ -207,7 +244,7 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Wiederkehrende Buchungen und Steuertermine</h3>
+        <h2 class="mt0">Wiederkehrende Buchungen und Steuertermine</h2>
         <p><strong>Miete, Telefon, Abos:</strong> Beim Erfassen unter <em>Weitere Angaben → Wiederholen</em>
         einen Turnus wählen. Sobald die nächste Buchung fällig ist, bietet Kontovia sie nach dem Entsperren
         zum Anlegen an. Jede wird eine gewöhnliche Buchung, an die Sie den Beleg hängen. Verwalten
@@ -220,7 +257,7 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Anzahlungen und der Ort der Leistung</h3>
+        <h2 class="mt0">Anzahlungen und der Ort der Leistung</h2>
         <p>Bei einer Einnahme können Sie den <strong>Ort</strong> festhalten, also wo die Leistung
         erbracht wurde. Bereits verwendete Orte schlägt das Feld vor, und in der
         <a data-go="transactions">Buchungsliste</a> filtern Sie danach über den Trichter im
@@ -236,20 +273,10 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Termine und Rechnungen verknüpfen</h3>
+        <h2 class="mt0">Termine und Rechnungen verknüpfen</h2>
         <p>Im <a data-go="calendar">Kalender</a> verknüpfen Sie einen Termin mit einer oder mehreren
         Buchungen, zum Beispiel den Montagetermin mit der dazugehörigen Rechnung. Außerdem zeigt der
         Kalender die Fälligkeiten offener Rechnungen.</p>
-        <p><strong>Aufgaben:</strong> Unter <a data-go="todos">Aufgaben</a> notieren Sie, was zu tun ist,
-        und haken es ab. Eine Aufgabe kann zu einem Termin gehören, muss aber nicht. Hat sie kein
-        eigenes Datum, gilt der Termin als Frist. Im Termin selbst stehen seine Aufgaben zum Abhaken
-        und Ergänzen.</p>
-        <p>Eine Aufgabe kann einen <strong>formatierten Text</strong> mit Überschriften, Listen, Links und Bildern
-        enthalten (Bilder auch per <kbd>${MOD}</kbd>+<kbd>V</kbd> aus der Zwischenablage) sowie <strong>Unteraufgaben</strong>,
-        die sich direkt in der Liste abhaken lassen. Mit <em>Verknüpft mit</em> hängen Sie sie an Buchungen, Kontakte und
-        Rechnungen. Dort erscheint sie dann auch, und mit <em>+ Aufgabe</em> legen Sie dort gleich eine neue an.
-        Aufgaben mit Datum stehen im Kalender. Wie weit die Liste vorausschaut (7 Tage, 4 Wochen, 1 Monat oder ein
-        eigener Zeitraum), stellen Sie oben in der Liste unter <em>Vorschau</em> ein.</p>
         ${raw(`<p><strong>Google Kalender:</strong> Unter <em>Abgleich</em> oben im
         Kalender oder unter Einstellungen → Kalender-Abgleich verbinden Sie Kontovia mit Ihrem
         Google-Konto. Kontovia legt dort einen eigenen Kalender „Kontovia“ an und gleicht in beide
@@ -260,7 +287,27 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Zeitraum wählen und filtern</h3>
+        <h2 class="mt0">Aufgaben, Ziele und Wiederholungen</h2>
+        <p>Unter <a data-go="todos">Aufgaben</a> notieren Sie, was zu tun ist,
+        und haken es ab. Eine Aufgabe kann zu einem Termin gehören, muss aber nicht. Hat sie kein
+        eigenes Datum, gilt der Termin als Frist. Im Termin selbst stehen seine Aufgaben zum Abhaken
+        und Ergänzen.</p>
+        <p>Eine Aufgabe kann einen <strong>formatierten Text</strong> mit Überschriften, Listen, Links und Bildern
+        enthalten (Bilder auch per <kbd>${MOD}</kbd>+<kbd>V</kbd> aus der Zwischenablage) sowie <strong>Unteraufgaben</strong>,
+        die sich direkt in der Liste abhaken lassen. Mit <em>Verknüpft mit</em> hängen Sie sie an Buchungen, Kontakte und
+        Rechnungen. Dort erscheint sie dann auch, und mit <em>+ Aufgabe</em> legen Sie dort gleich eine neue an.
+        Aufgaben mit Datum stehen im Kalender. Wie weit die Liste vorausschaut (7 Tage, 4 Wochen, 1 Monat oder ein
+        eigener Zeitraum), stellen Sie oben in der Liste unter <em>Vorschau</em> ein.</p>
+        <p><strong>Ziele:</strong> Eine Aufgabe der Art <em>Ziel</em> hat eine Menge und eine Frist, etwa 20 Seiten
+        bis Freitag. Den Stand tragen Sie als Zahl ein. Kontovia zeigt, wie viel pro Tag noch nötig ist, und rechnet
+        aus Ihrem bisherigen Tempo hoch, wann Sie voraussichtlich fertig sind oder wie viele Tage Sie in Verzug wären.</p>
+        <p><strong>Wiederholungen:</strong> Eine Aufgabe der Art <em>Wiederholt sich</em> kommt immer wieder, etwa jeden
+        Monat. Beim Abhaken springt sie auf den nächsten Termin. Haben Sie sie eine Weile liegen lassen, holen Sie die
+        verpassten Termine nicht einzeln nach: Ein Haken genügt, und sie steht beim nächsten Termin nach heute.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
+        <h2 class="mt0">Zeitraum wählen und filtern</h2>
         <p><strong>Zeitraum.</strong> Oben rechts steht der gewählte Zeitraum, etwa „Jahr ${String(new Date().getFullYear())}“.
         Die Pfeile daneben blättern um genau diese Länge weiter, vom März zum April, vom
         2. zum 3. Quartal oder von einem Jahr ins nächste. Ein Klick auf den Zeitraum öffnet die
@@ -289,7 +336,7 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Die Übersicht anpassen</h3>
+        <h2 class="mt0">Die Übersicht anpassen</h2>
         <p>Über <strong>Anpassen</strong> oben in der <a data-go="dashboard">Übersicht</a> ordnen Sie die
         Module so, wie Sie arbeiten: mit der Maus an einen anderen Platz ziehen oder mit den Pfeilen
         verschieben, die Breite von einem Viertel bis zur ganzen Zeile wählen (auch drei Viertel, damit sich
@@ -305,21 +352,21 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Diagramme und Durchschnittswerte</h3>
+        <h2 class="mt0">Diagramme und Durchschnittswerte</h2>
         <p>In der <a data-go="dashboard">Übersicht</a> und unter <a data-go="reports">Auswertungen</a>
         schalten Sie die Darstellung mit den Knöpfen im Kopf jeder Karte um. Das geht unabhängig
         vom Zeitraum oben. Den Verlauf zeigen Sie als <strong>Säulen</strong>, <strong>Linien</strong>,
         <strong>aufgelaufene Summen</strong> oder <strong>Tabelle</strong>, die Aufteilung nach
         Kategorien als <strong>Balken</strong> oder <strong>Torte</strong>. Die Wahl merkt sich
         Kontovia auf diesem Gerät.</p>
-        <p>Durchschnittswerte stehen unter den Kennzahlen (Ø je Monat), als gestrichelte Linie im
+        <p>Durchschnittswerte stehen unter den Kennzahlen („im Schnitt … je Monat“), als gestrichelte Linie im
         Verlauf und in der Karte <em>Durchschnittswerte</em> der Gewinn- und Verlustrechnung. Dort
         finden Sie auch den Wert je Buchung sowie den besten und schwächsten Monat. Gemittelt wird
         über die Monate, die schon begonnen haben, im laufenden Jahr also nicht über zwölf.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Private Buchungen</h3>
+        <h2 class="mt0">Private Buchungen</h2>
         <p>Im Buchungsdialog können Sie eine Buchung als <strong>privat</strong> kennzeichnen.
         Das ist für Vorgänge gedacht, die Sie für die eigene Übersicht festhalten wollen, die
         steuerlich aber nicht zum Betrieb gehören, etwa ein privater Einkauf, der über das Geschäftskonto lief. Private Buchungen fehlen in allen Unterlagen für Finanzamt und
@@ -335,7 +382,7 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Was beim Export herauskommt</h3>
+        <h2 class="mt0">Was beim Export herauskommt</h2>
         <ul>
           <li><strong>Anlage EÜR:</strong> Ihre Zahlen, sortiert nach den Zeilennummern des amtlichen
               Formulars. In „Mein ELSTER" nur noch abschreiben.</li>
@@ -355,7 +402,7 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body" id="hilfe-datenimport">
-        <h3 class="mt0">Daten aus einem anderen Programm übernehmen</h3>
+        <h2 class="mt0">Daten aus einem anderen Programm übernehmen</h2>
         <p>Unter <a data-go="datenimport">Import & Export</a>, Reiter „Import“, ziehen Sie eine Datei hinein. Kontovia erkennt selbst, was darin steht,
         liest sie nur auf diesem Gerät und übernimmt erst, wenn Sie es bestätigen.</p>
         <ul>
@@ -374,7 +421,7 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Tastenkürzel</h3>
+        <h2 class="mt0">Tastenkürzel</h2>
         <table class="data compact">
           <tbody>
             <tr><td><kbd>${MOD}</kbd>+<kbd>N</kbd></td><td>Neue Buchung</td></tr>
@@ -383,7 +430,7 @@ function anleitung(root) {
             <tr><td><kbd>${MOD}</kbd>+<kbd>K</kbd></td><td>Alles durchsuchen: Buchungen, Rechnungen, Kontakte, Termine, Aufgaben, Seiten</td></tr>
             <tr><td><kbd>${MOD}</kbd>+<kbd>F</kbd></td><td>In Buchungen suchen</td></tr>
             <tr><td><kbd>${MOD}</kbd>+<kbd>L</kbd></td><td>Sperren</td></tr>
-            <tr><td><kbd>${MOD}</kbd>+<kbd>1</kbd> … <kbd>7</kbd></td><td>Übersicht, Buchungen, Kalender, Auswertungen, Export, Stammdaten, Aufgaben</td></tr>
+            <tr><td><kbd>Alt</kbd>+<kbd>1</kbd> … <kbd>8</kbd></td><td>Übersicht, Buchungen, Rechnungen, Kalender, Aufgaben, Auswertungen, Import &amp; Export, Stammdaten. In der installierten App geht auch <kbd>${MOD}</kbd> statt <kbd>Alt</kbd>.</td></tr>
             <tr><td><kbd>${MOD}</kbd>+<kbd>,</kbd></td><td>Einstellungen</td></tr>
             <tr><td><kbd>F1</kbd> oder <kbd>?</kbd></td><td>Diese Hilfe</td></tr>
             <tr><td><kbd>Esc</kbd></td><td>Fenster schließen (fragt nach, wenn Eingaben offen sind)</td></tr>
@@ -410,7 +457,7 @@ function cloud(root) {
   root.innerHTML = html`
     <div class="content narrow" style="padding:0">
       <div class="card mb16"><div class="card-body">
-        <h3 class="mt0">Wo Ihre Buchhaltung liegt</h3>
+        <h2 class="mt0">Wo Ihre Buchhaltung liegt</h2>
         <p>Zunächst im Speicher dieses Browsers, verschlüsselt mit Ihrem Passwort. Den darf der
         Browser bei Platzmangel räumen; auf iPhone und iPad gehört deshalb die Cloud-Sicherung oder
         eine regelmäßige Vollsicherung dazu.</p>
@@ -425,7 +472,7 @@ function cloud(root) {
         Vollsicherung einspielen oder die Buchhaltung aus der Cloud laden.</p>
       </div></div>
       <div class="card mb16"><div class="card-body">
-        <h3 class="mt0">Wann Kontovia sich sperrt</h3>
+        <h2 class="mt0">Wann Kontovia sich sperrt</h2>
         <p>Nach der eingestellten Zeit ohne Eingabe, nach drei Minuten in einer anderen App oder einem
         anderen Tab, nach dem Ruhezustand des Geräts und wenn Kontovia in einem zweiten Fenster geöffnet
         wird. Sofort mit <kbd>${MOD}</kbd>+<kbd>L</kbd>.</p>
@@ -435,10 +482,10 @@ function cloud(root) {
         gilt dann die Regel für den Hintergrund.</p>
       </div></div>
       <div class="card mb16"><div class="card-body">
-        <h3 class="mt0">Entsperren, Sperren, Wechseln und Abmelden</h3>
-        <p><strong>Sperren</strong> schließt nur den Tresor. <strong>Abmelden</strong> (daneben in der Seitenleiste)
-        entfernt das offene Konto mit Buchhaltung, Belegen und allen Zugängen von diesem Gerät. Ist es mit Google
-        verbunden, gleicht Kontovia vorher von selbst ab und meldet sich erst danach ab. Klappt der Abgleich nicht,
+        <h2 class="mt0">Entsperren, Sperren, Wechseln und Entfernen</h2>
+        <p><strong>Sperren</strong> schließt nur den Tresor. <strong>Von diesem Gerät entfernen</strong> (im Menü am Namen oben
+        in der Seitenleiste) entfernt das offene Konto mit Buchhaltung, Belegen und allen Zugängen von diesem Gerät. Ist es mit Google
+        verbunden, gleicht Kontovia vorher von selbst ab und entfernt es erst danach. Klappt der Abgleich nicht,
         etwa ohne Netz, bleibt alles stehen, bis Sie entscheiden. Ohne Google-Verbindung weist Kontovia deutlich darauf hin,
         dass es Ihre Buchhaltung dann nur noch in einer Sicherung gäbe.</p>
         <p><strong>Mehrere Konten:</strong> Mit einem Klick auf den Namen oben in der Seitenleiste wechseln Sie zu einem
@@ -460,7 +507,7 @@ function cloud(root) {
         der Schlüssel in Ihrem Konto, wer es übernimmt, kommt auch an die Buchhaltung). Das Passwort bleibt immer gültig.</p>
       </div></div>
       <div class="card mb16"><div class="card-body">
-        <h3 class="mt0">Rückmeldung geben</h3>
+        <h2 class="mt0">Rückmeldung geben</h2>
         <p class="mb0">Mit <strong>Feedback</strong> unten in der Seitenleiste schreiben Sie uns frei, was Ihnen
         auffällt. Auf Wunsch geht ein Bild der Seite mit, auf der Sie waren, ohne das Rückmeldefenster. Mit
         <strong>Senden</strong> geht Ihre Nachricht an das Kontovia-Team und <strong>kann von anderen gelesen werden</strong>;
@@ -470,7 +517,7 @@ function cloud(root) {
         das nicht öffentlich sein soll.</p>
       </div></div>
       <div class="card"><div class="card-body">
-        <h3 class="mt0">Cloud-Abgleich einschalten</h3>
+        <h2 class="mt0">Cloud-Abgleich einschalten</h2>
         <p>Mit dem Cloud-Abgleich arbeiten Sie auf mehreren Geräten an derselben Buchhaltung, und
         Kontovia legt jeden Tag eine Sicherung in der Cloud ab. Sie brauchen dafür nur ein
         Google-Konto.</p>
@@ -487,7 +534,7 @@ function cloud(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Zweites Gerät anschließen</h3>
+        <h2 class="mt0">Zweites Gerät anschließen</h2>
         <p>Öffnen Sie Kontovia dort und klicken Sie beim ersten Start auf
         <strong>Mit Google anmelden</strong>, mit demselben Google-Konto wie auf dem ersten Gerät. Kontovia findet Ihre Buchhaltung im Konto.
         Zum Öffnen haben Sie zwei Wege:</p>
@@ -511,7 +558,7 @@ function cloud(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Bestätigung alle 30 Tage</h3>
+        <h2 class="mt0">Bestätigung alle 30 Tage</h2>
         <p>Ein mit Google verbundenes Gerät fragt von selbst, beim Entsperren und danach alle paar Stunden, bei Ihrem Konto nach, ob es noch zugelassen ist.
         Dabei wird nur gelesen; es gehen keine Angaben zu Ihrer Buchhaltung hinaus. So kann der Betreiber ein verlorenes oder nicht mehr berechtigtes Gerät
         vom Konto trennen. Sie müssen nichts tun. Haben Sie ein Gerät länger als drei Wochen nicht geöffnet, erinnert Kontovia freundlich; unter
@@ -528,7 +575,7 @@ function cloud(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Sicherungen in der Cloud</h3>
+        <h2 class="mt0">Sicherungen in der Cloud</h2>
         <p>Neben dem laufenden Stand legt der Abgleich einmal am Tag eine Sicherung in Ihrem
         Konto ab, ebenso vor jedem „Cloud überschreiben“ und vor jeder Wiederherstellung. Die
         30 neuesten bleiben erhalten; sie sind genauso verschlüsselt wie der Tresor.</p>
@@ -548,7 +595,7 @@ function cloud(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Was passiert, wenn beide Geräte dasselbe ändern?</h3>
+        <h2 class="mt0">Was passiert, wenn beide Geräte dasselbe ändern?</h2>
         <p>Kontovia vergleicht jeden einzelnen Eintrag mit dem letzten Stand, den beide Geräte
         gemeinsam hatten. Daraus ergibt sich:</p>
         <ul>
@@ -566,7 +613,7 @@ function cloud(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Google Kalender</h3>
+        <h2 class="mt0">Google Kalender</h2>
         ${raw(`<p>Im <a data-go="calendar">Kalender</a> über
         <em>Abgleich</em> oder unter <a data-go="settings">Einstellungen → Kalender-Abgleich</a>
         verbinden Sie Kontovia mit Google. Kontovia legt in Ihrem Konto einen eigenen Kalender
@@ -594,7 +641,7 @@ function cloud(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Verbindung trennen</h3>
+        <h2 class="mt0">Verbindung trennen</h2>
         <p>Unter <a data-go="settings">Einstellungen → Cloud-Abgleich → Verbindung trennen</a> meldet
         sich dieses Gerät von der Cloud ab. Ihre Buchhaltung bleibt vollständig auf dem Gerät, und
         Ihre anderen Geräte bleiben verbunden. Auf Wunsch löscht Kontovia dabei auch Tresor, Belege
@@ -652,7 +699,7 @@ function recht(root) {
   root.innerHTML = html`
     <div class="content narrow" style="padding:0">
       <div class="card"><div class="card-body">
-        <h3 class="mt0">Über dieses Programm</h3>
+        <h2 class="mt0">Über dieses Programm</h2>
         <table class="data compact">
           <tbody>
             <tr><td class="muted">Programm</td><td>Kontovia ${appInfo.version || ''}</td></tr>
@@ -663,7 +710,7 @@ function recht(root) {
       </div></div>
 
       <div class="card mt16" id="recht-anbieter"><div class="card-body">
-        <h3 class="mt0">Anbieter und Bedingungen</h3>
+        <h2 class="mt0">Anbieter und Bedingungen</h2>
         <p>Wer Kontovia anbietet, wie Sie ihn erreichen und unter welchen Bedingungen Sie das Programm nutzen, steht im Impressum
         und in den Nutzungsbedingungen. Beide sind auch auf der Webseite von Kontovia ohne Anmeldung abrufbar.</p>
         <div class="row wrap" style="gap:8px">
@@ -674,7 +721,7 @@ function recht(root) {
       </div></div>
 
       <div class="card mt16" id="recht-datenschutz"><div class="card-body">
-        <h3 class="mt0">Datenschutz</h3>
+        <h2 class="mt0">Datenschutz</h2>
         <p>Ohne Cloud-Abgleich, ohne Google Kalender und ohne Ihre Zustimmung zur Update-Suche
         verlässt nichts dieses Gerät. Es gibt keine Telemetrie, keine
         Absturzberichte, keine Nutzungsstatistik und kein Benutzerkonto beim Hersteller.</p>
@@ -692,7 +739,7 @@ function recht(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Künstliche Intelligenz</h3>
+        <h2 class="mt0">Künstliche Intelligenz</h2>
         <p><strong>Kontovia enthält keine.</strong> Es gibt kein Modell, kein Training, keine
         Ableitung aus Daten. Jede Zuordnung folgt einer Tabelle, die Sie selbst pflegen;
         jede Berechnung folgt festen Rechenregeln. Gleiche Eingabe ergibt immer
@@ -703,7 +750,7 @@ function recht(root) {
       </div></div>
 
       <div class="card mt16" id="recht-export"><div class="card-body">
-        <h3 class="mt0">Darf ich die Exporte beim Finanzamt verwenden?</h3>
+        <h2 class="mt0">Darf ich die Exporte beim Finanzamt verwenden?</h2>
         <p><strong>Ja, als Arbeitshilfe, so wie die Ausgaben jedes anderen Buchhaltungsprogramms.</strong>
         Beim Finanzamt kommt nicht der Export an, sondern Ihre Erklärung, die Sie in „Mein ELSTER“
         abgeben. Für deren Richtigkeit sind Sie verantwortlich, gleich mit welchem Programm oder ob
@@ -723,7 +770,7 @@ function recht(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Lizenzen</h3>
+        <h2 class="mt0">Lizenzen</h2>
         <p>Kontovia selbst enthält keinen fremden Programmcode. Kontovia läuft in Ihrem
         Browser; für ihn gelten dessen Lizenzbedingungen.</p>
         <p class="mb0"><strong>Schrift Geist.</strong> Copyright 2024 The Geist Project Authors
@@ -734,7 +781,7 @@ function recht(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
-        <h3 class="mt0">Marken Dritter</h3>
+        <h2 class="mt0">Marken Dritter</h2>
         <p>Die folgenden Zeichen sind Marken ihrer jeweiligen Inhaber. Sie werden hier
         ausschließlich beschreibend verwendet, um ein Format oder eine Schnittstelle zu
         benennen. Es besteht keine geschäftliche Verbindung zu den Inhabern, keine Empfehlung
@@ -785,6 +832,7 @@ function wireLinks(root) {
   root.querySelectorAll('[data-go]').forEach((a) => {
     a.style.cursor = 'pointer';
     a.style.color = 'var(--accent)';
+    a.style.textDecoration = 'underline';
     a.setAttribute('role', 'link');
     a.setAttribute('tabindex', '0');
     a.addEventListener('click', () => navigate(a.dataset.go));

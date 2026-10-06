@@ -18,7 +18,7 @@ export function mahnKarte(host) {
   const e = mahneinstellungen(store.db.settings);
   const art = e.aufschlag.art;
   host.innerHTML = `
-    <div class="card-head"><h3>${icon('alert', 16).__raw} Mahnwesen</h3><span class="sub">Fristen, Gebühren, Verzugsaufschlag</span></div>
+    <div class="card-head"><h2>${icon('alert', 16).__raw} Mahnwesen</h2><span class="sub">Fristen, Gebühren, Verzugsaufschlag</span></div>
     <div class="card-body">
       <p class="small muted mt0">Für Zahlungserinnerung, 1. Mahnung und 2. Mahnung stellen Sie hier die Zahlungsfrist und die Mahngebühr ein. Beim Erstellen jeder einzelnen Mahnung lässt sich beides noch ändern.</p>
       <div class="table-wrap"><table class="data compact">
@@ -53,8 +53,11 @@ export function mahnKarte(host) {
           <span class="hint">Ab diesem Schreiben ist der Verzugsaufschlag vorausgewählt.</span>
         </div>
       </div>
-      <div class="notice mt8">Beim Erstellen einer Mahnung wählen Sie, ob der Kunde ein Unternehmen oder eine Privatperson ist. Bei Privatkunden (Verbrauchern) gilt der Basiszinssatz plus 5 Prozentpunkte, die Pauschale wird <strong>nie</strong> berechnet, und eine Mahngebühr darf nur den tatsächlichen Aufwand abdecken. Verzug setzt außerdem voraus, dass die Zahlungsfrist abgelaufen ist (§ 286 BGB). Welche Beträge Sie verlangen, verantworten Sie selbst. Kontovia rechnet nach Ihren Angaben und ersetzt keine Rechtsberatung.
-        Mahngebühr und Verzugsaufschlag sind kein Entgelt für eine Leistung: Sie werden ohne Umsatzsteuer gebucht, erst wenn das Geld eingegangen ist.</div>
+      <div class="notice mt8">Für Privatkunden gelten engere Grenzen; Kontovia fragt deshalb bei jeder Mahnung, ob der Kunde ein Unternehmen ist.
+        Welche Beträge Sie verlangen, verantworten Sie selbst.
+        <details class="mehr-details small mt8"><summary>Mehr dazu</summary><div class="mt8">
+        Bei Privatkunden (Verbrauchern) gilt der Basiszinssatz plus 5 Prozentpunkte, die Pauschale wird <strong>nie</strong> berechnet, und eine Mahngebühr darf nur den tatsächlichen Aufwand abdecken. Verzug setzt außerdem voraus, dass die Zahlungsfrist abgelaufen ist (§ 286 BGB). Kontovia rechnet nach Ihren Angaben und ersetzt keine Rechtsberatung.
+        Mahngebühr und Verzugsaufschlag sind kein Entgelt für eine Leistung: Sie werden ohne Umsatzsteuer gebucht, erst wenn das Geld eingegangen ist.</div></details></div>
       <div class="row end mt16"><button class="btn primary" id="mw_speichern">Mahnwesen speichern</button></div>
     </div>`;
 

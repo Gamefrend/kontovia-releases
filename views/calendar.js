@@ -112,7 +112,7 @@ export async function render(root, params, { actions } = {}) {
     </div>
     <button class="btn" id="calShow" aria-haspopup="dialog" aria-expanded="false" title="Was der Kalender zeigt">${icon('eye', 16)} Anzeige ${icon('down', 14)}</button>
     <button class="btn" id="calSync" title="Mit Google Kalender oder per Kalenderdatei (.ics) abgleichen">${icon('refresh', 16)} Abgleich</button>
-    <button class="btn primary" id="newAppt">${icon('plus', 16)} Termin</button>`;
+    <button class="btn primary" id="newAppt">${icon('plus', 16)} Neuer Termin</button>`;
   $$('[data-mode]', actions).forEach((b) => b.addEventListener('click', () => {
     state.mode = b.dataset.mode;
     render(root, params, { actions });
@@ -204,7 +204,7 @@ function drawMonth(root) {
         <button class="btn sm" id="prev" title="Vorheriger Monat" aria-label="Vorheriger Monat">${icon('left', 15)}</button>
         <button class="btn sm" id="today">Heute</button>
         <button class="btn sm" id="next" title="Nächster Monat" aria-label="Nächster Monat">${icon('right', 15)}</button>
-        <h3 style="margin:0 0 0 8px;font-size:16px">${monthName}</h3>
+        <h2 style="margin:0 0 0 8px;font-size:16px">${monthName}</h2>
         <div class="spacer"></div>
         ${raw(syncBadge())}
         ${raw(hiddenHint())}
@@ -216,7 +216,7 @@ function drawMonth(root) {
     </div>
 
     <div class="card mt16">
-      <div class="card-head"><h3>Termine im ${monthName}</h3><div class="spacer"></div><span class="badge">${int(monthEvents.length)}</span></div>
+      <div class="card-head"><h2>Termine im ${monthName}</h2><div class="spacer"></div><span class="badge">${int(monthEvents.length)}</span></div>
       <div class="card-body ${monthEvents.length ? 'tight' : ''}">
         ${monthEvents.length
           ? raw('<div style="padding:0 16px">' + sortBy(monthEvents, (e) => e.occurrence + (e.startTime || '')).map(agendaRow).join('') + '</div>')
@@ -253,8 +253,9 @@ function cellHtml(date, monthRef, items) {
   const cls = ['cal-cell', other ? 'other' : '', date === todayISO() ? 'today' : '', dow >= 5 ? 'weekend' : ''].filter(Boolean).join(' ');
   const shown = items.slice(0, 3);
   const more = items.length - shown.length;
-  return `<div class="${cls}" data-day="${date}" tabindex="0" role="button" aria-label="${esc(fmtDate(date))}, neuer Termin">
-    <div class="cal-day">${Number(date.slice(8, 10))}</div>
+  // Der vorgelesene Name ist der sichtbare Inhalt (Tag, Einträge) und dahinter, was ein Klick tut.
+  return `<div class="${cls}" data-day="${date}" tabindex="0" role="button">
+    <div class="cal-day">${Number(date.slice(8, 10))}<span class="sr-only">. ${esc(fmtDate(date))}</span></div>
     ${shown.map((e) => e.isTax
       ? `<div class="cal-ev cal-tax" ${taxAttrs(e)} title="${esc(`${e.title}: ${e.hinweis}`)}">§ ${esc(e.title)}</div>`
       : e.isTodo
@@ -263,8 +264,9 @@ function cellHtml(date, monthRef, items) {
       ? `<div class="cal-ev" style="background:var(--warn-soft);color:var(--warn);border-left-color:var(--warn)" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(money(e.amount))} € ${esc(e.type === 'income' ? '↓' : '↑')}</div>`
       : e.isEvent
       ? `<div class="cal-ev" style="background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent)" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(e.title)}</div>`
-      : `<div class="cal-ev ${e.done ? 'done' : ''}" data-appt="${esc(e.id)}" title="${esc(e.title + (e.extern ? ` · Google Kalender „${kalenderName(e.extern)}“` : ''))}" ${e.color ? `style="border-left-color:${esc(e.color)};color:${esc(e.color)}"` : ''}>${e.allDay ? '' : esc((e.startTime || '') + ' ')}${esc(e.title)}</div>`).join('')}
+      : `<div class="cal-ev ${e.done ? 'done' : ''}" data-appt="${esc(e.id)}" title="${esc(e.title + (e.extern ? ` · Google Kalender „${kalenderName(e.extern)}“` : ''))}" ${e.color ? `style="--ev:${esc(e.color)}"` : ''}>${e.allDay ? '' : esc((e.startTime || '') + ' ')}${esc(e.title)}</div>`).join('')}
     ${more > 0 ? `<div class="cal-more">+ ${more} weitere</div>` : ''}
+    <span class="sr-only">, neuer Termin</span>
   </div>`;
 }
 
@@ -317,7 +319,7 @@ function drawAgenda(root) {
   root.innerHTML = html`
     <div class="card">
       <div class="card-head">
-        <h3>Kommende Termine</h3>
+        <h2>Kommende Termine</h2>
         <span class="sub">nächste zwölf Monate</span>
         <div class="spacer"></div>
         ${raw(syncBadge())}
@@ -330,7 +332,7 @@ function drawAgenda(root) {
     </div>
 
     <div class="card mt16">
-      <div class="card-head"><h3>Vergangene Termine</h3><span class="sub">letzte zwölf Monate</span></div>
+      <div class="card-head"><h2>Vergangene Termine</h2><span class="sub">letzte zwölf Monate</span></div>
       <div class="card-body ${past.length ? 'tight' : ''}">
         ${past.length ? raw('<div style="padding:0 16px">' + sortBy(past, (e) => e.occurrence, -1).slice(0, 40).map(agendaRow).join('') + '</div>')
           : emptyState('Keine Einträge', 'Hier erscheinen zurückliegende Termine.')}

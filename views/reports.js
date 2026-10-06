@@ -104,7 +104,7 @@ function scopeWarning() {
   if (!st.count) return '';
   return `<div class="notice warn mb16"><strong>Enthält ${st.count === 1 ? 'eine private Buchung' : `${int(st.count)} private Buchungen`}.</strong>
     Für ELSTER gelten die Werte ohne sie. Entfernen Sie dafür oben das Häkchen oder nehmen Sie die
-    Unterlagen unter „Export &amp; Finanzamt“, die private Buchungen nie enthalten.</div>`;
+    Unterlagen unter „Import &amp; Export“, die private Buchungen nie enthalten.</div>`;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -118,10 +118,12 @@ function guv(root, db) {
   // Im laufenden Zeitraum bis zum gleichen Stand wie der Vorzeitraum.
   const delta = (key) => `${deltaBadge(trend(cmp.currentToDate[key], previous[key]), { invert: key === 'expenseForProfit' }).__raw} ${compareLabel(cmp)}`;
   const checks = healthChecks(db, period.from, period.to);
+  // In der Anlage EÜR läuft die Umsatzsteuer mit; der Gewinn dort weicht deshalb ab. Er steht hier zum Vergleich.
+  const euerGewinn = euerReport(db, period.from, period.to).profit;
   const avg = averages(current);
   const perMonth = (v) => (avg.months ? Math.round(v / avg.months) : 0);
   const anteilPct = (v, total) => (total ? (Math.abs(v) / total * 100).toFixed(1).replace('.', ',') : '0,0');
-  const avgFoot = (v) => (avg.months > 1 ? `<span class="avg-foot">Ø ${esc(money(v))} € je Monat</span>` : '');
+  const avgFoot = (v) => (avg.months > 1 ? `<span class="avg-foot">im Schnitt ${esc(money(v))} € je Monat</span>` : '');
 
   const incomeCats = current.byCategory.filter((c) => c.kind === 'income');
   const expenseCats = current.byCategory.filter((c) => c.kind === 'expense');
@@ -136,14 +138,14 @@ function guv(root, db) {
     rows,
     columns: [
       { key: 'name', label: 'Kategorie', type: 'text', cell: (c) => esc(c.name) },
-      { key: 'count', label: 'Anz.', sortLabel: 'Anzahl', type: 'num', tdCls: 'muted', cell: (c) => (c.count === null ? '–' : int(c.count)) },
+      { key: 'count', label: 'Anzahl', sortLabel: 'Anzahl', type: 'num', tdCls: 'muted', cell: (c) => (c.count === null ? '–' : int(c.count)) },
       ...(klein ? [] : [{
-        key: 'vat', label: kind === 'income' ? 'USt' : 'Vorst.', sortLabel: kind === 'income' ? 'Umsatzsteuer' : 'Vorsteuer', type: 'num', tdCls: 'muted',
+        key: 'vat', label: kind === 'income' ? 'USt' : 'Vorsteuer', sortLabel: kind === 'income' ? 'Umsatzsteuer' : 'Vorsteuer', type: 'num', tdCls: 'muted',
         cell: (c) => (c.vat === null ? '–' : esc(money(c.vat))),
       }]),
       { key: 'amount', label: klein ? 'Betrag' : 'Netto', type: 'num', cell: (c) => esc(money(c.amount)) },
       {
-        key: 'avg', label: 'Ø/Monat', sortLabel: 'Durchschnitt je Monat', type: 'num', tdCls: 'muted',
+        key: 'avg', label: 'je Monat', sortLabel: 'Durchschnitt je Monat', type: 'num', tdCls: 'muted',
         value: (c) => perMonth(c.amount), cell: (c) => esc(money(perMonth(c.amount))),
       },
       {
@@ -182,14 +184,14 @@ function guv(root, db) {
     </div>
 
     <div class="card mb16">
-      <div class="card-head"><h3>Verlauf</h3><span class="sub">${periodLabel(period)}</span><div class="spacer"></div>${verlaufControls()}</div>
+      <div class="card-head"><h2>Verlauf</h2><span class="sub">${periodLabel(period)}</span><div class="spacer"></div>${verlaufControls()}</div>
       <div class="card-body">${verlaufBody(current.months, avg, (s) => ymLabel(s.ym))}</div>
     </div>
 
     <div class="grid c2 mb16">
       <div class="card">
         <div class="card-head">
-          <h3>Aufteilung nach Kategorie</h3>
+          <h2>Aufteilung nach Kategorie</h2>
           <div class="spacer"></div>
           ${segToggle('anteilGuvArt', [['expense', 'Ausgaben'], ['income', 'Einnahmen']], artAusgaben ? 'expense' : 'income', 'Welche Seite')}
           ${anteilControls('anteilGuv')}
@@ -198,7 +200,7 @@ function guv(root, db) {
       </div>
 
       <div class="card">
-        <div class="card-head"><h3>Durchschnittswerte</h3><span class="sub">${avg.months ? `über ${avg.months} ${avg.months === 1 ? 'Monat' : 'Monate'}` : 'Zeitraum hat noch nicht begonnen'}</span></div>
+        <div class="card-head"><h2>Durchschnittswerte</h2><span class="sub">${avg.months ? `über ${avg.months} ${avg.months === 1 ? 'Monat' : 'Monate'}` : 'Zeitraum hat noch nicht begonnen'}</span></div>
         <div class="card-body">
           <div class="kpi-list">
             ${raw(kpi('Einnahmen je Monat', `<span class="amount pos">${esc(money(avg.income))} €</span>`))}
@@ -216,18 +218,18 @@ function guv(root, db) {
 
     <div class="grid c2 start">
       <div class="card">
-        <div class="card-head"><h3>Betriebseinnahmen</h3><div class="spacer"></div><span class="badge pos">${money(current.incomeForProfit)} €</span></div>
+        <div class="card-head"><h2>Betriebseinnahmen</h2><div class="spacer"></div><span class="badge pos">${money(current.incomeForProfit)} €</span></div>
         ${catTable('income', incomeCats, current.incomeForProfit, current.countIncome, current.incomeVat, avg.income)}
       </div>
 
       <div class="card">
-        <div class="card-head"><h3>Betriebsausgaben</h3><div class="spacer"></div><span class="badge neg">${money(current.expenseForProfit)} €</span></div>
+        <div class="card-head"><h2>Betriebsausgaben</h2><div class="spacer"></div><span class="badge neg">${money(current.expenseForProfit)} €</span></div>
         ${catTable('expense', [...expenseCats, ...afa], current.expenseForProfit, current.countExpense, current.expenseVat, avg.expense)}
       </div>
     </div>
 
     <div class="card mt16">
-      <div class="card-head"><h3>Ergebnisrechnung</h3></div>
+      <div class="card-head"><h2>Ergebnisrechnung</h2></div>
       <div class="card-body">
         <table class="data">
           <tbody>
@@ -237,6 +239,8 @@ function guv(root, db) {
             ${current.expenseDeductible !== current.expenseForProfit ? raw(`
               <tr><td class="muted">davon steuerlich abziehbar (nach Kürzung, z. B. Bewirtung 70 %)</td><td class="num muted">${esc(money(current.expenseDeductible))} €</td></tr>
               <tr><td><strong>Steuerliches Ergebnis</strong></td><td class="num"><strong>${esc(money(current.taxableProfit))} €</strong></td></tr>`) : ''}
+            ${euerGewinn !== current.taxableProfit ? raw(`
+              <tr><td class="muted">Gewinn laut Anlage EÜR <button type="button" class="stat-link" data-zu-euer>Warum anders?</button></td><td class="num muted">${esc(money(euerGewinn))} €</td></tr>`) : ''}
             ${current.privateIn || current.privateOut ? raw(`
               <tr><td colspan="2" class="muted small" style="padding-top:14px">Nachrichtlich, wirkt sich nicht auf den Gewinn aus:</td></tr>
               <tr><td class="muted">Privateinlagen</td><td class="num muted">${esc(money(current.privateIn))} €</td></tr>
@@ -245,17 +249,18 @@ function guv(root, db) {
               <tr><td colspan="2" class="muted small" style="padding-top:14px">Umsatzsteuer-Verrechnung mit dem Finanzamt (kein Aufwand, sondern Ausgleich des Steuerkontos):</td></tr>
               <tr><td class="muted">im Zeitraum an das Finanzamt gezahlt</td><td class="num muted">${esc(money(current.vatRemitted))} €</td></tr>
               ${current.vatRefunded ? `<tr><td class="muted">vom Finanzamt erstattet</td><td class="num muted">${esc(money(current.vatRefunded))} €</td></tr>` : ''}
-              <tr><td class="muted">danach noch offene Zahllast des Zeitraums</td><td class="num muted">${esc(money(current.vatOutstanding))} €</td></tr>`) : ''}
+              <tr><td class="muted">${current.vatOutstanding < 0 ? 'mehr gezahlt, als im Zeitraum angefallen ist (etwa für den Vorzeitraum)' : 'danach noch offene Zahllast des Zeitraums'}</td><td class="num muted">${esc(money(Math.abs(current.vatOutstanding)))} €</td></tr>`) : ''}
           </tbody>
         </table>
         ${current.margin !== null ? raw(`<p class="small muted mt16 mb0">Von jedem eingenommenen Euro bleiben ${esc((current.margin * 100).toFixed(1).replace('.', ','))} Cent als Gewinn übrig.</p>`) : ''}
       </div>
     </div>
 
-    ${checks.length ? raw(`<div class="card mt16"><div class="card-head"><h3>Hinweise zur Datenqualität</h3></div><div class="card-body">
+    ${checks.length ? raw(`<div class="card mt16"><div class="card-head"><h2>Hinweise zur Datenqualität</h2></div><div class="card-body">
       ${checks.map(checkNotice).join('')}
     </div></div>`) : ''}`;
   wireCheckLinks(root, checks, period);
+  $('[data-zu-euer]', root)?.addEventListener('click', () => document.querySelector('#tabs [data-tab="euer"]')?.click());
 
   // Umschalten ändert nur die Darstellung – neu gezeichnet wird nur dieser Reiter.
   const redraw = () => { guv(root, db); mountCharts(root); mountTables(root); };
@@ -345,14 +350,14 @@ function euer(root, db) {
 
     <div class="grid c2 start">
       <div class="card">
-        <div class="card-head"><h3>Betriebseinnahmen</h3></div>
+        <div class="card-head"><h2>Betriebseinnahmen</h2></div>
         <div class="table-wrap"><table class="data">
           <tbody>${raw(e.income.map(line).join('') || '<tr><td colspan="3" class="muted center">Keine Einnahmen</td></tr>')}</tbody>
           <tfoot><tr><td class="num">${F.summeEinnahmen}</td><td>Summe Betriebseinnahmen</td><td class="num">${money(e.incomeTotal)} €</td></tr></tfoot>
         </table></div>
       </div>
       <div class="card">
-        <div class="card-head"><h3>Betriebsausgaben</h3></div>
+        <div class="card-head"><h2>Betriebsausgaben</h2></div>
         <div class="table-wrap"><table class="data">
           <tbody>${raw(e.expense.map(line).join('') || '<tr><td colspan="3" class="muted center">Keine Ausgaben</td></tr>')}</tbody>
           <tfoot><tr><td class="num">${F.summeAusgaben}</td><td>Summe Betriebsausgaben</td><td class="num">${money(e.expenseTotal)} €</td></tr></tfoot>
@@ -362,7 +367,7 @@ function euer(root, db) {
 
     ${!e.kleinunternehmer && e.reconciliation.vatFlow ? raw(`
     <div class="card mt16">
-      <div class="card-head"><h3>Warum weicht das vom Gewinn in der GuV ab?</h3></div>
+      <div class="card-head"><h2>Warum weicht das vom Gewinn in der GuV ab?</h2></div>
       <div class="card-body">
         <p class="small muted mt0">In der Einnahmen-Überschuss-Rechnung läuft die Umsatzsteuer als
         Betriebseinnahme und Betriebsausgabe mit. Die vereinnahmte Umsatzsteuer erhöht den EÜR-Gewinn
@@ -431,7 +436,7 @@ function ust(root, db) {
 
     <div class="grid c2">
       <div class="card">
-        <div class="card-head"><h3>Kennzahlen der Voranmeldung</h3><span class="sub">${periodLabel(period)}</span></div>
+        <div class="card-head"><h2>Kennzahlen der Voranmeldung</h2><span class="sub">${periodLabel(period)}</span></div>
         <div class="table-wrap"><table class="data">
           <tbody>
             ${raw(kz(81, 'Umsätze 19 % (Bemessungsgrundlage)', v.kz81net))}
@@ -454,7 +459,7 @@ function ust(root, db) {
       </div>
 
       <div class="card">
-        <div class="card-head"><h3>Voranmeldungszeiträume ${year}</h3><span class="sub">${db.settings.vatPeriod}</span></div>
+        <div class="card-head"><h2>Voranmeldungszeiträume ${year}</h2><span class="sub">${db.settings.vatPeriod}</span></div>
         <div class="table-wrap"><table class="data">
           <thead><tr><th>Zeitraum</th><th class="num">Umsatzsteuer</th><th class="num">Vorsteuer</th><th class="num">Zahllast</th></tr></thead>
           <tbody>
@@ -505,7 +510,7 @@ function bilanz(root, db) {
 
     <div class="grid c2">
       <div class="card">
-        <div class="card-head"><h3>Vermögen</h3><div class="spacer"></div><span class="badge pos">${money(b.activa.total)} €</span></div>
+        <div class="card-head"><h2>Vermögen</h2><div class="spacer"></div><span class="badge pos">${money(b.activa.total)} €</span></div>
         <div class="table-wrap"><table class="data">
           <tbody>
             <tr class="group"><td colspan="2" class="muted small strong">Anlagevermögen</td></tr>
@@ -520,7 +525,7 @@ function bilanz(root, db) {
       </div>
 
       <div class="card">
-        <div class="card-head"><h3>Schulden und Reinvermögen</h3><div class="spacer"></div><span class="badge">${money(b.passiva.total)} €</span></div>
+        <div class="card-head"><h2>Schulden und Reinvermögen</h2><div class="spacer"></div><span class="badge">${money(b.passiva.total)} €</span></div>
         <div class="table-wrap"><table class="data">
           <tbody>
             ${raw(line('Verbindlichkeiten aus Lieferungen und Leistungen', b.passiva.payables))}
@@ -535,7 +540,7 @@ function bilanz(root, db) {
     </div>
 
     <div class="card mt16">
-      <div class="card-head"><h3>Entwicklung des Eigenkapitals im laufenden Jahr</h3></div>
+      <div class="card-head"><h2>Entwicklung des Eigenkapitals im laufenden Jahr</h2></div>
       <div class="card-body">
         <table class="data">
           <tbody>
@@ -559,7 +564,7 @@ function opos(root, db) {
      Fälligkeit filtern; ein Klick öffnet die Buchung. */
   const liste = (id, items, title, tone) => `
     <div class="card">
-      <div class="card-head"><h3>${esc(title)}</h3><div class="spacer"></div>
+      <div class="card-head"><h2>${esc(title)}</h2><div class="spacer"></div>
         <span class="badge ${tone}">${esc(money(sum(items, (t) => t.gross)))} €</span></div>
       ${table({
         id,
@@ -602,7 +607,7 @@ function opos(root, db) {
 
   const aging = (a, title) => {
     const rows = [['nicht fällig', a.current], ['1–30 Tage', a.d30], ['31–60 Tage', a.d60], ['61–90 Tage', a.d90], ['über 90 Tage', a.older]];
-    return `<div class="card"><div class="card-head"><h3>${esc(title)}</h3></div><div class="card-body">
+    return `<div class="card"><div class="card-head"><h2>${esc(title)}</h2></div><div class="card-body">
       ${rankBars(rows.map(([name, amount]) => ({ name, amount })), { color: 'var(--warn)' }).__raw}</div></div>`;
   };
 
@@ -643,7 +648,7 @@ function accountSheet(db, acc) {
   const { opening, rows, closing } = accountLedger(db, acc, period.from, period.to);
   return `
     <div class="card mb16">
-      <div class="card-head"><h3>${esc(acc.name)}</h3><span class="sub">${esc(acc.kind === 'bank' ? 'Bankkonto' : 'Kasse')}${acc.iban ? ' · ' + esc(acc.iban) : ''}</span></div>
+      <div class="card-head"><h2>${esc(acc.name)}</h2><span class="sub">${esc(acc.kind === 'bank' ? 'Bankkonto' : 'Kasse')}${acc.iban ? ' · ' + esc(acc.iban) : ''}</span></div>
       <div class="table-wrap"><table class="data compact">
         <thead><tr><th>Datum</th><th>Vorgang</th><th class="num">Eingang</th><th class="num">Ausgang</th><th class="num">Saldo</th></tr></thead>
         <tbody>
@@ -674,7 +679,7 @@ function anlagen(root, db) {
       ${statCard({ label: 'Restbuchwert am Stichtag', value: `${esc(money(sum(assets, (a) => bookValue(a, period.to))))} €` })}
     </div>
     <div class="card">
-      <div class="card-head"><h3>Anlagenverzeichnis</h3><span class="sub">§ 4 Abs. 3 Satz 5 EStG</span></div>
+      <div class="card-head"><h2>Anlagenverzeichnis</h2><span class="sub">§ 4 Abs. 3 Satz 5 EStG</span></div>
       ${assets.length ? table({
         id: 'anlagen-auswertung',
         cls: 'data',

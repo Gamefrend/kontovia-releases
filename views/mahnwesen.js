@@ -13,6 +13,7 @@ import { store, sel, lockedUntil } from '../lib/store.js';
 import { navigate, refresh } from '../lib/router.js';
 import { mountTable } from '../lib/table.js';
 import { betragText, titel as titelVon } from '../lib/rechnung.js';
+import { isVoidPart } from '../lib/calc.js';
 import {
   MAHNSTUFEN, mahneinstellungen, mahnungKurz, mahnverlauf, stufenName, MAHNTEXTE, AUFSCHLAG_ARTEN, KUNDENARTEN, kundenartVon,
 } from '../lib/mahnwesen.js';
@@ -44,8 +45,17 @@ export function mahnwesenZeigen(root) {
   const ohneMahnung = liste.filter((x) => !x.s.letzte);
   const mahnkostenOffen = sel.invoices().filter((r) => r.richtung !== 'eingang')
     .map((r) => ({ r, k: mahnkostenVon(r.id) })).filter((x) => x.k.offen > 0);
+  // Überfällige Einnahmen, die ohne Rechnung aus Kontovia gebucht sind (etwa aus einem anderen
+  // Programm übernommen). Mahnen lässt sich nur eine Rechnung von hier; der Hinweis führt zu ihnen.
+  const ohneRechnung = sel.transactions().filter((t) => t.type === 'income' && !t.paidDate && !t.invoiceId
+    && !t.unlisted && !isVoidPart(t) && (t.dueDate || t.date) < heute);
 
   root.innerHTML = `
+    ${ohneRechnung.length ? `<div class="notice mb16">
+      ${ohneRechnung.length === 1 ? 'Eine überfällige Einnahme ist' : `${int(ohneRechnung.length)} überfällige Einnahmen sind`}
+      ohne Rechnung aus Kontovia gebucht (zusammen ${esc(money(sum(ohneRechnung, (t) => t.gross)))} €). Mahnen lässt sich hier nur,
+      was Sie in Kontovia geschrieben haben. <button type="button" class="stat-link" id="mwOhneRechnung">In den Buchungen ansehen</button>
+    </div>` : ''}
     <div class="grid c4 mb16 re-kennzahlen">
       ${statCard({ label: 'Überfällig', value: `${money(sum(liste, (x) => x.s.rest))} €`, tone: liste.length ? 'neg' : '', foot: `${int(liste.length)} ${liste.length === 1 ? 'Rechnung' : 'Rechnungen'}`, icon: 'alert' }).__raw}
       ${statCard({ label: 'Noch nicht gemahnt', value: int(ohneMahnung.length), foot: ohneMahnung.length ? 'Zahlungserinnerung fehlt noch' : 'alle überfälligen sind gemahnt', icon: 'clock' }).__raw}
@@ -53,14 +63,20 @@ export function mahnwesenZeigen(root) {
       ${statCard({ label: `Mahnungen ${jahr}`, value: int(alle.filter((m) => String(m.datum).startsWith(jahr)).length), foot: 'erstellt', icon: 'file' }).__raw}
     </div>
     <div class="card mb16">
-      <div class="card-head"><h3>${icon('alert', 16).__raw} Überfällige Rechnungen</h3>
+      <div class="card-head"><h2>${icon('alert', 16).__raw} Überfällige Rechnungen</h2>
         <button class="btn sm" id="mwEinst">${icon('settings', 14).__raw} Fristen, Gebühren und Verzugsaufschlag</button></div>
       <div id="mwListe"></div>
     </div>
-    ${mahnkostenOffen.length ? `<div class="card mb16"><div class="card-head"><h3>${icon('euro', 16).__raw} Mahnkosten, die noch nicht eingegangen sind</h3></div><div id="mwKosten"></div></div>` : ''}
-    <div class="card"><div class="card-head"><h3>${icon('history', 16).__raw} Alle Mahnungen</h3></div><div id="mwVerlauf"></div></div>`;
+    ${mahnkostenOffen.length ? `<div class="card mb16"><div class="card-head"><h2>${icon('euro', 16).__raw} Mahnkosten, die noch nicht eingegangen sind</h2></div><div id="mwKosten"></div></div>` : ''}
+    <div class="card"><div class="card-head"><h2>${icon('history', 16).__raw} Alle Mahnungen</h2></div><div id="mwVerlauf"></div></div>`;
 
   $('#mwEinst', root).addEventListener('click', () => navigate('settings', { abschnitt: 'mahnwesen' }));
+  $('#mwOhneRechnung', root)?.addEventListener('click', () => navigate('transactions', {
+    ids: ohneRechnung.map((t) => t.id),
+    titel: 'Überfällige Einnahmen ohne Rechnung',
+    period: { preset: 'alles', from: '1900-01-01', to: '2999-12-31' },
+    status: 'alle',
+  }));
 
   const stand = (x) => {
     const m = x.s.letzte;

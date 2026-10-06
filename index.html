@@ -4,13 +4,27 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://oauth2.googleapis.com https://www.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://firebasestorage.googleapis.com https://gmail.googleapis.com https://login.microsoftonline.com https://graph.microsoft.com; media-src 'self' blob:; frame-src blob:; object-src blob:; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'none'">
-  <title>Kontovia Buchhaltung</title>
+  <title>Kontovia: Buchhaltung im Browser, verschlüsselt und offline</title>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="web/web.css">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <meta name="description" content="Buchhaltung, die auf dem eigenen Gerät bleibt: verschlüsselt, offline, ohne Konto beim Hersteller.">
+  <meta name="description" content="Buchhaltung für Selbstständige und kleine Betriebe im Browser: Rechnungen, EÜR, Umsatzsteuer, DATEV-Export. Verschlüsselt, offline, ohne Konto beim Hersteller.">
+  <link rel="canonical" href="https://gamefrend.github.io/kontovia-releases/">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Kontovia">
+  <meta property="og:locale" content="de_DE">
+  <meta property="og:title" content="Kontovia: Buchhaltung im Browser, verschlüsselt und offline">
+  <meta property="og:description" content="Buchhaltung für Selbstständige und kleine Betriebe im Browser: Rechnungen, EÜR, Umsatzsteuer, DATEV-Export. Verschlüsselt, offline, ohne Konto beim Hersteller.">
+  <meta property="og:url" content="https://gamefrend.github.io/kontovia-releases/">
+  <meta property="og:image" content="https://gamefrend.github.io/kontovia-releases/icons/icon-512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="Kontovia Logo">
+  <meta name="twitter:card" content="summary">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Kontovia","alternateName":"Kontovia Buchhaltung","url":"https://gamefrend.github.io/kontovia-releases/","description":"Buchhaltung für Selbstständige und kleine Betriebe im Browser: Rechnungen, EÜR, Umsatzsteuer, DATEV-Export. Verschlüsselt, offline, ohne Konto beim Hersteller.","applicationCategory":"FinanceApplication","operatingSystem":"Web, Windows, macOS, Linux, Android, iOS","browserRequirements":"Aktueller Browser mit JavaScript","inLanguage":"de","image":"https://gamefrend.github.io/kontovia-releases/icons/icon-512.png"}</script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Kontovia">
@@ -21,11 +35,18 @@
 </head>
 <body>
   <div id="app">
-    <div class="gate">
+    <div class="gate" role="main">
       <div class="gate-card">
         <div class="gate-logo">K</div>
-        <h2>Kontovia wird gestartet …</h2>
+        <h1>Kontovia wird gestartet …</h1>
         <p class="lead">Einen Moment bitte.</p>
+        <noscript>
+          <p>Kontovia ist eine Buchhaltung für Selbstständige und kleine Betriebe, die ganz im Browser läuft:
+          Einnahmen und Ausgaben, Belege, Rechnungen und E-Rechnungen, Mahnungen, Kontoauszüge, Anlage EÜR,
+          Umsatzsteuer-Voranmeldung und DATEV-Export. Ihre Buchhaltung bleibt verschlüsselt auf Ihrem Gerät.</p>
+          <p><strong>Bitte schalten Sie JavaScript ein, um Kontovia zu nutzen.</strong></p>
+          <p><a href="recht/impressum.html">Impressum</a> · <a href="recht/datenschutz.html">Datenschutz</a> · <a href="recht/nutzungsbedingungen.html">Nutzungsbedingungen</a></p>
+        </noscript>
       </div>
     </div>
   </div>

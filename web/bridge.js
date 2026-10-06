@@ -256,11 +256,30 @@ let anderesFenster = false;
 /* Tastenkürzel                                                               */
 /* -------------------------------------------------------------------------- */
 
+/** Ziffern in der Reihenfolge der Seitenleiste; dieselbe Liste steht in VIEWS (app.js) und in der Hilfe. */
+const ZIFFER_ANSICHT = { 1: 'dashboard', 2: 'transactions', 3: 'rechnungen', 4: 'calendar', 5: 'todos', 6: 'reports', 7: 'export', 8: 'master' };
+
+/*
+ * Alt+Ziffer wechselt die Ansicht auch im Browser-Tab. Strg+Ziffer behält
+ * der Browser dort für seine Tabs; es wirkt nur in der installierten App.
+ * Gelesen wird die Taste (e.code), nicht das Zeichen: Auf dem Mac erzeugt
+ * Wahltaste+Ziffer Sonderzeichen. In Eingabefeldern bleibt Alt frei.
+ */
+document.addEventListener('keydown', (e) => {
+  if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || vault.isLocked) return;
+  const ziffer = /^Digit([1-8])$/.exec(e.code || '')?.[1];
+  if (!ziffer) return;
+  const ziel = e.target;
+  if (ziel?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(ziel?.tagName || '')) return;
+  e.preventDefault();
+  send('menu', { action: 'view', view: ZIFFER_ANSICHT[ziffer] });
+});
+
 document.addEventListener('keydown', (e) => {
   const mod = e.ctrlKey || e.metaKey;
   if (!mod || e.altKey) return;
   const k = e.key.toLowerCase();
-  const views = { 1: 'dashboard', 2: 'transactions', 3: 'calendar', 4: 'reports', 5: 'export', 6: 'master', 7: 'todos', 8: 'rechnungen', ',': 'settings' };
+  const views = { ...ZIFFER_ANSICHT, ',': 'settings' };
   let action = null;
   if (k === 'l') {
     if (vault.isLocked) return;
@@ -1088,9 +1107,9 @@ async function voraussetzungen() {
 
 function startFehler(text) {
   document.getElementById('app').innerHTML = `
-    <div class="gate"><div class="gate-card">
+    <div class="gate" role="main"><div class="gate-card">
       <div class="gate-logo">K</div>
-      <h2>Kontovia kann hier nicht starten</h2>
+      <h1>Kontovia kann hier nicht starten</h1>
       <p class="lead">${text}</p>
     </div></div>`;
 }
@@ -1101,9 +1120,9 @@ if (nurGoogleFenster) {
   // doch offen (etwa, wenn der Browser die Verbindung gekappt hat), steht hier,
   // was zu tun ist.
   document.getElementById('app').innerHTML = `
-    <div class="gate"><div class="gate-card">
+    <div class="gate" role="main"><div class="gate-card">
       <div class="gate-logo">K</div>
-      <h2>Fertig</h2>
+      <h1>Fertig</h1>
       <p class="lead">Kontovia hat die Antwort erhalten. Sie können dieses Fenster schließen.</p>
     </div></div>`;
   setTimeout(() => window.close(), 50);

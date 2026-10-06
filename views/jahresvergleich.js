@@ -65,7 +65,7 @@ export function vergleich(root, db) {
   const jahrKarten = v.jahre.map((y, i) => {
     const vor = i > 0 ? v.jahre[i - 1] : null;
     const fuss = vor === null ? `<span class="muted">${stichtagText}</span>`
-      : `${deltaBadge(trend(r.summen[y], r.summen[vor]), { invert: ausgaben }).__raw} <span class="muted">ggü. ${vor}</span>`;
+      : `${deltaBadge(trend(r.summen[y], r.summen[vor]), { invert: ausgaben }).__raw} <span class="muted">zu ${vor}</span>`;
     return statCard({ label: String(y), value: `${esc(money(r.summen[y]))} €`, tone: ausgaben ? 'neg' : 'pos', foot: fuss }).__raw;
   }).join('');
 
@@ -128,7 +128,7 @@ export function vergleich(root, db) {
     <div class="grid c4 mb16">${raw(jahrKarten)}</div>
 
     <div class="card mb16">
-      <div class="card-head"><h3>${name} nach Kategorie</h3><span class="sub">${stichtagText}</span></div>
+      <div class="card-head"><h2>${name} nach Kategorie</h2><span class="sub">${stichtagText}</span></div>
       <div class="card-body">
         ${table({
     id: 'vergleich-kat', cls: 'data', toolbar: false, defaultSort: { key: `y${letzte}`, dir: -1 }, rows: r.kategorien, columns: spalten,
@@ -139,7 +139,7 @@ export function vergleich(root, db) {
 
     <div class="card">
       <div class="card-head">
-        <h3>Verlauf über das Jahr</h3><div class="spacer"></div>
+        <h2>Verlauf über das Jahr</h2><div class="spacer"></div>
         <select id="vglKat" aria-label="Kategorie für den Verlauf">${raw(katOptionen)}</select>
         ${segToggle('vglAnsicht', [['monat', 'Je Monat'], ['summe', 'Aufgelaufen']], wahl.ansicht, 'Darstellung')}
       </div>

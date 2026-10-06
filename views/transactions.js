@@ -2,7 +2,7 @@
 
 import {
   html, raw, esc, $, money, moneyInput, parseMoney, fmtDate, todayISO, uid,
-  sortBy, sum, bytes, splitFromGross, splitFromNet, addDays, int, fmtDateShort, hueOf, norm,
+  sortBy, sum, bytes, splitFromGross, splitFromNet, addDays, int, hueOf, norm,
 } from '../lib/util.js';
 import { icon, ok, err, warn, modal, confirmDialog, amountCell, emptyState } from '../lib/ui.js';
 import {
@@ -11,8 +11,8 @@ import {
 } from '../lib/store.js';
 import { defaultPeriod, periodControl } from '../lib/period.js';
 import { mountTable, tableState } from '../lib/table.js';
-import { router, refresh } from '../lib/router.js';
-import { vatTreatment, depositInfo, isVoidPart, formLine, afaMethod, AFA_METHODE } from '../lib/calc.js';
+import { router, refresh, navigate } from '../lib/router.js';
+import { vatTreatment, depositInfo, isVoidPart, formLine, formYear, afaMethod, AFA_METHODE } from '../lib/calc.js';
 import { neuesAnlagegut, anlageFelder, wireAnlageFelder, anlageAusFeldern } from './anlageform.js';
 import { eRechnungLesen, eRechnungAusDatei, xmlAusPdf, richtung } from '../lib/erechnung.js';
 import { eRechnungHtml, zeigeERechnung } from './erechnung.js';
@@ -85,10 +85,13 @@ export async function render(root, params = {}, { actions } = {}) {
   // ein Filter darauf würde sonst unsichtbar weiterwirken.
   if (st.filters.location && !knownLocations().includes(st.filters.location)) delete st.filters.location;
 
+  // Drucken und PDF braucht man am Telefon selten; dort bleiben sie weg (nur-breit, web.css).
   actions.innerHTML = html`<div id="txPeriod"></div>
-    ${druckenMoeglich() ? raw(`<button class="btn" id="txDruck">${icon('print', 16).__raw} Drucken</button>`) : ''}
-    <button class="btn" id="txPdf">${icon('pdf', 16)} Als PDF</button>`;
+    <button class="btn" id="txKonto" title="Umsätze aus einer Datei Ihrer Bank übernehmen">${icon('bank', 16)} Kontoauszug einlesen</button>
+    ${druckenMoeglich() ? raw(`<button class="btn nur-breit" id="txDruck">${icon('print', 16).__raw} Drucken</button>`) : ''}
+    <button class="btn nur-breit" id="txPdf">${icon('pdf', 16)} Als PDF</button>`;
   periodCtl = periodControl($('#txPeriod', actions), period, () => list?.render());
+  $('#txKonto', actions).addEventListener('click', () => navigate('kontoimport'));
   $('#txDruck', actions)?.addEventListener('click', () => listeAusgeben('drucken'));
   $('#txPdf', actions).addEventListener('click', () => listeAusgeben('speichern'));
 
@@ -147,6 +150,8 @@ const statusRank = (t) => (isVoidPart(t) ? 3 : overdue(t) ? 0 : !t.paidDate ? 1 
 function listSpec() {
   const klein = store.db.settings.taxMode === 'kleinunternehmer';
   const alle = () => true;
+  // Hat keine Buchung einen Kontakt, bliebe die Spalte leer und nähme der Beschreibung den Platz.
+  const mitKontakt = sel.transactions().some((t) => t.contactId);
   const columns = [
     { key: 'date', label: 'Datum', type: 'date', width: '108px', cls: 'col-datum', tdCls: 'nowrap', cell: dateCell },
     {
@@ -162,10 +167,10 @@ function listSpec() {
         return `<span class="dot" style="background:hsl(${cat ? hueOf(cat.name) : 0} 55% 55%);margin-right:6px"></span>${esc(cat?.name || '–')}`;
       },
     },
-    {
+    ...(mitKontakt ? [{
       key: 'contact', label: 'Kontakt', type: 'text', width: '124px', cls: 'col-kontakt', tdCls: 'small truncate',
       value: (t) => (t.contactId ? sel.contactName(t.contactId) : ''), cell: (t) => esc(sel.contactName(t.contactId)),
-    },
+    }] : []),
     {
       key: 'status', label: 'Status', type: 'num', align: 'left', width: '132px', cls: 'col-status', value: statusRank, dir: 1,
       dirText: ['Offenes zuerst', 'Bezahltes zuerst'], cell: statusCell,
@@ -220,7 +225,7 @@ function listSpec() {
           .map((c) => [c.id, c.name, (t) => t.categoryId === c.id, c.kind === 'income' ? 'Einnahme' : 'Ausgabe'])],
     },
     {
-      key: 'contactId', column: 'contact', title: 'Kontakt', initial: '', hideEmpty: true, search: sel.contacts().length > 8,
+      key: 'contactId', column: mitKontakt ? 'contact' : 'description', title: 'Kontakt', initial: '', hideEmpty: true, search: sel.contacts().length > 8,
       options: () => [['', 'Alle Kontakte', alle],
         ...sortBy(sel.contacts(), (c) => c.name.toLowerCase()).map((c) => [c.id, c.name, (t) => t.contactId === c.id])],
     },
@@ -311,6 +316,7 @@ function summaryHtml(rows) {
     <span><span class="muted">Eingänge</span> <strong class="amount pos">${money(sumIncome)} €</strong></span>
     <span><span class="muted">Ausgänge</span> <strong class="amount neg">${money(sumExpense)} €</strong></span>
     <span><span class="muted">Saldo</span> <strong class="amount ${sumIncome - sumExpense >= 0 ? 'pos' : 'neg'}">${money(sumIncome - sumExpense)} €</strong></span>
+    <span class="muted tiny tx-sum-hinweis" title="Alle Zahlungen der Liste mit Umsatzsteuer, auch Privatentnahmen und Zahlungen an das Finanzamt. Die Übersicht zeigt dagegen Betriebseinnahmen und Betriebsausgaben ohne Umsatzsteuer, deshalb weichen die Zahlen dort ab.">brutto, alle Zahlungen</span>
     ${offen.length ? raw(`<span class="badge warn" title="Noch nicht bezahlt, zählt erst am Zahlungstag">${offen.length} offen${offenText ? ': ' + esc(offenText) : ''}</span>`) : ''}
     ${unlistedCount ? raw(`<span class="badge unlisted" title="In den Summen enthalten, in den Unterlagen fürs Finanzamt nicht">${unlistedCount} privat</span>`) : ''}
   </div>`;
@@ -323,7 +329,12 @@ function summaryHtml(rows) {
 function dateCell(t) {
   if (gebuchtIm(t) || !bezahltIm(t)) return esc(fmtDate(t.date));
   return `<span class="muted" title="Gebucht am ${esc(fmtDate(t.date))}, bezahlt am ${esc(fmtDate(t.paidDate))}. Zählt im gewählten Zeitraum">${esc(fmtDate(t.date))}</span>
-    <div class="tiny" style="color:var(--accent)">Zahlung ${esc(fmtDateShort(t.paidDate))}</div>`;
+    <div class="tiny" style="color:var(--accent)">Zahlung ${esc(tagImJahr(t.paidDate, t.date))}</div>`;
+}
+
+/** „28.09.“, wenn das Jahr dasselbe ist wie beim Bezugsdatum, sonst „28.09.2025“. */
+function tagImJahr(iso, bezug) {
+  return String(iso).slice(0, 4) === String(bezug || '').slice(0, 4) ? fmtDate(iso).slice(0, 6) : fmtDate(iso);
 }
 
 function descriptionCell(t) {
@@ -340,8 +351,9 @@ function descriptionCell(t) {
 function statusCell(t) {
   if (t.voided) return '<span class="badge" title="Durch eine Gegenbuchung aufgehoben">storniert</span>';
   if (t.isReversal) return '<span class="badge" title="Hebt eine stornierte Buchung auf">Gegenbuchung</span>';
+  // Am Tag der Buchung bezahlt (der Normalfall) braucht kein zweites Datum.
   const status = t.paidDate
-    ? `<span class="badge pos">bezahlt ${esc(fmtDateShort(t.paidDate))}</span>`
+    ? `<span class="badge pos" title="bezahlt am ${esc(fmtDate(t.paidDate))}">bezahlt${t.paidDate === t.date ? '' : ` ${esc(tagImJahr(t.paidDate, t.date))}`}</span>`
     : overdue(t)
       ? '<span class="badge neg">überfällig</span>'
       : '<span class="badge warn">offen</span>';
@@ -393,6 +405,41 @@ function depositTitle(dep) {
   return teile.join(' · ');
 }
 
+/**
+ * Kategorien fürs Auswahlfeld. Bei langen Listen stehen die fünf zuletzt
+ * benutzten oben in einer eigenen Gruppe, die übrigen in ihrer gewohnten
+ * Reihenfolge darunter; jede Kategorie kommt nur einmal vor.
+ */
+function kategorieOptionen(cats, gewaehlt) {
+  const opt = (c) => `<option value="${esc(c.id)}" ${gewaehlt === c.id ? 'selected' : ''}>${esc(c.name)}</option>`;
+  const ids = new Set(cats.map((c) => c.id));
+  const zuletzt = [];
+  if (cats.length > 8) {
+    const neueste = sortBy(sel.transactions().filter((t) => ids.has(t.categoryId)), (t) => t.date || '', -1);
+    for (const t of neueste) {
+      if (!zuletzt.includes(t.categoryId)) zuletzt.push(t.categoryId);
+      if (zuletzt.length >= 5) break;
+    }
+  }
+  if (!zuletzt.length) return cats.map(opt).join('');
+  const oben = zuletzt.map((id) => cats.find((c) => c.id === id));
+  const rest = cats.filter((c) => !zuletzt.includes(c.id));
+  return `<optgroup label="Zuletzt verwendet">${oben.map(opt).join('')}</optgroup>
+    <optgroup label="Alle weiteren">${rest.map(opt).join('')}</optgroup>`;
+}
+
+/** Kontakte fürs Auswahlfeld: bei Einnahmen zuerst die Kunden, bei Ausgaben die Lieferanten. */
+function kontaktOptionen(type, gewaehlt) {
+  const opt = (c) => `<option value="${esc(c.id)}" ${gewaehlt === c.id ? 'selected' : ''}>${esc(c.name)}</option>`;
+  const art = type === 'income' ? 'customer' : 'supplier';
+  const alle = sortBy(sel.contacts(), (c) => (c.name || '').toLowerCase());
+  const passend = alle.filter((c) => c.kind === art || c.kind === 'both');
+  const andere = alle.filter((c) => !passend.includes(c));
+  if (!passend.length || !andere.length) return alle.map(opt).join('');
+  return `<optgroup label="${type === 'income' ? 'Kunden' : 'Lieferanten'}">${passend.map(opt).join('')}</optgroup>
+    <optgroup label="Weitere Kontakte">${andere.map(opt).join('')}</optgroup>`;
+}
+
 /* -------------------------------------------------------------------------- */
 /* Erfassungsdialog                                                            */
 /* -------------------------------------------------------------------------- */
@@ -400,11 +447,11 @@ function depositTitle(dep) {
 /**
  * @param {string|object|null} id  Kennung, null (neu) oder ein fertiger Entwurf (Duplikat, Restzahlung)
  * @param {'income'|'expense'} type
- * @param {{onSaved?:(tx:object)=>any, wiederholen?:string}} opts  onSaved läuft nach dem Speichern,
+ * @param {{onSaved?:(tx:object)=>any, wiederholen?:string, dateien?:File[]}} opts  onSaved läuft nach dem Speichern,
  *   etwa um die Buchung mit dem Termin zu verknüpfen, aus dem sie angelegt wurde; wiederholen
- *   wählt einen Turnus vor (lib/wiederkehrend.js)
+ *   wählt einen Turnus vor (lib/wiederkehrend.js); dateien hängt Belege gleich beim Öffnen an
  */
-export function openTransactionDialog(id, type = 'expense', { onSaved = null, wiederholen: turnusVorgabe = '' } = {}) {
+export function openTransactionDialog(id, type = 'expense', { onSaved = null, wiederholen: turnusVorgabe = '', dateien = null } = {}) {
   const draft = id && typeof id === 'object' ? id : null;
   const existing = draft ? null : (id ? sel.transaction(id) : null);
   const tx = existing ? structuredClone(existing) : (draft || newTransactionDraft(type));
@@ -486,6 +533,18 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         <button data-type="income" class="income ${tx.type === 'income' ? 'active' : ''}">Einnahme</button>
       </div>
 
+      <div class="beleg-block mb16">
+        <div class="row between mb8">
+          <strong style="font-size:13px">Belege</strong>
+          <span class="muted tiny">Verschlüsselt gespeichert, höchstens 40 MB je Datei</span>
+        </div>
+        <div id="eInvoiceBox"></div>
+        <div class="attach-list mb8" id="attachList"></div>
+        <div class="dropzone" id="dropzone">
+          ${icon('paperclip', 16)} Rechnung oder Quittung hierher ziehen oder <u>Datei auswählen</u>
+        </div>
+      </div>
+
       <div class="form-grid">
         <div class="field full">
           <label>Beschreibung *</label>
@@ -500,8 +559,9 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
           <label>Kategorie *</label>
           <select id="i_categoryId">
             <option value="">Bitte wählen</option>
-            ${raw(cats.map((c) => `<option value="${esc(c.id)}" ${tx.categoryId === c.id ? 'selected' : ''}>${esc(c.name)}${c.euerLine ? ` · EÜR ${formLine(c.euerLine, new Date().getFullYear())}` : ''}</option>`).join(''))}
+            ${raw(kategorieOptionen(cats, tx.categoryId))}
           </select>
+          <span class="hint" id="catHint"></span>
         </div>
 
         <div class="field">
@@ -509,7 +569,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
           <div class="row" style="gap:6px">
             <select id="i_contactId" style="flex:1">
               <option value="">Keiner</option>
-              ${raw(sel.contacts().map((c) => `<option value="${esc(c.id)}" ${tx.contactId === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join(''))}
+              ${raw(kontaktOptionen(tx.type, tx.contactId))}
             </select>
             <button class="btn sm" id="btnNewContact" title="Neuen Kontakt anlegen">${icon('plus', 14)}</button>
           </div>
@@ -604,12 +664,12 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
             ? 'Dieses Datum zählt für die Anlage EÜR; die Umsatzsteuer richtet sich bei Ihnen nach dem Rechnungsdatum.'
             : 'Dieses Datum zählt für die Anlage EÜR und die Umsatzsteuer.'}</span>
         </div>
-        <div class="field">
+        <div class="field" id="dueField" ${tx.paidDate ? 'hidden' : ''}>
           <label>Fällig am</label>
           <div class="row" style="gap:6px">
             <input type="date" id="i_dueDate" value="${tx.dueDate || ''}" style="flex:1">
-            <button class="btn sm" data-due="14" title="14 Tage ab Belegdatum">+14 T</button>
-            <button class="btn sm" data-due="30" title="30 Tage ab Belegdatum">+30 T</button>
+            <button class="btn sm" data-due="14" title="14 Tage ab Belegdatum">+14 Tage</button>
+            <button class="btn sm" data-due="30" title="30 Tage ab Belegdatum">+30 Tage</button>
           </div>
         </div>
       </div>
@@ -622,7 +682,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         <div class="notice warn mt8" id="unlistedHint" ${tx.unlisted ? '' : raw('style="display:none"')}>
           Diese Buchung ist privat. Sie gehört nicht zum Betrieb und steht deshalb nicht in den Unterlagen
           für Finanzamt und Steuerkanzlei (EÜR, Umsatzsteuer, DATEV, Betriebsprüfung). In Übersicht und
-          Auswertungen zählt sie nur mit, wenn dort <strong>„Private Buchungen einbeziehen“</strong> gesetzt ist.
+          Auswertungen zählt sie nur mit, wenn dort <strong>„Private einbeziehen“</strong> gesetzt ist.
           Betriebliche Einnahmen und Ausgaben dürfen nicht als privat gekennzeichnet werden, sie müssen
           vollständig erklärt werden (§ 146 Abs. 1 AO).
         </div>
@@ -664,18 +724,6 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         </div>`) : ''}
       </details>
 
-      <hr class="sep">
-
-      <div class="row between mb8">
-        <strong style="font-size:13px">Belege</strong>
-        <span class="muted tiny">Verschlüsselt gespeichert, max. 40 MB je Datei</span>
-      </div>
-      <div id="eInvoiceBox"></div>
-      <div class="attach-list mb8" id="attachList"></div>
-      <div class="dropzone" id="dropzone">
-        ${icon('paperclip', 16)} Rechnung hierher ziehen oder <u>Datei auswählen</u>
-      </div>
-
       ${linkedAppts.length ? raw(`
         <hr class="sep">
         <div class="row between mb8"><strong style="font-size:13px">Verknüpfte Termine</strong></div>
@@ -690,6 +738,17 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     drawERechnung();
     updateAmountSummary();
     wireForm();
+  }
+
+  /** Unter der Kategorie: in welche Zeile der Anlage EÜR sie im Jahr der Buchung zählt. */
+  function kategorieHinweis() {
+    const hint = form.querySelector('#catHint');
+    if (!hint) return;
+    const c = sel.category(form.querySelector('#i_categoryId').value);
+    const jahr = Number((form.querySelector('#i_date').value || todayISO()).slice(0, 4));
+    const hat = c && c.euerLine !== null && c.euerLine !== undefined && c.euerLine !== '';
+    hint.textContent = hat ? `Zeile ${formLine(c.euerLine, jahr)} der Anlage EÜR ${formYear(jahr)}` : c?.private ? 'Privat, zählt nicht zum Gewinn' : '';
+    hint.hidden = !hint.textContent;
   }
 
   /** Felder für die Wiederholung – oder der Hinweis auf die Regel, zu der die Buchung gehört. */
@@ -941,8 +1000,8 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     const list = form.querySelector('#attachList');
     if (!attachments.length) {
       list.innerHTML = tx.type === 'income'
-        ? '<p class="muted tiny mb0">Noch kein Beleg hinterlegt. Auch von Ausgangsrechnungen gehört eine Kopie in die Unterlagen (§ 14b UStG, § 147 AO).</p>'
-        : '<p class="muted tiny mb0">Noch kein Beleg hinterlegt. Ohne Beleg keine Betriebsausgabe, das prüft das Finanzamt zuerst.</p>';
+        ? '<p class="muted tiny mb0">Noch kein Beleg. Eine Kopie jeder eigenen Rechnung gehört in Ihre Unterlagen.</p>'
+        : '<p class="muted tiny mb0">Noch kein Beleg. Hängen Sie ihn am besten gleich an, das Finanzamt fragt danach.</p>';
       return;
     }
     list.innerHTML = attachments.map((a) => `
@@ -1022,9 +1081,14 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         const rateSel = form.querySelector('#i_vatRate');
         if (rateSel) { rateSel.value = String(c.vatRate); updateAmountSummary(); }
       }
+      kategorieHinweis();
     });
+    form.querySelector('#i_date').addEventListener('change', kategorieHinweis);
+    kategorieHinweis();
     form.querySelector('#i_isPaid').addEventListener('change', (e) => {
       form.querySelector('#i_paidDate').disabled = !e.target.checked;
+      // Eine Fälligkeit braucht nur, was noch offen ist; ein eingetragenes Datum bleibt erhalten.
+      form.querySelector('#dueField').hidden = e.target.checked;
     });
     form.querySelector('#i_repeat')?.addEventListener('change', (e) => {
       const bis = form.querySelector('#i_repeatUntil');
@@ -1231,6 +1295,8 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
   // Belege dürfen auch von außerhalb des Dialogs fallen gelassen werden.
   m.root.addEventListener('dragover', (e) => e.preventDefault());
   m.root.addEventListener('drop', (e) => { e.preventDefault(); addFiles([...e.dataTransfer.files]); });
+  // „Neue Buchung → Aus Beleg“: die gewählten Dateien hängen sofort an, eine E-Rechnung wird erkannt.
+  if (dateien?.length) addFiles(dateien);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1388,7 +1454,7 @@ export async function previewAttachment(id, metaHint = null) {
           ? `<iframe class="preview-frame" src="${url}"></iframe>`
           : isText
             ? `<pre class="preview-text">${esc(textInhalt)}${daten.length > 400000 ? '\n…' : ''}</pre>`
-            : `<div class="empty"><h4>Keine Vorschau möglich</h4><p class="small">Diese Datei kann Kontovia nicht selbst anzeigen. Sie können den Beleg speichern oder extern öffnen.</p></div>`,
+            : `<div class="empty"><p class="empty-titel">Keine Vorschau möglich</p><p class="small">Diese Datei kann Kontovia nicht selbst anzeigen. Sie können den Beleg speichern oder extern öffnen.</p></div>`,
     foot: `<span class="left muted tiny">${meta.sha256
       ? `${esc(bytes(meta.size || 0))} · Prüfsumme ${esc(String(meta.sha256).slice(0, 16))}…`
       : esc(bytes(daten.length))}</span>

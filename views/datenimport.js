@@ -72,7 +72,7 @@ const KARTEN = [
   ['kontakte', 'users', 'Kunden und Lieferanten', 'Visitenkarten (vCard) aus Outlook, Google oder vom Telefon, Tabellen mit Adressen oder DATEV-Debitoren und -Kreditoren.'],
   ['produkte', 'tag', 'Produkte und Leistungen', 'Tabelle mit Bezeichnung, Preis, Einheit und Steuersatz, zum Beispiel aus Ihrem bisherigen Rechnungsprogramm.'],
   ['kontoauszug', 'bank', 'Kontoauszug', 'CSV, CAMT.053 oder MT940 von Ihrer Bank. Zahlungen werden offenen Rechnungen zugeordnet.'],
-  ['erechnung', 'invoice', 'E-Rechnung erhalten', 'XRechnung oder ZUGFeRD-PDF eines Lieferanten. Kontovia zeigt sie lesbar an und bereitet die Buchung vor.'],
+  ['erechnung', 'invoice', 'E-Rechnung erhalten', 'Die E-Rechnung eines Lieferanten, als XML-Datei oder PDF. Kontovia zeigt sie lesbar an und bereitet die Buchung vor.'],
   ['kalender', 'calendar', 'Termine', 'Kalenderdatei (.ics) aus Outlook, Google oder Apple Kalender.'],
 ];
 
@@ -93,14 +93,14 @@ function start(root) {
     <div class="grid c2 mt16">
       ${KARTEN.map(([id, ic, titel, text]) => `
         <div class="card">
-          <div class="card-head"><h3>${icon(ic, 16).__raw} ${esc(titel)}</h3></div>
+          <div class="card-head"><h2>${icon(ic, 16).__raw} ${esc(titel)}</h2></div>
           <div class="card-body">
             <p class="small muted mt0">${esc(text)}</p>
             <button class="btn" data-ziel="${id}" type="button">${id === 'kontoauszug' ? 'Zum Kontoauszug' : 'Datei wählen'}</button>
           </div>
         </div>`).join('')}
     </div>
-    ${meldungen.length ? '<div class="card mt16"><div class="card-head"><h3>Eingelesene Voranmeldungen</h3><span class="sub" id="diSumme"></span></div><div id="diMeldungen"></div></div>' : ''}`;
+    ${meldungen.length ? '<div class="card mt16"><div class="card-head"><h2>Eingelesene Voranmeldungen</h2><span class="sub" id="diSumme"></span></div><div id="diMeldungen"></div></div>' : ''}`;
 
   const input = $('#diDatei', root);
   let ziel = '';
@@ -578,7 +578,7 @@ function pruefenElster(root) {
     </div></div>
     ${st.meldungen.map((m) => {
     const alt = vorhanden.find((x) => x.jahr === m.jahr && x.zeitraum === m.zeitraum);
-    return `<div class="card mb16"><div class="card-head"><h3>${esc(zeitraumText(m.jahr, m.zeitraum))}${m.berichtigt ? ' <span class="badge tiny">berichtigt</span>' : ''}</h3>
+    return `<div class="card mb16"><div class="card-head"><h2>${esc(zeitraumText(m.jahr, m.zeitraum))}${m.berichtigt ? ' <span class="badge tiny">berichtigt</span>' : ''}</h2>
       <span class="sub">${m.steuernummer ? `Steuernummer ${esc(m.steuernummer)}` : ''}${alt ? ' · ersetzt die früher eingelesene' : ''}</span></div>
       <div class="card-body">${vergleichHtml(m)}</div></div>`;
   }).join('')}
@@ -609,7 +609,7 @@ function fertig(root) {
     : `<strong>${int(e.anzahl)}</strong> ${e.art === 'kontakte' ? (e.anzahl === 1 ? 'Kontakt' : 'Kontakte') : (e.anzahl === 1 ? 'Produkt' : 'Produkte')} übernommen.`;
   root.innerHTML = `
     <div class="card"><div class="card-body">
-      <h3 class="mt0">${icon('check', 18).__raw} ${e.fehler?.length ? 'Fertig, mit Hinweisen' : 'Fertig'}</h3>
+      <h2 class="mt0">${icon('check', 18).__raw} ${e.fehler?.length ? 'Fertig, mit Hinweisen' : 'Fertig'}</h2>
       <p>Aus „${esc(e.datei)}“: ${text}</p>
       ${e.fehler?.length ? `<div class="notice warn"><strong>${int(e.fehler.length)} ${e.fehler.length === 1 ? 'Zeile wurde' : 'Zeilen wurden'} nicht übernommen:</strong><ul class="mb0">${e.fehler.slice(0, 100).map((f) => `<li>${esc(f.text)}: ${esc(f.grund)}</li>`).join('')}</ul></div>` : ''}
       ${e.art === 'buchungen' ? '<p class="small muted">Dieselbe Datei noch einmal einzulesen, übernimmt nichts doppelt.</p>' : ''}

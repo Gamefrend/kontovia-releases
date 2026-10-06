@@ -95,7 +95,7 @@ function schrittDatei(host, root) {
           <select id="kiKonto">${kontoOptionen(st.kontoId)}</select>
           <span class="hint">Auf dieses Konto werden die Umsätze gebucht. Kontovia wählt es selbst, wenn die IBAN in der Datei zu einem Konto passt.</span>
         </div>
-        <div class="ki-drop" id="kiDrop" tabindex="0" role="button" aria-label="Kontoauszug auswählen">
+        <div class="ki-drop" id="kiDrop">
           ${icon('bank', 28).__raw}
           <strong>Kontoauszug hierher ziehen oder auswählen</strong>
           <span class="small muted">CSV (Sparkasse, Volksbank, ING, DKB und andere), CAMT.053 (XML) und MT940</span>
@@ -105,13 +105,13 @@ function schrittDatei(host, root) {
         <p class="small muted mb0 mt16" id="kiStatus" role="status">Die Datei wird nur auf diesem Gerät gelesen. Sie wird nicht hochgeladen und nirgends gespeichert. Gebucht wird erst, wenn Sie es bestätigen.</p>
       </div>
     </div>
-    ${importe.length ? '<div class="card mt16"><div class="card-head"><h3>Frühere Importe</h3></div><div id="kiFrueher"></div></div>' : ''}`;
+    ${importe.length ? '<div class="card mt16"><div class="card-head"><h2>Frühere Importe</h2></div><div id="kiFrueher"></div></div>' : ''}`;
 
   $('#kiKonto', host).addEventListener('change', (e) => { st.kontoId = e.currentTarget.value; });
   const input = $('#kiDatei', host);
   $('#kiWahl', host).addEventListener('click', (e) => { e.stopPropagation(); input.click(); });
+  // Ein Klick irgendwo in die Fläche wählt ebenfalls; mit der Tastatur geht es über den Knopf darin.
   $('#kiDrop', host).addEventListener('click', () => input.click());
-  $('#kiDrop', host).addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
   input.addEventListener('change', () => { if (input.files?.[0]) dateiLesen(input.files[0], root); });
   const drop = $('#kiDrop', host);
   for (const ev of ['dragenter', 'dragover']) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('ueber'); });
@@ -189,7 +189,7 @@ function schrittSpalten(host, root) {
   const trennerName = { ';': 'Semikolon', ',': 'Komma', '\t': 'Tabulator', '|': 'Senkrechter Strich' };
   host.innerHTML = `
     <div class="card">
-      <div class="card-head"><h3>${icon('table', 16).__raw} ${esc(st.name)}</h3><span class="sub">${esc(g.kodierung)}</span></div>
+      <div class="card-head"><h2>${icon('table', 16).__raw} ${esc(st.name)}</h2><span class="sub">${esc(g.kodierung)}</span></div>
       <div class="card-body">
         ${st.vorlage ? `<div class="notice ok mb16">Die gemerkte Zuordnung „${esc(st.vorlage)}“ wurde angewendet.</div>` : ''}
         <p class="mt0">${z.anzahl ? `<strong>${int(z.anzahl)} Umsätze</strong> erkannt, vom ${esc(fmtDate(z.von))} bis ${esc(fmtDate(z.bis))}: Eingänge ${esc(money(z.eingang))} €, Ausgänge ${esc(money(Math.abs(z.ausgang)))} €.` : '<strong>Noch keine Umsätze erkannt.</strong> Bitte ordnen Sie unten mindestens Buchungstag und Betrag zu.'}
@@ -207,7 +207,7 @@ function schrittSpalten(host, root) {
             <td><select data-spalte="${i}" aria-label="Bedeutung der Spalte ${esc(k || i + 1)}"><option value="">Nicht verwenden</option>${Object.entries(SPALTENROLLEN).map(([r, t]) => `<option value="${r}" ${rolleVon(i) === r ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></td>
             <td class="small muted col-mh-opt">${proben(i).map(esc).join(' · ')}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Keine Überschriften gefunden. Geben Sie oben die Zeile der Überschriften an.</td></tr>'}</tbody>
         </table></div>
-        ${g.umsaetze.length ? `<h4 class="mt16 mb8">So sehen die ersten Umsätze aus</h4>
+        ${g.umsaetze.length ? `<h3 class="mt16 mb8">So sehen die ersten Umsätze aus</h3>
         <div class="table-wrap"><table class="data compact"><thead><tr><th>Datum</th><th>Gegenseite</th><th class="col-mh-opt">Verwendungszweck</th><th class="right">Betrag</th></tr></thead><tbody>
           ${g.umsaetze.slice(0, 6).map((u) => `<tr><td class="nowrap">${esc(fmtDate(u.datum))}</td><td>${esc(u.gegenseite)}</td><td class="small muted col-mh-opt truncate">${esc(u.zweck)}</td><td class="right num ${u.betrag < 0 ? 'neg' : 'pos'}">${esc(money(u.betrag))} €</td></tr>`).join('')}
         </tbody></table></div>` : ''}
@@ -590,7 +590,7 @@ function schrittFertig(host, root) {
   if (!e) { st = leer(); zeichnen(root); return; }
   host.innerHTML = `
     <div class="card"><div class="card-body">
-      <h3 class="mt0">${icon('check', 18).__raw} ${e.fehler.length ? 'Fertig, mit Hinweisen' : 'Fertig'}</h3>
+      <h2 class="mt0">${icon('check', 18).__raw} ${e.fehler.length ? 'Fertig, mit Hinweisen' : 'Fertig'}</h2>
       <p>Aus „${esc(e.datei)}“ ${e.ausgewaehlt === 1 ? 'wurde ein Umsatz' : `wurden ${int(e.ausgewaehlt)} Umsätze`} bearbeitet:
         <strong>${int(e.bezahlt)}</strong> ${e.bezahlt === 1 ? 'Zahlung' : 'Zahlungen'} zu offenen Posten zugeordnet, <strong>${int(e.gebucht)}</strong> neue ${e.gebucht === 1 ? 'Buchung' : 'Buchungen'} angelegt${e.mahnkosten ? `, davon ${int(e.mahnkosten)} für Mahnkosten` : ''}.</p>
       ${e.fehler.length ? `<div class="notice warn"><strong>${int(e.fehler.length)} ${e.fehler.length === 1 ? 'Umsatz wurde' : 'Umsätze wurden'} nicht gebucht:</strong><ul class="mb0">${e.fehler.map((f) => `<li>${esc(f.text)}: ${esc(f.grund)}</li>`).join('')}</ul></div>` : ''}
@@ -626,7 +626,7 @@ export function regelnDialog() {
           <td class="right nowrap"><button class="btn sm ghost" data-edit="${esc(r.id)}" aria-label="Bearbeiten">${icon('edit', 14).__raw}</button><button class="btn sm ghost" data-del="${esc(r.id)}" aria-label="Löschen">${icon('trash', 14).__raw}</button></td></tr>`).join('') || '<tr><td colspan="4" class="muted">Noch keine Regeln.</td></tr>'}
       </tbody></table></div>
       <button class="btn mt8" id="rgNeu">${icon('plus', 14).__raw} Neue Regel</button>
-      <h4 class="mt16 mb8">Gemerkte Spaltenzuordnungen</h4>
+      <h3 class="mt16 mb8">Gemerkte Spaltenzuordnungen</h3>
       <div class="table-wrap"><table class="data compact"><tbody>
         ${vorlagen.map((v) => `<tr><td class="strong">${esc(v.name)}</td><td class="small muted">${Object.keys(v.spalten || {}).length} Spalten zugeordnet</td><td class="right"><button class="btn sm ghost" data-vdel="${esc(v.id)}" aria-label="Löschen">${icon('trash', 14).__raw}</button></td></tr>`).join('') || '<tr><td class="muted">Noch keine gemerkt. Beim Einlesen einer CSV-Datei lässt sich die Zuordnung merken.</td></tr>'}
       </tbody></table></div>`;

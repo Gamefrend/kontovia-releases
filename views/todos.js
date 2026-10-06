@@ -27,6 +27,7 @@ import {
   teilaufgaben, neueTeilaufgabe, fortschritt, verknuepfungen, verknuepfungHinzu, verknuepfungenRoh, aufgabenZu,
   horizontNormal, horizontEnde, horizontText, horizontTitel, aufgabenText, EINHEITEN, VERKNUEPFUNG_ARTEN,
   ARTEN, aufgabenArt, zielRechnung, zielPrognose, zielSatz, zielRest, zielNormal, mengeText, wiederholungNormal, wiederholungText, WIEDERHOLUNG_EINHEITEN,
+  naechsteFaelligkeit,
 } from '../lib/aufgaben.js';
 import { sucheIndex, suchen } from '../lib/suchindex.js';
 
@@ -79,7 +80,10 @@ function dueBadge(todo, today = todayISO()) {
   const cls = date < today ? 'neg' : date === today ? 'warn' : date <= addDays(today, 7) ? 'info' : '';
   const rel = relativeDays(date);
   const text = date < today ? `überfällig seit ${fmtDateShort(date)}` : `bis ${rel === 'heute' || rel === 'morgen' ? rel : fmtDateShort(date)}`;
-  return `<span class="badge ${cls} tiny" title="${esc(fromAppointment ? `Kein eigenes Datum, es gilt der Termin am ${fmtDate(date)}` : `Fällig am ${fmtDate(date)}`)}">${icon('clock', 11).__raw} ${esc(text)}</span>`;
+  // Eine verpasste Wiederholung holt niemand Termin für Termin nach: Abhaken springt auf den nächsten Tag nach heute.
+  const naechst = date < today && aufgabenArt(todo) === 'wiederholend'
+    ? `. Abhaken setzt sie auf den ${fmtDate(naechsteFaelligkeit(todo, today))}` : '';
+  return `<span class="badge ${cls} tiny" title="${esc(fromAppointment ? `Kein eigenes Datum, es gilt der Termin am ${fmtDate(date)}` : `Fällig am ${fmtDate(date)}${naechst}`)}">${icon('clock', 11).__raw} ${esc(text)}</span>`;
 }
 
 function apptChip(todo) {
@@ -120,7 +124,7 @@ const ZIEL_STATUS = {
   ohneDatum: ['', ''],
 };
 
-/** Hochrechnung in einer eigenen Zeile: „fertig zum …“ oder „… Tage in Verzug“; leer, wenn es nichts hochzurechnen gibt. */
+/** Hochrechnung in einer eigenen Zeile: „voraussichtlich fertig am …“ oder „… Tage in Verzug“; leer, wenn es nichts hochzurechnen gibt. */
 function prognoseText(todo, heute) {
   const p = zielPrognose(todo, heute);
   if (!p) return '';
@@ -129,7 +133,7 @@ function prognoseText(todo, heute) {
   const titel = `Hochgerechnet aus dem bisherigen Tempo (${mengeText(r.tempo)}${e} pro Tag)`;
   return p.verzug
     ? `<span class="verzug" title="${esc(`${titel}: fertig am ${fmtDate(p.fertig)}`)}">${p.verzug} ${p.verzug === 1 ? 'Tag' : 'Tage'} in Verzug</span>`
-    : `<span title="${esc(titel)}">Fertig zum ${esc(fmtDate(p.fertig))}</span>`;
+    : `<span title="${esc(titel)}">Voraussichtlich fertig am ${esc(fmtDate(p.fertig))}</span>`;
 }
 
 /** Fortschrittsbalken, Satz zum Stand und Eintragen des Fortschritts bei einem Ziel. */
@@ -184,8 +188,8 @@ export function todoRow(todo, { compact = false } = {}) {
   return `<div class="todo-item${compact ? '' : ' todo-voll'}${todo.done ? ' done' : ''}" data-todo="${esc(todo.id)}">
     <input type="checkbox" class="todo-check" data-toggle-todo="${esc(todo.id)}" ${todo.done ? 'checked' : ''}
       aria-label="${esc(todo.title)} ${todo.done ? 'wieder öffnen' : art === 'ziel' ? 'als geschafft abhaken' : 'als erledigt abhaken'}">
-    <div class="todo-main" data-edit-todo="${esc(todo.id)}" role="button" tabindex="0">
-      <div class="todo-title">${esc(todo.title || '(ohne Titel)')}</div>
+    <div class="todo-main" data-edit-todo="${esc(todo.id)}">
+      <button type="button" class="todo-title">${esc(todo.title || '(ohne Titel)')}</button>
       <div class="todo-meta">${compact ? faellig : ''}${wdh}${teile}${bilder}${apptChip(todo)}${compact ? '' : linkChips(todo)}${notiz}</div>
       ${art === 'ziel' ? zielBlock(todo, compact) : ''}
       ${unter}
@@ -261,8 +265,8 @@ export function wireTodoRows(root, redraw) {
   }));
   $$('[data-edit-todo]', root).forEach((n) => {
     const open = () => openTodoDialog(n.dataset.editTodo, {}, { nachSpeichern: redraw });
+    // Die Maus trifft die ganze Zeile, die Tastatur den Titel (ein Knopf, dessen Klick hier ankommt).
     n.addEventListener('click', (e) => { if (!e.target.closest('[data-open-appt],[data-open-link],.todo-subs,.todo-ziel-zeile')) open(); });
-    n.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === n) { e.preventDefault(); open(); } });
   });
   $$('[data-open-appt]', root).forEach((b) => b.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -310,7 +314,7 @@ export function aufgabenAbschnitt(el, typ, id, { titel = 'Aufgaben dazu', vorgab
 /* -------------------------------------------------------------------------- */
 
 export async function render(root, params, { actions } = {}) {
-  actions.innerHTML = html`<button class="btn primary" id="newTodo">${icon('plus', 16)} Aufgabe</button>`;
+  actions.innerHTML = html`<button class="btn primary" id="newTodo">${icon('plus', 16)} Neue Aufgabe</button>`;
   $('#newTodo', actions).addEventListener('click', () => openTodoDialog(null));
   draw(root);
 }
@@ -432,7 +436,7 @@ function draw(root) {
 /** Eine Gruppe als eigene Karte; der Punkt vor dem Namen zeigt die Dringlichkeit. */
 function group(title, rows, ton = 'muted') {
   return `<section class="card todo-group">
-    <header class="todo-group-title"><i class="todo-punkt ${esc(ton)}" aria-hidden="true"></i><h3>${esc(title)}</h3><span class="badge tiny">${rows.length}</span></header>
+    <header class="todo-group-title"><i class="todo-punkt ${esc(ton)}" aria-hidden="true"></i><h2>${esc(title)}</h2><span class="badge tiny">${rows.length}</span></header>
     <div class="todo-liste">${rows.map((t) => todoRow(t)).join('')}</div>
   </section>`;
 }

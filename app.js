@@ -4,7 +4,7 @@
  */
 
 import { html, raw, esc, $, int, bytes, fmtDateTime, debounce, MOD, ustIdHinweis, steuernummerHinweis } from './lib/util.js';
-import { icon, toast, ok, err, warn, modal, passwordInput, wirePasswordToggles, feldHinweis, obersteSchliessen } from './lib/ui.js';
+import { icon, toast, ok, err, warn, modal, passwordInput, wirePasswordToggles, feldHinweis, obersteSchliessen, beschriftungenBeobachten } from './lib/ui.js';
 import { store, setDb, clearDb, subscribe, saveNow, sel, lockedUntil, setDevice, commit } from './lib/store.js';
 import { startAutoSync, syncState, onSync, syncNow } from './lib/sync.js';
 import { updateState, onUpdate, startUpdateWatch, markNotified } from './lib/updates.js';
@@ -16,42 +16,42 @@ import { startCalendarSync, stopCalendarSync } from './lib/gcalsync.js';
 import { VERSIONEN } from './lib/versionen.js';
 import { mitCodeVerbinden, nachDemVerbinden } from './lib/koppeln.js';
 import { beimEntsperren, hinweisKasten, hinweisVerdrahten } from './lib/zulassung.js';
-import { abmelden, entsperrWege, kontenMenue, kontenAufSperrbildschirm, nachrichtHolen, kontoName, kontoSchluessel } from './lib/zugaenge.js';
+import { entsperrWege, kontenMenue, kontenAufSperrbildschirm, nachrichtHolen, kontoName, kontoSchluessel } from './lib/zugaenge.js';
 import { feedbackOeffnen, feedbackNachsenden, entwicklerKlick } from './lib/feedback.js';
 import { rechtsfuss, rechtslinks, nutzungPruefen, nutzungVermerken } from './lib/recht.js';
 import { nutzerWaehlen, nutzerMenue, nutzerAnzeigen, kannSchreiben } from './lib/benutzer.js';
 import { sucheOeffnen, SUCHE_KUERZEL } from './lib/suche.js';
 import { seite, seitenwechsel, beobachten, markierung, umschalterBeobachten, themaWechsel, schuetteln } from './lib/bewegung.js';
 
-import * as viewDashboard from './views/dashboard.js';
-import * as viewTransactions from './views/transactions.js';
-import * as viewCalendar from './views/calendar.js';
-import * as viewTodos from './views/todos.js';
-import * as viewRechnungen from './views/rechnungen.js';
-import * as viewReports from './views/reports.js';
-import * as viewImportExport from './views/importexport.js';
-import * as viewMaster from './views/master.js';
-import * as viewSettings from './views/settings.js';
-import * as viewHelp from './views/help.js';
-import * as viewKontoimport from './views/kontoimport.js';
-
 const api = window.kontovia;
 const app = document.getElementById('app');
 export let appInfo = { version: '1.0.0' };
 
+/* Die Ansichten werden erst geladen, wenn sie gebraucht werden: Der
+   Sperrbildschirm kommt so ohne die über 1 MB der Ansichten aus. Offline
+   liegen sie trotzdem bereit, der Service Worker hält jede Fassung ganz. */
 export const VIEWS = {
-  dashboard: { title: 'Übersicht', icon: 'dashboard', mod: viewDashboard, key: '1' },
-  transactions: { title: 'Buchungen', icon: 'book', mod: viewTransactions, key: '2' },
-  kontoimport: { title: 'Kontoauszug', icon: 'bank', mod: viewKontoimport },
-  calendar: { title: 'Kalender', icon: 'calendar', mod: viewCalendar, key: '3' },
-  todos: { title: 'Aufgaben', icon: 'todo', mod: viewTodos, key: '7' },
-  rechnungen: { title: 'Rechnungen', icon: 'invoice', mod: viewRechnungen, key: '8' },
-  reports: { title: 'Auswertungen', icon: 'chart', mod: viewReports, key: '4' },
-  export: { title: 'Import & Export', icon: 'export', mod: viewImportExport, key: '5' },
-  master: { title: 'Stammdaten', icon: 'master', mod: viewMaster, key: '6' },
-  settings: { title: 'Einstellungen', icon: 'settings', mod: viewSettings, key: ',' },
-  help: { title: 'Hilfe', icon: 'help', mod: viewHelp },
+  dashboard: { title: 'Übersicht', icon: 'dashboard', mod: () => import('./views/dashboard.js'), key: '1' },
+  transactions: { title: 'Buchungen', icon: 'book', mod: () => import('./views/transactions.js'), key: '2' },
+  kontoimport: { title: 'Kontoauszug', icon: 'bank', mod: () => import('./views/kontoimport.js') },
+  calendar: { title: 'Kalender', icon: 'calendar', mod: () => import('./views/calendar.js'), key: '4' },
+  todos: { title: 'Aufgaben', icon: 'todo', mod: () => import('./views/todos.js'), key: '5' },
+  rechnungen: { title: 'Rechnungen', icon: 'invoice', mod: () => import('./views/rechnungen.js'), key: '3' },
+  reports: { title: 'Auswertungen', icon: 'chart', mod: () => import('./views/reports.js'), key: '6' },
+  export: { title: 'Import & Export', icon: 'export', mod: () => import('./views/importexport.js'), key: '7' },
+  master: { title: 'Stammdaten', icon: 'master', mod: () => import('./views/master.js'), key: '8' },
+  settings: { title: 'Einstellungen', icon: 'settings', mod: () => import('./views/settings.js'), key: ',' },
+  help: { title: 'Hilfe', icon: 'help', mod: () => import('./views/help.js') },
 };
+
+/** Nach der ersten Ansicht die übrigen in Ruhe vorladen, damit der Wechsel nicht wartet. */
+let vorgeladen = false;
+function ansichtenVorladen() {
+  if (vorgeladen) return;
+  vorgeladen = true;
+  const spaeter = window.requestIdleCallback || ((f) => setTimeout(f, 1500));
+  spaeter(() => { for (const v of Object.values(VIEWS)) v.mod().catch(() => {}); });
+}
 
 /* -------------------------------------------------------------------------- */
 /* Thema                                                                       */
@@ -112,6 +112,8 @@ async function boot() {
   applyTheme(lastTheme());
   // Jeder Umschalter (Reiter, Einnahme/Ausgabe, Darstellung) bekommt die gleitende Marke.
   umschalterBeobachten();
+  // Jede Beschriftung nennt ihr Feld (Bildschirmleser, Klick auf die Beschriftung).
+  beschriftungenBeobachten();
   try {
     appInfo = await api.app.info();
     // Ohne Gerätekennung könnte das Änderungsjournal beim Abgleich zweier
@@ -138,7 +140,7 @@ async function boot() {
   if (status.fortsetzen) {
     const gate = document.querySelector('.gate-card');
     if (gate) {
-      gate.querySelector('h2').textContent = `Kontovia ${appInfo.version} ist installiert`;
+      gate.querySelector('h1').textContent = `Kontovia ${appInfo.version} ist installiert`;
       gate.querySelector('.lead').textContent = 'Sie werden gleich angemeldet.';
     }
   }
@@ -319,7 +321,7 @@ function renderSetup(konten = null) {
       Ein mit Google verbundenes Gerät bestätigt alle 30 Tage von selbst, dass das Konto noch zugelassen ist; dabei wird nur gelesen.</div></div>
       <div class="stack" style="gap:4px;align-items:flex-end">
         <button class="btn" id="g_anmelden">${icon('key', 15).__raw} Mit Google anmelden</button>
-        ${weiterleitung && mitCodeMoeglich ? '<button class="btn ghost sm" id="g_code">Stattdessen mit Code</button>' : ''}
+        ${weiterleitung && mitCodeMoeglich ? '<button class="btn ghost sm" id="g_code">Klappt nicht? Mit Code anmelden</button>' : ''}
       </div></div>`;
   };
 
@@ -376,7 +378,7 @@ function renderSetup(konten = null) {
 
   const bodies = [
     () => html`
-      <h2>${weiteres ? 'Weiteres Konto hinzufügen' : 'Willkommen bei Kontovia'}</h2>
+      <h1>${weiteres ? 'Weiteres Konto hinzufügen' : 'Willkommen bei Kontovia'}</h1>
       ${weiteres ? raw(`<p class="small muted" style="margin:-6px 0 12px">Jedes Konto hat sein eigenes Passwort und seine eigene Buchhaltung. Die bisherigen Konten bleiben, wie sie sind.</p>`) : ''}
       <p class="lead">Ihre Buchhaltung bleibt auf diesem Gerät, verschlüsselt mit
       Ihrem Passwort. Es gibt kein Benutzerkonto beim Hersteller und keine Telemetrie; Ihre
@@ -394,7 +396,7 @@ function renderSetup(konten = null) {
       </div>`,
 
     () => html`
-      <h2>Steuerliche Einstellungen</h2>
+      <h1>Steuerliche Einstellungen</h1>
       <p class="lead">Diese Einstellungen bestimmen, wie Kontovia rechnet. Wenn Sie
       unsicher sind: Die Voreinstellung passt für die meisten Selbstständigen und
       kleinen Betriebe. Die Anlage EÜR folgt immer dem Zahlungsfluss.</p>
@@ -439,7 +441,7 @@ function renderSetup(konten = null) {
       </div>`,
 
     () => html`
-      <h2>Passwort festlegen</h2>
+      <h1>Passwort festlegen</h1>
       <p class="lead">Ihre gesamte Buchhaltung wird mit diesem Passwort verschlüsselt.
       Ohne das Passwort sind die Daten unwiederbringlich verloren. Es gibt keine
       Hintertür und keine Zurücksetzfunktion.</p>
@@ -480,7 +482,7 @@ function renderSetup(konten = null) {
 
   function draw() {
     app.innerHTML = html`
-      <div class="gate">
+      <div class="gate" role="main">
         <div class="gate-card wide">
           ${weiteres ? raw(`<button type="button" class="btn ghost sm setup-zurueck" id="setupZurueck">${icon('left', 14).__raw} Zurück zu „${esc(kontoName(vorher))}“</button>`) : ''}
           <div class="gate-logo">K</div>
@@ -603,10 +605,10 @@ function renderSetup(konten = null) {
  */
 function renderCloudLaden(st, { neu }) {
   app.innerHTML = html`
-    <div class="gate">
+    <div class="gate" role="main">
       <div class="gate-card">
         <div class="gate-logo">K</div>
-        <h2>Buchhaltung aus der Cloud laden</h2>
+        <h1>Buchhaltung aus der Cloud laden</h1>
         <p class="lead">Angemeldet als <strong>${st.email || 'Google-Konto'}</strong>. In Ihrem Konto
         liegt eine Kontovia-Buchhaltung${st.stand ? raw(`, Stand ${esc(fmtDateTime(st.stand))}`) : ''}${st.groesse ? raw(` (${esc(bytes(st.groesse))})`) : ''}.
         Sie ist mit dem Passwort verschlüsselt, das Sie auf Ihrem anderen Gerät festgelegt haben.</p>
@@ -739,10 +741,10 @@ async function vorhandenenOrdnerOeffnen() {
 /** Nach einem Neustart fragt der Browser, ob Kontovia wieder auf den Ordner zugreifen darf. */
 function renderOrdnerZugriff(sp) {
   app.innerHTML = html`
-    <div class="gate">
+    <div class="gate" role="main">
       <div class="gate-card">
         <div class="gate-logo">K</div>
-        <h2>Zugriff auf Ihren Ordner</h2>
+        <h1>Zugriff auf Ihren Ordner</h1>
         <p class="lead">Ihre Buchhaltung liegt im Ordner <strong>„${sp.name}“</strong> auf diesem Gerät.
         Der Browser fragt nach einem Neustart, ob Kontovia wieder darauf zugreifen darf.</p>
         ${sp.zugriff === 'denied' ? raw(`<div class="notice warn mb16">Der Zugriff wurde abgelehnt. Ohne ihn kann
@@ -773,10 +775,10 @@ function renderOrdnerZugriff(sp) {
 /** Der gemerkte Ordner ist erreichbar, aber ohne Buchhaltung: verschoben, umbenannt oder geleert. */
 function renderOrdnerFehlt(sp) {
   app.innerHTML = html`
-    <div class="gate">
+    <div class="gate" role="main">
       <div class="gate-card">
         <div class="gate-logo">K</div>
-        <h2>Buchhaltung nicht gefunden</h2>
+        <h1>Buchhaltung nicht gefunden</h1>
         <p class="lead">Kontovia speichert Ihre Buchhaltung im Ordner <strong>„${sp.name}“</strong>, aber dort
         liegt sie nicht mehr. Wurde der Ordner verschoben, umbenannt oder geleert?</p>
         <div class="row wrap mt16" style="gap:8px">
@@ -821,10 +823,10 @@ function ordnerAuswegeVerdrahten(sp) {
 
 function renderUnlock(message = '') {
   app.innerHTML = html`
-    <div class="gate">
+    <div class="gate" role="main">
       <div class="gate-card">
         <div class="gate-logo">K</div>
-        <h2>Kontovia ist gesperrt</h2>
+        <h1>Kontovia ist gesperrt</h1>
         <p class="small muted" id="unlockKonto" style="margin:-6px 0 8px"></p>
         <p class="lead">Geben Sie Ihr Passwort ein, um die Buchhaltung zu entschlüsseln.</p>
         ${message ? raw(`<div class="notice mb16">${esc(message)}</div>`) : ''}
@@ -844,8 +846,9 @@ function renderUnlock(message = '') {
           <p>Ohne Passwort lässt sich der Tresor nicht öffnen, auch nicht vom Hersteller. Das
           schützt Ihre Buchhaltung, falls jemand die Datei in die Hände bekommt.</p>
           <p>Haben Sie eine <strong>Vollsicherung (.kvbak)</strong>, deren Passwort Sie kennen:
-          In den Einstellungen des Browsers die Website-Daten dieser Seite löschen, Kontovia neu laden, einen neuen
-          Tresor anlegen und unter <em>Einstellungen → Sicherung wiederherstellen</em> einspielen.</p>
+          Unten auf <em>Konto hinzufügen</em> tippen, eine neue Buchhaltung anlegen und die Sicherung dort unter
+          <em>Einstellungen → Sicherung wiederherstellen</em> einspielen. Das gesperrte Konto bleibt so lange erhalten,
+          bis Sie es selbst entfernen.</p>
           <p class="muted">Die automatischen Sicherungen sind mit dem Tresorpasswort verschlüsselt, das zu ihrer Zeit galt.</p>
         </details>
         <div id="kontenWahl" class="mt16"></div>
@@ -970,7 +973,9 @@ async function afterUnlock() {
   startCalendarSync().catch((e) => console.error('Kalenderabgleich:', e));
   await setupUpdateWatch();
   // Fällige wiederkehrende Buchungen erst nach der Frage zur Update-Prüfung anbieten.
-  import('./views/wiederkehrend.js').then((m) => m.faelligeAnbieten()).catch((e) => console.error('Wiederkehrende Buchungen:', e));
+  // Wer heute schon „Später“ gewählt hat, wird nicht bei jedem Entsperren erneut gefragt.
+  import('./views/wiederkehrend.js').then((m) => m.faelligeAnbieten({ merker: kontoSchluessel('wiederkehrendSpaeter', appInfo.konto) }))
+    .catch((e) => console.error('Wiederkehrende Buchungen:', e));
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1091,7 +1096,7 @@ export function renderUpdateButton() {
 function navItem(key) {
   const v = VIEWS[key];
   return html`
-    <div class="nav-item ${router.view === key ? 'active' : ''}" data-view="${key}" role="button" tabindex="0" aria-current="${router.view === key ? 'page' : 'false'}" title="${v.key ? `${v.title} (${MOD}+${v.key})` : v.title}">
+    <div class="nav-item ${router.view === key ? 'active' : ''}" data-view="${key}" role="button" tabindex="0" aria-current="${router.view === key ? 'page' : 'false'}" title="${v.key ? `${v.title} (${/\d/.test(v.key) ? 'Alt' : MOD}+${v.key})` : v.title}">
       ${icon(v.icon, 18)}<span>${v.title}</span>
     </div>`;
 }
@@ -1146,8 +1151,28 @@ export function neueBuchungMenue(anker) {
         <button type="button" class="menu-opt neu-opt" data-nav data-art="expense">
           <span class="neu-ico">${icon('arrowUp', 16, 'neu-svg').__raw}</span>
           <span class="menu-label"><strong>Ausgabe</strong><span class="menu-sub">Geld, das Sie bezahlen</span></span>
+        </button>
+        <button type="button" class="menu-opt neu-opt" data-nav data-beleg>
+          <span class="neu-ico">${icon('paperclip', 16, 'neu-svg').__raw}</span>
+          <span class="menu-label"><strong>Aus Beleg</strong><span class="menu-sub">Rechnung oder Quittung wählen</span></span>
         </button>`;
       pop.addEventListener('click', async (ev) => {
+        if (ev.target.closest('[data-beleg]')) {
+          // Die Dateiauswahl muss noch im Klick selbst aufgehen, sonst blockt sie der Browser.
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.multiple = true;
+          input.accept = '.pdf,.xml,.jpg,.jpeg,.png,.heic,.webp,image/*,application/pdf';
+          input.addEventListener('change', async () => {
+            const dateien = [...(input.files || [])];
+            if (!dateien.length) return;
+            const m = await import('./views/transactions.js');
+            m.openTransactionDialog(null, 'expense', { dateien });
+          });
+          handle.close();
+          input.click();
+          return;
+        }
         const b = ev.target.closest('[data-art]');
         if (!b) return;
         handle.close();
@@ -1187,7 +1212,6 @@ function renderShell() {
           ${raw(rechtsfuss())}
           <div class="foot-knoepfe">
             <button class="btn ghost" id="lockBtn" title="Sperren (${MOD}+L)">${icon('lock', 16)}<span class="knopf-text">Sperren</span></button>
-            <button class="btn ghost" id="logoutBtn" title="Dieses Konto von diesem Gerät abmelden (vorher wird abgeglichen)">${icon('logout', 16)}<span class="knopf-text">Abmelden</span></button>
           </div>
         </div>
       </aside>
@@ -1198,6 +1222,7 @@ function renderShell() {
         <div class="kopf">
           <header class="topbar">
             <h1 id="viewTitle">Übersicht</h1>
+            <button class="icon-btn top-hilfe" id="viewHilfe" type="button" hidden aria-label="Hilfe zu diesem Bereich" title="Hilfe zu diesem Bereich">${icon('help', 18)}</button>
             <button class="icon-btn top-suche" id="topSearch" type="button" aria-label="Suchen" title="Alles durchsuchen">${icon('search', 20)}</button>
           </header>
           <div id="topActions" class="row"></div>
@@ -1246,12 +1271,12 @@ function renderShell() {
   subscribe((ev) => { if (ev?.type === 'nutzer' || ev?.type === 'db') nutzerAnzeigen(); });
   nutzerAnzeigen();
   $('#lockBtn').addEventListener('click', () => lockNow());
-  $('#logoutBtn').addEventListener('click', () => abmelden());
   $('#feedbackBtn').addEventListener('click', () => feedbackOeffnen());
   entwicklerKlick($('#versionLabel'));
   $('#newTxBtn').addEventListener('click', (e) => neueBuchungMenue(e.currentTarget));
   $('#searchBtn').addEventListener('click', () => sucheOeffnen({ sperren: lockNow }));
   $('#topSearch').addEventListener('click', () => { $('.shell')?.classList.remove('nav-offen'); sucheOeffnen({ sperren: lockNow }); });
+  $('#viewHilfe').addEventListener('click', (e) => navigate('help', { abschnitt: e.currentTarget.dataset.abschnitt }));
   // Die Schnellleiste der Telefonansicht (src/web/mobil.js) öffnet dasselbe Menü an ihrem Knopf.
   if (!neuHoerer) {
     neuHoerer = (e) => neueBuchungMenue(e.detail.anker);
@@ -1318,6 +1343,33 @@ router.vorZurueck = obersteSchliessen;
 /** Frühere eigene Bereiche, die heute Reiter eines anderen sind (Verweise in Hilfe, Suche, Verlauf). */
 const UMLEITUNG = { datenimport: ['export', { reiter: 'import' }] };
 
+/**
+ * Der Abschnitt der Kurzanleitung zu jedem Bereich, für das „?“ neben dem
+ * Titel. Die Kennungen entstehen aus den Überschriften (abschnittKennung in
+ * views/help.js); wer dort eine Überschrift ändert, zieht sie hier nach.
+ */
+const HILFE_ABSCHNITT = {
+  dashboard: () => 'die-uebersicht-anpassen',
+  transactions: () => 'zeitraum-waehlen-und-filtern',
+  kontoimport: () => 'kontoauszug-einlesen',
+  rechnungen: (p) => (p.tab === 'mahnwesen' ? 'zahlungserinnerung-und-mahnung' : p.tab === 'eingang' ? 'e-rechnungen-empfangen-xrechnung-zugferd' : 'rechnungen-schreiben'),
+  calendar: () => 'termine-und-rechnungen-verknuepfen',
+  todos: () => 'aufgaben-ziele-und-wiederholungen',
+  reports: () => 'diagramme-und-durchschnittswerte',
+  export: (p) => (p.reiter === 'import' ? 'daten-aus-einem-anderen-programm-uebernehmen' : 'was-beim-export-herauskommt'),
+  master: () => 'anschaffungen-ueber-800',
+  settings: () => 'zwei-einstellungen-auf-die-es-ankommt',
+};
+
+function hilfeKnopfSetzen(view, params) {
+  const knopf = $('#viewHilfe');
+  if (!knopf) return;
+  const abschnitt = HILFE_ABSCHNITT[view]?.(params || {}) || '';
+  knopf.hidden = !abschnitt;
+  knopf.dataset.abschnitt = abschnitt;
+}
+
+let ansichtLauf = 0;
 onNavigate(async (view, params) => {
   if (UMLEITUNG[view]) {
     const [ziel, extra] = UMLEITUNG[view];
@@ -1334,14 +1386,20 @@ onNavigate(async (view, params) => {
     n.setAttribute('aria-current', aktiv ? 'page' : 'false');
   });
   $('#viewTitle').textContent = conf.title;
+  hilfeKnopfSetzen(view, params);
   $('#topActions').innerHTML = '';
   content.scrollTop = 0;
   // Am Telefon scrollt die ganze Spalte (web.css), nicht nur der Inhalt.
   content.closest('.main').scrollTop = 0;
   seitenwechsel();
   content.innerHTML = '<div class="skeleton" style="height:120px"></div>';
+  const lauf = ++ansichtLauf;
   try {
-    await conf.mod.render(content, params, { actions: $('#topActions') });
+    const mod = await conf.mod();
+    // Inzwischen weitergeklickt: die neuere Ansicht zeichnet.
+    if (lauf !== ansichtLauf) return;
+    await mod.render(content, params, { actions: $('#topActions') });
+    ansichtenVorladen();
   } catch (e) {
     console.error(e);
     content.innerHTML = html`<div class="notice danger">Die Ansicht konnte nicht dargestellt werden: ${e.message}</div>`;

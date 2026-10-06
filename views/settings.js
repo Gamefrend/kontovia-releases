@@ -124,7 +124,7 @@ async function draw(root) {
     <p class="set-sub" id="setSub"></p>
     <section class="set-panel" id="panel_firma" data-panel="firma" role="tabpanel" aria-labelledby="tab_firma">
       <div class="card">
-        <div class="card-head"><h3>${icon('building', 16)} Firmendaten</h3><span class="sub">erscheinen im Kopf jedes Berichts</span></div>
+        <div class="card-head"><h2>${icon('building', 16)} Firmendaten</h2><span class="sub">erscheinen im Kopf jedes Berichts</span></div>
         <div class="card-body">
           <div class="form-grid">
             <div class="field full"><label>Firma</label><input id="s_companyName" value="${s.companyName || ''}"></div>
@@ -138,11 +138,13 @@ async function draw(root) {
             <div class="field"><label>E-Mail</label><input id="s_email" value="${s.email || ''}"></div>
             <div class="field"><label>Telefon</label><input id="s_phone" value="${s.phone || ''}"></div>
           </div>
+          <p class="small muted mt8 mb0">Bankverbindung, Handelsregister und Website für Ihre Rechnungen stehen unter
+            <a href="#" data-zu-gestaltung>Rechnungen → Gestaltung</a>.</p>
         </div>
       </div>
 
       <div class="card">
-        <div class="card-head"><h3>${icon('euro', 16)} Steuerliche Einstellungen</h3></div>
+        <div class="card-head"><h2>${icon('euro', 16)} Steuerliche Einstellungen</h2></div>
         <div class="card-body">
           <div class="field">
             <label>Umsatzsteuer</label>
@@ -205,7 +207,7 @@ async function draw(root) {
       <div class="card" id="mahnCard"></div>
 
       <div class="card">
-        <div class="card-head"><h3>${icon('history', 16)} Unveränderbarkeit und Festschreibung</h3><span class="sub">GoBD</span></div>
+        <div class="card-head"><h2>${icon('history', 16)} Unveränderbarkeit und Festschreibung</h2><span class="sub">GoBD</span></div>
         <div class="card-body">
           <div class="grid c2">
             <div>
@@ -241,7 +243,7 @@ async function draw(root) {
 
     <section class="set-panel" id="panel_sicherheit" data-panel="sicherheit" role="tabpanel" aria-labelledby="tab_sicherheit" hidden>
       <div class="card">
-      <div class="card-head"><h3>${icon('shield', 16)} Sicherheit</h3></div>
+      <div class="card-head"><h2>${icon('shield', 16)} Sicherheit</h2></div>
       <div class="card-body">
         <div class="grid c2">
           <div>
@@ -256,7 +258,7 @@ async function draw(root) {
             <div class="row" style="gap:8px">
               <button class="btn" id="btnPw">${icon('key', 15)} Passwort ändern</button>
               <button class="btn" id="btnLock">${icon('lock', 15)} Jetzt sperren</button>
-              <button class="btn" id="btnAbmelden">${icon('logout', 15)} Abmelden</button>
+              <button class="btn" id="btnAbmelden">${icon('logout', 15)} Von diesem Gerät entfernen</button>
             </div>
           </div>
           <div class="notice">
@@ -285,7 +287,7 @@ async function draw(root) {
 
     <section class="set-panel" id="panel_daten" data-panel="daten" role="tabpanel" aria-labelledby="tab_daten" hidden>
     <div class="card" id="speicherCard">
-      <div class="card-head"><h3>${icon('archive', 16)} Sicherung und Speicherort</h3></div>
+      <div class="card-head"><h2>${icon('archive', 16)} Sicherung und Speicherort</h2></div>
       <div class="card-body">
         <div class="grid c2">
           <div>
@@ -299,7 +301,7 @@ async function draw(root) {
               einem anderen Ort auf als den Arbeitsrechner. Eine defekte Festplatte
               nimmt sonst beides mit.
             </p>
-            ${raw(speicherortBlock(storage?.speicher))}
+            ${raw(speicherortBlock(storage?.speicher, storage?.browser?.persistent))}
           </div>
           <div>
             ${storage ? raw(`<table class="data compact">
@@ -308,8 +310,8 @@ async function draw(root) {
                 <tr><td class="muted">Belege</td><td class="num">${int(storage.attachments.count)} Dateien · ${esc(bytes(storage.attachments.bytes))}</td></tr>
                 <tr><td class="muted">Automatische Sicherungen</td><td class="num">${int(storage.backups.count)} · ${esc(bytes(storage.backups.bytes))}</td></tr>
                 <tr><td class="muted">Ort</td><td class="tiny">${esc(storage.dataDir)}</td></tr>
-                ${storage.browser ? `<tr><td class="muted">Vor Räumen geschützt</td><td class="small">${storage.browser.persistent
-                  ? 'ja' : 'nein, der Browser darf bei Platzmangel räumen, bitte Cloud-Abgleich nutzen'}</td></tr>` : ''}
+                ${storage.browser ? `<tr><td class="muted">Vor dem Löschen geschützt</td><td class="small">${storage.browser.persistent
+                  ? 'ja' : 'nein, der Browser darf bei Platzmangel löschen'}</td></tr>` : ''}
               </tbody>
             </table>`) : ''}
             <p class="tiny muted mt8">
@@ -317,7 +319,7 @@ async function draw(root) {
               vorherigen Tresordatei ab und hält die letzten 25 vor.
               ${backups.length ? `Neueste: ${esc(fmtDateTime(backups[0].mtime))}.` : ''}
             </p>
-            <button class="btn sm mt8" id="btnPrune">Verwaiste Belegdateien aufräumen</button>
+            <button class="btn sm mt8" id="btnPrune">Nicht mehr benötigte Belegdateien löschen</button>
           </div>
         </div>
       </div>
@@ -329,7 +331,7 @@ async function draw(root) {
 
     <section class="set-panel" id="panel_darstellung" data-panel="darstellung" role="tabpanel" aria-labelledby="tab_darstellung" hidden>
     <div class="card">
-      <div class="card-head"><h3>${icon('settings', 16)} Darstellung</h3></div>
+      <div class="card-head"><h2>${icon('settings', 16)} Darstellung</h2></div>
       <div class="card-body">
         <div class="form-grid">
           <div class="field">
@@ -395,7 +397,7 @@ function leistenKarte(host) {
   };
   const zeichnen = (fokus) => {
     host.innerHTML = `<div class="card">
-      <div class="card-head"><h3>${icon('sidebar', 16).__raw} Seitenleiste</h3><span class="sub">gilt für dieses Gerät</span></div>
+      <div class="card-head"><h2>${icon('sidebar', 16).__raw} Seitenleiste</h2><span class="sub">gilt für dieses Gerät</span></div>
       <div class="card-body">
         <p class="muted small mt0">Blenden Sie Bereiche aus, die Sie nicht brauchen, und ordnen Sie die übrigen an. In der Seitenleiste selbst geht das auch per Rechtsklick; mit der Maus lassen sich Einträge nach kurzem Halten verschieben. Ausgeblendete Bereiche finden Sie weiterhin über die Suche.</p>
         ${NAV_GRUPPEN.map((_, g) => {
@@ -562,7 +564,7 @@ async function apply(root, { neuZeichnen = true } = {}) {
  * einen Ordner auf dem Gerät verschieben, sonst bleibt der Rat zu Cloud und
  * Vollsicherung.
  */
-function speicherortBlock(sp) {
+function speicherortBlock(sp, geschuetzt = false) {
   if (!sp) return '';
   if (sp.art === 'ordner') {
     return `<div class="notice ok mt16 mb8"><strong>Ihre Buchhaltung liegt im Ordner „${esc(sp.name)}“ auf diesem Gerät.</strong>
@@ -571,13 +573,13 @@ function speicherortBlock(sp) {
       <button class="btn sm" id="btnInBrowser">${icon('refresh', 14).__raw} Zurück in den Browser …</button>`;
   }
   if (sp.moeglich) {
-    return `<div class="notice mt16 mb8"><strong>Ihre Buchhaltung liegt im Speicher dieses Browsers.</strong>
-      Den darf der Browser bei Platzmangel räumen. Sicherer liegt sie in einem Ordner auf diesem Gerät: Dort
+    return `<div class="notice ${geschuetzt ? '' : 'warn '}mt16 mb8"><strong>Ihre Buchhaltung liegt im Speicher dieses Browsers.</strong>
+      ${geschuetzt ? 'Der Browser hat zugesagt, ihn nicht von selbst zu leeren.' : 'Den darf der Browser bei Platzmangel löschen.'} Sicherer liegt sie in einem Ordner auf diesem Gerät: Dort
       sehen Sie die Dateien und sichern sie mit Ihren übrigen Dateien.</div>
       <button class="btn sm" id="btnInOrdner">${icon('folder', 14).__raw} In einen Ordner verschieben …</button>`;
   }
   return `<div class="notice warn mt16 mb0"><strong>Ihre Buchhaltung liegt im Speicher dieses Browsers</strong>, und
-    den darf der Browser bei Platzmangel räumen. Schalten Sie deshalb die Cloud-Sicherung ein oder legen Sie
+    den darf der Browser bei Platzmangel löschen. Schalten Sie deshalb die Cloud-Sicherung ein oder legen Sie
     regelmäßig eine Vollsicherung an. In Chrome oder Edge lässt sich die Buchhaltung stattdessen in einem
     Ordner auf dem Gerät speichern.</div>`;
 }
@@ -665,6 +667,7 @@ function wire(root) {
 
   $('#btnLock', root).addEventListener('click', () => lockNow());
   $('#btnAbmelden', root).addEventListener('click', () => abmelden());
+  $('[data-zu-gestaltung]', root)?.addEventListener('click', (e) => { e.preventDefault(); navigate('rechnungen', { tab: 'gestaltung' }); });
   bildschirmKasten($('#bildschirmBox', root));
   zugaengeKarte($('#zugaengeCard', root));
   geraeteKarte($('#geraeteCard', root));
@@ -728,13 +731,13 @@ function wire(root) {
       for (const id of t.attachments || []) known.add(id);
     }
     const yes = await confirmDialog({
-      title: 'Verwaiste Belegdateien entfernen?',
+      title: 'Nicht mehr benötigte Belegdateien löschen?',
       text: `Entfernt werden nur Dateien, die zu keiner Buchung mehr gehören. ${int(known.size)} verknüpfte Belege bleiben unangetastet.`,
-      confirmLabel: 'Aufräumen', danger: true,
+      confirmLabel: 'Löschen', danger: true,
     });
     if (!yes) return;
     const n = await api.attach.prune([...known]);
-    ok(n ? `${n} verwaiste Dateien entfernt` : 'Nichts aufzuräumen');
+    ok(n ? `${n} nicht mehr benötigte Dateien gelöscht` : 'Nichts zu löschen');
     refresh();
   });
 

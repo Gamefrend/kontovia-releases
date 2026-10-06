@@ -16,7 +16,7 @@ import { navigate } from '../lib/router.js';
 export function checkNotice(k, i) {
   const cls = k.level === 'error' ? 'danger' : k.level === 'warn' ? 'warn' : '';
   const link = k.ids?.length
-    ? ` <button type="button" class="stat-link check-link" data-check="${i}">${k.ids.length === 1 ? 'Buchung' : `${k.ids.length} Buchungen`} anzeigen</button>`
+    ? ` <button type="button" class="stat-link check-link" data-check="${i}">${k.ids.length === 1 ? 'Ansehen' : 'Alle ansehen'}</button>`
     : '';
   return `<div class="notice ${cls} mb8">${esc(k.text)}${link}</div>`;
 }

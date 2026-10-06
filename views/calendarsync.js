@@ -64,7 +64,7 @@ export async function renderCalendarCard(el) {
 
   el.innerHTML = html`
     <div class="card">
-      <div class="card-head"><h3>${icon('calendar', 16)} Kalender-Abgleich</h3><span class="sub">Google Kalender und Kalenderdateien</span></div>
+      <div class="card-head"><h2>${icon('calendar', 16)} Kalender-Abgleich</h2><span class="sub">Google Kalender und Kalenderdateien</span></div>
       <div class="card-body">
         <div class="grid c2">
           <div>

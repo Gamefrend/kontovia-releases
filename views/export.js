@@ -12,26 +12,54 @@ import { appInfo } from '../app.js';
 import * as X from '../lib/exports.js';
 import * as R from '../lib/reports.js';
 import { pdfSpeichern, pdfZeigen, pdfFuerPaket, base64 } from '../lib/pdfausgabe.js';
-import { ustvaXml, ustvaZeitraum, latin9, steuernummerElster, landAusPlz, BUNDESLAENDER } from '../lib/elster.js';
+import { ustvaXml, ustvaZeitraum, zeitraumAusCode, zeitraumText, latin9, steuernummerElster, landAusPlz, BUNDESLAENDER } from '../lib/elster.js';
 
 const api = window.kontovia;
 const period = defaultPeriod();
+/** Die Zeitraumwahl oben; die Karte der Voranmeldung stellt sie mit um. */
+let periodCtl = null;
 
 export async function render(root, params, { actions } = {}) {
   if (params?.period?.from && params?.period?.to) setPeriod(period, params.period.from, params.period.to);
   actions.innerHTML = '<div id="exPeriod"></div>';
-  periodControl($('#exPeriod', actions), period, () => draw(root));
+  periodCtl = periodControl($('#exPeriod', actions), period, () => draw(root));
   draw(root);
 }
 
-function card({ id, title, sub, body, button, tone = '' }) {
+/**
+ * Eine Karte je Export: vorn ein Satz, wofür er ist, die Einzelheiten
+ * (Formate, Fachbegriffe) aufklappbar unter „Mehr dazu“.
+ */
+function card({ title, sub, body, mehr = '', extra = '', button }) {
   return `
     <div class="card">
-      <div class="card-head"><h3>${esc(title)}</h3><span class="sub">${esc(sub)}</span></div>
+      <div class="card-head"><h2>${esc(title)}</h2><span class="sub">${esc(sub)}</span></div>
       <div class="card-body">
         <div class="small" style="color:var(--text-2);line-height:1.6">${body}</div>
+        ${mehr ? `<details class="mehr-details small mt8"><summary>Mehr dazu</summary><div class="mt8" style="color:var(--text-2);line-height:1.6">${mehr}</div></details>` : ''}
+        ${extra}
         <div class="row wrap mt16" style="gap:8px">${button}</div>
       </div>
+    </div>`;
+}
+
+/** Das Jahr der Voranmeldung: das des gewählten Zeitraums, bei „Alles“ das laufende. */
+const ustvaJahr = (p) => (p.from < '1901' ? todayISO() : p.from).slice(0, 4);
+
+/** Auswahl für die Voranmeldung: Monate und Quartale des Jahres, das oben gewählt ist. */
+function ustvaWahl(period) {
+  const jahr = ustvaJahr(period);
+  const code = ustvaZeitraum(period) || '';
+  const opt = (c) => `<option value="${c}" ${c === code ? 'selected' : ''}>${esc(zeitraumText(jahr, c))}</option>`;
+  const quartale = ['41', '42', '43', '44'];
+  const monate = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
+  return `<div class="field mt16" style="max-width:260px">
+      <label for="ustvaWahl">Zeitraum der Voranmeldung</label>
+      <select id="ustvaWahl">
+        ${code ? '' : '<option value="" selected>Bitte wählen</option>'}
+        <optgroup label="Quartale">${quartale.map(opt).join('')}</optgroup>
+        <optgroup label="Monate">${monate.map(opt).join('')}</optgroup>
+      </select>
     </div>`;
 }
 
@@ -52,16 +80,14 @@ function draw(root) {
     <div class="page-head">
       <div>
         <h2>Export für ${periodLabel(period)}</h2>
-        <p>${int(rows.length)} Buchungen · ${int(attCount)} Belege · ${e.profit >= 0 ? 'EÜR-Gewinn' : 'EÜR-Verlust'} ${money(e.profit)} €${klein ? '' : ` · Umsatzsteuer-Zahllast ${esc(money(v.kz83))} €`}</p>
+        <p>${int(rows.length)} Buchungen · ${int(attCount)} Belege · <span title="So steht es in der Anlage EÜR. Dort zählt die Umsatzsteuer als Einnahme und Ausgabe mit, deshalb weicht der Wert vom Gewinn der Übersicht ab.">${e.profit >= 0 ? 'Gewinn laut EÜR' : 'Verlust laut EÜR'} ${money(e.profit)} €</span>${klein ? '' : ` · Umsatzsteuer-Zahllast ${esc(money(v.kz83))} €`}</p>
       </div>
     </div>
 
     <div class="notice mb16">
-      <strong>Zur Einordnung.</strong> Kontovia übermittelt nichts an die Finanzverwaltung.
-      Sie bekommen hier fertig aufbereitete Werte samt Zeilen- und Kennzahlenangabe, die Sie
-      in „Mein ELSTER“ nur noch eintragen, dazu Dateien, die eine Steuerkanzlei direkt
-      einlesen kann. Die Werte entstehen nach festen Rechenregeln, nicht durch künstliche
-      Intelligenz; die Verantwortung für die Erklärung bleibt bei Ihnen.
+      Kontovia sendet nichts an das Finanzamt. Sie bekommen hier aufbereitete Werte zum Eintragen
+      in „Mein ELSTER“ und Dateien für Ihre Steuerkanzlei. Die Werte entstehen nach festen
+      Rechenregeln, nicht durch künstliche Intelligenz; die Verantwortung für die Erklärung bleibt bei Ihnen.
       <a data-recht>Was das rechtlich bedeutet</a>
     </div>
 
@@ -75,26 +101,26 @@ function draw(root) {
     <div class="grid c2">
       ${raw(card({
         title: 'Alles für das Finanzamt', sub: 'empfohlen',
-        body: `Ein Ordner mit allem, was für die Steuererklärung gebraucht wird:
-          EÜR-Zeilen${klein ? '' : ', Umsatzsteuer-Kennzahlen'}, Buchungsjournal, offene Posten,
-          Anlagenverzeichnis, DATEV-Stapel und eine Anleitung zum Übertragen nach ELSTER.
-          Zusätzlich die vollständigen Berichte als PDF.`,
+        body: 'Alle Unterlagen für Ihre Steuererklärung in einem Ordner, mit einer Anleitung zum Übertragen nach ELSTER.',
+        mehr: `Enthalten sind die Zeilen der Anlage EÜR${klein ? '' : ', die Kennzahlen der Umsatzsteuer'}, das Buchungsjournal,
+          die offenen Posten, das Anlagenverzeichnis und ein DATEV-Stapel für die Kanzlei, dazu die vollständigen Berichte als PDF.`,
         button: `<button class="btn primary" id="btnPackAll">${icon('export', 16).__raw} Paket erstellen</button>
                  <button class="btn" id="btnPackCsv">Nur Tabellen (CSV)</button>`,
       }))}
 
       ${raw(card({
-        title: 'Vollständiges Berichtspaket als PDF', sub: 'ein Dokument',
-        body: `Gewinn- und Verlustrechnung, Anlage EÜR${klein ? '' : ', Umsatzsteuer-Voranmeldung'},
-          Vermögensübersicht, offene Posten und das komplette Buchungsjournal,
-          hintereinander in einer PDF-Datei, mit Seitenzahlen und Ihren Firmendaten im Kopf.`,
+        title: 'Alle Berichte in einer PDF', sub: 'ein Dokument',
+        body: 'Alle Berichte hintereinander in einer Datei, zum Ablegen oder Ausdrucken.',
+        mehr: `Gewinn- und Verlustrechnung, Anlage EÜR${klein ? '' : ', Umsatzsteuer-Voranmeldung'},
+          Vermögensübersicht, offene Posten und das komplette Buchungsjournal, mit Seitenzahlen und Ihren Firmendaten im Kopf.`,
         button: `<button class="btn primary" id="btnPackPdf">${icon('pdf', 16).__raw} PDF erstellen</button>
                  <button class="btn" id="btnPackPdfPreview">${icon('eye', 16).__raw} Vorschau</button>`,
       }))}
 
       ${raw(card({
-        title: 'Steuerkanzlei (DATEV)', sub: 'EXTF-Format 700',
-        body: `Buchungsstapel im DATEV-Importformat, je Wirtschaftsjahr eine Datei.
+        title: 'Für Ihre Steuerkanzlei', sub: 'DATEV',
+        body: 'Ihre Buchungen als Datei, die Kanzleiprogramme wie DATEV direkt einlesen.',
+        mehr: `Buchungsstapel im DATEV-Format (EXTF 700), je Wirtschaftsjahr eine Datei.
           Verwendet die Sachkonten des ${esc(db.settings.chartOfAccounts || 'SKR03')} aus Ihren Kategorien und bucht
           ${basisOf(db) === 'soll' && !klein ? 'Rechnungen über Sammeldebitor und -kreditor, Zahlungen aufs Geldkonto' : 'nach Zahlungsdatum gegen das Geldkonto'}.
           Steuerschlüssel für Konten ohne Automatik lassen sich auf Wunsch mitgeben.`,
@@ -102,47 +128,45 @@ function draw(root) {
       }))}
 
       ${raw(card({
-        title: 'Betriebsprüfung (GoBD)', sub: 'Datenträgerüberlassung Z3',
-        body: `Alle Daten in maschinell auswertbarer Form mit beschreibender <code>index.xml</code>
-          nach dem GDPdU-Beschreibungsstandard, so wie es eine Prüferin oder ein Prüfer
-          erwartet. Enthält auch das verkettete Änderungsjournal als Nachweis der
-          Unveränderbarkeit.`,
+        title: 'Wenn das Finanzamt prüft', sub: 'Betriebsprüfung',
+        body: 'Alle Daten so, wie eine Prüferin oder ein Prüfer sie verlangt, samt Nachweis, dass nichts nachträglich verändert wurde.',
+        mehr: `Datenträgerüberlassung nach GoBD (Z3): alle Daten in maschinell auswertbarer Form mit beschreibender
+          <code>index.xml</code> nach dem GDPdU-Beschreibungsstandard. Enthält auch das verkettete Änderungsjournal.`,
         button: `<button class="btn primary" id="btnGobd">${icon('archive', 16).__raw} Prüfungsordner</button>`,
       }))}
 
       ${raw(card({
         title: 'Belege ausleiten', sub: `${int(attCount)} Dateien im Zeitraum`,
-        body: `Alle hinterlegten Rechnungen und Quittungen des Zeitraums als einzelne Dateien,
-          benannt nach Datum, Belegnummer und Beschreibung. Dazu ein Verzeichnis mit
-          Prüfsummen, die belegen, dass die Dateien unverändert sind. <strong>Achtung:</strong> Die Dateien liegen danach unverschlüsselt
-          im Zielordner.`,
+        body: `Alle Rechnungen und Quittungen des Zeitraums als einzelne Dateien.
+          <strong>Achtung:</strong> Sie liegen danach unverschlüsselt im Zielordner.`,
+        mehr: `Die Dateien sind nach Datum, Belegnummer und Beschreibung benannt. Ein Verzeichnis mit
+          Prüfsummen belegt, dass sie unverändert sind.`,
         button: `<button class="btn" id="btnAttach">${icon('paperclip', 16).__raw} Belege exportieren</button>`,
       }))}
 
       ${raw(card({
         title: 'Rohdaten', sub: 'CSV und JSON',
-        body: `Einzelne Tabellen für die Weiterverarbeitung in Excel oder LibreOffice:
-          die Buchungen ohne die privaten und die Kontakte. Damit lassen sich eigene Unterlagen auch
-          selbst zusammenstellen. Der JSON-Export enthält den kompletten Bestand, falls Sie die
-          Daten je in ein anderes Programm übernehmen wollen.`,
+        body: 'Buchungen und Kontakte als Tabellen zum Weiterverarbeiten, etwa in Excel oder LibreOffice. Private Buchungen fehlen darin.',
+        mehr: '„Alles (JSON)“ enthält dagegen den kompletten Bestand samt privater Buchungen, etwa für den Umzug in ein anderes Programm.',
         button: `<button class="btn" id="btnCsvTx">Buchungen (CSV)</button>
                  <button class="btn" id="btnCsvContacts">Kontakte (CSV)</button>
                  <button class="btn" id="btnJson">Alles (JSON)</button>`,
       }))}
 
       ${klein ? '' : raw(card({
-        title: 'Voranmeldung für „Mein ELSTER“', sub: ustvaZeitraum(period) ? 'XML-Datei' : 'Monat oder Quartal wählen',
-        body: `Die Umsatzsteuer-Voranmeldung als Datei, die „Mein ELSTER“ direkt einliest: Formular
-          „Umsatzsteuer-Voranmeldung“ öffnen, Jahr wählen, Reiter „XML-Import“, Datei hochladen, prüfen, absenden.
-          Bemessungsgrundlagen stehen darin wie verlangt in vollen Euro.${ustvaZeitraum(period) ? '' : ' <strong>Wählen Sie dafür oben einen Monat oder ein Quartal.</strong>'}`,
+        title: 'Voranmeldung für „Mein ELSTER“', sub: 'zum Hochladen',
+        body: 'Die Umsatzsteuer-Voranmeldung als Datei, die „Mein ELSTER“ direkt einliest.',
+        mehr: `In „Mein ELSTER“: Formular „Umsatzsteuer-Voranmeldung“ öffnen, Jahr wählen, Reiter „XML-Import“,
+          Datei hochladen, prüfen, absenden. Bemessungsgrundlagen stehen darin wie verlangt in vollen Euro.`,
+        extra: ustvaWahl(period),
         button: `<button class="btn primary" id="btnElster" ${ustvaZeitraum(period) ? '' : 'disabled'}>${icon('euro', 16).__raw} ELSTER-Datei erstellen</button>`,
       }))}
 
       ${raw(card({
         title: 'Excel und weitere Formate', sub: 'zum Weitergeben',
-        body: `Eine Excel-Mappe mit Buchungen, Anlage EÜR${klein ? '' : ', Umsatzsteuer'}, offenen Posten und Kontakten,
-          mit echten Datums- und Eurozellen. Dazu die Kontakte als Visitenkarten (vCard) für Outlook, Google oder das Telefon
-          und die Produkte als Tabelle.${klein ? '' : ' Wer an Unternehmen im EU-Ausland liefert oder leistet, bekommt die Zusammenfassende Meldung als Datei für das Online-Portal des Bundeszentralamts für Steuern.'}`,
+        body: 'Eine Excel-Mappe mit den wichtigsten Tabellen, dazu Ihre Kontakte als Visitenkarten und die Produkte als Tabelle.',
+        mehr: `Die Mappe enthält Buchungen, Anlage EÜR${klein ? '' : ', Umsatzsteuer'}, offene Posten und Kontakte, mit echten Datums- und Eurozellen.
+          Die Visitenkarten (vCard) lesen Outlook, Google und das Telefon.${klein ? '' : ' Wer an Unternehmen im EU-Ausland liefert oder leistet, bekommt die Zusammenfassende Meldung als Datei für das Online-Portal des Bundeszentralamts für Steuern.'}`,
         button: `<button class="btn primary" id="btnXlsx">${icon('table', 16).__raw} Excel-Mappe</button>
                  <button class="btn" id="btnVcf">Kontakte (vCard)</button>
                  <button class="btn" id="btnProdukte">Produkte (CSV)</button>
@@ -151,7 +175,7 @@ function draw(root) {
     </div>
 
     <div class="card mt16">
-      <div class="card-head"><h3>Einzelne Berichte als PDF</h3></div>
+      <div class="card-head"><h2>Einzelne Berichte als PDF</h2></div>
       <div class="card-body">
         <div class="row wrap" style="gap:8px">
           <button class="btn" data-pdf="guv">${icon('chart', 15)} Gewinn & Verlust</button>
@@ -183,9 +207,20 @@ function wire(root, db, rows) {
   const recht = $('[data-recht]', root);
   recht.style.cursor = 'pointer';
   recht.style.color = 'var(--accent)';
+  recht.style.textDecoration = 'underline';
   recht.setAttribute('role', 'link');
   recht.setAttribute('tabindex', '0');
   recht.addEventListener('click', () => navigate('help', { tab: 'recht', anker: 'export' }));
+
+  // Monat oder Quartal der Voranmeldung: gilt dann für die ganze Seite, wie die Wahl oben.
+  $('#ustvaWahl', root)?.addEventListener('change', (e) => {
+    const z = zeitraumAusCode(ustvaJahr(period), e.target.value);
+    if (!z) return;
+    setPeriod(period, z.from, z.to);
+    periodCtl?.update();
+    draw(root);
+    $('#ustvaWahl', root)?.focus();
+  });
 
   $('#btnPackCsv', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const datev = await datevOptions(db);

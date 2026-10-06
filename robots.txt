@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://gamefrend.github.io/kontovia-releases/sitemap.xml

@@ -10,7 +10,7 @@ import {
 } from '../lib/calc.js';
 import { neuesAnlagegut, anlageFelder, wireAnlageFelder, anlageAusFeldern, anlageGesperrt } from './anlageform.js';
 import { regelTabelle, offeneVorkommen, faelligeAnbieten } from './wiederkehrend.js';
-import { anschriftAusText, LAENDER } from '../lib/rechnung.js';
+import { anschriftAusText, LAENDER, laenderSortiert } from '../lib/rechnung.js';
 import { openTransactionDialog } from './transactions.js';
 import { refresh } from '../lib/router.js';
 import { table, mountTable, mountTables } from '../lib/table.js';
@@ -28,9 +28,22 @@ const TABS = {
   recurring: 'Wiederkehrend',
 };
 
+/** Der Knopf oben sagt, was er anlegt; er folgt dem Reiter. */
+const NEU_TEXT = {
+  categories: 'Neue Kategorie',
+  contacts: 'Neuer Kontakt',
+  accounts: 'Neues Konto',
+  assets: 'Neues Anlagegut',
+  recurring: 'Neue Wiederholung',
+};
+let neuKnopf = null;
+const neuText = () => { if (neuKnopf) neuKnopf.innerHTML = `${icon('plus', 16).__raw} ${esc(NEU_TEXT[tab])}`; };
+
 export async function render(root, params, { actions } = {}) {
   if (params?.tab && TABS[params.tab]) tab = params.tab;
-  actions.innerHTML = html`<button class="btn primary" id="btnNew">${icon('plus', 16)} Neu</button>`;
+  actions.innerHTML = html`<button class="btn primary" id="btnNew"></button>`;
+  neuKnopf = actions.querySelector('#btnNew');
+  neuText();
   actions.querySelector('#btnNew').addEventListener('click', () => {
     // Eine Wiederholung entsteht aus ihrer ersten Buchung.
     if (tab === 'recurring') openTransactionDialog(null, 'expense', { wiederholen: 'monthly' });
@@ -51,6 +64,7 @@ function draw(root) {
     if (tab === b.dataset.tab) return;
     tab = b.dataset.tab;
     $$('[data-tab]', root).forEach((x) => x.classList.toggle('active', x === b));
+    neuText();
     zeigen(root);
   }));
   zeigen(root);
@@ -89,11 +103,14 @@ function usageFilter(column, uses) {
 
 function categories(root) {
   const uses = usageMap('categoryId');
+  // Gespeichert ist die Zuordnung nach dem Vordruck 2025; gezeigt wird die Nummer im Vordruck des laufenden Jahres.
+  const jahr = new Date().getFullYear();
+  const zeile = (c) => (c.euerLine === null || c.euerLine === undefined || c.euerLine === '' ? '' : formLine(c.euerLine, jahr));
   root.innerHTML = html`
     <div class="notice mb16">
       Die Kategorie einer Buchung entscheidet, in welche Zeile der Anlage EÜR und auf welches
       Konto im DATEV-Export sie fließt. Die mitgelieferte Zuordnung folgt der Anlage EÜR
-      (Vordruck ${formYear(new Date().getFullYear())}) und dem ${store.db.settings.chartOfAccounts || 'SKR03'}. Prüfen Sie sie einmal mit Ihrer Steuerberatung
+      (Vordruck ${formYear(jahr)}) und dem ${store.db.settings.chartOfAccounts || 'SKR03'}. Prüfen Sie sie einmal mit Ihrer Steuerberatung
       und passen Sie sie hier an, wenn sich das Formular ändert.
     </div>
     <div class="card" id="catCard"></div>`;
@@ -108,7 +125,7 @@ function categories(root) {
     unit: ['Kategorie', 'Kategorien'],
     search: {
       placeholder: 'Name, Konto oder EÜR-Zeile suchen …',
-      text: (c) => [c.name, c.skr03, c.skr04, c.euerLine ? `Zeile ${c.euerLine}` : ''].join(' '),
+      text: (c) => [c.name, c.skr03, c.skr04, zeile(c) ? `Zeile ${zeile(c)}` : ''].join(' '),
     },
     columns: [
       { key: 'name', label: 'Name', type: 'text', tdCls: 'strong', cell: (c) => esc(c.name) },
@@ -117,7 +134,7 @@ function categories(root) {
         value: (c) => (c.kind === 'income' ? 0 : 1),
         cell: (c) => (c.kind === 'income' ? '<span class="badge pos">Einnahme</span>' : '<span class="badge neg">Ausgabe</span>'),
       },
-      { key: 'euerLine', label: 'EÜR-Zeile', type: 'num', dir: 1, value: (c) => c.euerLine ?? '', cell: (c) => (c.euerLine ?? '<span class="muted">–</span>') },
+      { key: 'euerLine', label: 'EÜR-Zeile', type: 'num', dir: 1, value: (c) => zeile(c), cell: (c) => (zeile(c) === '' ? '<span class="muted">–</span>' : esc(zeile(c))) },
       { key: 'skr03', label: 'SKR03', type: 'text', tdCls: 'muted', cls: 'num' },
       { key: 'skr04', label: 'SKR04', type: 'text', tdCls: 'muted', cls: 'num' },
       { key: 'vatRate', label: 'USt', sortLabel: 'Steuersatz', type: 'num', value: (c) => c.vatRate ?? 0, cell: (c) => `${esc(c.vatRate ?? 0)} %` },
@@ -233,7 +250,7 @@ function accounts(root) {
       Kontostände in der Übersicht.
     </div>
     <div class="card">
-      <div class="card-head"><h3>Zahlungskonten</h3><div class="spacer"></div><span class="badge">${rows.length}</span></div>
+      <div class="card-head"><h2>Zahlungskonten</h2><div class="spacer"></div><span class="badge">${rows.length}</span></div>
       ${table({
         id: 'stamm-konten',
         cls: 'data',
@@ -276,7 +293,7 @@ function assets(root) {
       Zeile ${formLine(EUER.afaBeweglich, year)} der Anlage EÜR ${formYear(year)}.
     </div>
     <div class="card">
-      <div class="card-head"><h3>Anlagenverzeichnis</h3><div class="spacer"></div>
+      <div class="card-head"><h2>Anlagenverzeichnis</h2><div class="spacer"></div>
         <span class="badge">Restbuchwert ${money(sum(rows, (a) => bookValue(a, todayISO())))} €</span></div>
       ${table({
         id: 'stamm-anlagen',
@@ -512,7 +529,7 @@ function contactForm(c) {
     zusatz: c.addressExtra ?? frei?.zusatz ?? '', strasse: c.street || frei?.strasse || '', plz: c.zip || frei?.plz || '',
     ort: c.city || frei?.ort || '', land: c.country || frei?.land || 'DE',
   };
-  const laender = Object.entries(LAENDER).map(([k, l]) => `<option value="${k}" ${k === a.land ? 'selected' : ''}>${esc(l.name)}</option>`).join('');
+  const laender = laenderSortiert().map(([k, l]) => `<option value="${k}" ${k === a.land ? 'selected' : ''}>${esc(l.name)}</option>`).join('');
   baseDialog({
     title: isNew ? 'Neuer Kontakt' : 'Kontakt bearbeiten',
     body: html`

@@ -44,13 +44,22 @@ import { mahnwesenZeigen, mahnungenKarte } from './mahnwesen.js';
 const api = window.kontovia;
 
 let tab = 'ausgang';
+/* Vorn, was täglich gebraucht wird; dahinter, was man einmal einrichtet. */
 const TABS = {
-  ausgang: 'Rechnungen',
+  ausgang: 'Ausgang',
   eingang: 'Eingang',
-  produkte: 'Produkte',
+  mahnwesen: 'Mahnungen',
   vorlagen: 'Vorlagen',
-  mahnwesen: 'Mahnwesen',
+  produkte: 'Produkte',
   gestaltung: 'Gestaltung',
+};
+const TAB_TITEL = {
+  ausgang: 'Rechnungen, die Sie schreiben',
+  eingang: 'E-Rechnungen, die Sie erhalten',
+  mahnwesen: 'Überfällige Rechnungen und Mahnungen',
+  vorlagen: 'Positionen und Texte, aus denen mit einem Klick eine neue Rechnung entsteht',
+  produkte: 'Leistungen und Waren, die Sie öfter berechnen',
+  gestaltung: 'Aussehen der Rechnung, Bankverbindung und Voreinstellungen',
 };
 
 export async function render(root, params = {}, { actions } = {}) {
@@ -89,7 +98,7 @@ export async function render(root, params = {}, { actions } = {}) {
 
   root.innerHTML = `
     <div class="seg tabs mb16" role="group" aria-label="Bereich">
-      ${Object.entries(TABS).map(([k, v]) => `<button data-tab="${k}" class="${tab === k ? 'active' : ''}">${esc(v)}</button>`).join('')}
+      ${Object.entries(TABS).map(([k, v]) => `<button data-tab="${k}" class="${tab === k ? 'active' : ''}" title="${esc(TAB_TITEL[k])}">${esc(v)}</button>`).join('')}
     </div>
     <div id="reBody"></div>`;
   $$('[data-tab]', root).forEach((b) => b.addEventListener('click', () => { navigate('rechnungen', { tab: b.dataset.tab }, { ersetzen: true }); }));
@@ -181,7 +190,7 @@ function ausgang(root) {
       },
     ],
     emptyTitle: 'Noch keine Rechnungen',
-    emptyText: 'Mit „Neue Rechnung“ schreiben Sie Ihre erste E-Rechnung. Sie entsteht als PDF mit eingebetteten Rechnungsdaten (ZUGFeRD) und als XRechnung.',
+    emptyText: 'Mit „Neue Rechnung“ schreiben Sie Ihre erste Rechnung. Sie entsteht als PDF, das zugleich als E-Rechnung gilt.',
     onRowClick: (x) => navigate('rechnungen', { id: x.r.id }),
     onRender: (el) => {
       $$('[data-pdf]', el).forEach((b) => b.addEventListener('click', async (e) => {
@@ -234,7 +243,7 @@ async function detailZeigen(root, r, actions) {
         </div>
 
         <div class="card">
-          <div class="card-head"><h3>${icon('export', 16).__raw} Verschicken</h3></div>
+          <div class="card-head"><h2>${icon('export', 16).__raw} Verschicken</h2></div>
           <div class="card-body">
             <div class="re-aktionen">
               <button class="btn primary" id="reSenden">${icon('external', 15).__raw} Per E-Mail senden</button>
@@ -249,7 +258,7 @@ async function detailZeigen(root, r, actions) {
         </div>
 
         <div class="card">
-          <div class="card-head"><h3>${icon('book', 16).__raw} Zahlung und Buchung</h3></div>
+          <div class="card-head"><h2>${icon('book', 16).__raw} Zahlung und Buchung</h2></div>
           <div class="card-body">
             ${buchungen.length ? `<ul class="re-buchungen">${buchungen.map((t) => `<li><a href="#" data-tx="${esc(t.id)}">${esc(t.description)}</a>
               <span class="num">${esc(money(t.gross))} €</span>
@@ -263,17 +272,17 @@ async function detailZeigen(root, r, actions) {
         </div>
 
         <div class="card">
-          <div class="card-head"><h3>${icon('alert', 16).__raw} Mahnungen</h3></div>
+          <div class="card-head"><h2>${icon('alert', 16).__raw} Mahnungen</h2></div>
           <div class="card-body" id="reMahnungen"></div>
         </div>
 
         <div class="card">
-          <div class="card-head"><h3>${icon('todo', 16).__raw} Aufgaben</h3></div>
+          <div class="card-head"><h2>${icon('todo', 16).__raw} Aufgaben</h2></div>
           <div class="card-body" id="reAufgaben"></div>
         </div>
 
         <div class="card">
-          <div class="card-head"><h3>${icon('edit', 16).__raw} Ändern</h3></div>
+          <div class="card-head"><h2>${icon('edit', 16).__raw} Ändern</h2></div>
           <div class="card-body">
             <p class="small muted mt0">Eine ausgestellte Rechnung bleibt, wie sie ist. Fehler behebt eine Korrektur: Die Rechnung wird storniert und
               als neuer Entwurf mit Bezug auf die alte geöffnet.</p>
@@ -287,7 +296,7 @@ async function detailZeigen(root, r, actions) {
         </div>
 
         <div class="card">
-          <div class="card-head"><h3>${icon('archive', 16).__raw} Aufbewahrung</h3></div>
+          <div class="card-head"><h2>${icon('archive', 16).__raw} Aufbewahrung</h2></div>
           <div class="card-body small">
             ${[pdfMeta, xmlMeta].filter(Boolean).map((a) => `<div class="re-datei"><span>${esc(a.fileName)}</span><span class="muted">Prüfsumme ${esc(String(a.sha256 || '').slice(0, 12))}…</span></div>`).join('')
               || '<p class="muted mt0 mb0">Die Dateien liegen auf diesem Gerät noch nicht vor.</p>'}
@@ -647,29 +656,16 @@ function eingang(root) {
         <div class="re-empfang-ico">${icon('archive', 22).__raw}</div>
         <div style="flex:1;min-width:220px">
           <strong>E-Rechnungen empfangen</strong>
-          <p class="small muted mt0 mb8">Seit 2025 muss jedes Unternehmen E-Rechnungen annehmen können. Bald erhalten Sie dafür eine eigene
-            Empfangsadresse, an die Lieferanten ihre Rechnungen schicken; sie erscheinen dann hier von selbst.
-            Bis dahin fügen Sie erhaltene XRechnungen und ZUGFeRD-PDFs hier hinzu.</p>
+          <p class="small muted mt0 mb8">Seit 2025 muss jedes Unternehmen E-Rechnungen annehmen können. Speichern Sie eine erhaltene
+            E-Rechnung aus Ihrem Postfach und fügen Sie sie hier hinzu. Kontovia zeigt sie lesbar an und bereitet die Buchung vor.</p>
           <div class="row wrap">
             <button class="btn primary" id="reHinzu">${icon('plus', 15).__raw} E-Rechnung hinzufügen</button>
-            <button class="btn" id="reEmpfang">${icon('settings', 15).__raw} Empfang einrichten</button>
           </div>
         </div>
       </div>
     </div>
     <div class="card" id="reEingangListe"></div>`;
   $('#reHinzu', root).addEventListener('click', eingangHinzufuegen);
-  $('#reEmpfang', root).addEventListener('click', () => {
-    const m = modal({
-      title: 'Empfang einrichten',
-      size: 'slim',
-      body: `<p class="mt0">Der automatische Empfang kommt mit einer der nächsten Versionen. Sie bekommen dann eine eigene Adresse für
-        E-Rechnungen, die Sie Ihren Lieferanten nennen.</p><p class="small muted mb0">Bis dahin: E-Rechnungen aus Ihrem Postfach speichern und
-        hier mit „E-Rechnung hinzufügen“ ablegen. Kontovia liest sie und bereitet die Buchung vor.</p>`,
-      foot: '<button class="btn primary" data-x>Verstanden</button>',
-    });
-    m.root.querySelector('[data-x]').addEventListener('click', () => m.close());
-  });
 
   mountTable($('#reEingangListe', root), {
     id: 'rechnungen-eingang',
@@ -695,7 +691,7 @@ function eingang(root) {
       },
     ],
     emptyTitle: 'Noch keine erhaltenen E-Rechnungen',
-    emptyText: 'Fügen Sie eine XRechnung (XML) oder ein ZUGFeRD-PDF hinzu. Kontovia zeigt sie lesbar an und bereitet die Buchung vor.',
+    emptyText: 'Fügen Sie eine E-Rechnung hinzu, als XML-Datei oder als PDF mit eingebetteten Daten.',
     onRowClick: (r) => eingangAnsehen(r),
     onRender: (el) => {
       $$('[data-buchen]', el).forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); eingangBuchen(sel.invoice(b.dataset.buchen)); }));

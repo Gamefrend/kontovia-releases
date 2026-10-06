@@ -140,6 +140,8 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   .shell.nav-offen .kv-tabs { z-index: 100; }
   .cta { display: none; }
   .page-head { flex-wrap: wrap; }
+  /* Was am Telefon selten gebraucht wird (Drucken, PDF, Erklärzeilen), fällt weg und macht oben Platz. */
+  .nur-breit { display: none !important; }
 
   .grid.c2, .grid.c3, .grid.side { grid-template-columns: 1fr; }
   .grid.c4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }

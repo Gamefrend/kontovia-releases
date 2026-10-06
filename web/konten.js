@@ -190,12 +190,12 @@ export async function umbenennen(id, alias) {
 
 /**
  * Entfernt ein anderes als das offene Konto von diesem Gerät: Buchhaltung, Belege,
- * Sicherungen und Zugänge. Das offene Konto geht nur über „Abmelden“ (abgleichen, dann entfernen).
+ * Sicherungen und Zugänge. Das offene Konto geht nur über „Von diesem Gerät entfernen“ (abgleichen, dann entfernen).
  * Erst aus der Liste, dann die Daten: Bleibt etwas zurück, ist es unsichtbar und nur Speicherplatz.
  */
 export async function entfernen(id) {
   const kennung = String(id);
-  if (kennung === stand.aktiv) throw new Error('Das offene Konto lässt sich nur mit „Abmelden“ entfernen.');
+  if (kennung === stand.aktiv) throw new Error('Das offene Konto lässt sich nur über „Von diesem Gerät entfernen“ im Kontomenü entfernen.');
   if (!eintrag(kennung)) throw new Error('Dieses Konto gibt es auf diesem Gerät nicht (mehr).');
   stand.liste = stand.liste.filter((k) => k.id !== kennung);
   if (stand.zuletzt === kennung) stand.zuletzt = '';

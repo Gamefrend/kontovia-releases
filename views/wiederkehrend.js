@@ -25,9 +25,14 @@ let offen = false;
  * Bietet fällige wiederkehrende Buchungen zum Anlegen an. Angelegt wird nur,
  * was angehakt ist; Abgewähltes und Vorkommen im festgeschriebenen Zeitraum
  * werden übersprungen und nicht wieder angeboten.
+ *
+ * `merker` (nur beim Start nach dem Entsperren): Hat jemand heute schon
+ * „Später“ gewählt, öffnet sich das Fenster nicht bei jedem Entsperren neu.
+ * Der Hinweis in der Übersicht bleibt stehen und öffnet es jederzeit.
+ * @param {{merker?: string}} opts  Schlüssel im Gerätespeicher, je Konto
  * @returns {Promise<number>} Zahl der angelegten Buchungen
  */
-export async function faelligeAnbieten() {
+export async function faelligeAnbieten({ merker = '' } = {}) {
   if (!store.db || offen) return 0;
   // Wer nur lesen darf, bekommt nichts angeboten; es legt dann jemand mit Schreibrecht an.
   if (!kannSchreiben()) return 0;
@@ -38,6 +43,11 @@ export async function faelligeAnbieten() {
   if (!liste.length) {
     if (schon.length) await wiederkehrendeAnlegen([], schon);
     return 0;
+  }
+  if (merker) {
+    let spaeter = '';
+    try { spaeter = localStorage.getItem(merker) || ''; } catch { /* dann eben fragen */ }
+    if (spaeter === todayISO()) return 0;
   }
   offen = true;
   return new Promise((resolve) => {
@@ -56,12 +66,23 @@ export async function faelligeAnbieten() {
     const m = modal({
       title: `${liste.length === 1 ? 'Eine wiederkehrende Buchung ist' : `${int(liste.length)} wiederkehrende Buchungen sind`} fällig`,
       body: `<p class="mt0 small muted">Angelegt wird, was angehakt ist. Jede ist eine eigene Buchung, die Sie danach wie jede
-        andere ändern oder stornieren können. Nicht Angehaktes wird übersprungen. Belege hängen Sie an die einzelne Buchung an.</p>
+        andere ändern oder stornieren können. Ohne Häkchen lässt Kontovia eine Buchung für diesen Termin aus und bietet sie nicht noch einmal an.
+        Belege hängen Sie an die einzelne Buchung an.</p>
         <div style="max-height:52vh;overflow-y:auto">${liste.map(zeile).join('')}</div>`,
       foot: '<button class="btn" data-later>Später</button><button class="btn primary" data-go>Anlegen</button>',
       onClose: () => { offen = false; if (!fertig) resolve(0); },
     });
-    m.root.querySelector('[data-later]').addEventListener('click', () => m.close());
+    const knopf = m.root.querySelector('[data-go]');
+    const zaehlen = () => {
+      const n = m.root.querySelectorAll('input[data-i]:checked').length;
+      knopf.textContent = n ? (n === 1 ? 'Eine Buchung anlegen' : `${int(n)} Buchungen anlegen`) : 'Alle auslassen';
+    };
+    m.root.querySelectorAll('input[data-i]').forEach((c) => c.addEventListener('change', zaehlen));
+    zaehlen();
+    m.root.querySelector('[data-later]').addEventListener('click', () => {
+      if (merker) { try { localStorage.setItem(merker, todayISO()); } catch { /* egal */ } }
+      m.close();
+    });
     m.root.querySelector('[data-go]').addEventListener('click', async () => {
       const gewaehlt = new Set([...m.root.querySelectorAll('input[data-i]:checked')].map((c) => Number(c.dataset.i)));
       const anlegen = liste.filter((e, i) => gewaehlt.has(i) && !e.gesperrt);

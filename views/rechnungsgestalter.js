@@ -24,7 +24,7 @@ import { icon, confirmDialog, ok, err } from '../lib/ui.js';
 import { store, sel, commit, saveNow } from '../lib/store.js';
 import { router, navigate } from '../lib/router.js';
 import {
-  LAENDER, neueRechnung, neuePosition, verkaeuferAus, designVoll, design as designAus, profil as profilAus, PROFIL_VORGABE,
+  LAENDER, laenderSortiert, neueRechnung, neuePosition, verkaeuferAus, designVoll, design as designAus, profil as profilAus, PROFIL_VORGABE,
   FLUSS_BAUSTEINE, ELEMENT_VORGABE, PLATZHALTER, ibanGueltig,
 } from '../lib/rechnung.js';
 import { vorschauDaten, bildAblegen, bildWaehlen, bildHolen } from '../lib/rechnungsdateien.js';
@@ -219,7 +219,7 @@ export async function gestaltungZeigen(root, params = {}) {
     const d = D();
     const naechste = SCHRIFTEN.reduce((a, c) => (Math.abs(c[0] - Number(d.schriftgroesse)) < Math.abs(a[0] - Number(d.schriftgroesse)) ? c : a));
     $('#gsAussehen', root).innerHTML = `
-      <div class="card-head"><h3>${icon('layout', 16).__raw} Stil und Farbe</h3><span class="sub">gilt für alle neuen Rechnungen</span></div>
+      <div class="card-head"><h2>${icon('layout', 16).__raw} Stil und Farbe</h2><span class="sub">gilt für alle neuen Rechnungen</span></div>
       <div class="card-body">
         <div class="field"><label>Stil</label>
           <div class="re-kacheln" data-seg="layout" role="group" aria-label="Stil">${[['klassisch', 'Klassisch'], ['modern', 'Modern'], ['schlicht', 'Schlicht']].map(([k, t]) => kachel('stil', k, t, d.layout === k)).join('')}</div></div>
@@ -238,7 +238,7 @@ export async function gestaltungZeigen(root, params = {}) {
     const knoepfe = (art, da, neu, anders) => `<div class="row wrap"><button type="button" class="btn sm" data-bild-neu="${art}">${icon('plus', 13).__raw} ${da ? anders : neu}</button>
       ${da ? `<button type="button" class="btn sm ghost" data-bild-weg="${art}">${icon('trash', 13).__raw} Entfernen</button>` : ''}</div>`;
     $('#gsBilder', root).innerHTML = `
-      <div class="card-head"><h3>${icon('image', 16).__raw} Logo, Briefpapier und Bild</h3></div>
+      <div class="card-head"><h2>${icon('image', 16).__raw} Logo, Briefpapier und Bild</h2></div>
       <div class="card-body">
         <div class="field"><label>Logo</label>
           <div class="re-bildwahl">${feld(logo, 'Logo', 'kein Logo')}
@@ -265,7 +265,7 @@ export async function gestaltungZeigen(root, params = {}) {
   function angabenZeichnen() {
     const p = entwurf.profil;
     $('#gsAngaben', root).innerHTML = `
-      <div class="card-head"><h3>${icon('building', 16).__raw} Ihre Angaben auf Rechnungen</h3></div>
+      <div class="card-head"><h2>${icon('building', 16).__raw} Ihre Angaben auf Rechnungen</h2></div>
       <div class="card-body">
         ${fehlt.length ? `<div class="notice warn mb16">In den Einstellungen fehlen noch: ${esc(fehlt.join(', '))}. Diese Angaben müssen auf jeder Rechnung stehen.
           <a href="#" class="check-link" data-zu-einst>Zu den Firmendaten</a></div>`
@@ -277,14 +277,14 @@ export async function gestaltungZeigen(root, params = {}) {
           <div class="field"><label for="gp_bank">Bank</label><input id="gp_bank" data-p="bank" value="${esc(p.bank)}"></div>
           <div class="field"><label for="gp_inhaber">Kontoinhaber</label><input id="gp_inhaber" data-p="kontoinhaber" value="${esc(p.kontoinhaber)}" placeholder="${esc(v.name || '')}"></div>
           <div class="field"><label for="gp_land">Land Ihres Betriebs</label><select id="gp_land" data-p="land">
-            ${Object.entries(LAENDER).map(([c, l]) => `<option value="${c}" ${c === p.land ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select></div>
+            ${laenderSortiert().map(([c, l]) => `<option value="${c}" ${c === p.land ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select></div>
           <div class="field"><label for="gp_register">Handelsregister</label><input id="gp_register" data-p="register" value="${esc(p.register)}" placeholder="z. B. Amtsgericht München HRB 12345"></div>
           <div class="field"><label for="gp_gf">Geschäftsführung</label><input id="gp_gf" data-p="geschaeftsfuehrung" value="${esc(p.geschaeftsfuehrung)}" placeholder="bei GmbH und UG Pflicht"></div>
           <div class="field full"><label for="gp_web">Website</label><input id="gp_web" data-p="web" value="${esc(p.web)}"></div>
         </div>
       </div>`;
     $('#gsVorgaben', root).innerHTML = `
-      <div class="card-head"><h3>${icon('settings', 16).__raw} Voreinstellungen für neue Rechnungen</h3></div>
+      <div class="card-head"><h2>${icon('settings', 16).__raw} Voreinstellungen für neue Rechnungen</h2></div>
       <div class="card-body">
         <div class="form-grid">
           <div class="field"><label for="gp_praefix">Vor der Nummer</label><input id="gp_praefix" data-p="praefix" value="${esc(p.praefix)}" placeholder="z. B. RE-"><span class="hint" id="gp_nummerBeispiel"></span></div>

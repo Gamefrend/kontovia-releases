@@ -16,7 +16,7 @@ import { store, sel, commit, upsertEntity, nextInvoiceNumber } from '../lib/stor
 import { router, navigate } from '../lib/router.js';
 import { openMenu } from '../lib/popover.js';
 import {
-  EINHEITEN, ARTEN, STEUERFAELLE, ZAHLUNGSARTEN, LAENDER, berechnen, pruefen, vollstaendig, verkaeuferAus, neuePosition,
+  EINHEITEN, ARTEN, STEUERFAELLE, ZAHLUNGSARTEN, LAENDER, laenderSortiert, berechnen, pruefen, vollstaendig, verkaeuferAus, neuePosition,
   einheitAusText, einheitText, positionLeer, anschriftAusText, kaeuferAusKontakt, faelligkeit, zahlungsText, betragText, satzText,
   titel as titelVon, profil as profilAus, istGutschrift,
 } from '../lib/rechnung.js';
@@ -108,11 +108,11 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
 
   function kundeZeichnen() {
     const k = r.kaeufer;
-    const laender = Object.entries(LAENDER).map(([c, l]) => [c, `${l.name}`]);
+    const laender = laenderSortiert().map(([c, l]) => [c, `${l.name}`]);
     if (k.land && !LAENDER[k.land]) laender.push([k.land, k.land]);
     const kontakt = k.kontaktId ? sel.contact(k.kontaktId) : null;
     $('#reKunde', root).innerHTML = `
-      <div class="card-head"><h3>${icon('users', 16).__raw} Kunde</h3><div class="spacer"></div>
+      <div class="card-head"><h2>${icon('users', 16).__raw} Kunde</h2><div class="spacer"></div>
         <button type="button" class="btn sm" id="reKontaktWahl">${icon('search', 14).__raw} Aus Kontakten</button>
         <button type="button" class="btn sm ghost" id="reAnschriftText" title="Eine Anschrift aus einer E-Mail oder einem Dokument einfügen">${icon('copy', 14).__raw} Anschrift einfügen</button>
       </div>
@@ -221,7 +221,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
     const p = profilAus(s);
     const vorschlag = istVorlage ? '' : `wird beim Ausstellen vergeben${p.praefix ? ` (${p.praefix}…)` : ''}`;
     $('#reAngaben', root).innerHTML = `
-      <div class="card-head"><h3>${icon('file', 16).__raw} Rechnung</h3></div>
+      <div class="card-head"><h2>${icon('file', 16).__raw} Rechnung</h2></div>
       <div class="card-body">
         <div class="form-grid">
           <div class="field"><label for="ra_art">Art</label><select id="ra_art" data-f="art">${optionen(['380', '326', '384', '381'].map((k) => [k, ARTEN[k]]), r.art || '380')}</select></div>
@@ -298,7 +298,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
       </div>`;
     }).join('');
     $('#rePositionen', root).innerHTML = `
-      <div class="card-head"><h3>${icon('book', 16).__raw} Positionen</h3><div class="spacer"></div>
+      <div class="card-head"><h2>${icon('book', 16).__raw} Positionen</h2><div class="spacer"></div>
         <span class="small muted" id="rePosAnzahl"></span></div>
       <div class="card-body">
         <div class="re-positionen">${zeilen}</div>
@@ -443,7 +443,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
 
   function texteZeichnen() {
     $('#reTexte', root).innerHTML = `
-      <div class="card-head"><h3>${icon('edit', 16).__raw} Texte</h3><span class="sub">stehen auf dem PDF über und unter den Positionen</span></div>
+      <div class="card-head"><h2>${icon('edit', 16).__raw} Texte</h2><span class="sub">stehen auf dem PDF über und unter den Positionen</span></div>
       <div class="card-body">
         <div class="field"><label for="rt_kopf">Text vor den Positionen</label><textarea id="rt_kopf" data-f="kopftext" rows="3">${esc(r.kopftext || '')}</textarea></div>
         <div class="field mb0"><label for="rt_schluss">Text am Ende</label><textarea id="rt_schluss" data-f="schlusstext" rows="3">${esc(r.schlusstext || '')}</textarea></div>
@@ -470,7 +470,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
   function zahlungZeichnen() {
     const gut = istGutschrift(r);
     $('#reZahlung', root).innerHTML = `
-      <div class="card-head"><h3>${icon('euro', 16).__raw} Zahlung</h3>${gut ? '<span class="sub">Gutschrift: Sie zahlen an den Kunden</span>' : ''}</div>
+      <div class="card-head"><h2>${icon('euro', 16).__raw} Zahlung</h2>${gut ? '<span class="sub">Gutschrift: Sie zahlen an den Kunden</span>' : ''}</div>
       <div class="card-body">
         <div class="form-grid">
           <div class="field"><label for="rz_art">Zahlungsart</label><select id="rz_art" data-f="zahlungsart">${optionen(Object.entries(ZAHLUNGSARTEN).map(([k, z]) => [k, z.name]), r.zahlungsart || 'ueberweisung')}</select></div>
@@ -521,7 +521,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
     const box = $('#reBilder', root);
     const liste = r.bilder;
     box.innerHTML = `
-      <div class="card-head"><h3>${icon('image', 16).__raw} Bilder</h3><span class="sub">etwa Fotos der Arbeit oder ein Lageplan</span><div class="spacer"></div>
+      <div class="card-head"><h2>${icon('image', 16).__raw} Bilder</h2><span class="sub">etwa Fotos der Arbeit oder ein Lageplan</span><div class="spacer"></div>
         <button type="button" class="btn sm" id="reBildNeu">${icon('plus', 14).__raw} Bild</button></div>
       ${liste.length ? `<div class="card-body re-bilderliste">${liste.map((e) => `
         <div class="re-rbild" data-rbild="${esc(e.id)}">
