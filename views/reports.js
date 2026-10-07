@@ -446,6 +446,7 @@ function ust(root, db) {
             ${v.kz35net ? raw(kz(35, 'Umsätze zu anderen Steuersätzen', v.kz35net) + kz(36, 'Steuer dazu', v.kz36tax)) : ''}
             ${v.kz41 ? raw(kz(41, 'Innergemeinschaftliche Lieferungen', v.kz41)) : ''}
             ${v.kz21 ? raw(kz(21, 'Nicht steuerbare sonstige Leistungen (§ 18b)', v.kz21)) : ''}
+            ${v.kz43 ? raw(kz(43, 'Steuerfreie Umsätze mit Vorsteuerabzug (Ausfuhr)', v.kz43)) : ''}
             ${v.kz48 ? raw(kz(48, 'Steuerfreie Umsätze ohne Vorsteuerabzug', v.kz48)) : ''}
             ${v.kz89net ? raw(kz(89, 'Innergemeinschaftliche Erwerbe 19 %', v.kz89net)) : ''}
             ${v.kz93net ? raw(kz(93, 'Innergemeinschaftliche Erwerbe 7 %', v.kz93net)) : ''}

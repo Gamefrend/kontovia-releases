@@ -65,7 +65,11 @@ let geraetGemerkt = null;
 
 /**
  * Was das Gerät für den Assistenten mitbringt. Lädt nichts herunter.
- * @returns {Promise<{grafik:boolean, f16:boolean, ersatz:boolean, telefon:boolean, speicherGB:number|null,
+ * `grund` sagt, warum der Grafikchip fehlt, für die Anleitung (lib/grafikhilfe.js):
+ * 'schnittstelle' (der Browser bietet sie Webseiten nicht an), 'adapter' (bietet sie an,
+ * gibt aber keinen Chip heraus: Beschleunigung aus oder Sperrliste), 'ersatz' (nur
+ * Rechnen ohne Chip), '' (frei). Startparameter des Browsers kann eine Seite nicht setzen.
+ * @returns {Promise<{grafik:boolean, f16:boolean, ersatz:boolean, grund:string, telefon:boolean, speicherGB:number|null,
  *   hersteller:string, bauart:string, puffer:number, kerne:number, sparen:boolean}>}
  */
 export async function geraet() {
@@ -73,7 +77,7 @@ export async function geraet() {
   const ua = navigator.userAgent || '';
   const telefon = navigator.userAgentData?.mobile ?? /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
   const g = {
-    grafik: false, f16: false, ersatz: false, telefon: !!telefon,
+    grafik: false, f16: false, ersatz: false, grund: navigator.gpu ? 'adapter' : 'schnittstelle', telefon: !!telefon,
     speicherGB: Number(navigator.deviceMemory) || null,
     hersteller: '', bauart: '', puffer: 0,
     kerne: Number(navigator.hardwareConcurrency) || 0,
@@ -85,6 +89,7 @@ export async function geraet() {
       g.grafik = true;
       g.f16 = adapter.features.has('shader-f16');
       g.ersatz = !!(adapter.isFallbackAdapter || adapter.info?.isFallbackAdapter);
+      g.grund = g.ersatz ? 'ersatz' : '';
       g.hersteller = String(adapter.info?.vendor || '');
       g.bauart = String(adapter.info?.architecture || '');
       g.puffer = Number(adapter.limits?.maxBufferSize) || 0;

@@ -81,7 +81,7 @@ function start(root) {
   root.innerHTML = `
     <p class="mt0 mb16 muted">Aus einem anderen Programm, von Ihrer Steuerkanzlei oder aus ELSTER. Die Datei wird nur auf diesem Gerät gelesen und nirgends hochgeladen. Übernommen wird erst, wenn Sie es bestätigen.</p>
     <div class="card"><div class="card-body">
-      <div class="ki-drop" id="diDrop" tabindex="0" role="button" aria-label="Datei zum Übernehmen auswählen" style="margin-top:0">
+      <div class="ki-drop" id="diDrop" style="margin-top:0">
         ${icon('folder', 28).__raw}
         <strong>Datei hierher ziehen oder auswählen</strong>
         <span class="small muted">Kontovia erkennt das Format selbst: DATEV, Excel, CSV, ELSTER-XML, vCard, Kalenderdatei, E-Rechnung und Kontoauszug.</span>
@@ -106,9 +106,10 @@ function start(root) {
   let ziel = '';
   const waehlen = (z) => { ziel = z; input.value = ''; input.click(); };
   $('#diWahl', root).addEventListener('click', (e) => { e.stopPropagation(); waehlen(''); });
+  // Die Fläche nimmt Klick und Ablegen an; per Tastatur bedient man den Knopf darin
+  // (kein Bedienelement in einem role="button").
   const drop = $('#diDrop', root);
   drop.addEventListener('click', () => waehlen(''));
-  drop.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); waehlen(''); } });
   for (const ev of ['dragenter', 'dragover']) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add('ueber'); });
   for (const ev of ['dragleave', 'drop']) drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove('ueber'); });
   drop.addEventListener('drop', (e) => { const f = e.dataTransfer?.files?.[0]; if (f) dateiLesen(f, root, ''); });

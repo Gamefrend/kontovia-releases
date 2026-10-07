@@ -44,6 +44,7 @@ const VAT_TREATMENTS = {
   steuerfrei: 'Steuerfrei',
   'nicht-steuerbar': 'Nicht steuerbar (kein Entgelt, etwa Mahngebühren)',
   'ig-lieferung': 'Innergemeinschaftliche Lieferung',
+  ausfuhr: 'Ausfuhr außerhalb der EU (steuerfrei mit Vorsteuerabzug)',
   'reverse-charge-out': 'Reverse Charge (Leistung ins Ausland)',
   'ig-erwerb': 'Innergemeinschaftlicher Erwerb',
   'reverse-charge-in': 'Reverse Charge (§ 13b, Leistungsempfänger)',

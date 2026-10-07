@@ -1,6 +1,6 @@
 # Nutzungsbedingungen
 
-Fassung vom 5. Oktober 2026
+Fassung vom 6. Oktober 2026
 
 ## 1. Anbieter und Geltungsbereich
 
@@ -28,6 +28,15 @@ Ihre eigene. Was Sie dem Finanzamt, einer Kundin oder einem Kunden gegenüber
 erklären, verantworten Sie selbst (insbesondere §§ 90, 150 AO). Steuerliche
 Werte ändern sich; wir bemühen uns, sie aktuell zu halten, übernehmen dafür
 aber keine Gewähr.
+
+Der **Assistent** ist freiwillig. In der Stufe „Basis“ antwortet er nach festen
+Regeln, in den Stufen „Mini“ bis „Maximal“ ein Sprachmodell, das vollständig auf
+Ihrem Gerät läuft. Antworten des Modells sind im Programm als Antwort einer KI
+gekennzeichnet. Sie können falsch, unvollständig oder missverständlich sein und
+sind keine Steuer- oder Rechtsberatung. Zahlen nennt der Assistent nur aus
+Ihren Buchungen; prüfen Sie dennoch jede Angabe, bevor Sie sie verwenden. Der
+Assistent speichert nichts selbst: Jeden Vorschlag prüfen und speichern Sie im
+gewohnten Fenster.
 
 ## 3. Ihre Pflichten
 

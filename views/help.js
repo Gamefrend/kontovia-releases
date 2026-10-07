@@ -430,6 +430,9 @@ function anleitung(root) {
           <li><strong>Stufen:</strong> Basis versteht feste Fragen ohne Download. Mini, Standard, Groß und Maximal sind
           Sprachmodelle, die einmalig heruntergeladen werden (350 MB bis 4,6 GB) und dann offline laufen. Kontovia
           schlägt die Stufe vor, die zu Ihrem Gerät passt.</li>
+          <li><strong>Nur Basis wählbar?</strong> Dann gibt der Browser den Grafikchip nicht frei. Kontovia darf das nicht
+          selbst umstellen, zeigt aber im Assistenten unter <strong>Stufe</strong> › <strong>Grafikchip freigeben</strong>
+          Schritt für Schritt, wie es in Ihrem Browser geht.</li>
           <li><strong>Denkweise:</strong> Schnell antwortet direkt aus Ihren Zahlen, Ausgewogen formuliert eine kurze
           Antwort, Gründlich denkt vorher nach. Automatisch wählt je Frage.</li>
           <li><strong>Zahlen rechnet immer Kontovia.</strong> Das Modell wählt nur aus, was gesucht oder gerechnet
