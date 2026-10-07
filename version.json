@@ -1,12 +1,12 @@
 {
-  "version": "2.25.0",
-  "released": "2026-10-07T07:41:50.738Z",
-  "notes": "Hilfe, wenn der Assistent nur Basis anbietet\n\n- Gibt Ihr Browser den Grafikchip nicht frei, zeigt der Assistent Schritt für Schritt, wie Sie ihn in genau diesem Browser einschalten.\n- Adressen und Einstellungen stehen in der Anleitung zum Kopieren bereit, denn umstellen können Sie sie nur selbst.\n- Die Anleitung erscheint einmal von selbst. Danach finden Sie sie im Assistenten unter Stufe › Grafikchip freigeben und unter „So funktioniert der Assistent“.",
+  "version": "2.25.1",
+  "released": "2026-10-07T08:19:04.454Z",
+  "notes": "Mit Google entsperren: klarer und sicherer\n\n- „Mit Google entsperren“ schalten Sie jetzt unter Einstellungen › Daten & Cloud ein und aus, direkt bei der Verbindung zu Google.\n- Dort steht deutlich, dass das ein großes Sicherheitsrisiko ist: Ihre Buchhaltung ist dann nur noch durch das Passwort Ihres Google-Kontos geschützt. Einschalten geht nur mit Bestätigung.\n- Der Sperrbildschirm bietet „Mit Google entsperren“ nur noch dort an, wo es eingeschaltet ist. Geräte, die den Weg schon nutzen, behalten ihn.\n- Behoben: Wer den Weg auf einem Gerät ausschaltete, bekam ihn von einem anderen Gerät unbemerkt wieder eingeschaltet.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "c5a9547a482da29b1bb29b1c75a7599a734a24f263473c1c0e8c958484354ca4",
-      "size": 78761
+      "sha256": "2397f0dfdcfb06d84abf30909847882242124129025207dd504db7020cfd1a96",
+      "size": 79017
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -210,8 +210,8 @@
     },
     {
       "path": "lib/koppeln.js",
-      "sha256": "340b9fa1bb5f2bd008269f70da86eb648049536876248215a9db7e421b2fee18",
-      "size": 25170
+      "sha256": "2f90aea0d30b56d527a0afeaa7772af91ad38890f83763f0c816b75e53c7d37d",
+      "size": 24931
     },
     {
       "path": "lib/mahnungsaktionen.js",
@@ -385,8 +385,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "313680e658a4e641ab6f39bd3038756ca574f4a7120548415847185744f39cb5",
-      "size": 36692
+      "sha256": "ce4f953fa48e1fee2bfc078da8eac5138dfa9bb7b8eb3328b6437d814cd7664d",
+      "size": 37454
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -400,8 +400,8 @@
     },
     {
       "path": "lib/zugaenge.js",
-      "sha256": "1c46bc4e1bfd67af41894720488df4032da66da60e289d13395f5d4d939da974",
-      "size": 30146
+      "sha256": "113e06967cf4a3c8e0c5b8582e6e0dde40d469f09327ea1a968f986874c52f51",
+      "size": 28489
     },
     {
       "path": "lib/zulassung.js",
@@ -415,13 +415,13 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "77e008ef65c1929931b7b647f458f022495d3728d4237a3bdd61d8d69e664ce7",
+      "sha256": "df4843d0ca9c1c04fdb4489745a399d842805b25476cd808ffd41e0244d289dd",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "b1dbca3f06f6ec287c0e0f9466bcd327048241c2cbdc9a2d2e93e738dae2528e",
-      "size": 30318
+      "sha256": "1ee55b87784aa741fcb1eb435231431e3084766418617fc99805acd1a70f0b13",
+      "size": 30654
     },
     {
       "path": "recht/IMPRESSUM.md",
@@ -435,8 +435,8 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "0cd74e00a6a14940d5ce15d83a3f32835cd7c5f5dad891aedb197f1435b8f120",
-      "size": 33972
+      "sha256": "75f577e119ab6274b0d43b5cb9ea6e45e583bab95f1dd01af4ca5eef89779d72",
+      "size": 34323
     },
     {
       "path": "recht/impressum.html",
@@ -480,8 +480,8 @@
     },
     {
       "path": "views/cloudpanel.js",
-      "sha256": "75aa4cfc70424b6c7f1a7fcc4c147ab7990187ed54afdf0f8c65c423624d2a38",
-      "size": 37017
+      "sha256": "bc8d447bbdb7813dda60517500cd172e3acddbef602f6af83a8b15912331cddc",
+      "size": 42291
     },
     {
       "path": "views/dashboard.js",
@@ -505,8 +505,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "a5ab94705ce765868e335326c1e576cabd5562a6cd91f2e95480688f46efd8c7",
-      "size": 66707
+      "sha256": "0ab580d6b3a404c2a8791a171522fdd3e52201c4a58c2524a6bd7cc1fa97d882",
+      "size": 67062
     },
     {
       "path": "views/importexport.js",
@@ -560,8 +560,8 @@
     },
     {
       "path": "views/settings.js",
-      "sha256": "fa19db619975c3a7ed75f2b4f7fd67366a5ffa7bf29dacb82c8b2e9125deefa4",
-      "size": 46467
+      "sha256": "5f4de98652d47873b538b159e8b6a9ec1c93da8e190f54b4eb3ef982b0a81fe9",
+      "size": 46581
     },
     {
       "path": "views/spruenge.js",
@@ -585,12 +585,12 @@
     },
     {
       "path": "web/ablage.js",
-      "sha256": "bfc431cabd75a244d90acdafc48c660faf4af7119d260a2c537692b385462ff3",
-      "size": 26353
+      "sha256": "bbf4f3498025190dbcfe7f5918b26df909f2a19ef8582b3e5f477d9d70d5bb80",
+      "size": 26383
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "fcce26f1ba6cb1be1bd94c3f0920fb4dcc81a25a7a561e7c05b9658c675077ea",
+      "sha256": "2c4c4606097313275db4ad24d9b1c55a54cb4b584719c31cbf11ba77e80e8cda",
       "size": 6906
     },
     {
@@ -600,13 +600,13 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "fb83413526adc806adad787226e038538f81b1695b792770c2bc1b1e88eaf540",
-      "size": 57559
+      "sha256": "7a3045670c989cc5f9b9009ac1373535e6ee0e412b8d9001057948daafcd8d5f",
+      "size": 57766
     },
     {
       "path": "web/cloud.js",
-      "sha256": "9c9bc088b79298f95009c8efc29c0ac44aacf812d3cd1190713cf8f7fdd847d9",
-      "size": 37481
+      "sha256": "09fea6dfd5e37e5eb7cecefcaa196a9783070feec9fc3eee00ea7bcb1d4900b0",
+      "size": 38786
     },
     {
       "path": "web/cloudconfig.js",
@@ -625,13 +625,13 @@
     },
     {
       "path": "web/entsperrung.js",
-      "sha256": "ecce8a310a1de776d92fdcf8e2767bfe111dc1a17506a7dc4c6e908bd97bd644",
-      "size": 9970
+      "sha256": "4948097622ca955745240de362b798f00c55fca9899e6edb8f448f66497fdd39",
+      "size": 10867
     },
     {
       "path": "web/firebase.js",
-      "sha256": "282261df9088db2e3ba521b139080938d60a9e4d829c0df8a06a6e00e3c29c61",
-      "size": 17395
+      "sha256": "e033640028f9d7c105d9afc233f156db8c15daafe554c1733b2da0eabcf845df",
+      "size": 17650
     },
     {
       "path": "web/gcal.js",

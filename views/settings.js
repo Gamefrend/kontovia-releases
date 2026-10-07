@@ -267,7 +267,8 @@ async function draw(root) {
             Das Entschlüsseln ist bewusst aufwendig, damit niemand Passwörter in großer
             Zahl durchprobieren kann. Belege werden einzeln verschlüsselt und tragen auf
             der Festplatte keine sprechenden Namen. Eine Wiederherstellung ohne Passwort
-            gibt es nicht, außer über die weiteren Wege unten, die Sie selbst einschalten. Der freiwillige Cloud-Abgleich überträgt ausschließlich die
+            gibt es nicht, außer über Wege, die Sie selbst einschalten: Fingerabdruck oder Gesicht (unten) und
+            „Mit Google entsperren“ (unter Daten & Cloud, ein großes Sicherheitsrisiko). Der freiwillige Cloud-Abgleich überträgt ausschließlich die
             bereits verschlüsselte Buchhaltung.
           </div>
         </div>

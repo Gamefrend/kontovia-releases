@@ -23,7 +23,7 @@ import { journalNachEinspielen, fuerSicherung, altlastenEntfernen } from './zuga
 import * as W from './weiterleitung.js';
 import * as KP from './koppeln.js';
 import * as Z from './zulassung.js';
-import { googlePaket, googleSchluessel, googleMerken, googleVergessen, googleMerker, biometrieEntfernen } from './entsperrung.js';
+import { googlePaket, googleSchluessel, googleMerken, googleVergessen, googleMerker, googleAnzeige, googleAnzeigeSetzen, biometrieEntfernen } from './entsperrung.js';
 
 const BASIS = 'sync-basis.bin';
 const BASIS_AAD = K.utf8('kontovia/sync-basis');
@@ -369,6 +369,7 @@ export class Cloud {
     if (!st.refreshToken) throw Object.assign(new Error('Dazu muss Kontovia mit Ihrem Google-Konto verbunden sein.'), { code: 'NICHT_VERBUNDEN' });
     await this.be().schluesselSchreiben(googlePaket(this.vault.dek));
     await googleMerken(st.email);
+    await googleAnzeigeSetzen(true);
     return true;
   }
 
@@ -376,13 +377,20 @@ export class Cloud {
     this.vault.assertUnlocked();
     if (this.cfg().state?.firebase?.refreshToken) await this.be().schluesselLoeschen();
     await googleVergessen();
+    await googleAnzeigeSetzen(false);
     return true;
   }
 
-  /** Ist der Schlüssel im verbundenen Konto hinterlegt? */
+  /**
+   * Ist der Schlüssel im verbundenen Konto hinterlegt? Gesperrt zählt, was dieses Gerät
+   * weiß: eingeschaltet (Merker oder Anzeige) oder ungeprüft (Bestand vor 2.25.1).
+   */
   async googleStatus() {
     const merker = await googleMerker();
-    if (this.vault.isLocked) return { eingerichtet: !!merker, email: merker?.email || '' };
+    if (this.vault.isLocked) {
+      const anzeige = await googleAnzeige();
+      return { eingerichtet: !!merker || anzeige === true, ungeprueft: !merker && anzeige === undefined, email: merker?.email || '' };
+    }
     const st = this.cfg().state?.firebase || {};
     if (!st.refreshToken) return { eingerichtet: false, verbunden: false, email: '' };
     const dek = await this.schluesselPruefen(this.be());
@@ -391,17 +399,39 @@ export class Cloud {
     return { eingerichtet: da, verbunden: true, email: st.email || '' };
   }
 
-  /** Nach dem Entsperren mit dem Passwort: hat sich der Schlüssel geändert (etwa nach einer Sicherung), im Konto erneuern. */
+  /**
+   * Nach jedem Entsperren: den Schlüssel im Konto mit diesem Tresor vergleichen.
+   * - passt: der Sperrbildschirm zeigt „Mit Google entsperren“.
+   * - veraltet (etwa nach einer Sicherung) und auf diesem Gerät eingeschaltet (Merker): im Konto erneuern.
+   * - fehlt sicher (anderswo ausgeschaltet): nie neu anlegen, Merker weg, Knopf weg.
+   * - ließ sich nicht lesen (Netz, Anmeldung): nichts ändern.
+   * Nie verbunden gewesen: Mit Google lässt sich dieser Tresor nicht öffnen, Knopf weg.
+   * @returns {Promise<boolean>} true, wenn der Schlüssel im Konto erneuert wurde
+   */
   async googleAuffrischen() {
-    if (this.vault.isLocked || !(await googleMerker())) return false;
-    if (!this.cfg().state?.firebase?.refreshToken) return false;
+    if (this.vault.isLocked) return false;
+    const merker = await googleMerker();
+    const c = this.cfg();
+    if (!c.state?.firebase?.refreshToken) {
+      if (!merker && !c.linkedAt) await googleAnzeigeSetzen(false);
+      return false;
+    }
     const be = this.be();
-    const alt = await this.schluesselPruefen(be);
-    const gleich = alt && alt.length === this.vault.dek.length && alt.every((b, i) => b === this.vault.dek[i]);
+    let bytes;
+    try { bytes = await be.schluesselLesen(); } catch { return false; }
+    const alt = bytes ? googleSchluessel(bytes) : null;
+    const dek = this.vault.dek;
+    const gleich = !!alt && alt.length === dek.length && alt.every((b, i) => b === dek[i]);
     if (alt) K.wipe(alt);
-    if (gleich) return false;
-    await be.schluesselSchreiben(googlePaket(this.vault.dek));
-    return true;
+    if (gleich) { await googleAnzeigeSetzen(true); return false; }
+    if (merker && bytes) {
+      await be.schluesselSchreiben(googlePaket(dek));
+      await googleAnzeigeSetzen(true);
+      return true;
+    }
+    if (merker) await googleVergessen().catch(() => {});
+    await googleAnzeigeSetzen(false);
+    return false;
   }
 
   /* ---------------------------------------------------------------------- */
@@ -473,6 +503,7 @@ export class Cloud {
     await this.disconnect({ keepRemote: true });
     await biometrieEntfernen().catch(() => {});
     await googleVergessen().catch(() => {});
+    await googleAnzeigeSetzen(false);
     await Z.schreiben({ v: 1, lokalGesperrt: { seit: new Date().toISOString() } });
     return Z.stand(await Z.lesen());
   }

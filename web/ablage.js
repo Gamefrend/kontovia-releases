@@ -38,7 +38,7 @@ export const STORES = ['dateien', 'belege', 'sicherungen'];
  * Einträge, die immer im Browser bleiben: Sie gehören zu diesem Gerät, nicht zur
  * Buchhaltung. Je Konto: Speicherort, Übergabe, Biometrie, Merker für Google.
  */
-const NUR_IM_BROWSER = new Set(['geraet', 'konten', 'speicherort', 'uebergabe', 'biometrie', 'entsperrung-google']);
+const NUR_IM_BROWSER = new Set(['geraet', 'konten', 'speicherort', 'uebergabe', 'biometrie', 'entsperrung-google', 'entsperrung-google-anzeige']);
 /** Gehören zum Gerät, nicht zu einem Konto: Gerätekennung und die Liste der Konten. */
 const GERAET_GLOBAL = new Set(['geraet', 'konten']);
 /** Was aus dem Bereich „dateien“ in den Ordner gehört. */

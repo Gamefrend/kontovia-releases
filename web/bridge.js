@@ -740,7 +740,8 @@ const api = {
       const dek = cloud.schluesselUebergeben();
       if (!dek) {
         await cloud.anmeldungVerwerfen();
-        throw Object.assign(new Error('Für dieses Google-Konto ist das Entsperren ohne Passwort nicht eingeschaltet. Melden Sie sich mit dem Passwort an und schalten Sie es in den Einstellungen unter Sicherheit ein.'), { code: 'KEIN_SCHLUESSEL' });
+        // Hier nichts vergessen: Auch ein Netzfehler endet so. Das nächste Entsperren klärt es (googleAuffrischen).
+        throw Object.assign(new Error('Für dieses Google-Konto ist das Entsperren ohne Passwort nicht eingeschaltet. Bitte entsperren Sie mit Ihrem Passwort.'), { code: 'KEIN_SCHLUESSEL' });
       }
       try {
         return await mitSchluesselEntsperrt(dek);
@@ -754,6 +755,8 @@ const api = {
     googleLaden: handle(async () => {
       if (anderesFenster) throw new Error('Kontovia ist in einem anderen Fenster geöffnet. Bitte dort weiterarbeiten oder dieses Fenster neu laden.');
       const db = await cloud.ausCloudLadenOhnePasswort();
+      // Mit dem Schlüssel aus dem Google-Konto geöffnet: Der Sperrbildschirm bietet den Weg hier an.
+      await EN.googleAnzeigeSetzen(true);
       autoLockMinutes = Number(db?.settings?.autoLockMinutes ?? 10);
       resetLockTimer();
       restartAutoSync();

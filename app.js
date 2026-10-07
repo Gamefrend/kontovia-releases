@@ -631,8 +631,9 @@ function renderCloudLaden(st, { neu }) {
         <p class="tiny muted mt16" style="text-align:center">Die Belege kommen danach im Hintergrund nach.</p>
         <details class="forgot small mt8">
           <summary>Passwort vergessen?</summary>
-          <p>Ohne das Passwort lässt sich die Buchhaltung nicht öffnen, weder von Kontovia noch
-          von Google. Ist sie auf einem anderen Gerät noch entsperrt, ändern Sie dort unter
+          <p>Ohne das Passwort lässt sich die Buchhaltung nicht öffnen${st.schluessel
+    ? raw(', außer mit „Ohne Passwort laden“ oben: Für dieses Google-Konto ist „Mit Google entsperren“ eingeschaltet')
+    : ', weder von Kontovia noch von Google'}. Ist sie auf einem anderen Gerät noch entsperrt, ändern Sie dort unter
           <em>Einstellungen → Sicherheit</em> das Passwort und gleichen ab; danach gilt hier das neue.</p>
         </details>
         <div class="row mt16" style="gap:8px;justify-content:space-between">
@@ -850,7 +851,8 @@ function renderUnlock(message = '') {
         <details class="forgot small mt8">
           <summary>Passwort vergessen?</summary>
           <p>Ohne Passwort lässt sich der Tresor nicht öffnen, auch nicht vom Hersteller. Das
-          schützt Ihre Buchhaltung, falls jemand die Datei in die Hände bekommt.</p>
+          schützt Ihre Buchhaltung, falls jemand die Datei in die Hände bekommt. Ausnahme: Sie haben
+          „Mit Google entsperren“ eingeschaltet, dann genügt die Anmeldung bei Google.</p>
           <p>Haben Sie eine <strong>Vollsicherung (.kvbak)</strong>, deren Passwort Sie kennen:
           Unten auf <em>Konto hinzufügen</em> tippen, eine neue Buchhaltung anlegen und die Sicherung dort unter
           <em>Einstellungen → Sicherung wiederherstellen</em> einspielen. Das gesperrte Konto bleibt so lange erhalten,

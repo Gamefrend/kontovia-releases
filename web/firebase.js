@@ -267,12 +267,17 @@ export class FirebaseBackend {
     return true;
   }
 
-  /** Die Datei mit dem Datenschlüssel für „Mit Google entsperren“ (entsperrung.js); null, wenn es sie nicht gibt. */
+  /**
+   * Die Datei mit dem Datenschlüssel für „Mit Google entsperren“ (entsperrung.js); null nur,
+   * wenn es sie sicher nicht gibt (404). Jede andere Antwort wirft: „unklar“ ist nicht „aus“.
+   */
   async schluesselLesen() {
     const headers = await this.auth();
     try {
       const res = await request(this.objectUrl(`${this.base()}/${SCHLUESSEL_NAME}`, '?alt=media'), { headers, timeoutMs: 20000 });
-      return res.status === 200 ? res.body : null;
+      if (res.status === 200) return res.body;
+      if (res.status === 404) return null;
+      throw Object.assign(new Error(`Der Schlüssel ließ sich nicht lesen (HTTP ${res.status}).`), { status: res.status });
     } catch (err) {
       if (err.status === 404) return null;
       throw err;

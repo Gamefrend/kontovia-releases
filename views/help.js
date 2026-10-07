@@ -525,10 +525,13 @@ function cloud(root) {
         darf: <em>Inhaber</em> alles, <em>Mitarbeit</em> Buchungen, Rechnungen, Kontakte, Termine und Aufgaben, aber keine Einstellungen,
         <em>Nur lesen</em> ansehen, auswerten und exportieren. Rollen sind keine Zugriffssperre: Wer das Passwort des Kontos kennt,
         kommt an alle Daten. Wer getrennte Daten braucht, legt ein eigenes Konto an.</p>
-        <p class="mb0">Neben dem Passwort lassen sich unter <a data-go="settings">Einstellungen → Sicherheit</a> zwei
-        weitere Wege einschalten, jeder für sich ausreichend: <strong>Fingerabdruck oder Gesicht</strong> (nur auf diesem
-        Gerät, der Schlüssel bleibt im Sicherheitschip) und das <strong>Google-Konto</strong> (auf jedem Gerät; dafür liegt
-        der Schlüssel in Ihrem Konto, wer es übernimmt, kommt auch an die Buchhaltung). Das Passwort bleibt immer gültig.</p>
+        <p>Neben dem Passwort lässt sich unter <a data-go="settings">Einstellungen → Sicherheit</a>
+        <strong>Fingerabdruck oder Gesicht</strong> einschalten (nur auf diesem Gerät, der Schlüssel bleibt im Sicherheitschip).
+        Das Passwort bleibt immer gültig.</p>
+        <p class="mb0">Ist Kontovia mit Google verbunden, gibt es unter <a data-go="settings">Einstellungen → Daten &amp; Cloud</a>
+        außerdem <strong>Mit Google entsperren</strong>. <strong>Das ist ein großes Sicherheitsrisiko:</strong> Der Schlüssel zu Ihrer
+        Buchhaltung liegt dann unverschlüsselt im Cloud-Speicher, und Ihre Daten sind nur noch durch das Passwort Ihres
+        Google-Kontos geschützt. Wer Ihr Google-Konto übernimmt, kann alles lesen. Wir raten davon ab.</p>
       </div></div>
       <div class="card mb16"><div class="card-body">
         <h2 class="mt0">Rückmeldung geben</h2>
@@ -554,7 +557,7 @@ function cloud(root) {
         regelmäßigen Abständen.</p>
         <div class="notice ok mb0"><strong>Ihre Daten bleiben verschlüsselt.</strong> In die Cloud geht
         nur Ihre bereits verschlüsselte Buchhaltung. Lesen kann sie nur, wer Ihr Passwort kennt.
-        Das sind weder Google noch der Hersteller von Kontovia.</div>
+        Das sind weder Google noch der Hersteller von Kontovia. Das gilt, solange Sie „Mit Google entsperren“ ausgeschaltet lassen.</div>
       </div></div>
 
       <div class="card mt16"><div class="card-body">

@@ -182,6 +182,21 @@ export function googleSchluessel(bytes) {
   } catch { return null; }
 }
 
+/** Der Merker: Dieses Gerät hat den Weg eingeschaltet und hält den Schlüssel im Konto aktuell (cloud.js: googleAuffrischen). */
 export const googleMerken = (email) => A.schreiben('dateien', GOOGLE_MERKER, { email: String(email || ''), seit: new Date().toISOString() });
 export const googleMerker = () => A.lesen('dateien', GOOGLE_MERKER).catch(() => null);
 export const googleVergessen = () => A.loeschen('dateien', GOOGLE_MERKER);
+
+/**
+ * Zeigt der Sperrbildschirm „Mit Google entsperren“? Gilt auch für Geräte, die den
+ * Weg nur nutzen (etwa nach „Ohne Passwort laden“). Ohne Eintrag ist es ungeprüft
+ * (Bestand vor 2.25.1): Dann bleibt der Knopf sichtbar, damit niemand ausgesperrt wird,
+ * bis ein Entsperren es sicher klärt.
+ */
+export const GOOGLE_ANZEIGE = 'entsperrung-google-anzeige';
+export const googleAnzeigeSetzen = (an) => A.schreiben('dateien', GOOGLE_ANZEIGE, { an: !!an, seit: new Date().toISOString() }).catch(() => {});
+/** @returns {Promise<boolean|undefined>} undefined: noch nie geprüft */
+export async function googleAnzeige() {
+  const e = await A.lesen('dateien', GOOGLE_ANZEIGE).catch(() => null);
+  return typeof e?.an === 'boolean' ? e.an : undefined;
+}
