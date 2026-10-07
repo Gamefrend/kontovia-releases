@@ -16,6 +16,7 @@ import { html, raw, esc, $, $$, fmtDate, fmtDateShort, todayISO, addDays, relati
 import { icon, modal, confirmDialog, ok, warn, emptyState } from '../lib/ui.js';
 import { sel, store, upsertTodo, setTodoDone, deleteTodo, newTodoDraft, zielFortschritt } from '../lib/store.js';
 import { refresh, navigate } from '../lib/router.js';
+import { fokusMerken } from '../lib/fokus.js';
 import { openAppointmentDialog } from './calendar.js';
 import { expandAppointments } from '../lib/termine.js';
 import { prefs, setPref } from '../lib/prefs.js';
@@ -473,6 +474,7 @@ function appointmentOptions(selectedId) {
  */
 export function openTodoDialog(id, preset = {}, { nachSpeichern = null } = {}) {
   const existing = id ? sel.todo(id) : null;
+  if (existing) fokusMerken('aufgabe', existing.id);
   const t = existing ? structuredClone(existing) : newTodoDraft(preset);
   const isNew = !existing;
   const urspruenglich = bildIds(aufgabenHtml(t));

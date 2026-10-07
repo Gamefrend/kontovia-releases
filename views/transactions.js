@@ -12,6 +12,7 @@ import {
 import { defaultPeriod, periodControl } from '../lib/period.js';
 import { mountTable, tableState } from '../lib/table.js';
 import { router, refresh, navigate } from '../lib/router.js';
+import { fokusMerken } from '../lib/fokus.js';
 import { vatTreatment, depositInfo, isVoidPart, formLine, formYear, afaMethod, AFA_METHODE, isKleinunternehmer } from '../lib/calc.js';
 import { neuesAnlagegut, anlageFelder, wireAnlageFelder, anlageAusFeldern } from './anlageform.js';
 import { eRechnungLesen, eRechnungAusDatei, xmlAusPdf, richtung } from '../lib/erechnung.js';
@@ -450,13 +451,6 @@ function kontaktOptionen(type, gewaehlt) {
 /* -------------------------------------------------------------------------- */
 
 /**
- * @param {string|object|null} id  Kennung, null (neu) oder ein fertiger Entwurf (Duplikat, Restzahlung)
- * @param {'income'|'expense'} type
- * @param {{onSaved?:(tx:object)=>any, wiederholen?:string, dateien?:File[]}} opts  onSaved läuft nach dem Speichern,
- *   etwa um die Buchung mit dem Termin zu verknüpfen, aus dem sie angelegt wurde; wiederholen
- *   wählt einen Turnus vor (lib/wiederkehrend.js); dateien hängt Belege gleich beim Öffnen an
- */
-/**
  * Den offenen Rest einer Einnahme ausbuchen (store.js: restAusbuchen): Skonto
  * oder Forderungsausfall, ab einem Tag. Liefert {grund, datum} oder null.
  */
@@ -489,10 +483,19 @@ export function ausbuchenFragen(tx) {
   });
 }
 
-export function openTransactionDialog(id, type = 'expense', { onSaved = null, wiederholen: turnusVorgabe = '', dateien = null } = {}) {
+/**
+ * @param {string|object|null} id  Kennung, null (neu) oder ein fertiger Entwurf (Duplikat, Restzahlung)
+ * @param {'income'|'expense'} type
+ * @param {{onSaved?:(tx:object)=>any, wiederholen?:string, dateien?:File[], vorgabe?:object}} opts  onSaved läuft nach dem Speichern,
+ *   etwa um die Buchung mit dem Termin zu verknüpfen, aus dem sie angelegt wurde; wiederholen
+ *   wählt einen Turnus vor (lib/wiederkehrend.js); dateien hängt Belege gleich beim Öffnen an;
+ *   vorgabe füllt Felder einer bestehenden Buchung vor (der Assistent: {paidDate}), gespeichert wird wie sonst erst mit „Speichern“
+ */
+export function openTransactionDialog(id, type = 'expense', { onSaved = null, wiederholen: turnusVorgabe = '', dateien = null, vorgabe = null } = {}) {
   const draft = id && typeof id === 'object' ? id : null;
   const existing = draft ? null : (id ? sel.transaction(id) : null);
-  const tx = existing ? structuredClone(existing) : (draft || newTransactionDraft(type));
+  if (existing) fokusMerken('buchung', existing.id);
+  const tx = existing ? { ...structuredClone(existing), ...(vorgabe || {}) } : (draft || newTransactionDraft(type));
   const isNew = !existing;
   type = tx.type;
   // Kleinunternehmer oder nicht nach dem Stand am Tag der Buchung (Verlauf in den Einstellungen).

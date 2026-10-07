@@ -24,6 +24,8 @@ function werk() {
   worker = new Worker(new URL('./ki-worker.js', import.meta.url), { type: 'module', name: 'kontovia-assistent' });
   worker.addEventListener('message', (ev) => {
     const n = ev.data || {};
+    // Grafikchip abgestürzt: Das Modell ist weg und startet bei der nächsten Frage neu (laden).
+    if (n.art === 'verloren') { gestartet = ''; return; }
     const a = auftraege.get(n.id);
     if (!a) return;
     if (n.art === 'teil') a.beiTeil?.(n.text);
@@ -31,8 +33,10 @@ function werk() {
     else if (n.art === 'fehler') {
       auftraege.delete(n.id);
       const e = new Error(n.text);
-      e.code = /WebGPU|GPU|adapter|device/i.test(n.text) ? 'KI_GRAFIK' : /Integrity|integrity/i.test(n.text) ? 'KI_PRUEFSUMME'
-        : /fetch|network|Gegenstelle|Failed to fetch/i.test(n.text) ? 'KI_NETZ' : 'KI_FEHLER';
+      e.code = n.code || (/Grammar|grammar|structural/.test(`${n.name} ${n.text}`) ? 'KI_GRAMMATIK'
+        : /WebGPU|GPU|adapter|device/i.test(n.text) ? 'KI_GRAFIK' : /Integrity|integrity/i.test(n.text) ? 'KI_PRUEFSUMME'
+        : /fetch|network|Gegenstelle|Failed to fetch/i.test(n.text) ? 'KI_NETZ' : 'KI_FEHLER');
+      if (e.code === 'KI_ABSTURZ') gestartet = '';
       a.ablehnen(e);
     } else {
       auftraege.delete(n.id);
@@ -138,14 +142,15 @@ export async function laden(modell, beiFortschritt) {
 
 /**
  * Eine Antwort des gestarteten Modells.
- * @param {object} anfrage  {messages, temperature, top_p, max_tokens, extra_body}
+ * @param {object} anfrage  {messages, temperature, top_p, max_tokens, extra_body, response_format}
  * @param {(text:string)=>void} [beiTeil]  jedes neue Stück Text
- * @returns {Promise<{ende:string, nutzung:object|null}>}
+ * @returns {Promise<{ende:string, nutzung:object|null, nachricht:string|null}>}  nachricht: die Antwort,
+ *   wie die Laufzeit sie sich merkt (lib/assistent.js gibt sie wörtlich zurück, damit nichts neu eingelesen wird)
  */
 export async function antworten(anfrage, beiTeil) {
   if (!gestartet) throw Object.assign(new Error('Es ist kein Modell gestartet.'), { code: 'KI_NICHT_GESTARTET' });
   const r = await auftrag({ art: 'chat', anfrage }, { beiTeil });
-  return { ende: r.ende || '', nutzung: r.nutzung || null };
+  return { ende: r.ende || '', nutzung: r.nutzung || null, nachricht: typeof r.nachricht === 'string' ? r.nachricht : null };
 }
 
 export function abbrechen() { worker?.postMessage({ art: 'abbrechen' }); }

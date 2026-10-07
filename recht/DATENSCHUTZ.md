@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 7. Oktober 2026, Programmversion 2.27.0
+Stand: 8. Oktober 2026, Programmversion 2.28.0
 
 ---
 
@@ -379,10 +379,12 @@ Microsoft 365). Der Hersteller von Kontovia erhält dabei keine Daten.
 
 ## Assistent (freiwillig)
 
-Der Assistent beantwortet Fragen zu Ihrer Buchhaltung, sucht, rechnet und
-bereitet Einträge vor. **Er läuft ausschließlich auf Ihrem Gerät.** Ihre Fragen,
-seine Antworten und Ihre Buchhaltung werden dabei an niemanden übertragen, auch
-nicht an den Hersteller von Kontovia oder den Anbieter des Modells.
+Der Assistent beantwortet Fragen zu Ihrer Buchhaltung und zur Bedienung, sucht,
+rechnet und bereitet Einträge, Zahlungen und Mahnungen vor. **Er läuft
+ausschließlich auf Ihrem Gerät.** Ihre Fragen, seine Antworten, Ihre
+Buchhaltung und der Eintrag, den Sie gerade geöffnet haben, werden dabei an
+niemanden übertragen, auch nicht an den Hersteller von Kontovia oder den
+Anbieter des Modells.
 
 In der Stufe „Basis“ arbeitet er mit festen Regeln ohne jede Verbindung. Für die
 Stufen „Mini“ bis „Maximal“ wird **einmalig und nur nach Ihrer Zustimmung** ein

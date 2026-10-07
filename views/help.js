@@ -48,6 +48,30 @@ export async function render(root, params = {}) {
   if (params.abschnitt) setTimeout(() => $(`#hilfe-${params.abschnitt}`, root)?.closest('.card')?.scrollIntoView({ block: 'start' }), 60);
 }
 
+/**
+ * Die Abschnitte der Kurzanleitung und von „Cloud und Geräte“ als Text, für den
+ * Assistenten (lib/assistentwerkzeuge.js: hilfe_suchen). Gezeichnet wird in ein
+ * Element, das nie in die Seite kommt; so steht dort genau, was die Hilfe zeigt,
+ * samt der eigenen Einstellungen.
+ * @returns {Array<{titel:string, kennung:string, tab:string, absaetze:string[]}>}
+ */
+export function hilfeAbschnitte() {
+  const out = [];
+  for (const [reiter, zeichnen] of [['anleitung', anleitung], ['cloud', cloud]]) {
+    const el = document.createElement('div');
+    zeichnen(el);
+    for (const karte of $$('.card', el)) {
+      const h = $('h2', karte);
+      if (!h) continue;
+      const titel = h.textContent.replace(/\s+/g, ' ').trim();
+      const absaetze = $$('p, li', karte).filter((x) => !x.querySelector('p, li'))
+        .map((x) => x.textContent.replace(/\s+/g, ' ').trim()).filter((s) => s.length > 20);
+      out.push({ titel, kennung: abschnittKennung(titel), tab: reiter, absaetze });
+    }
+  }
+  return out;
+}
+
 /** Blendet beim Tippen alle Karten aus, in denen nicht jedes gesuchte Wort vorkommt. */
 function sucheVerdrahten(root, body) {
   const feld = $('#helpSuche', root);
@@ -446,9 +470,14 @@ function anleitung(root) {
       <div class="card mt16"><div class="card-body">
         <h2 class="mt0">Der Assistent</h2>
         <p>Öffnen Sie ihn mit <strong>Assistent</strong> in der Seitenleiste oder <kbd>${MOD}</kbd>+<kbd>J</kbd>
-        und fragen Sie in Ihren Worten: „Was ist noch offen?“, „Wie viel Umsatzsteuer zahle ich dieses Quartal?“,
+        und fragen Sie in Ihren Worten: „Was steht heute an?“, „Was ist noch offen?“, „Wie viel Umsatzsteuer zahle ich dieses Quartal?“,
         „Finde die Rechnung vom Fotoshooting mit dem Garten“ oder „Erinnere mich morgen an die Belege“.</p>
         <ul>
+          <li><strong>Mehr als Zahlen.</strong> Fragen zur Bedienung („Wie schreibe ich eine Rechnung?“) beantwortet er aus
+          dieser Hilfe. Er zeigt den Verlauf Monat für Monat, prüft ein Jahr vor der Steuer, liest die Anlage EÜR und die
+          Abschreibungen. „Müller hat bezahlt“ oder „Mahne das Weingut“ bereitet er im gewohnten Fenster vor.</li>
+          <li><strong>„Diese Rechnung“, „hier“:</strong> Haben Sie gerade eine Rechnung, Buchung, Aufgabe, einen Termin oder
+          Kontakt geöffnet, meint der Assistent diesen Eintrag.</li>
           <li><strong>Alles bleibt auf dem Gerät.</strong> Der Assistent rechnet auf Ihrem Gerät. Fragen und Buchhaltung gehen nirgendwohin.</li>
           <li><strong>Stufen:</strong> Basis versteht feste Fragen ohne Download. Mini, Standard, Groß und Maximal sind
           Sprachmodelle, die einmalig heruntergeladen werden (350 MB bis 4,6 GB) und dann offline laufen. Kontovia

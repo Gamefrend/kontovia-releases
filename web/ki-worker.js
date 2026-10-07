@@ -16,11 +16,16 @@
  * Nachrichten (von ki.js):
  *   {art:'laden', id, modell}        lädt oder startet ein Modell aus kimodelle.js
  *   {art:'chat', id, anfrage}        eine Antwort, Stück für Stück ({art:'teil'}), dann {art:'fertig'}
+ *                                    mit `nachricht`: der Antwort, wie die Laufzeit sie sich merkt.
+ *                                    Beginnt die nächste Anfrage mit genau diesem Verlauf, liest die
+ *                                    Laufzeit nur das Neue ein (sonst alles von vorn).
  *   {art:'abbrechen'}                bricht die laufende Antwort ab
  *   {art:'vergessen'}                verwirft den Gesprächsstand im Modell
  *   {art:'entladen', id}             gibt den Grafikspeicher frei
  *   {art:'imCache', id, modelle}     welche Modelle schon auf dem Gerät liegen
  *   {art:'loeschen', id, modell}     entfernt ein Modell vom Gerät
+ * Von sich aus meldet er {art:'verloren'}, wenn der Grafikchip abgestürzt
+ * und das Modell damit weg ist.
  */
 
 import { modellAdresseErlaubt } from './netz.js';
@@ -43,7 +48,33 @@ let motor = null;
 let geladen = '';
 
 const melden = (nachricht) => self.postMessage(nachricht);
-const fehler = (id, e) => melden({ art: 'fehler', id, text: String(e?.message || e || 'Unbekannter Fehler'), name: e?.name || '' });
+const fehler = (id, e) => melden({ art: 'fehler', id, text: String(e?.message || e || 'Unbekannter Fehler'), name: e?.name || '', code: e?.code || '' });
+
+/**
+ * Hängt der Grafikchip, setzt der Treiber ihn zurück (Windows nach gut 2 s,
+ * AMD zeigt dazu einen eigenen Fehlerbericht). Der Browser meldet das Gerät
+ * dann als verloren, und WebLLM räumt das Modell weg, auch mitten in einer
+ * Antwort („Tokenizer instance already deleted“, danach „Model not loaded“).
+ * Damit das erkennbar ist, bekommt jedes Gerät, das die Laufzeit holt, einen
+ * Wächter. „destroyed“ ist das eigene Aufräumen (entladen, Modellwechsel).
+ */
+let verloren = false;
+const echtesGeraet = self.GPUAdapter?.prototype?.requestDevice;
+if (echtesGeraet) {
+  self.GPUAdapter.prototype.requestDevice = async function (...args) {
+    const geraet = await echtesGeraet.apply(this, args);
+    geraet.lost.then((info) => {
+      if (info?.reason === 'destroyed') return;
+      verloren = true;
+      geladen = '';
+      melden({ art: 'verloren' });
+    });
+    return geraet;
+  };
+}
+
+/** Nach einem Absturz nicht gleich nochmal rechnen (das träfe den Treiber wieder); das Modell startet bei der nächsten Frage neu. */
+const absturz = () => Object.assign(new Error('Der Grafikchip hat die Berechnung abgebrochen.'), { code: 'KI_ABSTURZ' });
 
 async function laden(id, modell) {
   if (!MODELLE[modell]) throw new Error('Dieses Modell kennt Kontovia nicht.');
@@ -58,6 +89,7 @@ async function laden(id, modell) {
   if (geladen !== modell) {
     await motor.reload(modell);
     geladen = modell;
+    verloren = false;
   }
   melden({ art: 'geladen', id, modell });
 }
@@ -65,10 +97,10 @@ async function laden(id, modell) {
 /** Die gerade laufende Antwort. WebLLM sperrt `resetChat` nicht dagegen: Mitten in einer Antwort räumt es deren Zwischenwerte weg („Object has already been disposed“). */
 let laufend = null;
 
-const entsorgt = (e) => /already been disposed/i.test(String(e?.message || e));
+const entsorgt = (e) => /already been disposed|instance already deleted/i.test(String(e?.message || e));
 
 async function chat(id, anfrage) {
-  if (!motor || !geladen) throw new Error('Es ist kein Modell gestartet.');
+  if (!motor || !geladen) throw verloren ? absturz() : new Error('Es ist kein Modell gestartet.');
   let gesendet = false;
   const einmal = async () => {
     const strom = await motor.chat.completions.create({ ...anfrage, stream: true, stream_options: { include_usage: true } });
@@ -86,6 +118,9 @@ async function chat(id, anfrage) {
   try {
     ergebnis = await einmal();
   } catch (e) {
+    // Der Verlust des Geräts und der Fehler in der Antwort kommen nicht immer in fester Reihenfolge an.
+    if (!verloren) await new Promise((r) => setTimeout(r, 100));
+    if (verloren) throw absturz();
     if (!entsorgt(e)) throw e;
     // Die Laufzeit ist beschädigt: Modell neu starten (kommt aus dem Cache), und wenn noch nichts gesendet wurde, nochmal versuchen.
     await motor.reload(geladen);
@@ -93,8 +128,11 @@ async function chat(id, anfrage) {
     ergebnis = await einmal();
   }
   const { nutzung, ende } = ergebnis;
+  // Die Antwort genau so, wie sie im Gesprächsstand der Laufzeit steht (samt leerem
+  // Denkblock). Nur wer sie wörtlich zurückgibt, bekommt das schon Eingelesene wieder.
+  const nachricht = await motor.getMessage().catch(() => null);
   melden({
-    art: 'fertig', id, ende,
+    art: 'fertig', id, ende, nachricht: typeof nachricht === 'string' ? nachricht : null,
     nutzung: nutzung ? {
       prompt: nutzung.prompt_tokens || 0,
       antwort: nutzung.completion_tokens || 0,

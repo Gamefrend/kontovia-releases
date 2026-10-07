@@ -584,11 +584,18 @@ function mailVorlageDialog() {
   });
 }
 
-function bezahltDialog(r) {
+/** Für den Assistenten (lib/assistentfenster.js): „X hat bezahlt“ öffnet dieses Fenster mit dem genannten Tag. */
+export function bezahltFragen(id, { datum = '' } = {}) {
+  const r = sel.invoice(id);
+  if (!r) { warn('Diese Rechnung gibt es nicht mehr'); return; }
+  bezahltDialog(r, datum);
+}
+
+function bezahltDialog(r, datum = '') {
   const m = modal({
     title: `${titelVon(r)} ${r.nummer} als bezahlt markieren`,
     size: 'slim',
-    body: `<div class="field"><label for="reBezDatum">Bezahlt am</label><input type="date" id="reBezDatum" value="${esc(todayISO())}"></div>
+    body: `<div class="field"><label for="reBezDatum">Bezahlt am</label><input type="date" id="reBezDatum" value="${esc(datum || todayISO())}"></div>
       <p class="small muted mb0">Die offene Einnahme bekommt dieses Zahlungsdatum.</p>`,
     foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Bezahlt</button>',
   });

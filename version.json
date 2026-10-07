@@ -1,7 +1,7 @@
 {
-  "version": "2.27.0",
-  "released": "2026-10-07T20:36:53.407Z",
-  "notes": "Steuer genauer, Rückmeldungen geschützt\n\n- Wechseln Sie etwa von Kleinunternehmer zu Regelbesteuerung, fragt Kontovia, ab wann. Frühere Jahre bleiben, wie sie waren.\n- Kunden außerhalb der EU, Bauleistungen an deutsche Firmen und Buchungen ohne Kategorie stehen in der Voranmeldung jetzt richtig. Ohne Kategorie fragt Kontovia vor der ELSTER-Datei nach.\n- Neu: Skonto und ausgefallene Rechnungen ausbuchen, verkaufte Anlagegüter eintragen, Zahlungen um den Jahreswechsel richtig zuordnen.\n- Mahnungen rechnen den Verzug erst ab der ersten Erinnerung und ziehen Gebühren von der Pauschale ab. Rechnungen an Privatkunden nennen die 30-Tage-Frist.\n- Ihre Rückmeldungen und Bildschirmfotos können nur noch wir lesen, nicht andere Nutzer.",
+  "version": "2.28.0",
+  "released": "2026-10-07T22:46:50.140Z",
+  "notes": "Der Assistent wird schneller und hilft mehr\n\n- Der Assistent antwortet spürbar schneller, weil er im Gespräch nichts doppelt liest. Bricht der Grafikchip ab, startet er bei der nächsten Frage neu.\n- Neu: „Was steht heute an?“ zeigt Termine, fällige Aufgaben, Fristen und überfällige Rechnungen auf einen Blick.\n- Fragen zur Bedienung wie „Wie schreibe ich eine Rechnung?“ beantwortet er aus der Hilfe.\n- „Müller hat bezahlt“ trägt die Zahlung ein, „Mahne das Weingut“ bereitet die Mahnung vor. Gespeichert wird erst, wenn Sie bestätigen.\n- Er versteht „diese Rechnung“, zeigt Verläufe Monat für Monat, prüft ein Jahr vor der Steuer und liest Anlage EÜR und Abschreibungen.",
   "files": [
     {
       "path": "app.js",
@@ -55,18 +55,18 @@
     },
     {
       "path": "lib/assistent.js",
-      "sha256": "ed012c924962655d5303b81310bef8c2e94171062c2b0f55889e4e4433b752d1",
-      "size": 17165
+      "sha256": "104b3a1205a17d36695b01d5557244cfb16499550e747c5ccb0f9c620d750029",
+      "size": 26165
     },
     {
       "path": "lib/assistentdeutung.js",
-      "sha256": "9c5298f4feb347a6db620bec52052c50bb3a62860f34ca6da505ee9828833747",
-      "size": 38429
+      "sha256": "566cdd051d431930ccd2d78223a7793afcfb1177a1f9d60bc5d01b79af1ee1c0",
+      "size": 50105
     },
     {
       "path": "lib/assistentfenster.js",
-      "sha256": "d8e94b71c9c4d24209db76f05a629a4bbdb15e1a14c3a28b30fe9bca1e8d4e12",
-      "size": 39997
+      "sha256": "3b8c1f2a7b8253d05bd650525c8b712092ce6722ea8fff1872a22775d7fff427",
+      "size": 43200
     },
     {
       "path": "lib/assistentmodelle.js",
@@ -75,13 +75,13 @@
     },
     {
       "path": "lib/assistentwerkzeuge.js",
-      "sha256": "a3482de412565c02c7ee7eb7428481c653d99422d9aa6f4b3459ab2bc7a9af6e",
-      "size": 54331
+      "sha256": "03a9bea7905a63c22e189073f34e9a60c9be6a4c6cc8731b5b500b2e9b30a925",
+      "size": 88792
     },
     {
       "path": "lib/assistentwissen.js",
-      "sha256": "93bb1c38377b869a52d6b819132bb0fc1d02b68e35a861e927afb2bcc8398c3e",
-      "size": 7386
+      "sha256": "7e20640b5e63fc832af609c75c63997029290618df7d78f80086e791e3a16dae",
+      "size": 9524
     },
     {
       "path": "lib/aufgaben.js",
@@ -105,8 +105,8 @@
     },
     {
       "path": "lib/calc.js",
-      "sha256": "2a9edece302766fee99185bfa1089d60b1c33627821dbbacb37bb039d4178fbf",
-      "size": 71079
+      "sha256": "c00993401d8467d0cd41bd8bdea78ed3663d004474510946b834b28daecb6e42",
+      "size": 71086
     },
     {
       "path": "lib/datenimport.js",
@@ -157,6 +157,11 @@
       "path": "lib/feedback.js",
       "sha256": "72e7f04575eaa48d6d728ae07f8e7c9ed1da116d19571805c608e12ed548de0c",
       "size": 18621
+    },
+    {
+      "path": "lib/fokus.js",
+      "sha256": "0b1cce1eba7a15a1f6264127d68de6874e42e7b76d09a066ea743c5efbc0607b",
+      "size": 1097
     },
     {
       "path": "lib/fristen.js",
@@ -385,8 +390,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "3b6f537ae52a33feb069bd38e70d39d966b3c4312dc469d581da3ddb415f72fa",
-      "size": 39269
+      "sha256": "2225e6051229bc96c2a7e3d0aaabac19151f38a5f89a4a0f2d99a4db760dcdfe",
+      "size": 40101
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -415,13 +420,13 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "af3dad038b50bd38baf7b702dbbb36cfb2de9239e1cee2944d4b4b6532a8424c",
+      "sha256": "3757d3319c80a9ae6f08247bac46fa7b3d5d3fc31f6d03306c203d6b1bed0b66",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "6d6f5cda3fd63d622ab5d2ae57f7d805fb7789bd214dc265dfd826c7ebca35fe",
-      "size": 31193
+      "sha256": "c534d4c9adc734f5bd1eb2bc6f09250d957e04e15cca60bace54017bfde24a92",
+      "size": 31282
     },
     {
       "path": "recht/IMPRESSUM.md",
@@ -435,8 +440,8 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "d825f9832868b27172a38e0648aa4fca66adb80d7c41c6e02bd83cfab2696ae8",
-      "size": 34849
+      "sha256": "f4a0d5db349575b81ffcac5cd22a5cb11f5497c9c4471a2856005466dee01203",
+      "size": 34938
     },
     {
       "path": "recht/impressum.html",
@@ -470,8 +475,8 @@
     },
     {
       "path": "views/calendar.js",
-      "sha256": "24463f06bfecac22f404d100ce6d39617f26327ef21c604dd1861f30ab707d1b",
-      "size": 37578
+      "sha256": "def5f57dd04afd0a980dd412d020b56edbf07df00bd251a81b2f703b0ecc95b6",
+      "size": 37677
     },
     {
       "path": "views/calendarsync.js",
@@ -505,8 +510,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "0876ae533d8e4023aef613575f32d3af25923bd9fe1709f64fbab6000f4c362c",
-      "size": 70394
+      "sha256": "1eee608ee1c2b24b0e0216c7d511be8a036c3213f1b520486b2cae072cb1c149",
+      "size": 72027
     },
     {
       "path": "views/importexport.js",
@@ -535,13 +540,13 @@
     },
     {
       "path": "views/master.js",
-      "sha256": "3971d7540fbe7070e87d90eff5141a963f74db6ef56c5a9edca2ed4de9d64ee6",
-      "size": 36612
+      "sha256": "3df02081c542bcb595e078b2b2d00dbbef76f020a7fa132ddbf8a047cc03e12d",
+      "size": 36726
     },
     {
       "path": "views/rechnungen.js",
-      "sha256": "d0a0b5056211e3ae4cc79d8329d5fed7b95739caeeee0b6cb5c6ca352f8d4feb",
-      "size": 58865
+      "sha256": "c25474b09156665be6ded361d0b4ecaed50aa6ed8cf4a89ba806f64ce806563b",
+      "size": 59188
     },
     {
       "path": "views/rechnungseditor.js",
@@ -570,13 +575,13 @@
     },
     {
       "path": "views/todos.js",
-      "sha256": "a5e335ef62ddb91c87e6b38ff41930e457cb46a8e95376d390abb0b15d70ceb4",
-      "size": 42370
+      "sha256": "36d980b96ee2cbe1d9720fcac1ae9699b12a34905045b1ed7177824e0255993b",
+      "size": 42470
     },
     {
       "path": "views/transactions.js",
-      "sha256": "036b4c61d403327dc4ba495571ec96634c090e2270d27aa555f14e699d9dd21f",
-      "size": 84152
+      "sha256": "0f4a370959e2c23e3ac47810a0c5b58e5c6a92bfa6e07483d7ed7bed4fda0753",
+      "size": 84451
     },
     {
       "path": "views/wiederkehrend.js",
@@ -590,7 +595,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "aa2de0c3d21e2b45fe65eeeda4e15591a72b9c4fe53a3efd1142b32a1977a136",
+      "sha256": "2a3bfbe57b02cf4642e3f984f17f83d3f712617e35a9f90e5b774e167138f06d",
       "size": 6906
     },
     {
@@ -650,13 +655,13 @@
     },
     {
       "path": "web/ki-worker.js",
-      "sha256": "f34624eef126e98b00fb9a10cc264faab7affce1e1d351fb291c1218ff7073d3",
-      "size": 6406
+      "sha256": "434882a456362260c709e94cfe24665c982378f087ba15d0a81d5d90a3833047",
+      "size": 8581
     },
     {
       "path": "web/ki.js",
-      "sha256": "0911067f6bcbdf58c74a58681bb18d0f831b7675b714af36150d77e8eab04edd",
-      "size": 7324
+      "sha256": "a7162673ccac196e04bddfed590f4e09ee21627272a7238bc41eff9d343361bc",
+      "size": 7875
     },
     {
       "path": "web/kimodelle.js",

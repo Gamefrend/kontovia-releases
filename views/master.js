@@ -13,6 +13,7 @@ import { regelTabelle, offeneVorkommen, faelligeAnbieten } from './wiederkehrend
 import { anschriftAusText, LAENDER, laenderSortiert } from '../lib/rechnung.js';
 import { openTransactionDialog } from './transactions.js';
 import { refresh } from '../lib/router.js';
+import { fokusMerken } from '../lib/fokus.js';
 import { table, mountTable, mountTables } from '../lib/table.js';
 import { aufgabenAbschnitt } from './todos.js';
 import { markierung } from '../lib/bewegung.js';
@@ -403,6 +404,7 @@ function wireRowButtons(root, collection, usageField, label) {
  * `vorlage` füllt einen neuen Kontakt vor (Assistent); gespeichert wird erst im Fenster.
  */
 export function openStammdatum(collection, id, vorlage = null) {
+  if (collection === 'contacts' && id) fokusMerken('kontakt', id);
   openDialog(collection, id, vorlage);
 }
 

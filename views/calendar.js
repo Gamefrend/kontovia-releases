@@ -9,6 +9,7 @@ import { sel, upsertAppointment, deleteAppointment, applyTodoChanges, newTodoDra
 import { depositInfo, isVoidPart } from '../lib/calc.js';
 import { expandAppointments } from '../lib/termine.js';
 import { refresh } from '../lib/router.js';
+import { fokusMerken } from '../lib/fokus.js';
 import { openTransactionDialog } from './transactions.js';
 import { openCalendarSyncDialog, statusText } from './calendarsync.js';
 import { calState, onCalendarSync, refreshCalendarStatus, syncCalendar, calendarSettings } from '../lib/gcalsync.js';
@@ -375,6 +376,7 @@ function wireEvents(root) {
 
 export function openAppointmentDialog(id, preset = {}) {
   const existing = id ? sel.appointment(id) : null;
+  if (existing) fokusMerken('termin', existing.id);
   const a = existing ? structuredClone(existing) : {
     id: uid('apt'),
     title: '',
