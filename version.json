@@ -1,6 +1,6 @@
 {
   "version": "2.26.0",
-  "released": "2026-10-07T11:44:09.135Z",
+  "released": "2026-10-07T15:49:38.007Z",
   "notes": "Neuer Speicher für Ihre Buchhaltung\n\n- Ihre Buchhaltung liegt jetzt in einer verschlüsselten Datenbank auf dem Gerät. Gespeichert wird nur noch, was sich geändert hat; so bleibt auch ein großer Bestand flüssig.\n- Beim ersten Öffnen werden Ihre Daten einmal übernommen und Eintrag für Eintrag geprüft. Der bisherige Stand bleibt als Sicherung erhalten.\n- Die Cloud bekommt beim ersten Abgleich das neue Format. Die alte Datei geht erst, wenn die neue geprüft angekommen ist, und bleibt als Sicherung. Bitte bald auch die anderen Geräte aktualisieren.\n- Das Änderungsjournal verliert keinen Eintrag mehr. Ältere Einträge liegen im Archiv und stehen in jeder Sicherung und in den Unterlagen fürs Finanzamt.\n- Neu unter Einstellungen › Daten & Cloud: Sicherungen auf diesem Gerät ansehen und zurückholen.",
   "files": [
     {
