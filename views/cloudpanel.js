@@ -314,6 +314,9 @@ const ANLASS = {
   manuell: 'von Hand',
   'vor-ueberschreiben': 'vor dem Überschreiben',
   'vor-wiederherstellung': 'vor einer Wiederherstellung',
+  'vor-cloud-uebernahme': 'vor dem Übernehmen',
+  'vor-umstellung': 'Stand vor Version 2.26',
+  nachzuegler: 'von einem Gerät mit älterer Version',
 };
 
 /** Die Sicherungen in der Cloud – ansehen und einzeln wiederherstellen. */

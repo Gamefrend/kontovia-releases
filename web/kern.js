@@ -7,8 +7,10 @@
  * Nachbildung (scripts/pruefungen/format.test.js).
  *
  *   Passwort --scrypt--> KEK  --AES-256-GCM--> entpackt DEK (zufällig, 32 Byte)
- *   DEK --AES-256-GCM--> Tresordatei (gesamte Buchhaltung als JSON)
+ *   DEK --AES-256-GCM--> Tresordatei (Format 1: Buchhaltung als JSON, bis 2.25;
+ *                        2: Abbild der SQLite-Datenbank; 3: Verweis auf sie)
  *   HKDF(DEK,"kontovia/attachments/v1") --> Belegschlüssel
+ *   HKDF(DEK,"kontovia/sqlite/v1")      --> Schlüssel der Datenbank (sqlkern.js)
  *
  * Unterschied zu Node: WebCrypto legt beim Importieren eine eigene Kopie des
  * Schlüssels an, die sich nicht überschreiben lässt. Überschrieben wird, was
@@ -23,7 +25,15 @@ const dec = new TextDecoder();
 // 'KONTOVIA' und ein Formatbyte – dieselben 9 Byte wie in secure.js. Danach
 // folgt noch einmal ein eigenes Versionsbyte.
 const MAGIC = new Uint8Array([0x4b, 0x4f, 0x4e, 0x54, 0x4f, 0x56, 0x49, 0x41, 0x01]);
+/** Inhalt: gzip(JSON) – bis 2.25 der ganze Bestand; Vollsicherungen (.kvbak) bleiben so. Wird immer gelesen. */
 const FORMAT_VERSION = 1;
+/** Inhalt: gzip(Abbild der SQLite-Datenbank) – Cloud, Sicherungen, Ordner auf dem Gerät (seit 2.26). */
+export const FORMAT_ABBILD = 2;
+/** Inhalt: Verweis auf die verschlüsselte Datenbank im Dateispeicher des Browsers; verlässt das Gerät nie (seit 2.26). */
+export const FORMAT_VERWEIS = 3;
+const FORMATE = new Set([FORMAT_VERSION, FORMAT_ABBILD, FORMAT_VERWEIS]);
+/** Die ersten 16 Byte jeder SQLite-Datei. */
+const SQLITE_KOPF = 'SQLite format 3\0';
 
 export const DEFAULT_KDF = Object.freeze({ name: 'scrypt', N: 1 << 17, r: 8, p: 1, keyLen: 32 });
 
@@ -176,16 +186,21 @@ export async function open(key, blob, aad) {
 /*
  *  MAGIC(9) | version(1) | headerLen(4 LE) | header(JSON utf8) | body
  *  header  = { kdf, salt, wrappedDek, createdAt, app }
- *  body    = seal(DEK, gzip(JSON), aad = headerBuffer)
+ *  body    = seal(DEK, inhalt, aad = headerBuffer)
+ *  inhalt  = Version 1: gzip(JSON) · Version 2: gzip(SQLite-Abbild) · Version 3: JSON-Verweis
+ *
+ * Version 1 bleibt bit-genau, wie sie ist; neue Fassungen lesen sie immer.
+ * Ältere Fassungen lehnen 2 und 3 mit einer Meldung ab (unten).
  */
 
 const DEK_AAD = utf8('kontovia/dek');
 
-export function packContainer(header, body) {
+export function packContainer(header, body, version = FORMAT_VERSION) {
+  if (!FORMATE.has(version)) throw new Error(`Unbekanntes Dateiformat ${version}.`);
   const h = utf8(JSON.stringify(header));
   const len = new Uint8Array(4);
   new DataView(len.buffer).setUint32(0, h.length, true);
-  return concat(MAGIC, new Uint8Array([FORMAT_VERSION]), len, h, body);
+  return concat(MAGIC, new Uint8Array([version]), len, h, body);
 }
 
 export function unpackContainer(buf) {
@@ -196,7 +211,7 @@ export function unpackContainer(buf) {
     if (buf[i] !== MAGIC[i]) throw new Error('Keine gültige Kontovia-Datei (Signatur fehlt).');
   }
   const version = buf[MAGIC.length];
-  if (version !== FORMAT_VERSION) {
+  if (!FORMATE.has(version)) {
     throw new Error(`Dateiformat Version ${version} wird von dieser Programmversion nicht unterstützt.`);
   }
   const headerLen = new DataView(buf.buffer, buf.byteOffset + MAGIC.length + 1, 4).getUint32(0, true);
@@ -210,7 +225,7 @@ export function unpackContainer(buf) {
   } catch {
     throw new Error('Datei ist beschädigt (Header nicht lesbar).');
   }
-  return { header, headerBuf, body: buf.subarray(headerEnd) };
+  return { header, headerBuf, body: buf.subarray(headerEnd), version };
 }
 
 export async function sealBody(dek, data, header) {
@@ -223,34 +238,61 @@ export async function openBody(dek, body, headerBuf) {
   return JSON.parse(fromUtf8(await gunzip(packed)));
 }
 
-/** Erzeugt einen frischen Container. Der DEK bleibt für die Sitzung im Speicher. */
-export async function createContainer(password, data, extraHeader = {}) {
+/** Ist das der Anfang einer SQLite-Datei? */
+export function istAbbild(u8) {
+  if (!(u8 instanceof Uint8Array) || u8.length < 16) return false;
+  for (let i = 0; i < 16; i++) if (u8[i] !== SQLITE_KOPF.charCodeAt(i)) return false;
+  return true;
+}
+
+/** Format 2: das Abbild der Datenbank, gepackt und verschlüsselt. */
+export async function sealAbbild(dek, abbild, header) {
+  if (!istAbbild(abbild)) throw new Error('Das ist kein Abbild einer Datenbank.');
+  return seal(dek, await gzip(abbild), utf8(JSON.stringify(header)));
+}
+
+export async function openAbbild(dek, body, headerBuf) {
+  const abbild = await gunzip(await open(dek, body, headerBuf));
+  if (!istAbbild(abbild)) throw new Error('Die Datei enthält keine lesbare Datenbank.');
+  return abbild;
+}
+
+/** Format 3: wo die Datenbank im Dateispeicher des Browsers liegt (nur Name und Angaben, keine Daten). */
+export async function sealVerweis(dek, verweis, header) {
+  return seal(dek, utf8(JSON.stringify(verweis)), utf8(JSON.stringify(header)));
+}
+
+export async function openVerweis(dek, body, headerBuf) {
+  const v = JSON.parse(fromUtf8(await open(dek, body, headerBuf)));
+  if (!v || typeof v !== 'object' || typeof v.datei !== 'string') throw new Error('Der Verweis auf die Datenbank ist beschädigt.');
+  return v;
+}
+
+/** Ein neuer Kopf mit frischem Datenschlüssel, umhüllt mit dem Passwort. */
+export async function neuerKopf(password, extraHeader = {}) {
   const salt = randomBytes(SALT_LEN);
   const kdf = { ...DEFAULT_KDF };
   const kek = await deriveKey(password, salt, kdf);
   const dek = randomBytes(32);
-  const header = {
-    kdf,
-    salt: toBase64(salt),
-    wrappedDek: toBase64(await seal(kek, dek, DEK_AAD)),
-    createdAt: new Date().toISOString(),
-    ...extraHeader,
-  };
-  wipe(kek);
-  const body = await sealBody(dek, data, header);
-  return { buffer: packContainer(header, body), dek, header };
+  try {
+    const header = {
+      kdf,
+      salt: toBase64(salt),
+      wrappedDek: toBase64(await seal(kek, dek, DEK_AAD)),
+      createdAt: new Date().toISOString(),
+      ...extraHeader,
+    };
+    return { header, dek };
+  } finally {
+    wipe(kek);
+  }
 }
 
-/**
- * Entsperrt einen Container. Falsches Passwort und manipulierte Datei sind
- * nicht unterscheidbar – beides heißt: Authentifizierung fehlgeschlagen.
- */
-export async function openContainer(password, buf) {
-  const { header, headerBuf, body } = unpackContainer(buf);
+/** Der Datenschlüssel aus einem Kopf, mit dem Passwort. Falsches Passwort: BAD_PASSWORD. */
+export async function kopfOeffnen(password, header) {
   const kek = await deriveKey(password, fromBase64(header.salt), header.kdf);
-  let dek;
   try {
-    dek = await open(kek, fromBase64(header.wrappedDek), DEK_AAD);
+    return await open(kek, fromBase64(header.wrappedDek), DEK_AAD);
   } catch {
     const e = new Error('Falsches Passwort oder beschädigte Datei.');
     e.code = 'BAD_PASSWORD';
@@ -258,8 +300,35 @@ export async function openContainer(password, buf) {
   } finally {
     wipe(kek);
   }
-  const data = await openBody(dek, body, headerBuf);
-  return { data, dek, header, headerBuf };
+}
+
+/**
+ * Öffnet den Inhalt eines entpackten Containers mit dem Datenschlüssel.
+ * @returns {Promise<{data?:object, abbild?:Uint8Array, verweis?:object}>} je nach Format
+ */
+export async function inhaltOeffnen(dek, { version, body, headerBuf }) {
+  if (version === FORMAT_ABBILD) return { abbild: await openAbbild(dek, body, headerBuf) };
+  if (version === FORMAT_VERWEIS) return { verweis: await openVerweis(dek, body, headerBuf) };
+  return { data: await openBody(dek, body, headerBuf) };
+}
+
+/** Erzeugt einen frischen Container (Format 1). Der DEK bleibt für die Sitzung im Speicher. */
+export async function createContainer(password, data, extraHeader = {}) {
+  const { header, dek } = await neuerKopf(password, extraHeader);
+  const body = await sealBody(dek, data, header);
+  return { buffer: packContainer(header, body), dek, header };
+}
+
+/**
+ * Entsperrt einen Container. Falsches Passwort und manipulierte Datei sind
+ * nicht unterscheidbar – beides heißt: Authentifizierung fehlgeschlagen.
+ * Format 1 liefert `data`, Format 2 `abbild`, Format 3 `verweis`.
+ */
+export async function openContainer(password, buf) {
+  const c = unpackContainer(buf);
+  const dek = await kopfOeffnen(password, c.header);
+  const inhalt = await inhaltOeffnen(dek, c);
+  return { ...inhalt, dek, header: c.header, headerBuf: c.headerBuf, version: c.version };
 }
 
 /** Passwortwechsel: nur der gewrappte DEK wird neu erzeugt. */

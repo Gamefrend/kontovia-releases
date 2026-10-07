@@ -2,7 +2,7 @@
 
 import { html, raw, esc, $, $$, money, todayISO, int, sum } from '../lib/util.js';
 import { icon, ok, err, warn, modal, confirmDialog } from '../lib/ui.js';
-import { store, sel } from '../lib/store.js';
+import { store, sel, saveNow } from '../lib/store.js';
 import {
   euerReport, vatReturn, isKleinunternehmer, basisOf, effectiveDate, listedOnly, unlistedStats,
 } from '../lib/calc.js';
@@ -19,6 +19,16 @@ const period = defaultPeriod();
 /** Die Zeitraumwahl oben; die Karte der Voranmeldung stellt sie mit um. */
 let periodCtl = null;
 
+
+/**
+ * Der Bestand mit dem ganzen Änderungsjournal, auch den älteren Einträgen, die
+ * nur in der Datenbank liegen (Archiv, web/tresor.js). Für Unterlagen, die das
+ * Journal enthalten: Datenträgerüberlassung, Finanzamt-Paket, Gesamtexport.
+ */
+async function mitGanzemJournal(db) {
+  if (store.dirty) await saveNow();
+  return { ...db, auditLog: await api.vault.journal() };
+}
 export async function render(root, params, { actions } = {}) {
   if (params?.period?.from && params?.period?.to) setPeriod(period, params.period.from, params.period.to);
   actions.innerHTML = '<div id="exPeriod"></div>';
@@ -227,7 +237,7 @@ function wire(root, db, rows) {
     if (!datev) return;
     const res = await api.file.saveMany({
       folderLabel: 'Zielordner für die Finanzamt-Unterlagen',
-      files: X.taxOfficePack(db, period, appInfo.version, datev),
+      files: X.taxOfficePack(await mitGanzemJournal(db), period, appInfo.version, datev),
     });
     if (res) ok('Unterlagen gespeichert', `${res.written.length} Dateien in ${res.dir}`);
   }));
@@ -235,7 +245,7 @@ function wire(root, db, rows) {
   $('#btnPackAll', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const datev = await datevOptions(db);
     if (!datev) return;
-    const files = X.taxOfficePack(db, period, appInfo.version, datev);
+    const files = X.taxOfficePack(await mitGanzemJournal(db), period, appInfo.version, datev);
     const y = period.from.slice(0, 4);
     const pdfs = [
       [R.guvReport(db, period), `Gewinn-und-Verlust_${y}.pdf`],
@@ -283,7 +293,7 @@ function wire(root, db, rows) {
   $('#btnGobd', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const res = await api.file.saveMany({
       folderLabel: 'Zielordner für die Datenträgerüberlassung',
-      files: X.gobdExport(db, period),
+      files: X.gobdExport(await mitGanzemJournal(db), period),
     });
     if (res) ok('Prüfungsordner erstellt', `${res.written.length} Dateien in ${res.dir}`);
   }));
@@ -340,7 +350,7 @@ function wire(root, db, rows) {
     });
     if (!yes) return;
     // Der Gesamtexport ist der vollständige Bestand – auch private Buchungen.
-    const p = await api.file.save({ defaultName: `Kontovia-Daten_${todayISO()}.json`, filters: [{ name: 'JSON', extensions: ['json'] }], text: X.jsonExport(store.db) });
+    const p = await api.file.save({ defaultName: `Kontovia-Daten_${todayISO()}.json`, filters: [{ name: 'JSON', extensions: ['json'] }], text: X.jsonExport(await mitGanzemJournal(store.db)) });
     if (p) ok('Export gespeichert', p);
   }));
 

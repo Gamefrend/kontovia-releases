@@ -18,12 +18,19 @@
  *            Geschrieben wird über createWritable(): Chromium schreibt in eine
  *            Zwischendatei und tauscht sie beim close() aus.
  *
+ * Die Buchhaltung selbst liegt seit 2.26 in einer SQLite-Datenbank im privaten
+ * Dateisystem des Browsers (OPFS, je Konto `sqlOrdner`), geführt vom Rechenwerk
+ * (sql.js, sqlwerk.js); kontovia.tresor trägt dann nur Schlüssel und Verweis.
+ * Im Ordner liegt statt dessen ein verschlüsseltes Abbild (tresor.js).
+ *
  * Ist ein Ordner gewählt, ist er die einzige Quelle; es gibt keinen Spiegel im
  * Browser, damit es keine zwei Wahrheiten gibt. Was zu diesem Gerät gehört und
  * nicht zur Buchhaltung (Gerätekennung, Wahl des Speicherorts), bleibt immer
  * im Browser. Gespeichert wird ausschließlich, was ohnehin verschlüsselt ist;
  * nur die Gerätekennung liegt, wie unter Windows, im Klartext.
  */
+
+import { ordnerEntfernen } from './sql.js';
 
 /** Die Datenbank des Geräts; darin liegt auch die erste Buchhaltung („haupt“). */
 const DB_NAME = 'kontovia';
@@ -32,6 +39,11 @@ const DB_VERSION = 1;
 export const HAUPTKONTO = 'haupt';
 /** Name der Datenbank, in der die Buchhaltung eines Kontos liegt. */
 export const kontoDatenbank = (id) => (!id || id === HAUPTKONTO ? DB_NAME : `${DB_NAME}-k-${id}`);
+/**
+ * Ordner im privaten Dateispeicher des Browsers (OPFS), in dem die SQLite-Datenbank
+ * eines Kontos liegt (seit 2.26, sql.js). Wie die IndexedDB: je Konto ein eigener.
+ */
+export const sqlOrdner = (id) => `.${kontoDatenbank(id)}-sql`;
 export const STORES = ['dateien', 'belege', 'sicherungen'];
 
 /**
@@ -314,6 +326,8 @@ let browser = indexedDb;
 let geraet = indexedDb;
 let datenbanken = echteDatenbanken;
 let ordner = null;
+/** Das offene Konto (kontoSetzen), für den Ordner seiner Datenbank. */
+let aktivKonto = HAUPTKONTO;
 /** Läuft ein Umzug, warten Schreibzugriffe, bis er fertig ist (dann gilt der neue Ort). */
 let umzug = null;
 /** Schreibzugriffe, die gerade laufen; ein Umzug beginnt erst, wenn keiner mehr läuft. */
@@ -373,6 +387,7 @@ export function browserUnterbauSetzen(u, datenbankenNachbildung = null) {
   geraet = browser;
   datenbanken = datenbankenNachbildung || echteDatenbanken;
   ordner = null;
+  aktivKonto = HAUPTKONTO;
 }
 
 /**
@@ -383,12 +398,23 @@ export function browserUnterbauSetzen(u, datenbankenNachbildung = null) {
 export function kontoSetzen(id) {
   browser = id === HAUPTKONTO || !id ? geraet : datenbanken.oeffnen(kontoDatenbank(id));
   ordner = null;
+  aktivKonto = id || HAUPTKONTO;
+}
+
+/**
+ * Wo die SQLite-Datenbank des offenen Kontos liegt (tresor.js, sql.js).
+ * opfs: false, solange die Buchhaltung in einem Ordner auf dem Gerät liegt;
+ * dann hält das Rechenwerk sie nur im Arbeitsspeicher und gesichert wird ein Abbild.
+ */
+export function sqlOrt() {
+  return { konto: aktivKonto, ordner: sqlOrdner(aktivKonto), opfs: !ordner };
 }
 
 /**
  * Löscht die Datenbank eines Kontos, das nicht (mehr) gebraucht wird. Die
  * Gerätedatenbank bleibt, sie hält auch die Liste der Konten: dort werden nur
- * die Einträge des Kontos „haupt“ entfernt.
+ * die Einträge des Kontos „haupt“ entfernt. Die SQLite-Datenbank im
+ * Dateispeicher des Browsers geht mit (ihr Rechenwerk muss beendet sein).
  */
 export async function kontoLoeschen(id) {
   if (!id || id === HAUPTKONTO) {
@@ -399,9 +425,10 @@ export async function kontoLoeschen(id) {
         await db.loeschen(s, k);
       }
     }
-    return;
+  } else {
+    await datenbanken.loeschen(kontoDatenbank(id));
   }
-  await datenbanken.loeschen(kontoDatenbank(id));
+  await sqlOrdnerEntfernen(sqlOrdner(id));
 }
 
 /** Ein Unterbau im Arbeitsspeicher, mit derselben Schnittstelle wie IndexedDB (für die Prüfungen). */
@@ -460,7 +487,9 @@ export async function zugriffErbitten() {
 }
 
 /**
- * Abmelden: entfernt alles aus dem Browser, was zu dieser Buchhaltung gehört.
+ * Abmelden: entfernt alles aus dem Browser, was zu dieser Buchhaltung gehört,
+ * auch die SQLite-Datenbank im Dateispeicher des Browsers (ihr Rechenwerk muss
+ * beendet sein: tresor.js, Vault.beendet).
  * Nur die Gerätekennung und die Liste der Konten bleiben. Ein gewählter Ordner wird vergessen; die
  * Dateien darin bleiben unberührt.
  */
@@ -473,8 +502,13 @@ export function geraetLeeren() {
         await browser.loeschen(s, k);
       }
     }
+    await sqlOrdnerEntfernen(sqlOrdner(aktivKonto));
   });
 }
+
+/** Der Ordner einer SQLite-Datenbank im Dateispeicher des Browsers; die Prüfungen setzen eine Nachbildung ein. */
+let sqlOrdnerEntfernen = (o) => ordnerEntfernen(o);
+export function sqlOrdnerEntfernenSetzen(fn) { sqlOrdnerEntfernen = fn || ((o) => ordnerEntfernen(o)); }
 
 /** Den Ordner nicht mehr verwenden; die Dateien darin bleiben unberührt. */
 export function ordnerVergessen() {

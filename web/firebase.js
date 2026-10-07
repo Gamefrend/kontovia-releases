@@ -2,8 +2,11 @@
  * Kontovia – Ablage in Firebase, Web-Fassung.
  *
  * Dieselben Pfade und derselbe Tresorname wie früher in der Windows-Fassung:
- * Cloud-Stände von dort lassen sich hier weiter abgleichen. Die
- * Google-Anmeldung davor steht in weiterleitung.js und anmeldung.js.
+ * Cloud-Stände von dort lassen sich hier weiter lesen. Seit 2.26 liegt der
+ * Stand als Abbild der Datenbank unter v2/tresor.kv (dazu v2/sicherungen/ und
+ * v2/umstellung/); tresor.kv wird nur noch gelesen und nach der Umstellung
+ * gelöscht (cloud.js). Die Google-Anmeldung davor steht in weiterleitung.js
+ * und anmeldung.js.
  */
 
 import { requestJson, request, form } from './netz.js';
@@ -17,11 +20,24 @@ const SECURETOKEN = 'https://securetoken.googleapis.com/v1';
 const STORAGE = 'https://firebasestorage.googleapis.com/v0/b';
 
 export const VAULT_NAME = 'tresor.kv';
+/** Der Stand als Abbild der Datenbank (seit 2.26). */
+export const TRESOR_V2 = 'v2/tresor.kv';
 const SCHLUESSEL_NAME = 'entsperrung.kv';
 /** Wie früher unter Windows: 2026-10-01T08-30-00Z_auto.kv */
 export const BACKUP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z_[a-z-]{1,30}\.kv$/;
+/**
+ * Wo Sicherungen liegen: v2 = Abbilder (seit 2.26, die 30 neuesten bleiben),
+ * alt = aus der Zeit davor (bleiben, wie sie sind), umstellung = der Stand
+ * der alten Datei, bevor sie abgeräumt wurde (bleibt immer).
+ */
+export const SICHERUNG_ORTE = Object.freeze({ v2: 'v2/sicherungen/', alt: 'sicherungen/', umstellung: 'v2/umstellung/' });
 
 const enc = (s) => encodeURIComponent(s);
+
+function sicherungsOrt(ort) {
+  if (!Object.hasOwn(SICHERUNG_ORTE, ort)) throw new Error('Unbekannter Ort einer Sicherung.');
+  return SICHERUNG_ORTE[ort];
+}
 
 /** Wie früher unter Windows: abgelaufene oder widerrufene Sitzung → code NEU_ANMELDEN. */
 export function anmeldungUngueltig(err) {
@@ -140,35 +156,108 @@ export class FirebaseBackend {
     return `${STORAGE}/${enc(this.cfg.bucket)}/o/${enc(objectPath)}${query}`;
   }
 
-  async vaultMeta() {
+  /* ---------------------------------------------------------------------- */
+  /* Dateien im eigenen Zweig (Pfade relativ zu tresore/<uid>/)              */
+  /* ---------------------------------------------------------------------- */
+
+  /** @returns {Promise<{exists:boolean, generation?:string, size?:number, updated?:string}>} */
+  async metaVon(rel) {
     const headers = await this.auth();
     try {
-      const m = await requestJson(this.objectUrl(`${this.base()}/${VAULT_NAME}`), { headers, timeoutMs: 20000 });
-      return { exists: true, version: String(m.generation || m.updated || ''), size: Number(m.size || 0), updated: m.updated };
+      const m = await requestJson(this.objectUrl(`${this.base()}/${rel}`), { headers, timeoutMs: 20000 });
+      return { exists: true, generation: String(m.generation || m.updated || ''), size: Number(m.size || 0), updated: m.updated };
     } catch (err) {
       if (err.status === 404) return { exists: false };
       throw err;
     }
   }
 
-  async vaultDownload(onProgress) {
+  async laden(rel, onProgress) {
     const headers = await this.auth();
-    const res = await request(this.objectUrl(`${this.base()}/${VAULT_NAME}`, '?alt=media'), {
-      headers, timeoutMs: 10 * 60 * 1000, onProgress,
-    });
-    if (res.status !== 200) throw new Error(`Der Tresor konnte nicht geladen werden (HTTP ${res.status}).`);
+    const res = await request(this.objectUrl(`${this.base()}/${rel}`, '?alt=media'), { headers, timeoutMs: 10 * 60 * 1000, onProgress });
+    if (res.status !== 200) throw new Error(`Die Datei ließ sich nicht aus der Cloud laden (HTTP ${res.status}).`);
     return res.body;
   }
 
-  async vaultUpload(bytes) {
+  async hochladen(rel, bytes) {
     const headers = { ...(await this.auth()), 'content-type': 'application/octet-stream' };
-    const path = `${this.base()}/${VAULT_NAME}`;
     const m = await requestJson(
-      `${STORAGE}/${enc(this.cfg.bucket)}/o?uploadType=media&name=${enc(path)}`,
+      `${STORAGE}/${enc(this.cfg.bucket)}/o?uploadType=media&name=${enc(`${this.base()}/${rel}`)}`,
       { method: 'POST', headers, body: bytes, timeoutMs: 10 * 60 * 1000 },
     );
-    return { version: String(m.generation || m.updated || ''), size: Number(m.size || bytes.length) };
+    return { generation: String(m?.generation || m?.updated || ''), size: Number(m?.size ?? bytes.length), updated: m?.updated || '' };
   }
+
+  async entfernen(rel) {
+    const headers = await this.auth();
+    try {
+      await requestJson(this.objectUrl(`${this.base()}/${rel}`), { method: 'DELETE', headers, timeoutMs: 20000 });
+    } catch (err) {
+      if (err.status !== 404) throw err;
+    }
+    return true;
+  }
+
+  /** @returns {Promise<Array<{name:string, size:number, updated:string}>>} Namen relativ zu `prefix` */
+  async liste(prefix, max = 2000) {
+    const headers = await this.auth();
+    const voll = `${this.base()}/${prefix}`;
+    const out = [];
+    let pageToken = '';
+    do {
+      const url = `${STORAGE}/${enc(this.cfg.bucket)}/o?prefix=${enc(voll)}&maxResults=1000`
+        + (pageToken ? `&pageToken=${enc(pageToken)}` : '');
+      const data = await requestJson(url, { headers, timeoutMs: 30000 });
+      for (const item of data?.items || []) {
+        out.push({ name: String(item.name || '').slice(voll.length), size: Number(item.size || 0), updated: item.updated || '' });
+      }
+      pageToken = data?.nextPageToken || '';
+    } while (pageToken && out.length < max);
+    return out;
+  }
+
+  /* ---------------------------------------------------------------------- */
+  /* Der Tresor                                                              */
+  /*                                                                         */
+  /* Seit 2.26 liegt der Stand als Abbild der Datenbank unter v2/tresor.kv.  */
+  /* tresor.kv (die alte Fassung) wird nie mehr geschrieben; neue Fassungen  */
+  /* lesen es, übernehmen es und räumen es ab (cloud.js: umstellen).         */
+  /* ---------------------------------------------------------------------- */
+
+  /**
+   * Der Stand in der Cloud: die neue Datei, sonst die alte.
+   * @returns {Promise<{exists:boolean, version?:string, size?:number, updated?:string, fassung?:1|2}>}
+   *   version: Generation, bei der neuen Datei mit „v2:“ davor (so verwechselt
+   *   sie kein Vermerk aus der Zeit davor)
+   */
+  async vaultMeta() {
+    const neu = await this.metaVon(TRESOR_V2);
+    if (neu.exists) return { exists: true, version: `v2:${neu.generation}`, size: neu.size, updated: neu.updated, fassung: 2 };
+    const alt = await this.metaVon(VAULT_NAME);
+    if (alt.exists) return { exists: true, version: alt.generation, size: alt.size, updated: alt.updated, fassung: 1 };
+    return { exists: false };
+  }
+
+  /** Lädt den Stand; `fassung` aus vaultMeta() (ohne Angabe: die neue Datei). */
+  async vaultDownload(onProgress, fassung = 2) {
+    return this.laden(fassung === 1 ? VAULT_NAME : TRESOR_V2, onProgress);
+  }
+
+  /** Schreibt immer die neue Datei. */
+  async vaultUpload(bytes) {
+    const m = await this.hochladen(TRESOR_V2, bytes);
+    return { version: `v2:${m.generation}`, size: m.size };
+  }
+
+  /** Die alte Datei (tresor.kv), etwa von einem Gerät, das noch nicht aktualisiert ist. */
+  async altMeta() {
+    const m = await this.metaVon(VAULT_NAME);
+    return m.exists ? { exists: true, version: m.generation, size: m.size, updated: m.updated } : { exists: false };
+  }
+
+  async altDownload() { return this.laden(VAULT_NAME); }
+
+  async altLoeschen() { return this.entfernen(VAULT_NAME); }
 
   async listAttachments() {
     const headers = await this.auth();
@@ -217,54 +306,27 @@ export class FirebaseBackend {
     return true;
   }
 
-  async listBackups() {
-    const headers = await this.auth();
-    const prefix = `${this.base()}/sicherungen/`;
-    const out = [];
-    let pageToken = '';
-    do {
-      const url = `${STORAGE}/${enc(this.cfg.bucket)}/o?prefix=${enc(prefix)}&maxResults=1000`
-        + (pageToken ? `&pageToken=${enc(pageToken)}` : '');
-      const data = await requestJson(url, { headers, timeoutMs: 30000 });
-      for (const item of data?.items || []) {
-        const name = String(item.name || '').slice(prefix.length);
-        if (BACKUP_RE.test(name)) out.push({ name, size: Number(item.size || 0), updated: item.updated || '' });
-      }
-      pageToken = data?.nextPageToken || '';
-    } while (pageToken && out.length < 2000);
-    return out;
+  /** Sicherungen an einem Ort (SICHERUNG_ORTE); ohne Angabe die Abbilder seit 2.26. */
+  async listBackups(ort = 'v2') {
+    return (await this.liste(sicherungsOrt(ort))).filter((s) => BACKUP_RE.test(s.name));
   }
 
-  async backupDownload(name) {
+  async backupDownload(name, ort = 'v2') {
     if (!BACKUP_RE.test(name)) throw new Error('Ungültiger Name einer Sicherung.');
-    const headers = await this.auth();
-    const res = await request(this.objectUrl(`${this.base()}/sicherungen/${name}`, '?alt=media'), {
-      headers, timeoutMs: 10 * 60 * 1000,
-    });
-    if (res.status !== 200) throw new Error(`Die Sicherung konnte nicht geladen werden (HTTP ${res.status}).`);
-    return res.body;
+    return this.laden(sicherungsOrt(ort) + name);
   }
 
-  async backupUpload(name, bytes) {
+  async backupUpload(name, bytes, ort = 'v2') {
     if (!BACKUP_RE.test(name)) throw new Error('Ungültiger Name einer Sicherung.');
-    const headers = { ...(await this.auth()), 'content-type': 'application/octet-stream' };
-    const path = `${this.base()}/sicherungen/${name}`;
-    const m = await requestJson(
-      `${STORAGE}/${enc(this.cfg.bucket)}/o?uploadType=media&name=${enc(path)}`,
-      { method: 'POST', headers, body: bytes, timeoutMs: 10 * 60 * 1000 },
-    );
-    return { name, size: Number(m?.size || bytes.length), updated: m?.updated || '' };
+    const m = await this.hochladen(sicherungsOrt(ort) + name, bytes);
+    return { name, size: m.size, updated: m.updated };
   }
 
-  async backupRemove(name) {
+  async backupRemove(name, ort = 'v2') {
     if (!BACKUP_RE.test(name)) throw new Error('Ungültiger Name einer Sicherung.');
-    const headers = await this.auth();
-    try {
-      await requestJson(this.objectUrl(`${this.base()}/sicherungen/${name}`), { method: 'DELETE', headers, timeoutMs: 20000 });
-    } catch (err) {
-      if (err.status !== 404) throw err;
-    }
-    return true;
+    // Was vor der Umstellung lag, entfernt Kontovia nie selbst.
+    if (ort === 'umstellung') throw new Error('Diese Sicherung bleibt.');
+    return this.entfernen(sicherungsOrt(ort) + name);
   }
 
   /**
@@ -390,16 +452,15 @@ export class FirebaseBackend {
     }
   }
 
+  /** Nur auf ausdrücklichen Wunsch („Cloud trennen und dort löschen“): alles im eigenen Zweig. */
   async removeAll() {
     for (const e of await this.koppelnListe().catch(() => [])) await this.koppelnLoeschen(e.name).catch(() => {});
     for (const a of await this.listAttachments()) await this.attachmentRemove(a.id).catch(() => {});
-    for (const s of await this.listBackups().catch(() => [])) await this.backupRemove(s.name).catch(() => {});
-    const headers = await this.auth();
-    try {
-      await requestJson(this.objectUrl(`${this.base()}/${VAULT_NAME}`), { method: 'DELETE', headers, timeoutMs: 20000 });
-    } catch (err) {
-      if (err.status !== 404) throw err;
+    for (const ort of Object.keys(SICHERUNG_ORTE)) {
+      for (const s of await this.liste(SICHERUNG_ORTE[ort]).catch(() => [])) await this.entfernen(SICHERUNG_ORTE[ort] + s.name).catch(() => {});
     }
+    await this.entfernen(TRESOR_V2);
+    await this.entfernen(VAULT_NAME);
     await this.schluesselLoeschen().catch(() => {});
     return true;
   }
@@ -422,9 +483,11 @@ export class FirebaseBackend {
 
   async quota() {
     const attachments = await this.listAttachments();
-    const backups = await this.listBackups().catch(() => []);
-    const meta = await this.vaultMeta().catch(() => ({ size: 0 }));
-    const used = (meta.size || 0) + [...attachments, ...backups].reduce((s, a) => s + a.size, 0);
+    const backups = [];
+    for (const ort of Object.values(SICHERUNG_ORTE)) backups.push(...await this.liste(ort).catch(() => []));
+    const neu = await this.metaVon(TRESOR_V2).catch(() => ({ size: 0 }));
+    const alt = await this.metaVon(VAULT_NAME).catch(() => ({ size: 0 }));
+    const used = (neu.size || 0) + (alt.size || 0) + [...attachments, ...backups].reduce((s, a) => s + a.size, 0);
     return { email: this.state.email || '', used, limit: 0, scope: 'eigener Verbrauch im Projekt' };
   }
 }

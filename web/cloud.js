@@ -11,15 +11,22 @@
  *
  * Sicherungen in der Cloud, die Anmeldung vor dem ersten Tresor und das
  * Mitnehmen der Geräteverbindung beim Übernehmen laufen wie in der früheren
- * früheren Windows-Fassung.
+ * Windows-Fassung.
+ *
+ * Seit 2.26 ist der Cloud-Stand ein Abbild der Datenbank (v2/tresor.kv). Liegt
+ * nur die alte Datei tresor.kv da, stellt der erste Abgleich um: alten Stand
+ * sichern, neue Datei hochladen, zurücklesen, erst dann die alte löschen.
+ * Schreibt ein Gerät mit älterer Fassung später wieder nach tresor.kv, wird
+ * das übernommen und wieder abgeräumt (docs/sql-umstellung.md 7).
  */
 
 import * as K from './kern.js';
 import * as A from './ablage.js';
 import { TRESOR } from './tresor.js';
-import { FirebaseBackend } from './firebase.js';
+import { FirebaseBackend, BACKUP_RE } from './firebase.js';
 import BUILTIN from './cloudconfig.js';
 import { journalNachEinspielen, fuerSicherung, altlastenEntfernen } from './zugang.js';
+import { zerlegen, zusammensetzen, JOURNAL, JOURNAL_FENSTER } from './sqlschema.js';
 import * as W from './weiterleitung.js';
 import * as KP from './koppeln.js';
 import * as Z from './zulassung.js';
@@ -38,9 +45,26 @@ export function sicherungsName(anlass, jetzt = new Date()) {
   return `${jetzt.toISOString().slice(0, 19).replace(/:/g, '-')}Z_${anlass}.kv`;
 }
 
+/**
+ * Name einer Sicherung, wie die Oberfläche ihn sieht: Abbilder seit 2.26 ohne
+ * Vorsatz, ältere mit „alt/“, der Stand vor der Umstellung mit „umstellung/“.
+ */
+export function sicherungsTeile(name) {
+  const m = /^(?:(alt|umstellung)\/)?([^/]+)$/.exec(String(name));
+  if (!m || !BACKUP_RE.test(m[2])) return null;
+  return { ort: m[1] || 'v2', datei: m[2] };
+}
+
 export function sicherungsAngaben(name) {
-  const m = /^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})Z_([a-z-]+)\.kv$/.exec(String(name));
-  return m ? { at: `${m[1]}T${m[2]}:${m[3]}:${m[4]}.000Z`, anlass: m[5] } : null;
+  const t = sicherungsTeile(name);
+  const m = t && /^(\d{4}-\d{2}-\d{2})T(\d{2})-(\d{2})-(\d{2})Z_([a-z-]+)\.kv$/.exec(t.datei);
+  return m ? { at: `${m[1]}T${m[2]}:${m[3]}:${m[4]}.000Z`, anlass: m[5], ort: t.ort } : null;
+}
+
+function gleicheBytes(a, b) {
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
 }
 
 function verbindungVon(c) {
@@ -358,7 +382,7 @@ export class Cloud {
     if (!a?.meta.exists) throw new Error('In Ihrem Konto liegt keine Buchhaltung, die sich laden ließe.');
     const dek = this.schluesselUebergeben();
     if (!dek) throw Object.assign(new Error('Für dieses Konto ist das Öffnen ohne Passwort nicht eingeschaltet. Bitte geben Sie das Passwort ein.'), { code: 'KEIN_SCHLUESSEL' });
-    a.blob ??= await a.be.vaultDownload();
+    a.blob ??= await a.be.vaultDownload(undefined, a.meta.fassung);
     return this.ausCloudUebernehmen(a, (blob) => this.vault.adoptContainerWithKey(blob, dek));
   }
 
@@ -639,7 +663,7 @@ export class Cloud {
   async ausCloudLaden(password) {
     const a = this.anmeldung;
     if (!a?.meta.exists) throw new Error('In Ihrem Konto liegt keine Buchhaltung, die sich laden ließe.');
-    a.blob ??= await a.be.vaultDownload();
+    a.blob ??= await a.be.vaultDownload(undefined, a.meta.fassung);
     return this.ausCloudUebernehmen(a, (blob) => this.vault.adoptContainer(blob, password));
   }
 
@@ -680,24 +704,91 @@ export class Cloud {
   /* Basis und Abgleich                                                      */
   /* ---------------------------------------------------------------------- */
 
+  /** Die Basis des Abgleichs: seit 2.26 ein Abbild der Datenbank (ohne Journal), davor JSON. */
   async readBase() {
     try {
       const blob = await A.lesen('dateien', BASIS);
       if (!blob) return null;
-      return JSON.parse(K.fromUtf8(await K.open(this.vault.dek, blob, BASIS_AAD)));
+      const roh = await K.open(this.vault.dek, blob, BASIS_AAD);
+      if (K.istAbbild(roh)) return zusammensetzen((await this.vault.motor.abbildLesen(roh, { fenster: 1 })).zf);
+      return JSON.parse(K.fromUtf8(roh));
     } catch {
       return null;
     }
   }
 
   async writeBase(db) {
-    const blob = await K.seal(this.vault.dek, K.utf8(JSON.stringify(db)), BASIS_AAD);
-    await A.schreiben('dateien', BASIS, blob);
+    // Das Journal braucht die Basis nicht (merge.js vereinigt es ohne sie).
+    const zf = zerlegen(db);
+    if (zf.tabellen[JOURNAL]) zf.tabellen[JOURNAL] = [];
+    const abbild = await this.vault.motor.abbildAusZeilen(zf);
+    await A.schreiben('dateien', BASIS, await K.seal(this.vault.dek, abbild, BASIS_AAD));
+  }
+
+  /**
+   * Öffnet einen Stand aus der Cloud mit dem Schlüssel dieses Tresors (Format 1
+   * oder 2). Sein Journal geht dabei vollständig in die Datenbank dieses Geräts
+   * (nur anfügen); die Oberfläche bekommt die neuesten Einträge. Wirft, wenn der
+   * Stand zu einer anderen Buchhaltung gehört.
+   */
+  async standOeffnen(blob) {
+    const c = K.unpackContainer(blob);
+    if (c.version === K.FORMAT_VERWEIS) throw new Error('Ein Verweis gehört nicht in die Cloud.');
+    const inhalt = await K.inhaltOeffnen(this.vault.dek, c);
+    if (inhalt.data) {
+      await this.vault.journalErgaenzen(inhalt.data[JOURNAL]);
+      return inhalt.data;
+    }
+    const r = await this.vault.motor.abbildLesen(inhalt.abbild, { fenster: JOURNAL_FENSTER, journalUebernehmen: true });
+    this.vault.journalGesamt += r.uebernommen || 0;
+    return zusammensetzen(r.zf);
+  }
+
+  /**
+   * Die alte Datei (tresor.kv) neben der neuen: von einem Gerät mit älterer
+   * Fassung (bis 2.25), das die neue nicht kennt. Gehört sie zu einer anderen
+   * Buchhaltung, bleibt sie unberührt (und wird nicht bei jedem Abgleich neu geladen).
+   * @returns {Promise<{version:string, blob:Uint8Array, db:object}|null>}
+   */
+  async altPruefen(be) {
+    const m = await be.altMeta();
+    const c = this.cfg();
+    if (!m.exists) { delete c.fremdeAltdatei; return null; }
+    if (c.fremdeAltdatei === m.version) return null;
+    const blob = await be.altDownload();
+    try {
+      return { version: m.version, blob, db: await this.standOeffnen(blob) };
+    } catch {
+      c.fremdeAltdatei = m.version;
+      return null;
+    }
+  }
+
+  /**
+   * Der Stand der alten Datei zum Zeitpunkt der Umstellung (Sicherung
+   * „vor-umstellung“): Gegenstück, um bei einem Gerät mit älterer Fassung
+   * Geändertes von Veraltetem zu unterscheiden (merge.js: nachzueglerEinarbeiten).
+   */
+  async umstellungsBasis(be) {
+    try {
+      const liste = (await be.listBackups('umstellung'))
+        .filter((s) => sicherungsAngaben(s.name)?.anlass === 'vor-umstellung')
+        .sort((a, b) => b.name.localeCompare(a.name));
+      if (!liste.length) return null;
+      const c = K.unpackContainer(await be.backupDownload(liste[0].name, 'umstellung'));
+      const inhalt = await K.inhaltOeffnen(this.vault.dek, c);
+      return inhalt.data || zusammensetzen((await this.vault.motor.abbildLesen(inhalt.abbild, { fenster: 1 })).zf);
+    } catch {
+      return null;
+    }
   }
 
   /**
    * Holt den Cloud-Stand. Rückgabe wie in der Windows-Fassung:
    *   leer | aktuell | bereit (mit remote und base) | fremd
+   * Liegt nur die alte Datei vor (vor der Umstellung), ist sie der Cloud-Stand;
+   * commit() stellt dann um. Liegt neben der neuen noch die alte (ein Gerät mit
+   * älterer Fassung hat geschrieben), kommt sie als `nachzuegler` mit.
    */
   async begin({ force = false, dirty = true } = {}) {
     this.vault.assertUnlocked();
@@ -706,29 +797,40 @@ export class Cloud {
 
     const meta = await be.vaultMeta();
     if (!meta.exists) {
-      this.pending = { remoteVersion: null, hadRemote: false };
+      this.pending = { remoteVersion: null, hadRemote: false, fassung: 2 };
       return { state: 'leer' };
     }
+    const alt = meta.fassung === 2 ? await this.altPruefen(be) : null;
 
     // Kostenbremse: drüben unverändert und hier nichts Neues – nicht laden.
-    if (!force && meta.version && meta.version === c.remoteVersion && !dirty) {
+    if (!force && meta.version && meta.version === c.remoteVersion && !dirty && !alt) {
       this.pending = null;
       this.abgeglichenUm = Date.now();
       return { state: 'aktuell', remoteVersion: meta.version };
     }
 
-    const blob = await be.vaultDownload();
+    const blob = await be.vaultDownload(undefined, meta.fassung);
     let remote;
     try {
-      const { headerBuf, body } = K.unpackContainer(blob);
-      remote = await K.openBody(this.vault.dek, body, headerBuf);
+      remote = await this.standOeffnen(blob);
     } catch {
       this.pending = null;
       return { state: 'fremd', modifiedTime: meta.updated, size: meta.size };
     }
 
-    this.pending = { remoteVersion: meta.version, hadRemote: true };
-    return { state: 'bereit', remote, base: await this.readBase(), remoteVersion: meta.version };
+    this.pending = {
+      remoteVersion: meta.version,
+      hadRemote: true,
+      fassung: meta.fassung,
+      // Umstellung: die alte Datei, so wie sie hier gelesen wurde.
+      alt: meta.fassung === 1 ? { version: meta.version, blob } : alt ? { version: alt.version, blob: alt.blob, nachzuegler: true } : null,
+    };
+    const out = { state: 'bereit', remote, base: await this.readBase(), remoteVersion: meta.version };
+    if (alt) {
+      out.nachzuegler = alt.db;
+      out.nachzueglerBasis = await this.umstellungsBasis(be);
+    }
+    return out;
   }
 
   async commit(db, onProgress = () => {}) {
@@ -737,15 +839,14 @@ export class Cloud {
     // Was ab jetzt lokal geändert wird, ist nicht mehr im Hochgeladenen.
     const gesichertStand = Date.now();
     const be = this.be();
+    const p = this.pending;
 
-    if (this.pending.hadRemote) {
-      const now = await be.vaultMeta();
-      if (now.exists && now.version !== this.pending.remoteVersion) {
-        this.pending = null;
-        const e = new Error('Ein anderes Gerät hat währenddessen gespeichert.');
-        e.code = 'RETRY';
-        throw e;
-      }
+    const now = await be.vaultMeta();
+    if (p.hadRemote ? (now.exists && now.version !== p.remoteVersion) : now.exists) {
+      this.pending = null;
+      const e = new Error('Ein anderes Gerät hat währenddessen gespeichert.');
+      e.code = 'RETRY';
+      throw e;
     }
 
     // Maßgeblich ist der eigene Cloud-Block – dort stehen Anmeldemerkmal und Abgleichstand.
@@ -754,12 +855,27 @@ export class Cloud {
 
     await this.vault.save(db);
 
+    // Umstellung: Den Stand der alten Datei sichern, bevor die neue entsteht.
+    // Er bleibt immer liegen (Gegenstück für Geräte mit älterer Fassung).
+    if (p.fassung === 1 && p.alt) await this.altSichern(p.alt, 'vor-umstellung');
+
     onProgress({ phase: 'tresor' });
-    const container = await this.verpacken(db);
+    const container = await this.verpacken();
     const up = await be.vaultUpload(container);
+    if (Number(up.size) !== container.length) throw new Error('Das Hochladen ist unvollständig angekommen. Bitte noch einmal abgleichen.');
 
     c.remoteVersion = up.version;
     c.lastSyncAt = new Date().toISOString();
+
+    // Die alte Datei erst abräumen, wenn die neue geprüft in der Cloud liegt.
+    if (p.alt) {
+      try {
+        await this.altAbraeumen(container, p.alt);
+        delete c.umstellungFehler;
+      } catch (err) {
+        c.umstellungFehler = String(err?.message || err).slice(0, 300);
+      }
+    }
 
     try {
       await this.vielleichtSichern(container);
@@ -781,6 +897,40 @@ export class Cloud {
     this.lastError = null;
     this.abgeglichenUm = gesichertStand;
     return { remoteVersion: up.version, bytes: container.length, attachments };
+  }
+
+  /** Legt den Stand der alten Datei unter v2/umstellung/ ab und prüft ihn durch Zurücklesen. */
+  async altSichern(alt, anlass) {
+    const be = this.be();
+    const name = sicherungsName(anlass);
+    await be.backupUpload(name, alt.blob, 'umstellung');
+    if (!gleicheBytes(await be.backupDownload(name, 'umstellung'), alt.blob)) {
+      throw new Error('Die Sicherung der alten Datei ist nicht vollständig in der Cloud angekommen.');
+    }
+    return name;
+  }
+
+  /**
+   * Die Reihenfolge der Umstellung: 1. hochladen (commit), 2. warten, bis das
+   * Hochladen erfolgreich ist: die neue Datei zurücklesen, Byte für Byte
+   * vergleichen und öffnen, 3. erst dann die alte Datei löschen, und nur, wenn
+   * sie seit dem Lesen niemand verändert hat (sonst beim nächsten Abgleich).
+   */
+  async altAbraeumen(container, alt) {
+    const be = this.be();
+    const zurueck = await be.vaultDownload(undefined, 2);
+    if (!gleicheBytes(zurueck, container)) throw new Error('Die neue Datei in der Cloud weicht vom Hochgeladenen ab; die alte bleibt.');
+    const c = K.unpackContainer(zurueck);
+    await this.vault.motor.abbildLesen(await K.openAbbild(this.vault.dek, c.body, c.headerBuf), { fenster: 1 });
+    const vorher = await be.altMeta();
+    if (!vorher.exists) return false;
+    if (vorher.version !== alt.version) return false;
+    if (alt.nachzuegler) await this.altSichern(alt, 'nachzuegler');
+    const jetzt = await be.altMeta();
+    if (!jetzt.exists || jetzt.version !== alt.version) return false;
+    await be.altLoeschen();
+    this.cfg().cloudUmgestellt ??= new Date().toISOString();
+    return true;
   }
 
   /** Belege sind unveränderlich: fehlt eine Datei auf einer Seite, wird sie übertragen. */
@@ -825,17 +975,23 @@ export class Cloud {
     return { hochgeladen: up, heruntergeladen: down, entfernt: removed };
   }
 
-  /** Wie früher unter Windows: ohne Anmeldemerkmale in die Cloud. */
-  async verpacken(db) {
+  /**
+   * Der Stand für die Cloud: ein Abbild der Datenbank dieses Geräts (mit dem
+   * ganzen Journal), wie früher unter Windows ohne Anmeldemerkmale.
+   */
+  async verpacken() {
+    await this.vault.saving?.catch(() => {});
     const header = { ...this.vault.header, savedAt: new Date().toISOString() };
     // Was zu diesem Gerät gehört (Liste verbundener Geräte, eigener Gerätename), geht nicht in den gemeinsamen Stand.
-    const stand = fuerSicherung(db);
+    const werte = {};
+    const stand = fuerSicherung({ cloud: this.vault.db?.cloud });
     if (stand?.cloud && typeof stand.cloud === 'object') {
       const { gekoppelt, geraeteName, ...rest } = stand.cloud;
       void gekoppelt; void geraeteName;
-      stand.cloud = rest;
+      werte.cloud = JSON.stringify(rest);
     }
-    return K.packContainer(header, await K.sealBody(this.vault.dek, stand, header));
+    const abbild = await this.vault.motor.abbild({ werte });
+    return K.packContainer(header, await K.sealAbbild(this.vault.dek, abbild, header), K.FORMAT_ABBILD);
   }
 
   /* ---------------------------------------------------------------------- */
@@ -844,11 +1000,11 @@ export class Cloud {
 
   async sicherungAblegen(container, anlass) {
     const be = this.be();
-    const res = await be.backupUpload(sicherungsName(anlass), container);
+    const res = await be.backupUpload(sicherungsName(anlass), container, 'v2');
     this.cfg().lastCloudBackupAt = new Date().toISOString();
     try {
-      const liste = (await be.listBackups()).sort((a, b) => b.name.localeCompare(a.name));
-      for (const alt of liste.slice(SICHERUNG_BEHALTEN)) await be.backupRemove(alt.name).catch(() => {});
+      const liste = (await be.listBackups('v2')).sort((a, b) => b.name.localeCompare(a.name));
+      for (const alt of liste.slice(SICHERUNG_BEHALTEN)) await be.backupRemove(alt.name, 'v2').catch(() => {});
     } catch { /* aufgeräumt wird beim nächsten Mal */ }
     return { name: res.name, size: res.size, ...sicherungsAngaben(res.name) };
   }
@@ -856,7 +1012,7 @@ export class Cloud {
   async vielleichtSichern(container) {
     const c = this.cfg();
     if (Date.now() - (Date.parse(c.lastCloudBackupAt || '') || 0) < SICHERUNG_ABSTAND_MS) return null;
-    const neueste = (await this.be().listBackups())
+    const neueste = (await this.be().listBackups('v2'))
       .map((s) => Date.parse(sicherungsAngaben(s.name)?.at || '') || 0)
       .reduce((a, b) => Math.max(a, b), 0);
     if (Date.now() - neueste < SICHERUNG_ABSTAND_MS) {
@@ -866,31 +1022,42 @@ export class Cloud {
     return this.sicherungAblegen(container, 'auto');
   }
 
+  /** Alle Sicherungen: die seit 2.26, die älteren und den Stand vor der Umstellung. */
   async sicherungen() {
     this.vault.assertUnlocked();
-    return (await this.be().listBackups())
-      .map((s) => ({ name: s.name, size: s.size, ...sicherungsAngaben(s.name) }))
-      .sort((a, b) => b.name.localeCompare(a.name));
+    const be = this.be();
+    const out = [];
+    for (const [ort, vorsatz] of [['v2', ''], ['alt', 'alt/'], ['umstellung', 'umstellung/']]) {
+      let liste = [];
+      try { liste = await be.listBackups(ort); } catch (err) { if (ort === 'v2') throw err; }
+      for (const s of liste) out.push({ name: vorsatz + s.name, size: s.size, ...sicherungsAngaben(vorsatz + s.name) });
+    }
+    return out.sort((a, b) => String(b.at).localeCompare(String(a.at)) || b.name.localeCompare(a.name));
   }
 
   async jetztSichern() {
     this.vault.assertUnlocked();
-    const res = await this.sicherungAblegen(await this.verpacken(this.vault.db), 'manuell');
+    const res = await this.sicherungAblegen(await this.verpacken(), 'manuell');
     await this.vault.save(this.vault.db);
     return res;
   }
 
   async sicherungEinspielen(name, password) {
     this.vault.assertUnlocked();
-    if (!sicherungsAngaben(name)) throw new Error('Ungültiger Name einer Sicherung.');
-    const blob = await this.be().backupDownload(name);
-    const { headerBuf, body } = K.unpackContainer(blob);
+    const t = sicherungsTeile(name);
+    if (!t) throw new Error('Ungültiger Name einer Sicherung.');
+    const blob = await this.be().backupDownload(t.datei, t.ort);
+    const c = K.unpackContainer(blob);
+    if (c.version === K.FORMAT_VERWEIS) throw new Error('Diese Datei ist keine Sicherung.');
     let db = null;
-    try { db = await K.openBody(this.vault.dek, body, headerBuf); } catch { db = null; }
+    try {
+      const inhalt = await K.inhaltOeffnen(this.vault.dek, c);
+      db = inhalt.data || zusammensetzen((await this.vault.motor.abbildLesen(inhalt.abbild)).zf);
+    } catch { db = null; }
 
     if (db) {
       await this.vault.sicherungskopie('vor-wiederherstellung');
-      await this.sicherungAblegen(await this.verpacken(this.vault.db), 'vor-wiederherstellung');
+      await this.sicherungAblegen(await this.verpacken(), 'vor-wiederherstellung');
       db.cloud = this.vault.db.cloud;
       db.auditLog = journalNachEinspielen(this.vault.db.auditLog, db.auditLog);
       db.restoredAt = new Date().toISOString();
@@ -912,31 +1079,46 @@ export class Cloud {
   /** Übernimmt den Cloud-Stand vollständig. Der hiesige Tresor wird vorher gesichert. */
   async adoptRemote() {
     this.vault.assertUnlocked();
-    await this.uebernehmen(await this.be().vaultDownload(), 'vor-cloud-uebernahme');
+    const be = this.be();
+    const meta = await be.vaultMeta();
+    if (!meta.exists) throw new Error('In der Cloud liegt keine Buchhaltung.');
+    await this.uebernehmen(await be.vaultDownload(undefined, meta.fassung), 'vor-cloud-uebernahme');
     return true;
   }
 
   async uebernehmen(blob, anlass) {
-    K.unpackContainer(blob); // wirft, wenn es keine gültige Datei ist
+    // Wirft, wenn es keine gültige Datei ist; ein Verweis gehört nie in die Cloud.
+    if (K.unpackContainer(blob).version === K.FORMAT_VERWEIS) throw new Error('Diese Datei lässt sich nicht übernehmen.');
     await this.vault.sicherungskopie(anlass);
     this.mitnehmen = verbindungVon(this.cfg());
+    await this.vault.saving?.catch(() => {});
     await A.schreiben('dateien', TRESOR, blob);
     await A.loeschen('dateien', BASIS).catch(() => {});
     this.backend = null;
     this.vault.lock(); // der Schlüssel des anderen Tresors ist ein anderer
   }
 
+  /**
+   * Auf ausdrücklichen Wunsch: den Stand dieses Geräts in die Cloud schreiben.
+   * Was dort lag, kommt vorher in die Sicherungen; eine alte Datei aus der Zeit
+   * vor 2.26, die sich gesichert hat, wird danach entfernt.
+   */
   async overwriteRemote() {
     this.vault.assertUnlocked();
+    const be = this.be();
     const db = this.vault.db;
-    const meta = await this.be().vaultMeta();
-    if (meta.exists) await this.sicherungAblegen(await this.be().vaultDownload(), 'vor-ueberschreiben');
-    const container = await this.verpacken(db);
-    const up = await this.be().vaultUpload(container);
+    const meta = await be.vaultMeta();
+    if (meta.exists) await this.sicherungAblegen(await be.vaultDownload(undefined, meta.fassung), 'vor-ueberschreiben');
+    const alt = await be.altMeta();
+    const altBlob = alt.exists && meta.fassung !== 1 ? await be.altDownload() : null;
+    if (altBlob) await this.sicherungAblegen(altBlob, 'vor-ueberschreiben');
+    const container = await this.verpacken();
+    const up = await be.vaultUpload(container);
+    if (alt.exists) await this.altAbraeumen(container, { version: alt.version, blob: altBlob }).catch(() => {});
     const c = this.cfg();
     c.remoteVersion = up.version;
     c.lastSyncAt = new Date().toISOString();
-    this.pending = { remoteVersion: up.version, hadRemote: true };
+    this.pending = { remoteVersion: up.version, hadRemote: true, fassung: 2 };
     await this.syncAttachments(db);
     await this.writeBase(db);
     await this.vault.save(db);

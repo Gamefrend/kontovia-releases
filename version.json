@@ -1,12 +1,12 @@
 {
-  "version": "2.25.1",
-  "released": "2026-10-07T08:19:04.454Z",
-  "notes": "Mit Google entsperren: klarer und sicherer\n\n- „Mit Google entsperren“ schalten Sie jetzt unter Einstellungen › Daten & Cloud ein und aus, direkt bei der Verbindung zu Google.\n- Dort steht deutlich, dass das ein großes Sicherheitsrisiko ist: Ihre Buchhaltung ist dann nur noch durch das Passwort Ihres Google-Kontos geschützt. Einschalten geht nur mit Bestätigung.\n- Der Sperrbildschirm bietet „Mit Google entsperren“ nur noch dort an, wo es eingeschaltet ist. Geräte, die den Weg schon nutzen, behalten ihn.\n- Behoben: Wer den Weg auf einem Gerät ausschaltete, bekam ihn von einem anderen Gerät unbemerkt wieder eingeschaltet.",
+  "version": "2.26.0",
+  "released": "2026-10-07T11:44:09.135Z",
+  "notes": "Neuer Speicher für Ihre Buchhaltung\n\n- Ihre Buchhaltung liegt jetzt in einer verschlüsselten Datenbank auf dem Gerät. Gespeichert wird nur noch, was sich geändert hat; so bleibt auch ein großer Bestand flüssig.\n- Beim ersten Öffnen werden Ihre Daten einmal übernommen und Eintrag für Eintrag geprüft. Der bisherige Stand bleibt als Sicherung erhalten.\n- Die Cloud bekommt beim ersten Abgleich das neue Format. Die alte Datei geht erst, wenn die neue geprüft angekommen ist, und bleibt als Sicherung. Bitte bald auch die anderen Geräte aktualisieren.\n- Das Änderungsjournal verliert keinen Eintrag mehr. Ältere Einträge liegen im Archiv und stehen in jeder Sicherung und in den Unterlagen fürs Finanzamt.\n- Neu unter Einstellungen › Daten & Cloud: Sicherungen auf diesem Gerät ansehen und zurückholen.",
   "files": [
     {
       "path": "app.js",
-      "sha256": "2397f0dfdcfb06d84abf30909847882242124129025207dd504db7020cfd1a96",
-      "size": 79017
+      "sha256": "19a5b311182cefdab20936d8553fc6fbe97f7084118ece7b2495ee690d34859a",
+      "size": 79931
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -230,8 +230,8 @@
     },
     {
       "path": "lib/merge.js",
-      "sha256": "02fc57364c5c05a0590ccdaa5ed3d1fd5764cffc9ec467b2d788139d25225afa",
-      "size": 14595
+      "sha256": "898efdb47640239021c6a68aea52c6358815faab34107d64971aa99fe5f23cf7",
+      "size": 19837
     },
     {
       "path": "lib/pdf.js",
@@ -335,8 +335,8 @@
     },
     {
       "path": "lib/store.js",
-      "sha256": "ec8c3ebdf6c6f35a439df25055c5976e7b9192cb521a18ae023e88b08392f824",
-      "size": 38166
+      "sha256": "0215c2d44e7941fa90449791c7cffdfe8b9315414ec9c00bfab1f942e0e3bca6",
+      "size": 38182
     },
     {
       "path": "lib/suche.js",
@@ -350,8 +350,8 @@
     },
     {
       "path": "lib/sync.js",
-      "sha256": "9d44541e16a705120b0937cc9246dc953af3364f0ddf0c172313c0c881d7b66b",
-      "size": 6709
+      "sha256": "40be912bb2bc910f853b28b97fd73290bac9446ce4740725ab37307fd9f3ae46",
+      "size": 7144
     },
     {
       "path": "lib/table.js",
@@ -385,8 +385,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "ce4f953fa48e1fee2bfc078da8eac5138dfa9bb7b8eb3328b6437d814cd7664d",
-      "size": 37454
+      "sha256": "e6ed2d97a507db239d91791280908d80eaf0648a672973a088ba22cb5c909f08",
+      "size": 38401
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -415,13 +415,13 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "df4843d0ca9c1c04fdb4489745a399d842805b25476cd808ffd41e0244d289dd",
+      "sha256": "8e30dca82524b398ba94641c023e29ac590649ba60119d48d70517af327c0ed6",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "1ee55b87784aa741fcb1eb435231431e3084766418617fc99805acd1a70f0b13",
-      "size": 30654
+      "sha256": "9db2f1dcba2b6d1a415e93cec2a6c78335ade80f505dba296c5a361acdf03eb6",
+      "size": 31132
     },
     {
       "path": "recht/IMPRESSUM.md",
@@ -435,8 +435,8 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "75f577e119ab6274b0d43b5cb9ea6e45e583bab95f1dd01af4ca5eef89779d72",
-      "size": 34323
+      "sha256": "79be52e534072dd47b046392f84e3d350bb4b9b52fcf2da890938f7b342d052e",
+      "size": 34801
     },
     {
       "path": "recht/impressum.html",
@@ -460,8 +460,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "50e2fe167e9ad2beabb97bb74fcb86a249737e52213d87e2ab9678b203792ac2",
-      "size": 125487
+      "sha256": "8e26b06c5875fccbda9dcbc46a8ddcbecae7bb8e6de4788eb1511b0fd870990c",
+      "size": 125804
     },
     {
       "path": "views/anlageform.js",
@@ -480,8 +480,8 @@
     },
     {
       "path": "views/cloudpanel.js",
-      "sha256": "bc8d447bbdb7813dda60517500cd172e3acddbef602f6af83a8b15912331cddc",
-      "size": 42291
+      "sha256": "d8f24fcbcb4dba24f9562c7f52283bf60cecec8887812f3d9d52193d4b243efe",
+      "size": 42442
     },
     {
       "path": "views/dashboard.js",
@@ -500,13 +500,13 @@
     },
     {
       "path": "views/export.js",
-      "sha256": "42dc7f91903fc60c9307d6f6f915da683c0becbea766f004a87a12a639225448",
-      "size": 29792
+      "sha256": "5fb0ac0f52ee4962f1602e0384f022c048ae61dca2fe4d2a1fdcf17f7e76b1b8",
+      "size": 30282
     },
     {
       "path": "views/help.js",
-      "sha256": "0ab580d6b3a404c2a8791a171522fdd3e52201c4a58c2524a6bd7cc1fa97d882",
-      "size": 67062
+      "sha256": "2fac2023e0df83d0c308abbf21dcf38e17a0f48069590671a8d6bd561c4f5fb2",
+      "size": 67397
     },
     {
       "path": "views/importexport.js",
@@ -560,8 +560,8 @@
     },
     {
       "path": "views/settings.js",
-      "sha256": "5f4de98652d47873b538b159e8b6a9ec1c93da8e190f54b4eb3ef982b0a81fe9",
-      "size": 46581
+      "sha256": "854fdd68dff750433026148a92135ef33a696350a68b6253cdf87259b627ecb0",
+      "size": 50494
     },
     {
       "path": "views/spruenge.js",
@@ -585,12 +585,12 @@
     },
     {
       "path": "web/ablage.js",
-      "sha256": "bbf4f3498025190dbcfe7f5918b26df909f2a19ef8582b3e5f477d9d70d5bb80",
-      "size": 26383
+      "sha256": "bd3a8d1fa9194a104c1e666aad04b437bda537927d9b54b5a16513b06a72164f",
+      "size": 28097
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "2c4c4606097313275db4ad24d9b1c55a54cb4b584719c31cbf11ba77e80e8cda",
+      "sha256": "b7fd576c78a171efb0a4cf16aed050c2b2f5a3ea936a12a140c70291d2018935",
       "size": 6906
     },
     {
@@ -600,13 +600,13 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "7a3045670c989cc5f9b9009ac1373535e6ee0e412b8d9001057948daafcd8d5f",
-      "size": 57766
+      "sha256": "0ea1e285be57df76e565ead37f204b757a1ee97ab5aa757a9e08cd69e3fb987a",
+      "size": 58958
     },
     {
       "path": "web/cloud.js",
-      "sha256": "09fea6dfd5e37e5eb7cecefcaa196a9783070feec9fc3eee00ea7bcb1d4900b0",
-      "size": 38786
+      "sha256": "bae33a2c6af3ff08ad45743a24c226f17afcf92b5d2b543b0381db8b5de60561",
+      "size": 47558
     },
     {
       "path": "web/cloudconfig.js",
@@ -630,8 +630,8 @@
     },
     {
       "path": "web/firebase.js",
-      "sha256": "e033640028f9d7c105d9afc233f156db8c15daafe554c1733b2da0eabcf845df",
-      "size": 17650
+      "sha256": "e6c986246b108d0e1497eb19317f90af8f172ae49b01bf406f371f3d541c11bf",
+      "size": 20990
     },
     {
       "path": "web/gcal.js",
@@ -645,8 +645,8 @@
     },
     {
       "path": "web/kern.js",
-      "sha256": "51d87f333d304330dd7d5835057db7b977ff43841dc2e70116ed8c504b8fe209",
-      "size": 10300
+      "sha256": "f05fa673ed802e0c41d1b112456e08329c9e4820494640f3944e2d0d980d38fd",
+      "size": 13741
     },
     {
       "path": "web/ki-worker.js",
@@ -714,9 +714,29 @@
       "size": 4157
     },
     {
+      "path": "web/sql.js",
+      "sha256": "7f7cb90d5ea69db97adb76d54cb061c9f48451f297a2e5d4a8b4d0fe800c02ae",
+      "size": 8520
+    },
+    {
+      "path": "web/sqlkern.js",
+      "sha256": "fa8c00fee214af2cc8b78b34e3df47b6bac4c6ba66501bdc7493e1e12fe12521",
+      "size": 18269
+    },
+    {
+      "path": "web/sqlschema.js",
+      "sha256": "3cdf24952f1e6337a36ef688db8b9c49dd0f1719232212e59b16f19540ce72e1",
+      "size": 12447
+    },
+    {
+      "path": "web/sqlwerk.js",
+      "sha256": "5f27485995f97365b341d06104d80b54299b2a0eca5d62c90f9bdef1ae220cab",
+      "size": 6037
+    },
+    {
       "path": "web/tresor.js",
-      "sha256": "5545a4e14c4eb0df5b4f45410e2473892d15f2a30c7723b5fe19110d918ea94b",
-      "size": 12950
+      "sha256": "11fe21e185aeea3aca7d095c7c2bdd51497cca500beb0d252ad143b498aca0cd",
+      "size": 31248
     },
     {
       "path": "web/uebergabe.js",
@@ -730,8 +750,8 @@
     },
     {
       "path": "web/vendor/HERKUNFT.md",
-      "sha256": "2bd62c30dcc8015ade60f731ad169fea1e774ae48655210c6e05beb7210e75d1",
-      "size": 1472
+      "sha256": "3182aad4129a185d57a0b0413c76b55a704a8005de9ca2fe157799038ece6476",
+      "size": 3860
     },
     {
       "path": "web/vendor/LICENSE-loglevel.txt",
@@ -739,9 +759,24 @@
       "size": 1053
     },
     {
+      "path": "web/vendor/LICENSE-sqlite3mc.txt",
+      "sha256": "39205ec18e0f25f56c62d3bda9768e7509b63a74ba58beb7442903dfc81c247a",
+      "size": 1074
+    },
+    {
       "path": "web/vendor/LICENSE-web-llm.txt",
       "sha256": "d412ab9d5ac17e6931705aac01e5a0d323da5acd2e89a2c19aa8fc05becc59ad",
       "size": 11737
+    },
+    {
+      "path": "web/vendor/sqlite3.mjs",
+      "sha256": "058b526608afdd81c244540f525286275d7bcc6a11676d19fdda7be50502f10e",
+      "size": 438638
+    },
+    {
+      "path": "web/vendor/sqlite3.wasm",
+      "sha256": "b6aedab9eee5cd5de0f13498e0bf64bb5ee9cc786d1d0303cc365578b64d18ab",
+      "size": 1068015
     },
     {
       "path": "web/vendor/web-llm.js",

@@ -49,6 +49,7 @@ const googleRueckkehr = nurGoogleFenster ? null : G.rueckkehrAusAdresse();
 if (!nurGoogleFenster) I.starten({ toast });
 
 const vault = new Vault(U.VERSION);
+vault.melder = (schritt) => send('umstellung', schritt);
 /* Das Konto trägt den Namen des Betriebs und, wenn verbunden, die Google-Adresse; so erkennt man es vor dem Entsperren wieder. */
 vault.beschrifter = (db, geoeffnet) => KO.beschriften({
   name: db?.settings?.companyName || db?.settings?.ownerName,
@@ -92,7 +93,7 @@ const str = (v, max = 500) => String(v ?? '').slice(0, max);
 /* Ereignisse                                                                  */
 /* -------------------------------------------------------------------------- */
 
-const hoerer = { locked: new Set(), updateProgress: new Set(), cloudProgress: new Set(), cloudTick: new Set(), menu: new Set(), speicher: new Set() };
+const hoerer = { locked: new Set(), updateProgress: new Set(), cloudProgress: new Set(), cloudTick: new Set(), menu: new Set(), speicher: new Set(), umstellung: new Set() };
 
 function send(kanal, payload) {
   for (const fn of hoerer[kanal]) {
@@ -452,6 +453,8 @@ async function geraetLeeren() {
   if (!vault.isLocked) vault.lock();
   nachSperre('abmelden');
   await UE.verwerfen().catch(() => {});
+  // Die Datenbank im Dateispeicher des Browsers geht mit; ihr Rechenwerk muss dafür beendet sein.
+  await vault.beendet;
   await A.geraetLeeren();
   const naechstes = await KO.aktivEntfernen();
   try {
@@ -471,6 +474,7 @@ async function fuerKontowechselSperren() {
   await vault.saving?.catch(() => {});
   await cloud.anmeldungVerwerfen().catch(() => {});
   if (!vault.isLocked) vault.lock();
+  await vault.beendet;
   nachSperre('konto-wechsel');
 }
 
@@ -624,6 +628,14 @@ const api = {
     }),
     storage: handle(async () => ({ ...(await vault.storageStats()), speicher: await ortBeschreiben() }), { needsUnlock: false }),
     backups: handle(async () => vault.listBackups(), { needsUnlock: false }),
+    /** Eine Sicherung auf diesem Gerät zurückholen (auch den Stand vor der Umstellung). */
+    backupZurueckholen: handle(async (name) => {
+      await vault.sicherungZurueckholen(str(name, 140));
+      cloud.lokalGeaendert();
+      return kopie(fuerOberflaeche(vault.db));
+    }),
+    /** Alle Journaleinträge, auch die im Archiv der Datenbank (Exporte, Journal ansehen). */
+    journal: handle(async () => kopie(await vault.journalAlle())),
   },
 
   attach: {
@@ -902,7 +914,10 @@ const api = {
       if (!gewaehlt) throw new Error('Bitte zuerst einen Ordner wählen.');
       if (gewaehlt.tresor) throw new Error(`Im Ordner „${gewaehlt.pfad}“ liegt schon eine Kontovia-Buchhaltung. Wählen Sie einen anderen Ordner.`);
       await vault.saving?.catch(() => {});
+      // Ein Verweis auf den Datenspeicher des Browsers taugt im Ordner nicht: vorher ein Abbild schreiben.
+      await vault.fuerOrdnerVorbereiten();
       const res = await A.inOrdnerUmziehen(gewaehlt.handle, { pruefen: (s, k, b) => vault.kopiePruefen(s, k, b), fortschritt: (p) => send('speicher', p) });
+      await vault.dateispeicherAufraeumen();
       res.pfad = gewaehlt.pfad;
       gewaehlt = null;
       await ortBeschreiben();
@@ -992,6 +1007,8 @@ const api = {
       const res = kopie(await cloud.begin({ force: !!opts.force, dirty: opts.dirty !== false }));
       if (res.remote) res.remote = fuerOberflaeche(res.remote);
       if (res.base) res.base = fuerOberflaeche(res.base);
+      if (res.nachzuegler) res.nachzuegler = fuerOberflaeche(res.nachzuegler);
+      if (res.nachzueglerBasis) res.nachzueglerBasis = fuerOberflaeche(res.nachzueglerBasis);
       return res;
     }),
     commit: handle(async (db) => {
@@ -1105,6 +1122,8 @@ const api = {
     cloudTick: anmelden('cloudTick'),
     menu: anmelden('menu'),
     speicher: anmelden('speicher'),
+    /** Beim ersten Öffnen mit dieser Fassung: die Daten werden in die Datenbank übernommen (tresor.js). */
+    umstellung: anmelden('umstellung'),
   },
 };
 

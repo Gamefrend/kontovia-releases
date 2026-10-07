@@ -482,9 +482,12 @@ function cloud(root) {
     <div class="content narrow" style="padding:0">
       <div class="card mb16"><div class="card-body">
         <h2 class="mt0">Wo Ihre Buchhaltung liegt</h2>
-        <p>Zunächst im Speicher dieses Browsers, verschlüsselt mit Ihrem Passwort. Den darf der
-        Browser bei Platzmangel räumen; auf iPhone und iPad gehört deshalb die Cloud-Sicherung oder
-        eine regelmäßige Vollsicherung dazu.</p>
+        <p>Zunächst im Speicher dieses Browsers, in einer Datenbank, die mit einem Schlüssel aus Ihrem
+        Passwort verschlüsselt ist. Den Speicher darf der Browser bei Platzmangel räumen; auf iPhone und
+        iPad gehört deshalb die Cloud-Sicherung oder eine regelmäßige Vollsicherung dazu.</p>
+        <p>Beim Speichern legt Kontovia höchstens alle 30 Minuten eine Sicherung ab. Unter
+        <a data-go="settings">Einstellungen → Daten &amp; Cloud</a> sehen Sie sie und holen bei Bedarf eine
+        zurück. Der Stand von vor Version 2.26 bleibt dort dauerhaft.</p>
         <p><strong>In Chrome und Edge</strong> lässt sie sich unter <a data-go="settings">Einstellungen →
         Sicherung und Speicherort</a> in einen <strong>Ordner auf dem Gerät</strong> verschieben. Dort liegen
         Tresor, Belege und Sicherungen als Dateien, und Sie sichern sie mit

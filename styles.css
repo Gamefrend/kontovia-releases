@@ -535,6 +535,9 @@ html[data-theme="dark"] .modal-backdrop, html[data-theme="dark"] .modal-geist { 
   box-shadow: var(--shadow-md); padding: 36px;
 }
 .gate-card.wide { width: min(680px, 100%); }
+/* Einmalige Übernahme der Daten in die neue Datenbank (app.js: api.on.umstellung) */
+.umstellung-hinweis { position: fixed; inset: 0; z-index: 2000; display: grid; place-items: center; padding: 24px; background: color-mix(in srgb, var(--bg) 88%, transparent); }
+.umstellung-balken { height: 8px; margin-top: 8px; }
 .gate-logo { width: 44px; height: 44px; border-radius: 12px; background: var(--accent); display: grid; place-items: center; color: var(--accent-text); font-weight: 600; font-size: 21px; margin-bottom: 20px; }
 .gate h1 { margin: 0 0 6px; font-size: 22px; font-weight: 600; letter-spacing: -.03em; }
 .gate p.lead { margin: 0 0 22px; color: var(--muted); font-size: 13.5px; line-height: 1.6; }

@@ -1464,6 +1464,27 @@ api.on.locked(async ({ reason }) => {
   renderUnlock(texts[reason] ?? '');
 });
 
+/**
+ * Beim ersten Öffnen mit Fassung 2.26 werden die Daten einmal in die neue
+ * Datenbank übernommen und geprüft (web/tresor.js). Solange das läuft, steht
+ * dieser Hinweis über allem; er verschwindet auch, wenn es nicht klappt.
+ */
+api.on.umstellung?.(({ phase } = {}) => {
+  let el = document.getElementById('umstellungHinweis');
+  if (phase !== 'start') { el?.remove(); return; }
+  if (el) return;
+  el = document.createElement('div');
+  el.id = 'umstellungHinweis';
+  el.className = 'umstellung-hinweis';
+  el.setAttribute('role', 'status');
+  el.innerHTML = html`<div class="gate-card">
+    <p class="mt0"><strong>Ihre Daten werden für die neue Version vorbereitet.</strong></p>
+    <p class="muted">Das geschieht einmal und dauert meist nur einen Moment. Bitte lassen Sie Kontovia so lange geöffnet.</p>
+    <div class="skeleton umstellung-balken"></div>
+  </div>`;
+  document.body.append(el);
+});
+
 api.on.menu(async (payload) => {
   if (!store.db) return;
   switch (payload.action) {

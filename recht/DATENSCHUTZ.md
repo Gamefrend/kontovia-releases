@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 7. Oktober 2026, Programmversion 2.25.1
+Stand: 7. Oktober 2026, Programmversion 2.26.0
 
 ---
 
@@ -42,7 +42,10 @@ Alle Daten liegen verschlüsselt auf Ihrem Gerät: im Speicher des Browsers oder
 wenn Sie das in Chrome oder Edge wählen, in einem Ordner Ihrer Wahl (siehe
 „Auslieferung und Speicherort“). Die Verschlüsselung erfolgt mit AES-256-GCM;
 der Schlüssel wird mit scrypt aus Ihrem Passwort abgeleitet und existiert nur im
-Arbeitsspeicher, solange das Programm entsperrt ist.
+Arbeitsspeicher, solange das Programm entsperrt ist. Seit Version 2.26 liegt die
+Buchhaltung im Browser in einer Datenbank, deren Seiten einzeln verschlüsselt
+sind (ChaCha20-Poly1305, Schlüssel aus demselben Datenschlüssel abgeleitet); im
+Ordner liegt ein ebenso verschlüsseltes Abbild davon.
 
 ## Was das Programm nicht tut
 
@@ -62,8 +65,8 @@ wenn Sie ihnen ausdrücklich zustimmen.
 ## Speicher im Browser (Cookies und ähnliche Technologien)
 
 Kontovia setzt **keine Cookies** und bindet kein Tracking, keine Werbung und
-keine Analyse ein. Es speichert in Ihrem Browser (IndexedDB, lokaler Speicher,
-Zwischenspeicher und Sitzungsspeicher) nur, was für den Betrieb der App
+keine Analyse ein. Es speichert in Ihrem Browser (IndexedDB, privates Dateisystem des
+Browsers, lokaler Speicher, Zwischenspeicher und Sitzungsspeicher) nur, was für den Betrieb der App
 unbedingt erforderlich ist und was Sie ausdrücklich verlangen: die verschlüsselte
 Buchhaltung, die Liste Ihrer Konten, Einstellungen wie das Erscheinungsbild und
 die Programmdateien für den Betrieb ohne Netz. Dafür ist nach § 25 Abs. 2 Nr. 2
@@ -102,7 +105,10 @@ verschlüsselten Belegdateien.
 
 **Sicherungen:** Zusätzlich legt Kontovia höchstens einmal am Tag sowie vor
 jedem Überschreiben und jeder Wiederherstellung eine Kopie des ebenso
-verschlüsselten Tresors ab und hält die 30 neuesten vor. Belege, die Ihr
+verschlüsselten Tresors ab und hält die 30 neuesten vor. Beim ersten Abgleich
+mit Version 2.26 bekommt der Cloud-Stand ein neues Format; der bisherige Stand
+bleibt dabei als verschlüsselte Sicherung liegen, bis Sie die Daten in der
+Cloud selbst löschen. Belege, die Ihr
 Bestand nicht mehr braucht, bleiben noch 90 Tage gespeichert, damit diese
 Sicherungen vollständig wiederherstellbar sind.
 

@@ -19,6 +19,7 @@ import { renderCalendarCard } from './calendarsync.js';
 import { mahnKarte } from './mahneinstellungen.js';
 import { table, mountTables } from '../lib/table.js';
 import { bereichEin, markierung } from '../lib/bewegung.js';
+import { darf, verbotText } from '../lib/rollen.js';
 
 const api = window.kontovia;
 
@@ -228,11 +229,12 @@ async function draw(root) {
               <p class="small muted mt0">
                 Jede Änderung landet im Änderungsjournal. Die Einträge sind über Prüfsummen
                 miteinander verkettet. Wird nachträglich etwas verändert, passen sie nicht
-                mehr zusammen.
+                mehr zusammen. Kontovia löscht keinen Eintrag; ältere liegen im Archiv
+                und gehen in jede Sicherung und jeden Export fürs Finanzamt mit.
               </p>
               <div class="row wrap" style="gap:8px">
                 <button class="btn" id="btnVerify">${icon('check', 15)} Journal prüfen</button>
-                <button class="btn" id="btnJournal">${icon('eye', 15)} Journal ansehen (${int((store.db.auditLog || []).length)})</button>
+                <button class="btn" id="btnJournal">${icon('eye', 15)} Journal ansehen (${int(journalGesamt(storage))})</button>
               </div>
               <div id="verifyResult" class="mt8"></div>
             </div>
@@ -307,7 +309,7 @@ async function draw(root) {
           <div>
             ${storage ? raw(`<table class="data compact">
               <tbody>
-                <tr><td class="muted">Tresordatei</td><td class="num">${esc(bytes(storage.vaultBytes))}</td></tr>
+                <tr><td class="muted">Buchhaltung</td><td class="num">${esc(bytes(storage.vaultBytes))}</td></tr>
                 <tr><td class="muted">Belege</td><td class="num">${int(storage.attachments.count)} Dateien · ${esc(bytes(storage.attachments.bytes))}</td></tr>
                 <tr><td class="muted">Automatische Sicherungen</td><td class="num">${int(storage.backups.count)} · ${esc(bytes(storage.backups.bytes))}</td></tr>
                 <tr><td class="muted">Ort</td><td class="tiny">${esc(storage.dataDir)}</td></tr>
@@ -316,11 +318,15 @@ async function draw(root) {
               </tbody>
             </table>`) : ''}
             <p class="tiny muted mt8">
-              Kontovia legt bei jedem Speichern höchstens alle 30 Minuten eine Kopie der
-              vorherigen Tresordatei ab und hält die letzten 25 vor.
+              Kontovia legt beim Speichern höchstens alle 30 Minuten eine Sicherung ab und
+              hält die letzten 25 vor. Der Stand vor dem Wechsel auf die neue Datenbank
+              (Version 2.26) bleibt dauerhaft.
               ${backups.length ? `Neueste: ${esc(fmtDateTime(backups[0].mtime))}.` : ''}
             </p>
-            <button class="btn sm mt8" id="btnPrune">Nicht mehr benötigte Belegdateien löschen</button>
+            <div class="row wrap mt8" style="gap:8px">
+              ${backups.length ? raw('<button class="btn sm" id="btnLokaleSicherungen">Sicherungen auf diesem Gerät</button>') : ''}
+              <button class="btn sm" id="btnPrune">Nicht mehr benötigte Belegdateien löschen</button>
+            </div>
           </div>
         </div>
       </div>
@@ -774,7 +780,8 @@ function wire(root) {
       : html`<div class="notice danger">Die Kette bricht bei Eintrag Nr. ${res.seq}. Der Datenbestand wurde außerhalb von Kontovia verändert.</div>`;
   });
 
-  $('#btnJournal', root).addEventListener('click', () => showJournal());
+  $('#btnJournal', root).addEventListener('click', async () => showJournal(journalGesamt(await api.vault.storage().catch(() => null))));
+  $('#btnLokaleSicherungen', root)?.addEventListener('click', async () => lokaleSicherungen(root, await api.vault.backups().catch(() => [])));
 }
 
 export async function runBackup() {
@@ -842,15 +849,78 @@ export function vorgangText(action) {
   return DINGE[ding] && TUN[tun] ? `${DINGE[ding]} ${TUN[tun]}` : String(action || '');
 }
 
-function showJournal() {
+/** Was eine Sicherung auf diesem Gerät ist, aus ihrem Namen (web/tresor.js). */
+function sicherungsArt(name) {
+  const n = String(name);
+  if (n.startsWith('vor-umstellung-')) return 'Stand vor Version 2.26 (bleibt immer)';
+  if (n.startsWith('vor-wiederherstellung-')) return 'vor einer Wiederherstellung';
+  if (n.startsWith('vor-cloud-uebernahme-')) return 'vor dem Übernehmen aus der Cloud';
+  return 'automatisch';
+}
+
+/** Die Sicherungen auf diesem Gerät: ansehen und einzeln zurückholen. */
+function lokaleSicherungen(root, backups) {
+  const m = modal({
+    title: 'Sicherungen auf diesem Gerät',
+    size: 'wide',
+    body: html`
+      <p class="mt0 small muted">Eine Sicherung ersetzt beim Zurückholen den Bestand. Der jetzige Stand wird vorher
+      als Sicherung abgelegt, die Verbindungen dieses Geräts bleiben. Mit Cloud bringt der nächste Abgleich den Stand
+      zu Ihren anderen Geräten.</p>
+      <table class="data compact">
+        <thead><tr><th>Zeitpunkt</th><th>Art</th><th class="num">Größe</th><th></th></tr></thead>
+        <tbody>${raw(backups.map((b, i) => `<tr>
+          <td class="nowrap">${esc(fmtDateTime(b.mtime))}</td>
+          <td><span class="badge">${esc(sicherungsArt(b.name))}</span></td>
+          <td class="num">${esc(bytes(b.size))}</td>
+          <td class="right"><button class="btn sm" data-zurueck="${i}">Zurückholen</button></td>
+        </tr>`).join(''))}</tbody>
+      </table>`,
+    foot: '<button class="btn primary" data-x>Schließen</button>',
+  });
+  m.root.querySelector('[data-x]').addEventListener('click', () => m.close());
+  m.body.querySelectorAll('[data-zurueck]').forEach((knopf) => knopf.addEventListener('click', async () => {
+    const b = backups[Number(knopf.dataset.zurueck)];
+    m.close();
+    // Wie jede Änderung an Sicherungen: nur ein Inhaber (rollen.js), geprüft vor dem Eingriff.
+    if (store.nutzer && !darf(store.nutzer.rolle, 'sicherung.wiederhergestellt')) { err('Nicht erlaubt', verbotText(store.nutzer.rolle)); return; }
+    const ja = await confirmDialog({
+      title: `Stand vom ${fmtDateTime(b.mtime)} zurückholen?`,
+      text: 'Der Bestand wird durch diese Sicherung ersetzt. Was danach angelegt oder geändert wurde, ist dann auf dem Stand der Sicherung. Der jetzige Stand wird vorher als Sicherung abgelegt.',
+      confirmLabel: 'Zurückholen', danger: true,
+    });
+    if (!ja) return;
+    try {
+      if (store.dirty) await saveNow();
+      setDb(await api.vault.backupZurueckholen(b.name));
+      await commit('sicherung.wiederhergestellt', () => null, {
+        entity: 'bestand', summary: `Stand der Sicherung vom ${fmtDateTime(b.mtime)} auf diesem Gerät zurückgeholt`,
+      });
+      await saveNow();
+      ok('Sicherung zurückgeholt', `${int(store.db.transactions.length)} Buchungen.`);
+      navigate('dashboard');
+    } catch (e) {
+      err('Zurückholen fehlgeschlagen', e.message);
+      draw(root);
+    }
+  }));
+}
+
+/** Alle Einträge des Journals, auch die im Archiv der Datenbank. */
+function journalGesamt(storage) {
+  return Math.max(Number(storage?.journal) || 0, (store.db.auditLog || []).length);
+}
+
+function showJournal(gesamt = (store.db.auditLog || []).length) {
   const log = [...(store.db.auditLog || [])].reverse().slice(0, 800);
   const vorgaenge = [...new Set(log.map((e) => e.action))].sort((a, b) => vorgangText(a).localeCompare(vorgangText(b), 'de'));
   const m = modal({
     title: 'Änderungsjournal',
     size: 'wide',
     body: html`
-      <p class="mt0 small muted">Die letzten ${int(log.length)} von ${int((store.db.auditLog || []).length)} Einträgen.
-      Jeder Eintrag enthält die Prüfsumme des vorherigen. So lässt sich nachträgliches Verändern erkennen.</p>
+      <p class="mt0 small muted">Die letzten ${int(log.length)} von ${int(gesamt)} Einträgen.
+      Jeder Eintrag enthält die Prüfsumme des vorherigen. So lässt sich nachträgliches Verändern erkennen.
+      Kein Eintrag wird gelöscht; alle stehen in der Datenträgerüberlassung (Import und Export).</p>
       ${table({
         id: 'journal',
         cls: 'data compact',
