@@ -768,6 +768,8 @@ async function eingangBuchen(r, gelesen = null) {
   tx.invoiceNumber = String(g.nummer || '').slice(0, 60);
   tx.description = [g.verkaeufer, g.nummer ? `Rechnung ${g.nummer}` : ''].filter(Boolean).join(', ').slice(0, 200);
   tx.attachments = [r.anhangId];
+  // Ab 2028: Versteuert der Lieferant nach Ist, zählt die Vorsteuer erst mit der Zahlung (calc.js: vorsteuerDatum).
+  if ((daten?.hinweise || []).some((h) => /vereinnahmten Entgelten/i.test(h))) tx.lieferantIst = true;
   const kontakt = sel.contacts().find((c) => String(c.name).trim().toLowerCase() === String(g.verkaeufer || '').trim().toLowerCase());
   if (kontakt) tx.contactId = kontakt.id;
   const saetze = [...new Set((daten?.steuersaetze || []).map((s) => s.satz))];

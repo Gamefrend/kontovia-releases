@@ -174,6 +174,7 @@ function flags(c) {
   if (c.private) out.push('<span class="badge">privat, kein Betriebsvorgang</span>');
   if (c.depreciation) out.push('<span class="badge info">Abschreibung</span>');
   if (c.vatNeutral) out.push('<span class="badge">Finanzamt-Verrechnung</span>');
+  if (c.regelmaessig) out.push('<span class="badge">regelmäßig</span>');
   if (c.deductibleRate && c.deductibleRate < 1) out.push(`<span class="badge warn">nur ${Math.round(c.deductibleRate * 100)} % abziehbar</span>`);
   if (c.intraEu) out.push('<span class="badge">innergemeinschaftlich</span>');
   if (c.reverseCharge) out.push('<span class="badge">Reverse Charge</span>');
@@ -444,6 +445,11 @@ function baseDialog({ title, body, onSave, wide = false, onOpen = null }) {
   return m;
 }
 
+/** Hat die Kategorie Buchungen im festgeschriebenen Zeitraum? Dann wirkt jede Änderung auch dort. */
+function inFestschreibung(catId) {
+  return !!lockedUntil() && sel.transactions().some((t) => t.categoryId === catId && (isLockedDate(t.date) || (!!t.paidDate && isLockedDate(t.paidDate))));
+}
+
 function categoryForm(c) {
   const isNew = !c;
   c = c || { id: uid('cat'), kind: 'expense', name: '', euerLine: null, skr03: '', skr04: '', vatRate: 19, active: true };
@@ -498,9 +504,14 @@ function categoryForm(c) {
         </div>
         <div class="field full">
           <label class="check"><input type="checkbox" id="f_private" ${c.private ? 'checked' : ''}> Privatvorgang (Entnahme oder Einlage, wirkt nicht auf den Gewinn)</label>
+          <label class="check mt8"><input type="checkbox" id="f_regelmaessig" ${c.regelmaessig ? 'checked' : ''}> Regelmäßig wiederkehrend (etwa Miete, Leasing, Versicherung)</label>
+          <span class="hint">Zahlungen bis zehn Tage vor oder nach dem Jahreswechsel zählen dann in der Anlage EÜR im Jahr, zu dem sie gehören (§ 11 EStG).</span>
           <label class="check mt8"><input type="checkbox" id="f_active" ${c.active !== false ? 'checked' : ''}> in der Auswahl anzeigen</label>
         </div>
-      </div>`,
+      </div>
+      ${!isNew && inFestschreibung(c.id) ? raw(`<div class="notice warn mt16">Diese Kategorie hat Buchungen im festgeschriebenen Zeitraum (bis ${esc(fmtDate(lockedUntil()))}).
+        Eine andere EÜR-Zeile, ein anderer Steuersatz oder „Privatvorgang“ verändern auch die Auswertungen dieser Zeiträume.
+        Legen Sie für Neues besser eine neue Kategorie an.</div>`) : ''}`,
     onSave: async (rootEl) => {
       const g = (k) => rootEl.querySelector('#f_' + k);
       const name = g('name').value.trim();
@@ -515,8 +526,19 @@ function categoryForm(c) {
         skr04: g('skr04').value.trim(),
         deductibleRate: Number(g('deductibleRate').value),
         private: g('private').checked,
+        regelmaessig: g('regelmaessig').checked,
         active: g('active').checked,
       };
+      // Was in festgeschriebenen Zeiträumen wirkt, ändert sich nur nach Rückfrage.
+      const wirkt = ['euerLine', 'private', 'deductibleRate', 'kind'].some((k) => JSON.stringify(c[k] ?? null) !== JSON.stringify(next[k] ?? null));
+      if (!isNew && wirkt && inFestschreibung(c.id)) {
+        const ja = await confirmDialog({
+          title: 'Festgeschriebene Zeiträume ändern sich mit',
+          text: 'Die Änderung gilt auch für Buchungen, die schon festgeschrieben und erklärt sind. Deren EÜR sähe danach anders aus. Trotzdem ändern?',
+          confirmLabel: 'Trotzdem ändern',
+        });
+        if (!ja) return false;
+      }
       await upsertEntity('categories', next, 'kategorie');
       ok('Kategorie gespeichert');
     },

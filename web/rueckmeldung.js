@@ -7,9 +7,10 @@
  * aber nur kleine Dateien mit festem Namen, und nichts lässt sich danach
  * ändern.
  *
- * Lesen, Auflisten und Löschen brauchen ebenfalls keine Anmeldung (Entscheidung
- * des Betreibers für den Testbetrieb): Wer das versteckte Entwicklermenü
- * kennt, darf dort alles sehen und alles tun. Gesendet wird nur, was die
+ * Lesen, Auflisten und Löschen darf seit 2.27 nur der Betreiber, angemeldet
+ * mit seinem Google-Konto: Das Entwicklermenü schickt die Anmeldung der Cloud
+ * mit (`kopf`, bridge.js), die Regeln prüfen sie. Bis 2.26 ging das ohne
+ * Anmeldung für jeden. Gesendet wird nur, was die
  * Person im Rückmeldefenster sieht und bestätigt:
  * Art, Text, Name der Seite, Programmversion, Fenstergröße und auf Wunsch ein
  * Bildschirmfoto. Nichts aus der Buchhaltung, keine Kennung, keine E-Mail.
@@ -83,12 +84,12 @@ export async function senden({ eintrag, fotoBytes = null }, cfg = null) {
   return { ok: true };
 }
 
-/* ---- Lesen: für alle, ohne Anmeldung ---- */
+/* ---- Lesen und Löschen: nur der Betreiber (kopf = Anmeldung der Cloud) ---- */
 
 /** Lädt die eingegangenen Rückmeldungen (neueste zuerst). */
-export async function laden(cfg = null) {
+export async function laden(cfg = null, kopf = {}) {
   const b = bucket(cfg);
-  const headers = {};
+  const headers = { ...kopf };
   const prefix = 'feedback/';
   const namen = [];
   let seite = '';
@@ -112,19 +113,19 @@ export async function laden(cfg = null) {
   return out.sort((a, c) => String(c.createdAt).localeCompare(String(a.createdAt)));
 }
 
-export async function foto(id, cfg = null) {
+export async function foto(id, cfg = null, kopf = {}) {
   if (!ID_RE.test(String(id))) throw new Error('Ungültige Kennung.');
   const res = await request(`${STORAGE}/${enc(bucket(cfg))}/o/${enc(`feedback/${id}.jpg`)}?alt=media`, {
-    headers: {}, timeoutMs: 60000, maxBytes: MAX_FOTO + 1024,
+    headers: { ...kopf }, timeoutMs: 60000, maxBytes: MAX_FOTO + 1024,
   });
   if (res.status !== 200) throw new Error(`Das Foto konnte nicht geladen werden (HTTP ${res.status}).`);
   return res.body;
 }
 
-export async function loeschen(id, cfg = null) {
+export async function loeschen(id, cfg = null, kopf = {}) {
   if (!ID_RE.test(String(id))) throw new Error('Ungültige Kennung.');
   const b = bucket(cfg);
-  const headers = {};
+  const headers = { ...kopf };
   for (const ende of ['jpg', 'json']) {
     try {
       await requestJson(`${STORAGE}/${enc(b)}/o/${enc(`feedback/${id}.${ende}`)}`, { method: 'DELETE', headers, timeoutMs: 20000 });

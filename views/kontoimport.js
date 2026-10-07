@@ -478,6 +478,7 @@ function zeileDialog(z, fertig) {
   const entwurf = () => {
     const k = kopie();
     k.trotzdem = g('zdTrotzdem') ? g('zdTrotzdem').checked : z.trotzdem;
+    k.restSkonto = g('zdSkonto') ? g('zdSkonto').checked : !!z.restSkonto;
     if (modus === 'zuordnen') {
       if (ein) {
         const r = rechnungen.find((x) => x.id === g('zdZiel').value);
@@ -502,7 +503,8 @@ function zeileDialog(z, fertig) {
     }
     const k = entwurf();
     const p = modus === 'zuordnen' ? (k.ziele.length || k.txId ? pruefen(k) : { ok: false, grund: 'Bitte wählen.' }) : { ok: true };
-    g('zdPruefung').innerHTML = modus === 'zuordnen' ? (p.ok ? (p.teilzahlung ? `<span class="muted">Das ist eine Teilzahlung: ${esc(money(u.betrag))} € werden verbucht, der Rest bleibt offen.</span>` : '<span class="pos">Passt.</span>') : `<span class="neg">${esc(p.grund)}</span>`) : '';
+    g('zdPruefung').innerHTML = modus === 'zuordnen' ? (p.ok ? (p.teilzahlung ? `<span class="muted">Das ist eine Teilzahlung: ${esc(money(u.betrag))} € werden verbucht, der Rest bleibt offen.</span>
+      <label class="check mt8"><input type="checkbox" id="zdSkonto" ${k.restSkonto ? 'checked' : ''}> Den Rest als Skonto ausbuchen (der Kunde durfte weniger zahlen)</label>` : '<span class="pos">Passt.</span>') : `<span class="neg">${esc(p.grund)}</span>`) : '';
   };
   $$('[data-modus]', m.root).forEach((b) => b.addEventListener('click', () => { modus = b.dataset.modus; zeigen(); aktualisieren(); }));
   g('zdZiel')?.addEventListener('change', () => { g('zdKosten').dataset.beruehrt = ''; aktualisieren(); });

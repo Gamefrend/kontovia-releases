@@ -38,7 +38,9 @@ export function wireCheckLinks(root, checks, periode) {
 /** Ein Steuertermin (lib/fristen.js) führt zu den Zahlen, die dafür gebraucht werden. */
 export function oeffneFrist(t) {
   if (!t) return;
-  if (t.zeitraum) navigate('reports', { tab: 'ust', period: t.zeitraum });
+  if (t.art === 'zm') navigate('export', { period: t.zeitraum });
+  else if (t.art === 'est' || t.art === 'gewst') navigate('reports', { tab: 'guv' });
+  else if (t.zeitraum) navigate('reports', { tab: 'ust', period: t.zeitraum });
   else if (t.jahr) navigate('export', { period: { from: `${t.jahr}-01-01`, to: `${t.jahr}-12-31` } });
   else navigate('reports', { tab: 'ust' });
 }

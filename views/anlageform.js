@@ -5,12 +5,25 @@
  * den Stammdaten. Bis Fassung 1.7 gab es zwei Masken mit verschiedenen
  * Vorschlägen – in einer stand der Kopierer mit acht statt sieben Jahren, in
  * beiden der Computer mit drei Jahren, obwohl seit 2021 ein Jahr genügt.
+ * Seit 2.27 mit Art (Zeile der EÜR) und, bei bestehenden Gütern, dem Abgang
+ * (Verkauf, Entnahme, Verschrottung; calc.js: restbuchwert).
  */
 
 import { html, raw, esc, moneyInput, parseMoney, todayISO, fmtDate, money, uid } from '../lib/util.js';
 import { confirmDialog, warn } from '../lib/ui.js';
 import { store, isLockedDate, lockedUntil } from '../lib/store.js';
-import { degressivMoeglich, degressivSatz, DEGRESSIV_VON, DEGRESSIV_BIS } from '../lib/calc.js';
+import { degressivMoeglich, degressivSatz, DEGRESSIV_FENSTER, isKleinunternehmer, restbuchwert } from '../lib/calc.js';
+
+/** Arten von Anlagegütern, je mit eigener Zeile der Anlage EÜR (calc.js: afaZeile). */
+const ARTEN = [
+  ['beweglich', 'Beweglich (Geräte, Möbel, Fahrzeuge)'],
+  ['immateriell', 'Immateriell (Software, Lizenzen, Rechte)'],
+  ['unbeweglich', 'Gebäude und Grundstücksteile'],
+];
+/** Wie ein Gut ausscheidet (seit 2.27). */
+const ABGANG = [['verkauf', 'Verkauft'], ['entnahme', 'Ins Privatvermögen übernommen'], ['verschrottung', 'Verschrottet oder verloren']];
+
+const fensterText = () => DEGRESSIV_FENSTER.map((f) => `${fmtDate(f.von)} bis ${fmtDate(f.bis)} (höchstens ${Math.round(f.satz * 100)} %)`).join(', ');
 
 /**
  * Übliche Nutzungsdauern nach der amtlichen AfA-Tabelle für allgemein
@@ -42,14 +55,15 @@ export function anlageGesperrt(a) {
 
 /** HTML der Felder. `bestehend`: ein schon gespeichertes Anlagegut. */
 export function anlageFelder(a, { bestehend = false } = {}) {
-  const klein = store.db.settings.taxMode === 'kleinunternehmer';
+  const klein = isKleinunternehmer(store.db, a.purchaseDate || todayISO());
   const gesperrt = bestehend && anlageGesperrt(a);
   const zu = gesperrt ? 'disabled' : '';
   const methode = a.method === 'sofort' || a.method === 'degressiv' ? a.method : 'linear';
+  const abgangFest = !!a.abgang?.datum && isLockedDate(a.abgang.datum);
   return html`
     ${gesperrt ? raw(`<div class="notice warn mb16">Die Anschaffung liegt im festgeschriebenen Zeitraum
       (bis ${esc(fmtDate(lockedUntil()))}). Kosten, Datum und Abschreibung bleiben deshalb so, wie sie
-      erklärt wurden; nur die Bezeichnung lässt sich noch ändern.</div>`) : ''}
+      erklärt wurden; nur die Bezeichnung und ein späterer Abgang lassen sich noch eintragen.</div>`) : ''}
     <div class="field"><label for="a_name">Bezeichnung *</label><input id="a_name" value="${a.name || ''}"></div>
     <div class="form-grid">
       <div class="field">
@@ -83,7 +97,23 @@ export function anlageFelder(a, { bestehend = false } = {}) {
         <input type="number" id="a_life" min="1" max="50" step="1" value="${methode === 'sofort' ? 1 : (a.usefulLifeYears || 1)}" ${zu}>
       </div>
     </div>
-    <p class="hint mt0" id="a_hint" aria-live="polite"></p>`;
+    <p class="hint mt0" id="a_hint" aria-live="polite"></p>
+    <div class="field">
+      <label for="a_art">Art des Wirtschaftsguts</label>
+      <select id="a_art" ${zu}>${raw(ARTEN.map(([v, t]) => `<option value="${v}" ${(a.art || 'beweglich') === v ? 'selected' : ''}>${esc(t)}</option>`).join(''))}</select>
+      <span class="hint">Bestimmt die Zeile der Anlage EÜR für die Abschreibung.</span>
+    </div>
+    ${bestehend ? raw(`<details class="mt8" ${a.abgang?.datum ? 'open' : ''}>
+      <summary class="small" style="cursor:pointer;padding:6px 0">Verkauft, entnommen oder verschrottet?</summary>
+      ${abgangFest ? `<div class="notice warn mt8">Der Abgang liegt im festgeschriebenen Zeitraum und bleibt so.</div>` : ''}
+      <div class="form-grid mt8">
+        <div class="field"><label for="a_abgangDatum">Ausgeschieden am</label><input type="date" id="a_abgangDatum" value="${esc(a.abgang?.datum || '')}" ${abgangFest ? 'disabled' : ''}></div>
+        <div class="field"><label for="a_abgangArt">Wie</label><select id="a_abgangArt" ${abgangFest ? 'disabled' : ''}>${ABGANG.map(([v, t]) => `<option value="${v}" ${a.abgang?.art === v ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>
+      </div>
+      <p class="hint mt0">Abgeschrieben wird bis einschließlich des Monats, in dem das Gut ausscheidet. Was übrig ist, steht als Restbuchwert in der Anlage EÜR.
+      Den Verkaufserlös oder bei einer Übernahme ins Privatvermögen den Wert buchen Sie als Einnahme in der Kategorie „Verkauf von Anlagevermögen“.
+      ${a.abgang?.datum && restbuchwert(a) ? `Restbuchwert: ${esc(money(restbuchwert(a).amount))} €.` : ''}</p>
+    </details>`) : ''}`;
 }
 
 /** Verdrahtet Vorschläge und Hinweistext. */
@@ -98,11 +128,11 @@ export function wireAnlageFelder(root) {
     if (methode === 'sofort') {
       text = 'Computerhardware und Software: ein Jahr Nutzungsdauer, der volle Betrag im Anschaffungsjahr (BMF-Schreiben vom 22.02.2022).';
     } else if (methode === 'degressiv') {
-      const satz = Math.round(degressivSatz(jahre) * 1000) / 10;
+      const satz2 = Math.round(degressivSatz(jahre, datum) * 1000) / 10;
       text = degressivMoeglich(datum)
-        ? `${String(satz).replace('.', ',')} % vom jeweiligen Restwert, im ersten Jahr anteilig nach Monaten; sobald die lineare Rate höher ist, wechselt Kontovia zu ihr (§ 7 Abs. 2 und 3 EStG).`
+        ? `${String(satz2).replace('.', ',')} % vom jeweiligen Restwert, im ersten Jahr anteilig nach Monaten; sobald die lineare Rate höher ist, wechselt Kontovia zu ihr (§ 7 Abs. 2 und 3 EStG).`
           + (jahre < 4 ? ' Bei unter vier Jahren Nutzungsdauer bringt degressiv nichts, es bleibt praktisch linear.' : '')
-        : `Degressiv nur für Anschaffungen vom ${fmtDate(DEGRESSIV_VON)} bis ${fmtDate(DEGRESSIV_BIS)} (bewegliche Wirtschaftsgüter).`;
+        : `Degressiv nur für bewegliche Wirtschaftsgüter, angeschafft ${fensterText()}.`;
     } else {
       text = `${String(Math.round(1000 / jahre) / 10).replace('.', ',')} % je Jahr, monatsgenau ab dem Anschaffungsmonat (§ 7 Abs. 1 EStG).`;
     }
@@ -133,23 +163,29 @@ export async function anlageAusFeldern(root, a, { bestehend = false } = {}) {
   const g = (id) => root.querySelector('#a_' + id);
   const name = g('name').value.trim();
   if (!name) { warn('Bitte eine Bezeichnung eintragen'); g('name').focus(); return null; }
-  // Festgeschrieben: nur der Name darf sich ändern.
-  if (bestehend && anlageGesperrt(a)) return { ...a, name };
+  const abgang = abgangAusFeldern(g, a);
+  if (abgang === false) return null;
+  // Festgeschrieben: nur der Name und ein späterer Abgang dürfen sich ändern.
+  if (bestehend && anlageGesperrt(a)) return mitAbgang({ ...a, name }, abgang);
 
   const cost = parseMoney(g('cost').value);
   const purchaseDate = g('date').value || todayISO();
   const method = g('method').value;
+  const art = g('art')?.value || 'beweglich';
   const usefulLifeYears = method === 'sofort' ? 1 : Math.max(1, Math.min(50, Math.round(Number(g('life').value) || 1)));
   if (cost <= 0) { warn('Bitte die Anschaffungskosten eintragen'); g('cost').focus(); return null; }
   if (isLockedDate(purchaseDate)) {
     warn('Zeitraum ist festgeschrieben', `Bis ${fmtDate(lockedUntil())} lässt sich kein Anlagegut mehr anschaffen. Bitte ein späteres Datum wählen.`);
     return null;
   }
-  if (method === 'degressiv' && !degressivMoeglich(purchaseDate)) {
-    warn('Degressiv hier nicht möglich', `Nur für Anschaffungen vom ${fmtDate(DEGRESSIV_VON)} bis ${fmtDate(DEGRESSIV_BIS)}.`);
+  if (method === 'degressiv' && (art !== 'beweglich' || !degressivMoeglich(purchaseDate))) {
+    warn('Degressiv hier nicht möglich', `Nur für bewegliche Wirtschaftsgüter, angeschafft ${fensterText()}.`);
     return null;
   }
-  if (cost <= 80000 && method !== 'sofort') {
+  if (abgang && abgang.datum < purchaseDate) { warn('Abgang vor der Anschaffung', 'Bitte das Datum des Abgangs prüfen.'); return null; }
+  // Die Grenze gilt netto, auch für Kleinunternehmer, die brutto erfassen (R 9b Abs. 2 EStR); dort mit 19 % herausgerechnet.
+  const netto = isKleinunternehmer(store.db, purchaseDate) ? Math.round(cost / 1.19) : cost;
+  if (netto <= 80000 && method !== 'sofort') {
     const trotzdem = await confirmDialog({
       title: 'Bis 800 € netto',
       text: `Das Wirtschaftsgut kostet ${money(cost)} €. Wirtschaftsgüter bis 800 € netto dürfen als geringwertiges Wirtschaftsgut sofort in voller Höhe abgezogen werden (§ 6 Abs. 2 EStG). Trotzdem über mehrere Jahre abschreiben?`,
@@ -157,5 +193,25 @@ export async function anlageAusFeldern(root, a, { bestehend = false } = {}) {
     });
     if (!trotzdem) return null;
   }
-  return { ...a, name, cost, purchaseDate, usefulLifeYears, method };
+  return mitAbgang({ ...a, name, cost, purchaseDate, usefulLifeYears, method, art }, abgang);
+}
+
+/** Der Abgang aus den Feldern: null = keiner, false = ungültig (Hinweis gezeigt). */
+function abgangAusFeldern(g, a) {
+  const feld = g('abgangDatum');
+  if (!feld) return a.abgang?.datum ? a.abgang : null;
+  if (feld.disabled) return a.abgang;
+  const datum = feld.value;
+  if (!datum) return null;
+  if (isLockedDate(datum)) {
+    warn('Zeitraum ist festgeschrieben', `Bis ${fmtDate(lockedUntil())} lässt sich kein Abgang mehr eintragen. Bitte ein späteres Datum wählen.`);
+    return false;
+  }
+  return { datum, art: g('abgangArt')?.value || 'verkauf' };
+}
+
+function mitAbgang(x, abgang) {
+  if (abgang) x.abgang = abgang;
+  else delete x.abgang;
+  return x;
 }

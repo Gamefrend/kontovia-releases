@@ -7,12 +7,12 @@ import {
 import { icon, ok, err, warn, modal, confirmDialog, amountCell, emptyState } from '../lib/ui.js';
 import {
   store, sel, upsertTransaction, deleteTransaction, voidTransaction, isLockedDate, lockedUntil,
-  newTransactionDraft, commit, nextInvoiceNumber, upsertEntity, removeAttachmentRecord,
+  newTransactionDraft, commit, nextInvoiceNumber, upsertEntity, removeAttachmentRecord, restAusbuchen,
 } from '../lib/store.js';
 import { defaultPeriod, periodControl } from '../lib/period.js';
 import { mountTable, tableState } from '../lib/table.js';
 import { router, refresh, navigate } from '../lib/router.js';
-import { vatTreatment, depositInfo, isVoidPart, formLine, formYear, afaMethod, AFA_METHODE } from '../lib/calc.js';
+import { vatTreatment, depositInfo, isVoidPart, formLine, formYear, afaMethod, AFA_METHODE, isKleinunternehmer } from '../lib/calc.js';
 import { neuesAnlagegut, anlageFelder, wireAnlageFelder, anlageAusFeldern } from './anlageform.js';
 import { eRechnungLesen, eRechnungAusDatei, xmlAusPdf, richtung } from '../lib/erechnung.js';
 import { eRechnungHtml, zeigeERechnung } from './erechnung.js';
@@ -45,9 +45,13 @@ const VAT_TREATMENTS = {
   'nicht-steuerbar': 'Nicht steuerbar (kein Entgelt, etwa Mahngebühren)',
   'ig-lieferung': 'Innergemeinschaftliche Lieferung',
   ausfuhr: 'Ausfuhr außerhalb der EU (steuerfrei mit Vorsteuerabzug)',
-  'reverse-charge-out': 'Reverse Charge (Leistung ins Ausland)',
+  'reverse-charge-out': 'Leistung an Unternehmen in der EU (Steuerschuld beim Kunden)',
+  'ausland-nicht-steuerbar': 'Leistung an Unternehmen außerhalb der EU (nicht steuerbar)',
+  'rc-inland-out': 'Steuerschuld beim Kunden im Inland (§ 13b, etwa Bauleistungen)',
   'ig-erwerb': 'Innergemeinschaftlicher Erwerb',
-  'reverse-charge-in': 'Reverse Charge (§ 13b, Leistungsempfänger)',
+  'reverse-charge-in': 'Leistung aus dem EU-Ausland (§ 13b, Sie schulden die Steuer)',
+  'rc-in-sonstige': 'Andere Leistung nach § 13b (aus dem Nicht-EU-Ausland oder Inland)',
+  'ohne-kategorie': 'Noch offen (ohne Kategorie)',
 };
 
 /* -------------------------------------------------------------------------- */
@@ -452,13 +456,47 @@ function kontaktOptionen(type, gewaehlt) {
  *   etwa um die Buchung mit dem Termin zu verknüpfen, aus dem sie angelegt wurde; wiederholen
  *   wählt einen Turnus vor (lib/wiederkehrend.js); dateien hängt Belege gleich beim Öffnen an
  */
+/**
+ * Den offenen Rest einer Einnahme ausbuchen (store.js: restAusbuchen): Skonto
+ * oder Forderungsausfall, ab einem Tag. Liefert {grund, datum} oder null.
+ */
+export function ausbuchenFragen(tx) {
+  return new Promise((resolve) => {
+    let fertig = false;
+    const m = modal({
+      title: 'Offenen Betrag ausbuchen',
+      size: 'slim',
+      body: html`
+        <p class="mt0">${tx.description || 'Einnahme'}: ${money(tx.gross)} € sind offen.</p>
+        <label class="check"><input type="radio" name="grund" value="skonto" checked> Skonto oder Nachlass: Der Kunde durfte weniger zahlen</label>
+        <label class="check"><input type="radio" name="grund" value="uneinbringlich"> Forderungsausfall: Das Geld ist nicht mehr zu bekommen</label>
+        <div class="field mt8"><label for="ausbDatum">Am</label><input type="date" id="ausbDatum" value="${todayISO()}" min="${tx.date}"></div>
+        <p class="hint mb0">Umsatzsteuer und Einnahme werden im Zeitraum dieses Tages berichtigt (§ 17 UStG). Die Rechnung gilt danach als erledigt.
+        Zahlt der Kunde doch noch, erfassen Sie die Zahlung als neue Einnahme.</p>`,
+      foot: '<button class="btn" data-nein>Abbrechen</button><button class="btn primary" data-ja>Ausbuchen</button>',
+      onClose: () => { if (!fertig) resolve(null); },
+    });
+    m.root.querySelector('[data-nein]').addEventListener('click', () => { fertig = true; m.close(); resolve(null); });
+    m.root.querySelector('[data-ja]').addEventListener('click', () => {
+      // Erst lesen, dann schließen: Beim Schließen räumt das Fenster seinen Inhalt ab.
+      const datum = m.root.querySelector('#ausbDatum').value;
+      const grund = m.root.querySelector('input[name="grund"]:checked')?.value || 'skonto';
+      if (!datum) { warn('Bitte ein Datum wählen'); return; }
+      fertig = true;
+      m.close();
+      resolve({ grund, datum });
+    });
+  });
+}
+
 export function openTransactionDialog(id, type = 'expense', { onSaved = null, wiederholen: turnusVorgabe = '', dateien = null } = {}) {
   const draft = id && typeof id === 'object' ? id : null;
   const existing = draft ? null : (id ? sel.transaction(id) : null);
   const tx = existing ? structuredClone(existing) : (draft || newTransactionDraft(type));
   const isNew = !existing;
   type = tx.type;
-  const klein = store.db.settings.taxMode === 'kleinunternehmer';
+  // Kleinunternehmer oder nicht nach dem Stand am Tag der Buchung (Verlauf in den Einstellungen).
+  const klein = isKleinunternehmer(store.db, tx.date || todayISO());
   // Festgeschrieben ist eine Buchung, deren Datum oder Zahlung im
   // festgeschriebenen Zeitraum liegt – auch eine Vorauszahlung auf eine
   // spätere Rechnung gehört zum Zeitraum, in dem sie floss.
@@ -489,6 +527,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       <div class="left row" style="gap:8px">
         ${!isNew && !stornoTeil ? `<button class="btn danger sm" id="btnDelete">${icon('trash', 14).__raw} Löschen</button>` : ''}
         ${!isNew && !stornoTeil ? `<button class="btn sm" id="btnVoid">Stornieren</button>` : ''}
+        ${!isNew && !stornoTeil && tx.type === 'income' && !tx.paidDate ? '<button class="btn sm" id="btnAusbuchen">Ausbuchen …</button>' : ''}
         ${!isNew ? `<button class="btn sm" id="btnDuplicate">${icon('copy', 14).__raw} Duplizieren</button>` : ''}
       </div>
       <button class="btn" id="btnCancel">Abbrechen</button>
@@ -703,7 +742,11 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
               ${Object.entries(VAT_TREATMENTS).map(([k, v]) => `<option value="${k}" ${treat === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}
             </select>
             <span class="hint">Bestimmt, in welche Kennzahl der Umsatzsteuer-Voranmeldung der Betrag fließt.</span>
-          </div>`)}
+          </div>
+          ${tx.type === 'expense' ? `<div class="field full">
+            <label class="check"><input type="checkbox" id="i_lieferantIst" ${tx.lieferantIst ? 'checked' : ''}> Auf der Rechnung steht „Versteuerung nach vereinnahmten Entgelten“</label>
+            <span class="hint">Ab 2028 zählt die Vorsteuer aus solchen Rechnungen erst, wenn Sie bezahlt haben.</span>
+          </div>` : ''}`)}
           <div class="field full">
             <label>Notiz</label>
             <textarea id="i_notes" placeholder="Interne Bemerkung, betrieblicher Anlass bei Bewirtung, …">${tx.notes || ''}</textarea>
@@ -912,8 +955,15 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     }
     if (!klein) {
       tx.vatRate = Number(g('vatRate').value);
+      // Festgehalten wird nur eine bewusste Wahl. Bis 2.26 stand hier immer der
+      // abgeleitete Wert, auch „steuerfrei“ ohne Kategorie (Kennzahl 48).
       const tv = g('vatTreatment')?.value;
-      if (tv) tx.vatTreatment = tv;
+      const ohne = { ...tx };
+      delete ohne.vatTreatment;
+      if (tv && tv !== 'ohne-kategorie' && tv !== vatTreatment(store.db, ohne)) tx.vatTreatment = tv;
+      else delete tx.vatTreatment;
+      if (tx.type === 'expense' && g('lieferantIst')?.checked) tx.lieferantIst = true;
+      else delete tx.lieferantIst;
     } else {
       tx.vatRate = 0;
     }
@@ -1277,6 +1327,17 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     await voidTransaction(tx.id, reason);
     m.close();
     ok('Buchung storniert', 'Original und Gegenbuchung bleiben nachvollziehbar erhalten.');
+    refresh();
+  });
+  m.root.querySelector('#btnAusbuchen')?.addEventListener('click', async () => {
+    const wahl = await ausbuchenFragen(tx);
+    if (!wahl) return;
+    try {
+      await restAusbuchen(tx.id, wahl);
+    } catch (e) { err('Nicht ausgebucht', e.message); return; }
+    saved = true;
+    m.close();
+    ok(wahl.grund === 'skonto' ? 'Skonto ausgebucht' : 'Forderungsausfall ausgebucht', 'Die Umsatzsteuer wird im Zeitraum des Ausbuchens berichtigt.');
     refresh();
   });
   m.root.querySelector('#btnDuplicate')?.addEventListener('click', () => {

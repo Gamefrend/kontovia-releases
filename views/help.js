@@ -107,6 +107,13 @@ function anleitung(root) {
         <p><strong>Regelbesteuerung oder Kleinunternehmer.</strong> Als Kleinunternehmer nach § 19 UStG
         rechnen Sie durchgehend brutto, weisen keine Umsatzsteuer aus und ziehen keine Vorsteuer.
         Bei Ihnen ist eingestellt: <strong>${s.taxMode === 'kleinunternehmer' ? 'Kleinunternehmer § 19 UStG' : 'Regelbesteuerung'}</strong>.</p>
+        <p><strong>Wechsel.</strong> Ändern Sie eine der beiden Einstellungen, fragt Kontovia, ab wann der Wechsel gilt. Frühere
+        Zeiträume bleiben, wie sie waren: Wer etwa ab Januar nicht mehr Kleinunternehmer ist, sieht das alte Jahr weiter als
+        Kleinunternehmer. Die Vorsteuer zählt übrigens immer mit dem Datum der Rechnung, auch bei Ist-Versteuerung.</p>
+        <p><strong>Zahlungen um den Jahreswechsel.</strong> Regelmäßige Zahlungen wie Miete, Leasing oder die Umsatzsteuer-Vorauszahlung,
+        die bis zehn Tage vor oder nach dem Jahreswechsel fällig sind und gezahlt werden, zählen in der Anlage EÜR im Jahr, zu dem sie
+        gehören (§ 11 EStG). Kontovia erkennt sie an der wiederkehrenden Buchung, an der Kategorie „An Finanzamt gezahlte Umsatzsteuer“
+        und an Kategorien, die Sie unter Stammdaten als „regelmäßig wiederkehrend“ kennzeichnen.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -124,15 +131,19 @@ function anleitung(root) {
         wird über die Nutzungsdauer verteilt. Beim Erfassen der Ausgabe wählen Sie
         „Als Anlagegut abschreiben“. Kontovia rechnet die Abschreibung monatsgenau aus, führt das
         Anlagenverzeichnis und trägt den Betrag in Zeile ${formLine(EUER.afaBeweglich, new Date().getFullYear())}
-        der Anlage EÜR ein.</p>
+        der Anlage EÜR ein (Software und Lizenzen in Zeile ${formLine(EUER.afaImmateriell, new Date().getFullYear())}).</p>
         <ul>
           <li><strong>Computer, Notebooks, Tablets, Drucker und Software</strong> dürfen mit einem Jahr
               Nutzungsdauer voll im Jahr der Anschaffung abgezogen werden (BMF-Schreiben vom
               22.02.2022). Wählen Sie dafür die Abschreibung „1 Jahr“.</li>
           <li><strong>Degressiv</strong> geht für bewegliche Wirtschaftsgüter, die vom 01.07.2025 bis
               31.12.2027 angeschafft werden: höchstens das Dreifache der linearen Rate und höchstens 30 %
-              vom Restwert (§ 7 Abs. 2 EStG). Das bringt in den ersten Jahren mehr Abzug; Kontovia wechselt
+              vom Restwert (§ 7 Abs. 2 EStG). Für frühere Anschaffungen kennt Kontovia auch die älteren
+              Fenster (2020 bis 2022 und April bis Dezember 2024). Kontovia wechselt
               von selbst zur linearen Rate, sobald sie höher ist.</li>
+          <li><strong>Verkauf, Entnahme, Verschrottung.</strong> Scheidet ein Gut aus, tragen Sie das unter Stammdaten beim Anlagegut ein.
+              Abgeschrieben wird bis zu diesem Monat, der Rest steht als Restbuchwert in der Anlage EÜR. Den Erlös buchen Sie als Einnahme
+              in „Verkauf von Anlagevermögen“.</li>
           <li>Bis 800 € netto ist ein Wirtschaftsgut geringwertig und sofort voll abziehbar. Dafür
               genügt eine gewöhnliche Ausgabe.</li>
         </ul>
@@ -169,6 +180,13 @@ function anleitung(root) {
         Telefon übergibt „Teilen“ Anhang und Text an Ihre Mail-App. Den Standardtext ändern Sie direkt im Fenster.
         Kontovia vermerkt den Versand bei der Rechnung; bei den Wegen über Ihr Programm fragt es vorher, ob die E-Mail
         abgeschickt ist.</p>
+        <p><strong>Kunden im Ausland.</strong> Für Leistungen an Unternehmen in einem anderen EU-Land wählen Sie „Leistung an
+        Unternehmen in der EU“ (der Kunde schuldet die Steuer, die Rechnung gehört in die Zusammenfassende Meldung). Für Kunden
+        außerhalb der EU, etwa in der Schweiz, in Großbritannien oder den USA, wählen Sie „Leistung an Unternehmen außerhalb der
+        EU“. Bauleistungen und ähnliche Fälle an deutsche Unternehmen laufen über „Steuerschuld beim Kunden im Inland“.</p>
+        <p><strong>Skonto und Ausfall.</strong> Zahlt ein Kunde mit Skonto oder gar nicht mehr, öffnen Sie die offene Buchung und
+        wählen „Ausbuchen“. Kontovia berichtigt Einnahme und Umsatzsteuer im Zeitraum des Ausbuchens. Beim Kontoauszug geht das
+        bei einer Teilzahlung gleich mit.</p>
         <p class="small">Der automatische Empfang von E-Rechnungen kommt mit einer der nächsten Versionen. Bis dahin
         lesen Sie eine erhaltene E-Rechnung unter Rechnungen → Eingang ein.</p>
       </div></div>
@@ -215,14 +233,19 @@ function anleitung(root) {
         <a data-go="settings">Einstellungen → Mahnwesen</a> ein. Beim Erstellen können Sie die Gebühr für das einzelne Schreiben
         ändern oder auf 0 setzen. Eine Gebühr von 0 € steht nicht auf dem Schreiben.</p>
         <p><strong>Verzugsaufschlag.</strong> Er ist ausgeschaltet, bis Sie ihn einschalten. Möglich sind Prozent pro Jahr auf den
-        offenen Betrag (tageweise ab Fälligkeit), eine feste Pauschale (Vorgabe 40 €, höchstens einmal je Rechnung) oder
+        offenen Betrag (tageweise ab Beginn des Verzugs), eine feste Pauschale (Vorgabe 40 €, höchstens einmal je Rechnung) oder
         beides. Bei Geschäftskunden gilt gesetzlich üblich der Basiszinssatz plus 9 Prozentpunkte. Der Basiszinssatz ändert
-        sich halbjährlich, deshalb tragen Sie den Satz selbst ein.</p>
+        sich halbjährlich, deshalb tragen Sie den Satz selbst ein. Mahngebühren werden auf die Pauschale angerechnet.</p>
+        <p><strong>Wann der Verzug beginnt.</strong> Ein Zahlungsziel, das nur auf der Rechnung steht, bringt den Kunden noch nicht in
+        Verzug. Das tut die erste Zahlungserinnerung, bei Geschäftskunden spätestens 30 Tage nach Fälligkeit, bei Privatkunden nur,
+        wenn die Rechnung darauf hinweist. Kontovia druckt diesen Hinweis auf Rechnungen an Privatkunden. Ist der Zahlungstermin mit
+        dem Kunden fest vereinbart, stellen Sie in den Einstellungen „ab Fälligkeit“ ein. Die Kosten der ersten Erinnerung lassen sich
+        meist nicht verlangen; Kontovia weist darauf hin.</p>
         <p><strong>Unternehmen oder Privatperson.</strong> Im Fenster wählen Sie, ob der Kunde ein Unternehmen oder eine Privatperson
         ist. Bei Privatkunden gilt der Basiszinssatz plus 5 Prozentpunkte, die Pauschale von 40 € gibt es nicht (§ 288 Abs. 5 BGB),
         und eine Mahngebühr darf nur den tatsächlichen Aufwand abdecken. Kontovia berechnet die Pauschale deshalb bei Privatkunden
         nie und warnt vor auffällig hohen Sätzen und Gebühren. Ohne USt-IdNr. oder Leitweg-ID geht Kontovia vorsichtshalber von einer
-        Privatperson aus. Verzug setzt voraus, dass die Zahlungsfrist abgelaufen ist (§ 286 BGB). Welche Beträge Sie verlangen,
+        Privatperson aus. Verzug setzt voraus, dass die Zahlungsfrist abgelaufen ist und gemahnt wurde oder 30 Tage vergangen sind (§ 286 BGB). Welche Beträge Sie verlangen,
         verantworten Sie selbst; Kontovia ersetzt keine Rechtsberatung.</p>
         <p><strong>Buchhaltung.</strong> Gebühr und Verzugsaufschlag sind kein Entgelt für eine Leistung. Sie ändern weder die
         Rechnung noch deren Umsatzsteuer, und eine festgeschriebene Rechnung bleibt, wie sie ist. Beim Erstellen der Mahnung
@@ -540,11 +563,11 @@ function cloud(root) {
         <h2 class="mt0">Rückmeldung geben</h2>
         <p class="mb0">Mit <strong>Feedback</strong> unten in der Seitenleiste schreiben Sie uns frei, was Ihnen
         auffällt. Auf Wunsch geht ein Bild der Seite mit, auf der Sie waren, ohne das Rückmeldefenster. Mit
-        <strong>Senden</strong> geht Ihre Nachricht an das Kontovia-Team und <strong>kann von anderen gelesen werden</strong>;
-        eine Kopie bleibt verschlüsselt auf Ihrem Gerät. Dabei werden nur Art, Text, Name der Seite,
+        <strong>Senden</strong> geht Ihre Nachricht unverschlüsselt an das Kontovia-Team; <strong>andere Nutzer sehen sie nicht</strong>.
+        Eine Kopie bleibt verschlüsselt auf Ihrem Gerät. Dabei werden nur Art, Text, Name der Seite,
         Programmversion und Fenstergröße übertragen, nichts aus Ihrer Buchhaltung, kein Name und keine
-        E-Mail-Adresse. Das Bild geht nur mit, wenn Sie es ankreuzen. Schreiben Sie bitte nichts hinein,
-        das nicht öffentlich sein soll.</p>
+        E-Mail-Adresse. Das Bild geht nur mit, wenn Sie es ankreuzen. Schreiben Sie bitte keine Passwörter,
+        Kontonummern oder Namen Ihrer Kunden hinein.</p>
       </div></div>
       <div class="card"><div class="card-body">
         <h2 class="mt0">Cloud-Abgleich einschalten</h2>

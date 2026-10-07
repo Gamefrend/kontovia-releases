@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 7. Oktober 2026, Programmversion 2.26.0
+Stand: 7. Oktober 2026, Programmversion 2.27.0
 
 ---
 
@@ -248,12 +248,13 @@ auf Wunsch das Foto. Nicht übertragen werden Ihre Buchhaltung, Ihr Name, Ihre
 E-Mail-Adresse oder eine Kennung Ihres Kontos; dafür ist kein Konto nötig.
 Anders als Ihre Buchhaltung ist diese Übertragung nicht mit Ihrem Passwort
 verschlüsselt (sie läuft über eine verschlüsselte Verbindung, liegt aber
-unverschlüsselt im Speicher). **Jede gesendete Rückmeldung, auch ein
-mitgesendetes Foto, kann von anderen gelesen werden**, technisch von jedem, der
-die Adresse des Speichers kennt. Schreiben Sie daher
+unverschlüsselt im Speicher). Lesen und löschen können die Rückmeldungen nur
+wir, angemeldet mit unserem Konto; andere Nutzer sehen sie nicht. Bis Version
+2.26 waren gesendete Rückmeldungen technisch für jeden lesbar, der die Adresse
+des Speichers kannte. Schreiben Sie
 bitte keine Passwörter, Kontonummern, Steuerdaten oder Namen von Kunden hinein
-und kreuzen Sie das Foto nur an, wenn die Seite nichts zeigt, das nicht
-öffentlich sein soll. Wir löschen Rückmeldungen auf Anfrage und wenn sie erledigt sind. Wir
+und kreuzen Sie das Foto nur an, wenn die Seite keine Daten anderer Personen
+zeigt. Wir löschen Rückmeldungen auf Anfrage und wenn sie erledigt sind. Wir
 verwenden sie, um Kontovia zu verbessern.
 
 Eine Kopie bleibt verschlüsselt in Ihrer Buchhaltung auf Ihrem Gerät, das Foto

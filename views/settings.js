@@ -2,7 +2,9 @@
 
 import {
   html, raw, esc, $, $$, fmtDate, fmtDateTime, todayISO, int, bytes, uid, ustIdHinweis, steuernummerHinweis,
+  addDays, moneyInput, parseMoney,
 } from '../lib/util.js';
+import { STEUER_FELDER } from '../lib/calc.js';
 import { icon, modal, confirmDialog, askPassword, ok, err, warn, toast, feldHinweis } from '../lib/ui.js';
 import { store, sel, commit, saveNow, setDb, verifyAudit, lockedUntil } from '../lib/store.js';
 import { refresh, navigate, router } from '../lib/router.js';
@@ -27,7 +29,7 @@ const api = window.kontovia;
 const FELDER = [
   'companyName', 'ownerName', 'street', 'zip', 'city', 'taxNumber', 'vatId', 'taxOffice', 'email', 'phone',
   'taxMode', 'accountingBasis', 'defaultVatRate', 'vatPeriod', 'vatDeadline', 'chartOfAccounts', 'fiscalYear',
-  'autoLockMinutes', 'startView',
+  'taetigSeit', 'svz', 'terminZm', 'autoLockMinutes', 'startView',
 ];
 
 /**
@@ -153,8 +155,9 @@ async function draw(root) {
               <option value="regelbesteuerung" ${s.taxMode === 'regelbesteuerung' ? 'selected' : ''}>Regelbesteuerung</option>
               <option value="kleinunternehmer" ${s.taxMode === 'kleinunternehmer' ? 'selected' : ''}>Kleinunternehmer (§ 19 UStG)</option>
             </select>
-            <span class="hint">Ein Wechsel ändert nur die Darstellung und die Auswertungen. Bereits erfasste Steuerbeträge bleiben in den Buchungen gespeichert.</span>
+            <span class="hint">Bei einem Wechsel fragt Kontovia, ab wann er gilt. Frühere Zeiträume bleiben, wie sie waren.</span>
           </div>
+          ${raw(verlaufText(s))}
           <div class="field">
             <label>Umsatzsteuer berechnen nach</label>
             <select id="s_accountingBasis">
@@ -201,7 +204,31 @@ async function draw(root) {
               <input id="s_fiscalYear" type="number" min="2000" max="2100" value="${s.fiscalYear || new Date().getFullYear()}">
               <span class="hint">Nur zur Orientierung. Die Auswertungen richten sich nach dem jeweils gewählten Zeitraum.</span>
             </div>
+            <div class="field">
+              <label for="s_taetigSeit">Beginn der Tätigkeit</label>
+              <input id="s_taetigSeit" type="date" value="${s.taetigSeit || ''}">
+              <span class="hint">Für Kleinunternehmer: Im ersten Jahr gilt die Grenze von 25.000 € schon im laufenden Jahr.</span>
+            </div>
+            <div class="field" id="svzFeld" ${s.vatPeriod === 'monatlich' && s.vatDeadline === 'dauerfrist' ? '' : 'hidden'}>
+              <label for="s_svz">Sondervorauszahlung ${svzJahr()}</label>
+              <input id="s_svz" class="money-input" inputmode="decimal" value="${moneyInput(s.sondervorauszahlungen?.[svzJahr()] || 0)}">
+              <span class="hint">Wird in der Voranmeldung für Dezember abgezogen (Kennzahl 39). Ein Elftel der Vorauszahlungen des Vorjahres, wie vom Finanzamt festgesetzt.</span>
+            </div>
           </div>
+          <fieldset class="mt8">
+            <legend class="small strong">Weitere Steuertermine in Übersicht und Kalender</legend>
+            <label class="check"><input type="checkbox" id="s_terminEst" ${s.terminEst ? 'checked' : ''}> Einkommensteuer-Vorauszahlungen (10. März, Juni, September, Dezember)</label>
+            <label class="check"><input type="checkbox" id="s_terminGewSt" ${s.terminGewSt ? 'checked' : ''}> Gewerbesteuer-Vorauszahlungen (15. Februar, Mai, August, November)</label>
+            <div class="field mt8">
+              <label for="s_terminZm">Zusammenfassende Meldung</label>
+              <select id="s_terminZm">
+                <option value="" ${!s.terminZm ? 'selected' : ''}>keine</option>
+                <option value="vierteljährlich" ${s.terminZm === 'vierteljährlich' ? 'selected' : ''}>vierteljährlich</option>
+                <option value="monatlich" ${s.terminZm === 'monatlich' ? 'selected' : ''}>monatlich</option>
+              </select>
+              <span class="hint">Für Lieferungen und Leistungen an Unternehmen in anderen EU-Ländern, fällig am 25. nach dem Zeitraum.</span>
+            </div>
+          </fieldset>
         </div>
       </div>
 
@@ -540,9 +567,92 @@ async function bildschirmKasten(el) {
   });
 }
 
+/** Für welches Jahr die Sondervorauszahlung gerade gebraucht wird: bis Ende Februar noch das Vorjahr (Dezember-Voranmeldung). */
+function svzJahr(heute = todayISO()) {
+  const y = Number(heute.slice(0, 4));
+  return heute.slice(5) < '03-01' ? y - 1 : y;
+}
+
+const STEUER_NAMEN = {
+  taxMode: { regelbesteuerung: 'Regelbesteuerung', kleinunternehmer: 'Kleinunternehmer' },
+  accountingBasis: { ist: 'nach Zahlungseingang', soll: 'nach Rechnungsdatum' },
+};
+const standText = (e) => [STEUER_NAMEN.taxMode[e.taxMode] || '', e.taxMode !== 'kleinunternehmer' ? STEUER_NAMEN.accountingBasis[e.accountingBasis] || '' : '',
+  e.taxMode !== 'kleinunternehmer' && e.vatPeriod ? `Voranmeldung ${e.vatPeriod}` : ''].filter(Boolean).join(', ');
+
+/** Bisherige Stände der steuerlichen Einstellungen (calc.js: steuerStand), neueste zuerst. */
+function verlaufText(s) {
+  const v = (s.steuerVerlauf || []).filter(Boolean);
+  if (v.length < 2) return '';
+  const zeilen = [...v].sort((a, b) => String(b.ab || '').localeCompare(String(a.ab || '')))
+    .map((e) => `<li>${e.ab ? `ab ${esc(fmtDate(e.ab))}` : 'davor'}: ${esc(standText(e))}</li>`).join('');
+  return `<div class="notice mb16"><strong>Bisherige Stände</strong><ul class="small mb0">${zeilen}</ul></div>`;
+}
+
+/**
+ * Ab wann gilt eine Änderung an Steuerart, Versteuerung oder Voranmeldung?
+ * Liefert das Datum ('' = für alle Zeiträume, weil die Angabe falsch war) oder null bei Abbruch.
+ */
+function abWannFragen(bisher, neu) {
+  const gesperrt = lockedUntil();
+  const vorschlag = `${todayISO().slice(0, 4)}-01-01`;
+  const min = gesperrt ? addDays(gesperrt, 1) : '';
+  return new Promise((resolve) => {
+    let fertig = false;
+    const m = modal({
+      title: 'Ab wann gilt die Änderung?',
+      size: 'slim',
+      body: html`
+        <p class="mt0">Bisher: ${standText(bisher)}.<br>Neu: ${standText(neu)}.</p>
+        <label class="check"><input type="radio" name="abwann" value="ab" checked> Ab einem Tag, frühere Zeiträume bleiben</label>
+        <div class="field mt8"><label for="abDatum">Gilt ab</label><input type="date" id="abDatum" value="${min && min > vorschlag ? min : vorschlag}" ${min ? raw(`min="${min}"`) : ''}>
+          <span class="hint">Wer die Kleinunternehmerregelung nach einem Jahr über 25.000 € verlässt, stellt zum 1. Januar um. Wird im laufenden Jahr die Grenze von 100.000 € überschritten, gilt der Tag des Umsatzes.</span></div>
+        <label class="check"><input type="radio" name="abwann" value="immer" ${gesperrt ? 'disabled' : ''}> Für alle Zeiträume (die bisherige Angabe war falsch)</label>
+        ${gesperrt ? raw(`<p class="hint mb0">Bis ${esc(fmtDate(gesperrt))} ist festgeschrieben; davor lässt sich nichts mehr ändern.</p>`) : ''}`,
+      foot: '<button class="btn" data-nein>Abbrechen</button><button class="btn primary" data-ja>Übernehmen</button>',
+      onClose: () => { if (!fertig) resolve(null); },
+    });
+    m.root.querySelector('[data-nein]').addEventListener('click', () => { fertig = true; m.close(); resolve(null); });
+    m.root.querySelector('[data-ja]').addEventListener('click', () => {
+      const immer = m.root.querySelector('input[name="abwann"]:checked')?.value === 'immer';
+      const ab = m.root.querySelector('#abDatum').value;
+      if (!immer && !ab) { warn('Bitte ein Datum wählen'); return; }
+      if (!immer && gesperrt && ab <= gesperrt) { warn('Zeitraum ist festgeschrieben', `Bis ${fmtDate(gesperrt)} lässt sich nichts mehr ändern. Bitte ein späteres Datum wählen.`); return; }
+      fertig = true;
+      m.close();
+      resolve(immer ? '' : ab);
+    });
+  });
+}
+
+/** Trägt einen neuen Stand ab `ab` in den Verlauf ein ('' = gilt immer, der Verlauf entfällt). */
+function verlaufSetzen(settings, bisher, neu, ab) {
+  if (!ab) { delete settings.steuerVerlauf; return; }
+  const v = (settings.steuerVerlauf || []).filter(Boolean);
+  if (!v.length) v.push({ ab: '', ...bisher });
+  const davor = v.filter((e) => String(e.ab || '') < ab);
+  if (!davor.length) davor.push({ ab: '', ...bisher });
+  settings.steuerVerlauf = [...davor, { ab, ...neu }];
+}
+
 async function apply(root, { neuZeichnen = true } = {}) {
   const val = (id) => $('#s_' + id, root)?.value ?? '';
+  const s = store.db.settings;
+  // Leere Werte wie die Vorgaben behandeln, sonst gälte etwa eine nie gewählte Abgabefrist als Änderung.
+  const norm = (k, v) => ({
+    taxMode: v || 'regelbesteuerung', accountingBasis: v === 'soll' ? 'soll' : 'ist',
+    vatPeriod: v || 'vierteljährlich', vatDeadline: v === 'dauerfrist' ? 'dauerfrist' : 'normal',
+  })[k];
+  const bisher = Object.fromEntries(STEUER_FELDER.map((k) => [k, norm(k, s[k])]));
+  const neu = Object.fromEntries(STEUER_FELDER.map((k) => [k, norm(k, val(k))]));
+  let ab = null;
+  if (STEUER_FELDER.some((k) => String(bisher[k] || '') !== String(neu[k] || ''))) {
+    ab = await abWannFragen(bisher, neu);
+    if (ab === null) return;
+  }
+  const svz = parseMoney(val('svz'));
   await commit('einstellungen.aendern', (db) => {
+    if (ab !== null) verlaufSetzen(db.settings, bisher, neu, ab);
     Object.assign(db.settings, {
       companyName: val('companyName'), ownerName: val('ownerName'), street: val('street'),
       zip: val('zip'), city: val('city'), taxNumber: val('taxNumber'), vatId: val('vatId'),
@@ -550,12 +660,15 @@ async function apply(root, { neuZeichnen = true } = {}) {
       taxMode: val('taxMode'), accountingBasis: val('accountingBasis'),
       defaultVatRate: Number(val('defaultVatRate')), vatPeriod: val('vatPeriod'), vatDeadline: val('vatDeadline'),
       chartOfAccounts: val('chartOfAccounts'), fiscalYear: Number(val('fiscalYear')),
+      taetigSeit: val('taetigSeit'),
+      sondervorauszahlungen: { ...(db.settings.sondervorauszahlungen || {}), [svzJahr()]: Math.max(0, svz) },
+      terminEst: !!$('#s_terminEst', root)?.checked, terminGewSt: !!$('#s_terminGewSt', root)?.checked, terminZm: val('terminZm'),
       autoLockMinutes: Number(val('autoLockMinutes')),
       theme: val('theme'), startView: val('startView'),
       // Zeitstempel entscheidet beim Cloud-Abgleich, welche Fassung gilt.
       updatedAt: new Date().toISOString(),
     });
-  }, { entity: 'einstellungen', summary: 'Einstellungen geändert' });
+  }, { entity: 'einstellungen', summary: ab !== null ? `Einstellungen geändert, Steuer ${ab ? `ab ${ab}` : 'für alle Zeiträume'}` : 'Einstellungen geändert' });
   await api.app.setAutoLock(store.db.settings.autoLockMinutes);
   applyTheme();
   await saveNow();
@@ -661,6 +774,21 @@ function wire(root) {
   $('#btnInBrowser', root)?.addEventListener('click', () => zurueckInDenBrowser());
   feldHinweis($('#s_taxNumber', root), steuernummerHinweis);
   feldHinweis($('#s_vatId', root), ustIdHinweis);
+
+  // Sondervorauszahlung nur bei monatlicher Voranmeldung mit Dauerfristverlängerung.
+  const svzZeigen = () => { $('#svzFeld', root).hidden = !($('#s_vatPeriod', root).value === 'monatlich' && $('#s_vatDeadline', root).value === 'dauerfrist'); };
+  $('#s_vatPeriod', root).addEventListener('change', svzZeigen);
+  $('#s_vatDeadline', root).addEventListener('change', svzZeigen);
+  // Weitere Steuertermine wirken sofort, wie das Erscheinungsbild.
+  for (const id of ['terminEst', 'terminGewSt']) {
+    $(`#s_${id}`, root)?.addEventListener('change', async (e) => {
+      await commit('einstellungen.aendern', (db) => {
+        db.settings[id] = e.target.checked;
+        db.settings.updatedAt = new Date().toISOString();
+      }, { entity: 'einstellungen', summary: 'Steuertermine eingestellt' });
+      saveNow();
+    });
+  }
 
   // Das Erscheinungsbild wirkt sofort – ausprobieren soll ohne „Übernehmen“ gehen.
   $('#s_theme', root).addEventListener('change', async (e) => {

@@ -1,11 +1,12 @@
 /** Kontovia – Export für Finanzamt, Steuerkanzlei, Betriebsprüfung und Archiv. */
 
-import { html, raw, esc, $, $$, money, todayISO, int, sum } from '../lib/util.js';
+import { html, raw, esc, $, $$, money, todayISO, int, sum, fmtDate, uid } from '../lib/util.js';
 import { icon, ok, err, warn, modal, confirmDialog } from '../lib/ui.js';
-import { store, sel, saveNow } from '../lib/store.js';
+import { store, sel, saveNow, commit, lockedUntil } from '../lib/store.js';
 import {
-  euerReport, vatReturn, isKleinunternehmer, basisOf, effectiveDate, listedOnly, unlistedStats,
+  euerReport, vatReturn, isKleinunternehmer, nurKleinunternehmer, basisOf, effectiveDate, listedOnly, unlistedStats, isVoidPart,
 } from '../lib/calc.js';
+import { darf } from '../lib/rollen.js';
 import { defaultPeriod, periodControl, periodLabel, setPeriod } from '../lib/period.js';
 import { navigate } from '../lib/router.js';
 import { appInfo } from '../app.js';
@@ -77,11 +78,11 @@ function draw(root) {
   // Unterlagen für Finanzamt und Kanzlei enthalten private Buchungen nie.
   const db = listedOnly(store.db);
   const hidden = unlistedStats(store.db, period.from, period.to);
-  const klein = isKleinunternehmer(db);
+  const klein = isKleinunternehmer(db, period.from) && isKleinunternehmer(db, period.to);
   const e = euerReport(db, period.from, period.to);
   const v = vatReturn(db, period.from, period.to);
   const rows = db.transactions.filter((t) => {
-    const d = effectiveDate(t, basisOf(db)) || t.date;
+    const d = effectiveDate(t, basisOf(db, period.from)) || t.date;
     return d >= period.from && d <= period.to;
   });
   const attCount = sum(rows, (t) => (t.attachments || []).length);
@@ -132,7 +133,7 @@ function draw(root) {
         body: 'Ihre Buchungen als Datei, die Kanzleiprogramme wie DATEV direkt einlesen.',
         mehr: `Buchungsstapel im DATEV-Format (EXTF 700), je Wirtschaftsjahr eine Datei.
           Verwendet die Sachkonten des ${esc(db.settings.chartOfAccounts || 'SKR03')} aus Ihren Kategorien und bucht
-          ${basisOf(db) === 'soll' && !klein ? 'Rechnungen über Sammeldebitor und -kreditor, Zahlungen aufs Geldkonto' : 'nach Zahlungsdatum gegen das Geldkonto'}.
+          ${basisOf(db, period.from) === 'soll' && !klein ? 'Rechnungen über Sammeldebitor und -kreditor, Zahlungen aufs Geldkonto' : 'nach Zahlungsdatum gegen das Geldkonto'}.
           Steuerschlüssel für Konten ohne Automatik lassen sich auf Wunsch mitgeben.`,
         button: `<button class="btn primary" id="btnDatev">${icon('file', 16).__raw} Buchungsstapel</button>`,
       }))}
@@ -204,6 +205,40 @@ function draw(root) {
 
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Buchungen ohne Kategorie im Zeitraum (seit 2.27): Ohne Kategorie ist offen, wie sie
+ * steuerlich zählen. Vor Unterlagen fürs Finanzamt fragt Kontovia deshalb nach.
+ * @returns {Promise<boolean>} weiter?
+ */
+async function ohneKategorieFragen(db) {
+  const n = listedOnly(db).transactions.filter((t) => !t.categoryId && !isVoidPart(t)
+    && ((t.date >= period.from && t.date <= period.to) || (t.paidDate && t.paidDate >= period.from && t.paidDate <= period.to))).length;
+  if (!n) return true;
+  return confirmDialog({
+    title: 'Buchungen ohne Kategorie',
+    text: `Im Zeitraum ${n === 1 ? 'liegt eine Buchung' : `liegen ${int(n)} Buchungen`} ohne Kategorie. Ohne Kategorie ist nicht klar, ob und wie viel Umsatzsteuer anfällt und in welche Zeile der EÜR ${n === 1 ? 'sie gehört' : 'sie gehören'}. Ordnen Sie ${n === 1 ? 'sie' : 'sie'} am besten erst zu.`,
+    confirmLabel: 'Trotzdem erstellen',
+    cancelLabel: 'Erst zuordnen',
+  });
+}
+
+/** Nach der ELSTER-Datei: Den erklärten Zeitraum festschreiben (GoBD)? */
+async function festschreibenAnbieten() {
+  const bis = period.to;
+  if (!darf(store.nutzer?.rolle, 'festschreibung') && store.nutzer) return;
+  if (lockedUntil() >= bis || bis > todayISO()) return;
+  const ja = await confirmDialog({
+    title: 'Zeitraum festschreiben?',
+    text: `Ist die Voranmeldung abgegeben, gehört der Zeitraum bis ${fmtDate(bis)} festgeschrieben. Danach lassen sich die Buchungen nur noch stornieren, offene Rechnungen weiter als bezahlt vermerken. Das lässt sich nicht zurücknehmen.`,
+    confirmLabel: 'Festschreiben', cancelLabel: 'Später',
+  });
+  if (!ja) return;
+  await commit('festschreibung', (db) => { db.locks.push({ id: uid('lock'), until: bis, ts: new Date().toISOString() }); },
+    { entity: 'festschreibung', summary: `Festgeschrieben bis ${bis} (nach der Voranmeldung)` });
+  await saveNow();
+  ok('Zeitraum festgeschrieben', `bis ${fmtDate(bis)}`);
+}
+
 function wire(root, db, rows) {
   const busy = async (btn, fn) => {
     const label = btn.innerHTML;
@@ -233,6 +268,7 @@ function wire(root, db, rows) {
   });
 
   $('#btnPackCsv', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
+    if (!await ohneKategorieFragen(db)) return;
     const datev = await datevOptions(db);
     if (!datev) return;
     const res = await api.file.saveMany({
@@ -243,6 +279,7 @@ function wire(root, db, rows) {
   }));
 
   $('#btnPackAll', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
+    if (!await ohneKategorieFragen(db)) return;
     const datev = await datevOptions(db);
     if (!datev) return;
     const files = X.taxOfficePack(await mitGanzemJournal(db), period, appInfo.version, datev);
@@ -253,7 +290,7 @@ function wire(root, db, rows) {
       [R.balancePdf(db, period), `Vermoegensuebersicht_${y}.pdf`],
       [R.journalPdf(db, period), `Buchungsjournal_${y}.pdf`],
     ];
-    if (!isKleinunternehmer(db)) pdfs.splice(2, 0, [R.ustvaPdf(db, period), `UStVA_${y}.pdf`]);
+    if (!nurKleinunternehmer(db)) pdfs.splice(2, 0, [R.ustvaPdf(db, period), `UStVA_${y}.pdf`]);
     for (const [doc, name] of pdfs) files.push(await pdfFuerPaket(doc, name));
     const res = await api.file.saveMany({ folderLabel: 'Zielordner für die Finanzamt-Unterlagen', files });
     if (res) {
@@ -272,6 +309,7 @@ function wire(root, db, rows) {
   }));
 
   $('#btnDatev', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
+    if (!await ohneKategorieFragen(db)) return;
     const opts = await datevNumbersDialog(db, true);
     if (!opts) return;
     const stapel = X.datevFiles(db, period, opts);
@@ -357,14 +395,18 @@ function wire(root, db, rows) {
   $('#btnElster', root)?.addEventListener('click', (e) => busy(e.currentTarget, async () => {
     const stnr = await steuernummerDialog(db);
     if (!stnr) return;
-    const xml = ustvaXml(listedOnly(db), period, { steuernummer: stnr });
+    if (!await ohneKategorieFragen(db)) return;
+    const xml = ustvaXml(listedOnly(db), period, { steuernummer: stnr, trotzdem: true });
     const code = ustvaZeitraum(period);
     const p = await api.file.save({
       defaultName: `UStVA_${period.from.slice(0, 4)}_${code}.xml`,
       filters: [{ name: 'ELSTER-Datei', extensions: ['xml'] }],
       dataBase64: base64(latin9(xml)),
     });
-    if (p) ok('ELSTER-Datei gespeichert', `${p}. In „Mein ELSTER“: Umsatzsteuer-Voranmeldung, Reiter „XML-Import“.`);
+    if (p) {
+      ok('ELSTER-Datei gespeichert', `${p}. In „Mein ELSTER“: Umsatzsteuer-Voranmeldung, Reiter „XML-Import“.`);
+      await festschreibenAnbieten();
+    }
   }));
 
   $('#btnXlsx', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
@@ -509,7 +551,7 @@ function steuernummerDialog(db) {
 function datevNumbersDialog(db, einzeln) {
   return new Promise((resolve) => {
     let settled = false;
-    const klein = isKleinunternehmer(db);
+    const klein = isKleinunternehmer(db, period.from);
     const m = modal({
       title: 'Angaben für DATEV',
       size: 'slim',

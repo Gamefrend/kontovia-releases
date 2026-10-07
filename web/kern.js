@@ -130,8 +130,23 @@ function scryptImThread(password, salt, params) {
   });
 }
 
+/**
+ * Die Parameter stammen bei einer fremden Datei (Tresor, Sicherung .kvbak) aus
+ * deren Kopf. Ein manipulierter Kopf mit riesigem N brächte den Tab mit dem
+ * Speicherbedarf zum Absturz; erlaubt ist deshalb nur, was Kontovia je
+ * geschrieben hat oder schreiben würde: N eine Zweierpotenz von 2^14 bis 2^20
+ * (geschrieben wurde immer 2^17), r = 8, p = 1, 32 Byte. Seit 2.27.
+ */
+export function kdfPruefen(kdf) {
+  const N = Number(kdf?.N);
+  const ok = Number.isInteger(N) && N >= 1 << 14 && N <= 1 << 20 && (N & (N - 1)) === 0
+    && Number(kdf?.r) === 8 && Number(kdf?.p) === 1 && Number(kdf?.keyLen) === 32;
+  if (!ok) throw Object.assign(new Error('Die Datei hat ungewöhnliche Schlüsselparameter und wird nicht geöffnet.'), { code: 'BAD_FORMAT' });
+}
+
 export async function deriveKey(password, salt, kdf = DEFAULT_KDF) {
   if (!kdf || kdf.name !== 'scrypt') throw new Error('Unbekanntes KDF: ' + (kdf?.name ?? ''));
+  kdfPruefen(kdf);
   const pw = utf8(password);
   try {
     return await scryptImThread(pw, salt, { N: kdf.N, r: kdf.r, p: kdf.p, keyLen: kdf.keyLen });

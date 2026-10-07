@@ -332,7 +332,9 @@ export function mahnungDialog(rechnungId, { onFertig } = {}) {
     try { v = mahnungVorbereiten(r.id, w); } catch (ex) { g('summe').innerHTML = `<span class="neg">${esc(ex.message)}</span>`; return; }
     const b = v.berechnung;
     const pauschaleSchon = b.aufschlag.pauschale > 0 && !b.aufschlag.pauschaleNeu;
-    g('prozentText').textContent = satzOk ? `Prozent pro Jahr (${String(einst.aufschlag.prozent).replace('.', ',')} %), tageweise ab Fälligkeit` : 'Prozent pro Jahr (in den Einstellungen ist noch kein Satz eingetragen)';
+    g('prozentText').textContent = satzOk
+      ? `Prozent pro Jahr (${String(einst.aufschlag.prozent).replace('.', ',')} %), tageweise ab ${b.aufschlag.verzugAb ? `dem ${fmtDate(addDays(b.aufschlag.verzugAb, 1))}` : 'Beginn des Verzugs'}`
+      : 'Prozent pro Jahr (in den Einstellungen ist noch kein Satz eingetragen)';
     g('prozent').disabled = !satzOk;
     g('pauschaleText').textContent = pauschaleSchon ? `Pauschale (${money(b.aufschlag.pauschale)} €, schon früher berechnet, bleibt in der Forderung)` : `Feste Pauschale (${money(einst.aufschlag.pauschale)} €, höchstens einmal je Rechnung)`;
     // Gegenüber Privatpersonen gibt es keine Pauschale (§ 288 Abs. 5 BGB).
@@ -352,6 +354,7 @@ export function mahnungDialog(rechnungId, { onFertig } = {}) {
       ${b.gebuehr ? zeile(`Mahngebühr (${esc(MAHNSTUFEN[b.stufe].kurz)})`, `${esc(money(b.gebuehr))} €`) : ''}
       ${b.aufschlag.zins ? zeile(`Verzugsaufschlag ${esc(String(b.aufschlag.satz).replace('.', ','))} % für ${int(b.aufschlag.tage)} Tage`, `${esc(money(b.aufschlag.zins))} €`) : ''}
       ${b.aufschlag.pauschale ? zeile('Verzugsaufschlag (Pauschale)', `${esc(money(b.aufschlag.pauschale))} €`) : ''}
+      ${b.aufschlag.anrechnung ? zeile('abzüglich Mahngebühren, auf die Pauschale angerechnet', `−${esc(money(b.aufschlag.anrechnung))} €`) : ''}
       ${b.nebenBezahlt ? zeile('abzüglich bereits gezahlter Mahnkosten', `−${esc(money(b.nebenBezahlt))} €`) : ''}
       ${zeile(`Zu zahlen bis ${esc(fmtDate(b.frist))}`, `${esc(money(b.gesamt))} €`, true)}
       ${b.warnungen.map((x) => `<div class="small neg mt8">${esc(x)}</div>`).join('')}`;

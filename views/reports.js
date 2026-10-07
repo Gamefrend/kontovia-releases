@@ -7,8 +7,8 @@ import { icon, statCard, deltaBadge, compareLabel, rankBars, emptyState, ok, err
 import { store, sel } from '../lib/store.js';
 import {
   compareRanges, trend, euerReport, vatReturn, vatPeriods, balanceSheet,
-  openItems, accountBalances, isKleinunternehmer, depreciationInRange, bookValue,
-  totalDepreciation, healthChecks, scopeDb, unlistedStats, averages, isEffective, accountLedger,
+  openItems, accountBalances, isKleinunternehmer, nurKleinunternehmer, steuerStand, depreciationInRange, bookValue,
+  totalDepreciation, healthChecks, scopeDb, unlistedStats, averages, isEffective, accountLedger, restbuchwert,
 } from '../lib/calc.js';
 import {
   prefs, setPref, scope, scopeToggleHtml, wireScopeToggle, verlaufControls, wireVerlauf, verlaufBody,
@@ -19,6 +19,7 @@ import * as R from '../lib/reports.js';
 import { pdfSpeichern, pdfZeigen, drucken, druckenMoeglich } from '../lib/pdfausgabe.js';
 import { table, mountTables } from '../lib/table.js';
 import { openTransactionDialog } from './transactions.js';
+import { navigate } from '../lib/router.js';
 import { checkNotice, wireCheckLinks } from './spruenge.js';
 import { vergleich, vergleichEinstellung } from './jahresvergleich.js';
 
@@ -61,12 +62,14 @@ function draw(root) {
   const db = scopeDb(store.db, scope.includeUnlisted);
   // Der Umsatzsteuer-Reiter ist für Kleinunternehmer ausgeblendet – war er
   // vor einem Wechsel der Einstellung aktiv, fällt die Ansicht auf die GuV zurück.
-  if (tab === 'ust' && isKleinunternehmer(db)) tab = 'guv';
+  // Wer früher regelbesteuert war, sieht ihn weiter (für die alten Zeiträume).
+  const ohneUst = nurKleinunternehmer(db);
+  if (tab === 'ust' && ohneUst) tab = 'guv';
   root.innerHTML = html`
     <div class="row wrap mb16" style="gap:10px 16px">
       <div class="seg tabs" id="tabs" role="group" aria-label="Auswertung">
         ${raw(Object.entries(TABS)
-          .filter(([k]) => !(k === 'ust' && isKleinunternehmer(db)))
+          .filter(([k]) => !(k === 'ust' && ohneUst))
           .map(([k, v]) => `<button aria-pressed="${tab === k}" data-tab="${k}" class="${tab === k ? 'active' : ''}">${esc(v)}</button>`).join(''))}
       </div>
       <div class="spacer"></div>
@@ -112,7 +115,7 @@ function scopeWarning() {
 /* -------------------------------------------------------------------------- */
 
 function guv(root, db) {
-  const klein = isKleinunternehmer(db);
+  const klein = isKleinunternehmer(db, period.to);
   const cmp = compareRanges(db, period.from, period.to);
   const { current, previous } = cmp;
   // Im laufenden Zeitraum bis zum gleichen Stand wie der Vorzeitraum.
@@ -347,6 +350,13 @@ function euer(root, db) {
       jährlich. Bitte einmal gegen das Formular des jeweiligen Jahres prüfen. Die Zuordnung jeder
       Kategorie lässt sich unter Stammdaten anpassen.
     </div>
+    ${e.ohneKategorie.length ? raw(`<div class="notice warn mb16"><strong>${e.ohneKategorie.length === 1 ? 'Eine Buchung' : `${int(e.ohneKategorie.length)} Buchungen`} ohne Kategorie.</strong>
+      Sie stehen vorläufig in Zeile ${F.steuerpflichtig} (Einnahmen) bzw. ${F.uebrigeAusgaben} (Ausgaben). Ordnen Sie sie einer
+      Kategorie zu, bevor Sie die Zahlen übernehmen. <a href="#" data-ohne-kategorie>Buchungen zeigen</a></div>`) : ''}
+    ${e.zehnTage.length ? raw(`<div class="notice mb16"><strong>Zahlungen um den Jahreswechsel.</strong>
+      ${e.zehnTage.map((z) => `${esc(db.transactions.find((t) => t.id === z.id)?.description || 'Buchung')}, bezahlt am ${esc(fmtDate(z.bezahlt))}`).join('; ')}:
+      ${e.zehnTage.length === 1 ? 'Diese regelmäßige Zahlung zählt' : 'Diese regelmäßigen Zahlungen zählen'} im Jahr, zu dem sie gehören, nicht im Jahr
+      der Zahlung (10-Tage-Regel, § 11 EStG). Das gilt etwa für die Umsatzsteuer-Vorauszahlung für Dezember, gezahlt bis zum 10. Januar.</div>`) : ''}
 
     <div class="grid c2 start">
       <div class="card">
@@ -372,7 +382,7 @@ function euer(root, db) {
         <p class="small muted mt0">In der Einnahmen-Überschuss-Rechnung läuft die Umsatzsteuer als
         Betriebseinnahme und Betriebsausgabe mit. Die vereinnahmte Umsatzsteuer erhöht den EÜR-Gewinn
         so lange, bis Sie sie an das Finanzamt überweisen und diese Zahlung als Ausgabe erfassen.
-        Über das ganze Jahr gleicht sich das aus. Die Umsatzsteuer kostet Sie keinen Cent Gewinn.</p>
+        Über die Jahre gleicht sich das aus. Die Umsatzsteuer kostet Sie keinen Cent Gewinn.</p>
         <table class="data">
           <tbody>
             <tr><td>Ergebnis ohne Umsatzsteuer (wie in der Gewinn- und Verlustrechnung)</td><td class="num">${esc(money(e.reconciliation.netResult))} €</td></tr>
@@ -404,6 +414,10 @@ function euer(root, db) {
         </div>
       </div>
     </div>`;
+  $('[data-ohne-kategorie]', root)?.addEventListener('click', (ev) => {
+    ev.preventDefault();
+    navigate('transactions', { ids: e.ohneKategorie, titel: 'Buchungen ohne Kategorie', period: { preset: period.preset, from: period.from, to: period.to }, status: 'alle' });
+  });
 }
 
 /* -------------------------------------------------------------------------- */
@@ -423,6 +437,9 @@ function ust(root, db) {
 
   root.innerHTML = html`
     ${raw(scopeWarning())}
+    ${v.kleinunternehmer ? raw('<div class="notice mb16">In diesem Zeitraum waren Sie Kleinunternehmer und geben keine Voranmeldung ab.</div>') : ''}
+    ${v.ohneKategorie.length ? raw(`<div class="notice warn mb16"><strong>${v.ohneKategorie.length === 1 ? 'Eine Buchung' : `${int(v.ohneKategorie.length)} Buchungen`} ohne Kategorie.</strong>
+      Ohne Kategorie ist nicht klar, ob Umsatzsteuer anfällt; ohne Steuersatz fehlen sie in den Kennzahlen. Ordnen Sie sie zu, bevor Sie die Voranmeldung abgeben.</div>`) : ''}
     <div class="grid c3 mb16">
       ${statCard({ label: 'Vereinnahmte Umsatzsteuer', value: `${esc(money(v.umsatzsteuer))} €`, tone: 'neg' })}
       ${statCard({ label: 'Abziehbare Vorsteuer', value: `${esc(money(v.vorsteuer))} €`, tone: 'pos' })}
@@ -447,20 +464,25 @@ function ust(root, db) {
             ${v.kz41 ? raw(kz(41, 'Innergemeinschaftliche Lieferungen', v.kz41)) : ''}
             ${v.kz21 ? raw(kz(21, 'Nicht steuerbare sonstige Leistungen (§ 18b)', v.kz21)) : ''}
             ${v.kz43 ? raw(kz(43, 'Steuerfreie Umsätze mit Vorsteuerabzug (Ausfuhr)', v.kz43)) : ''}
+            ${v.kz45 ? raw(kz(45, 'Nicht steuerbare Leistungen an Unternehmen außerhalb der EU', v.kz45)) : ''}
             ${v.kz48 ? raw(kz(48, 'Steuerfreie Umsätze ohne Vorsteuerabzug', v.kz48)) : ''}
+            ${v.kz60 ? raw(kz(60, 'Umsätze, für die der Kunde die Steuer schuldet (§ 13b)', v.kz60)) : ''}
             ${v.kz89net ? raw(kz(89, 'Innergemeinschaftliche Erwerbe 19 %', v.kz89net)) : ''}
             ${v.kz93net ? raw(kz(93, 'Innergemeinschaftliche Erwerbe 7 %', v.kz93net)) : ''}
-            ${v.kz46net ? raw(kz(46, 'Leistungen nach § 13b', v.kz46net) + kz(47, 'Steuer nach § 13b', v.kz47tax)) : ''}
+            ${v.kz46net ? raw(kz(46, 'Leistungen aus der EU nach § 13b', v.kz46net) + kz(47, 'Steuer darauf', v.kz47tax)) : ''}
+            ${v.kz84net ? raw(kz(84, 'Andere Leistungen nach § 13b', v.kz84net) + kz(85, 'Steuer darauf', v.kz85tax)) : ''}
             ${raw(kz(66, 'Vorsteuer aus Rechnungen', v.kz66))}
             ${v.kz61 ? raw(kz(61, 'Vorsteuer aus i.g. Erwerben', v.kz61)) : ''}
             ${v.kz67 ? raw(kz(67, 'Vorsteuer nach § 13b', v.kz67)) : ''}
+            ${v.kz39 ? raw(kz(39, 'Abzug der Sondervorauszahlung', -v.kz39)) : ''}
+            ${v.kz50 ? raw(kz(50, 'Davon Forderungsausfall (in den Umsätzen enthalten, in ELSTER von Hand eintragen)', v.kz50)) : ''}
           </tbody>
           <tfoot><tr><td class="num">83</td><td>${v.kz83 >= 0 ? 'Verbleibende Vorauszahlung' : 'Verbleibender Überschuss'}</td><td class="num">${money(v.kz83)} €</td></tr></tfoot>
         </table></div>
       </div>
 
       <div class="card">
-        <div class="card-head"><h2>Voranmeldungszeiträume ${year}</h2><span class="sub">${db.settings.vatPeriod}</span></div>
+        <div class="card-head"><h2>Voranmeldungszeiträume ${year}</h2><span class="sub">${steuerStand(db, `${year}-01-01`).vatPeriod || ''}</span></div>
         <div class="table-wrap"><table class="data">
           <thead><tr><th>Zeitraum</th><th class="num">Umsatzsteuer</th><th class="num">Vorsteuer</th><th class="num">Zahllast</th></tr></thead>
           <tbody>
@@ -480,7 +502,7 @@ function ust(root, db) {
         </table></div>
         <div class="card-body">
           <p class="small muted mb0">Zeitraum anklicken, um ihn oben als Auswertungszeitraum zu übernehmen.
-          Die Voranmeldung ist bis zum 10. Tag nach Ablauf des Zeitraums zu übermitteln${db.settings.vatDeadline === 'dauerfrist'
+          Die Voranmeldung ist bis zum 10. Tag nach Ablauf des Zeitraums zu übermitteln${steuerStand(db, period.from).vatDeadline === 'dauerfrist'
             ? ', mit Dauerfristverlängerung einen Monat später' : ''}; die Termine stehen auch in Übersicht und Kalender.</p>
         </div>
       </div>
@@ -671,6 +693,8 @@ function accountSheet(db, acc) {
 /* Anlagevermögen                                                              */
 /* -------------------------------------------------------------------------- */
 
+const ABGANG_TEXT = { verkauf: 'Verkauft', entnahme: 'Ins Privatvermögen entnommen', verschrottung: 'Verschrottet' };
+
 function anlagen(root, db) {
   const assets = db.assets || [];
   root.innerHTML = html`
@@ -688,7 +712,11 @@ function anlagen(root, db) {
         defaultSort: { key: 'purchaseDate', dir: 1 },
         rows: assets,
         columns: [
-          { key: 'name', label: 'Wirtschaftsgut', type: 'text', cell: (a) => esc(a.name) },
+          {
+            key: 'name', label: 'Wirtschaftsgut', type: 'text',
+            cell: (a) => esc(a.name) + (a.abgang?.datum
+              ? `<div class="tiny muted">${esc(ABGANG_TEXT[a.abgang.art] || 'Ausgeschieden')} am ${esc(fmtDate(a.abgang.datum))}, Restbuchwert ${esc(money(restbuchwert(a)?.amount || 0))} €</div>` : ''),
+          },
           { key: 'purchaseDate', label: 'Anschaffung', type: 'date', tdCls: 'nowrap', cell: (a) => esc(fmtDate(a.purchaseDate)) },
           { key: 'cost', label: 'Kosten', type: 'num', cell: (a) => esc(money(a.cost)) },
           { key: 'usefulLifeYears', label: 'Nutzungsdauer', type: 'num', value: (a) => Number(a.usefulLifeYears), cell: (a) => `${esc(a.usefulLifeYears)} Jahre` },

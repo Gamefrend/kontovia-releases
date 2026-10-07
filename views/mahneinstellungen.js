@@ -11,7 +11,7 @@ import { icon, ok, err } from '../lib/ui.js';
 import { store, commit } from '../lib/store.js';
 import { refresh } from '../lib/router.js';
 import {
-  MAHNSTUFEN, AUFSCHLAG_ARTEN, PAUSCHALE_VORGABE, mahneinstellungen, parseSatz,
+  MAHNSTUFEN, AUFSCHLAG_ARTEN, PAUSCHALE_VORGABE, VERZUG_AB, mahneinstellungen, parseSatz,
 } from '../lib/mahnwesen.js';
 
 export function mahnKarte(host) {
@@ -29,7 +29,7 @@ export function mahnKarte(host) {
           <td class="right"><input id="mw_gebuehr${st}" inputmode="decimal" value="${esc(moneyInput(e.gebuehren[st]))}" style="width:90px;text-align:right" aria-label="Gebühr in Euro, ${esc(MAHNSTUFEN[st].name)}"></td>
         </tr>`).join('')}</tbody>
       </table></div>
-      <p class="tiny muted mt8">Eine Gebühr von 0 € steht nicht auf dem Schreiben.</p>
+      <p class="tiny muted mt8">Eine Gebühr von 0 € steht nicht auf dem Schreiben. Ohne fest vereinbarten Zahlungstermin bringt erst die Zahlungserinnerung den Kunden in Verzug; ihre Kosten lassen sich dann meist nicht verlangen.</p>
 
       <div class="field mt16">
         <label for="mw_art">Verzugsaufschlag für verspätete Zahlung</label>
@@ -40,12 +40,17 @@ export function mahnKarte(host) {
         <div class="field" id="mw_prozentBox">
           <label for="mw_prozent">Prozent pro Jahr</label>
           <input id="mw_prozent" inputmode="decimal" value="${e.aufschlag.prozent ? esc(String(e.aufschlag.prozent).replace('.', ',')) : ''}" placeholder="z. B. 12,5">
-          <span class="hint">Auf den offenen Betrag, tageweise ab Fälligkeit. Bei Geschäftskunden gilt gesetzlich üblich der Basiszinssatz plus 9 Prozentpunkte. Der Basiszinssatz ändert sich halbjährlich (Januar und Juli). Sie tragen den Satz selbst ein und halten ihn aktuell, Kontovia kennt ihn nicht.</span>
+          <span class="hint">Auf den offenen Betrag, tageweise ab Beginn des Verzugs. Bei Geschäftskunden gilt gesetzlich üblich der Basiszinssatz plus 9 Prozentpunkte. Der Basiszinssatz ändert sich halbjährlich (Januar und Juli). Sie tragen den Satz selbst ein und halten ihn aktuell, Kontovia kennt ihn nicht.</span>
         </div>
         <div class="field" id="mw_pauschaleBox">
           <label for="mw_pauschale">Feste Pauschale in €</label>
           <input id="mw_pauschale" inputmode="decimal" value="${esc(moneyInput(e.aufschlag.pauschale))}">
-          <span class="hint">Vorgabe 40 €: die gesetzliche Verzugspauschale bei Geschäftskunden (§ 288 Abs. 5 BGB), nur gegenüber Unternehmen. Sie wird höchstens einmal je Rechnung berechnet.</span>
+          <span class="hint">Vorgabe 40 €: die gesetzliche Verzugspauschale bei Geschäftskunden (§ 288 Abs. 5 BGB), nur gegenüber Unternehmen. Sie wird höchstens einmal je Rechnung berechnet, Mahngebühren werden auf sie angerechnet.</span>
+        </div>
+        <div class="field full">
+          <label for="mw_verzug">Verzug beginnt</label>
+          <select id="mw_verzug">${Object.entries(VERZUG_AB).map(([k, t]) => `<option value="${k}" ${e.aufschlag.verzugAb === k ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>
+          <span class="hint">Ein Zahlungsziel, das nur auf der Rechnung steht, bringt den Kunden noch nicht in Verzug. Das tut erst die Zahlungserinnerung, bei Geschäftskunden spätestens 30 Tage nach Fälligkeit, bei Privatkunden nur, wenn die Rechnung darauf hinweist (§ 286 BGB). Kontovia druckt diesen Hinweis auf Rechnungen an Privatkunden.</span>
         </div>
         <div class="field">
           <label for="mw_ab">Vorschlagen ab</label>
@@ -56,7 +61,7 @@ export function mahnKarte(host) {
       <div class="notice mt8">Für Privatkunden gelten engere Grenzen; Kontovia fragt deshalb bei jeder Mahnung, ob der Kunde ein Unternehmen ist.
         Welche Beträge Sie verlangen, verantworten Sie selbst.
         <details class="mehr-details small mt8"><summary>Mehr dazu</summary><div class="mt8">
-        Bei Privatkunden (Verbrauchern) gilt der Basiszinssatz plus 5 Prozentpunkte, die Pauschale wird <strong>nie</strong> berechnet, und eine Mahngebühr darf nur den tatsächlichen Aufwand abdecken. Verzug setzt außerdem voraus, dass die Zahlungsfrist abgelaufen ist (§ 286 BGB). Kontovia rechnet nach Ihren Angaben und ersetzt keine Rechtsberatung.
+        Bei Privatkunden (Verbrauchern) gilt der Basiszinssatz plus 5 Prozentpunkte, die Pauschale wird <strong>nie</strong> berechnet, und eine Mahngebühr darf nur den tatsächlichen Aufwand abdecken. Verzug setzt außerdem voraus, dass die Zahlungsfrist abgelaufen ist und der Kunde gemahnt wurde oder 30 Tage vergangen sind (§ 286 BGB). Kontovia rechnet nach Ihren Angaben und ersetzt keine Rechtsberatung.
         Mahngebühr und Verzugsaufschlag sind kein Entgelt für eine Leistung: Sie werden ohne Umsatzsteuer gebucht, erst wenn das Geld eingegangen ist.</div></details></div>
       <div class="row end mt16"><button class="btn primary" id="mw_speichern">Mahnwesen speichern</button></div>
     </div>`;
@@ -95,7 +100,7 @@ export function mahnKarte(host) {
       await commit('einstellungen.aendern', (db) => {
         db.settings.mahnwesen = {
           fristen, gebuehren,
-          aufschlag: { art: artNeu, prozent: satz, pauschale, abStufe: Number(wert('ab')) },
+          aufschlag: { art: artNeu, prozent: satz, pauschale, abStufe: Number(wert('ab')), verzugAb: wert('verzug') },
         };
         db.settings.updatedAt = new Date().toISOString();
       }, { entity: 'einstellungen', summary: 'Mahnwesen eingestellt' });

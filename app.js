@@ -4,7 +4,7 @@
  */
 
 import { html, raw, esc, $, int, bytes, fmtDateTime, debounce, MOD, ustIdHinweis, steuernummerHinweis } from './lib/util.js';
-import { icon, toast, ok, err, warn, modal, passwordInput, wirePasswordToggles, feldHinweis, obersteSchliessen, beschriftungenBeobachten } from './lib/ui.js';
+import { icon, toast, ok, err, warn, modal, passwordInput, wirePasswordToggles, feldHinweis, obersteSchliessen, beschriftungenBeobachten, betragHinweiseBeobachten } from './lib/ui.js';
 import { store, setDb, clearDb, subscribe, saveNow, sel, lockedUntil, setDevice, commit } from './lib/store.js';
 import { startAutoSync, syncState, onSync, syncNow } from './lib/sync.js';
 import { updateState, onUpdate, startUpdateWatch, markNotified } from './lib/updates.js';
@@ -112,12 +112,37 @@ function renderThemeToggle() {
 /* Start                                                                       */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Kontovia läuft nicht eingebettet in fremden Seiten: Dort könnten unsichtbar
+ * Klicks untergeschoben werden. Die CSP-Regel frame-ancestors wirkt im
+ * <meta>-Tag nicht, und GitHub Pages setzt keine Kopfzeile dafür; deshalb
+ * prüft die Seite selbst (seit 2.27).
+ */
+function imRahmen() {
+  try { return window.top !== window.self; } catch { return true; }
+}
+
+function renderRahmen() {
+  app.innerHTML = html`
+    <div class="gate" role="main">
+      <div class="gate-card">
+        <div class="gate-logo">K</div>
+        <h1>Kontovia öffnet sich nur in einem eigenen Fenster</h1>
+        <p class="lead">Diese Seite wurde in eine andere Website eingebettet. Zum Schutz Ihrer Buchhaltung läuft Kontovia dort nicht.</p>
+        <div class="row wrap mt16"><a class="btn primary" id="rahmenLink" target="_top" rel="noopener">Kontovia öffnen</a></div>
+      </div>
+    </div>`;
+  $('#rahmenLink').href = location.href;
+}
+
 async function boot() {
+  if (imRahmen()) { renderRahmen(); return; }
   applyTheme(lastTheme());
   // Jeder Umschalter (Reiter, Einnahme/Ausgabe, Darstellung) bekommt die gleitende Marke.
   umschalterBeobachten();
   // Jede Beschriftung nennt ihr Feld (Bildschirmleser, Klick auf die Beschriftung).
   beschriftungenBeobachten();
+  betragHinweiseBeobachten();
   try {
     appInfo = await api.app.info();
     // Ohne Gerätekennung könnte das Änderungsjournal beim Abgleich zweier

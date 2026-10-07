@@ -371,6 +371,17 @@ window.addEventListener('online', () => { if (!vault.isLocked) send('cloudTick',
 /* -------------------------------------------------------------------------- */
 
 /**
+ * Anmeldung der Cloud für das Lesen der Rückmeldungen. Ohne Verbindung fehlt
+ * sie, und die Regeln lehnen ab (nur der Betreiber darf lesen).
+ */
+async function betreiberKopf() {
+  if (vault.isLocked || !cloud.status().linked) {
+    throw Object.assign(new Error('Zum Lesen der Rückmeldungen mit dem Konto des Betreibers bei der Cloud anmelden.'), { code: 'NEU_ANMELDEN' });
+  }
+  return cloud.be().auth();
+}
+
+/**
  * Wie Buffer.from(text, 'latin1') in Node: je Zeichen das untere Byte. So
  * entsteht der DATEV-Stapel in beiden Fassungen Byte für Byte gleich.
  */
@@ -694,7 +705,9 @@ const api = {
         throw new Error('Für die Sicherung ist ein Passwort mit mindestens 10 Zeichen nötig.');
       }
       const buf = await vault.exportFullBackup(password);
-      const stamp = new Date().toISOString().slice(0, 10);
+      // Ortszeit: Zwischen 0 und 2 Uhr stünde in UTC noch der Vortag im Namen.
+      const jetzt = new Date();
+      const stamp = `${jetzt.getFullYear()}-${String(jetzt.getMonth() + 1).padStart(2, '0')}-${String(jetzt.getDate()).padStart(2, '0')}`;
       const name = await D.anbieten(buf, `Kontovia-Sicherung-${stamp}.kvbak`, {
         mime: 'application/octet-stream',
         filters: [{ name: 'Kontovia-Sicherung', extensions: ['kvbak'] }],
@@ -967,16 +980,17 @@ const api = {
   },
 
   /**
-   * Rückmeldungen online (rueckmeldung.js). Senden, Lesen und Löschen gehen ohne
-   * Konto und auch bei gesperrtem Tresor (firebase/storage.rules).
+   * Rückmeldungen online (rueckmeldung.js). Senden geht ohne Konto und auch bei
+   * gesperrtem Tresor. Lesen und Löschen nur mit der Anmeldung der Cloud, und
+   * die Regeln lassen dabei nur den Betreiber zu (firebase/storage.rules, seit 2.27).
    */
   feedback: {
     senden: handle(async ({ eintrag, fotoBase64 } = {}) => R.senden({
       eintrag: eintrag || {}, fotoBytes: fotoBase64 ? K.fromBase64(String(fotoBase64)) : null,
     }), { needsUnlock: false }),
-    laden: handle(async () => R.laden(), { needsUnlock: false }),
-    foto: handle(async (id) => K.toBase64(await R.foto(String(id))), { needsUnlock: false }),
-    loeschen: handle(async (id) => R.loeschen(String(id)), { needsUnlock: false }),
+    laden: handle(async () => R.laden(null, await betreiberKopf())),
+    foto: handle(async (id) => K.toBase64(await R.foto(String(id), null, await betreiberKopf()))),
+    loeschen: handle(async (id) => R.loeschen(String(id), null, await betreiberKopf())),
   },
 
   cloud: {
