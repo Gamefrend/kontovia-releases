@@ -1,17 +1,17 @@
 {
-  "version": "2.30.0",
-  "released": "2026-10-08T19:44:11.638Z",
-  "notes": "Englisch für Rechnungen und Assistent\n\n- Neu: Rechnungen, Mahnschreiben und E-Mails lassen sich auf Englisch schreiben. Die Sprache wählen Sie bei jeder Rechnung, für neue Rechnungen unter Rechnungen › Gestaltung.\n- Der Assistent versteht jetzt auch englische Fragen und antwortet auf Englisch.\n- Die Seite mit den Tarifen gibt es auf Englisch, mit Umschalter oben.\n- Auf Englisch steht bei Prozenten und Mengen jetzt überall der Punkt als Dezimalzeichen.",
+  "version": "2.30.1",
+  "released": "2026-10-08T20:00:34.711Z",
+  "notes": "Tarifseite kürzer und ruhiger\n\n- Die Seite mit den Tarifen ist kürzer geworden. Die Anmeldung öffnet sich in einem eigenen Fenster.\n- Am Handy lässt sich die Seite nicht mehr zur Seite schieben, und Knöpfe bleiben nach dem Antippen nicht mehr eingefärbt.\n- Die Vorschau der App ist übersichtlicher, Grafiken lassen sich nicht mehr markieren oder verschieben.\n- Dezente Bewegung beim Scrollen.",
   "files": [
     {
       "path": "abo/abo.css",
-      "sha256": "bc93b4e00906075046a8437f5166d44e79afa45a5577375472f70cb9653d55a1",
-      "size": 65080
+      "sha256": "80962936d9a6160c939095cda2045944c8fd635eeaf39074953495cb6aed4c4b",
+      "size": 69105
     },
     {
       "path": "abo/abo.js",
-      "sha256": "4ff770dba57d32fcacb3524862505a8441a1e2e08c427b4c47baf08ec303012d",
-      "size": 32171
+      "sha256": "7597822744026689f52416319cdc62872dd8da3d00aa909facf779dcbd183bb6",
+      "size": 33553
     },
     {
       "path": "abo/config.json",
@@ -20,13 +20,13 @@
     },
     {
       "path": "abo/en.js",
-      "sha256": "a368ece713b2462ab8819d675ce57a356f52b5f58eeacb5ebdee2a2a039f45c9",
-      "size": 21926
+      "sha256": "268b64f9ac9a9c1c1485671961dffaa337ed580fe85e78331e90233d3a7e0523",
+      "size": 22109
     },
     {
       "path": "abo/index.html",
-      "sha256": "2160b84b000cef6c45988b8f36a4753a385e8600cd67fd52de3608a03818c641",
-      "size": 40596
+      "sha256": "240310663499e560a8ac42dd4584e19caa344e098020e7fb8e7a1d6115cc467f",
+      "size": 30970
     },
     {
       "path": "abo/vorab.js",
@@ -500,8 +500,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz.js",
-      "sha256": "2e94eafe9d270bf562d5b78fc11fb21f116e73fae456036dfaef1662b902f932",
-      "size": 5559
+      "sha256": "a8cd3a297a0ebe06b4f4b774ad978a752699ffec45ee2bbea1e9a30cdc41baf0",
+      "size": 6290
     },
     {
       "path": "lib/store.js",
@@ -555,8 +555,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "0770a92b5ee60e9055586529c90c7225d48657d47ddee6c1069046d8d5d5cac8",
-      "size": 41764
+      "sha256": "02338965f87fe66056dd82d4dedba54b506f42ec181a4d57fa1afc30d742fc38",
+      "size": 42283
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -585,12 +585,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "6d21eae8a69b0bbcbfc30785943775f65a7a8425beb9839b54e0cb26c264b3a6",
+      "sha256": "5945afcaa07501deeda58680d529d2fee460cf7294787f89a8d9155ab1defafb",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "3f7889c80bfea0f7e059d8497c1b6a91912b04caf1c232480eadd391bc8992de",
+      "sha256": "05ac43fdea1a9fad73b2dd04ca94862ed222035d7e502eae84b3495c245e4e84",
       "size": 31282
     },
     {
@@ -605,7 +605,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "04d83293a80e69952dbcbdfc47c8145914f23eab80574d50eb5813190c24aed1",
+      "sha256": "05e6c7ac2bd6fc7649da11b2e7e3a3ada3951077f764dc06315830382ad0a060",
       "size": 34938
     },
     {
@@ -760,7 +760,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "1d705db06f55b44143864c4a75933dcb1c0d9824fca7f61b4d06ea5592f0409b",
+      "sha256": "37499cd2369b8da411486f2386a559a4cf13da6afb3c805ae8c70145c4ee98e3",
       "size": 6906
     },
     {
@@ -980,8 +980,8 @@
     },
     {
       "path": "abo/",
-      "sha256": "2160b84b000cef6c45988b8f36a4753a385e8600cd67fd52de3608a03818c641",
-      "size": 40596
+      "sha256": "240310663499e560a8ac42dd4584e19caa344e098020e7fb8e7a1d6115cc467f",
+      "size": 30970
     }
   ]
 }

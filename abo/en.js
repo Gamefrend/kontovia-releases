@@ -191,6 +191,8 @@ export default {
   "Für die Preisübersicht wird JavaScript gebraucht.": "JavaScript is needed for the price overview.",
 
   // Anmelden
+  "Schließen": "Close",
+  "Nur Name und E-Mail-Adresse. Ihre Buchhaltungsdaten gehen dabei nie an uns.": "Just your name and email address. Your bookkeeping data never reaches us.",
   "Lizenz holen": "Get a licence",
   "In zwei Minuten startklar.": "Ready in two minutes.",
   "Tarif wählen": "Choose a plan",

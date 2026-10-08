@@ -264,6 +264,7 @@ function laufband() {
 /** Kleiner Monat im Kalender-Beispiel (November 2026) mit Steuertermin, Fälligkeit und Termin. */
 function kalenderBauen() {
   const raster = $('kalRaster');
+  if (!raster) return;
   const besonders = { 10: 'steuer', 16: 'faellig', 24: 'termin' };
   const leer = (new Date(2026, 10, 1).getDay() + 6) % 7;
   const felder = [];
@@ -378,7 +379,7 @@ function tarifeZeichnen() {
     if (istFrei(t)) a.href = '../';
     else {
       a.href = '#anmelden';
-      a.addEventListener('click', () => tarifWaehlen(t.id));
+      a.addEventListener('click', (e) => { e.preventDefault(); tarifWaehlen(t.id); anmeldungOeffnen(); });
     }
     k.append(a);
 
@@ -632,6 +633,35 @@ async function absenden(e) {
     { text: x('Kontovia öffnen', 'Open Kontovia'), href: '../' });
 }
 
+/* ---------- Anmeldung im Fenster ---------- */
+
+function anmeldungOeffnen() {
+  const d = $('anmeldung');
+  if (!d || d.open) return;
+  if (typeof d.showModal !== 'function') { d.setAttribute('open', ''); return; }
+  d.showModal();
+}
+function anmeldungVorbereiten() {
+  const d = $('anmeldung');
+  $('anmeldungZu').addEventListener('click', () => d.close());
+  // Klick auf den abgedunkelten Rand schließt (nur wenn Maus oder Finger dort beginnen und enden).
+  let start = false;
+  d.addEventListener('pointerdown', (e) => { start = e.target === d; });
+  d.addEventListener('click', (e) => { if (start && e.target === d) d.close(); });
+  d.addEventListener('close', () => { if (location.hash === '#anmelden') history.replaceState(null, '', location.pathname + location.search); });
+  addEventListener('hashchange', () => { if (location.hash === '#anmelden') anmeldungOeffnen(); });
+  if (location.hash === '#anmelden') anmeldungOeffnen();
+}
+
+/** Grafiken sind Schmuck: kein Markieren, kein Ziehen, kein langes Drücken mit Menü. */
+function grafikenSperren() {
+  const ziele = '.buehne, .demo, .tresor, .schwebe';
+  const innen = (e) => e.target instanceof Element && e.target.closest(ziele);
+  for (const art of ['selectstart', 'dragstart', 'contextmenu']) {
+    document.addEventListener(art, (e) => { if (innen(e)) e.preventDefault(); });
+  }
+}
+
 /* ---------- Installieren ---------- */
 
 let installAngebot = null;
@@ -645,8 +675,6 @@ function geraetErkennen() {
 
 function installierenVorbereiten() {
   const art = geraetErkennen();
-  document.querySelector(`.geraet[data-plattform="${art}"]`)?.classList.add('passt');
-
   const knopf = $('installKnopf'), hinweis = $('installHinweis');
   const schonApp = matchMedia('(display-mode: standalone)').matches;
   if (schonApp) { knopf.hidden = true; hinweis.hidden = false; hinweis.textContent = x('Kontovia läuft hier bereits als App.', 'Kontovia is already running here as an app.'); }
@@ -687,6 +715,8 @@ async function start() {
   tresorSpielen(document.querySelector('[data-demo="tresor"]'));
   installierenVorbereiten();
   vergleichUmschalten();
+  grafikenSperren();
+  anmeldungVorbereiten();
 
   let cfg;
   try {
