@@ -10,7 +10,8 @@
  * wie im PDF (lib/rechnungsdruck.js → lib/pdfvorschau.js).
  */
 
-import { esc, $, $$, money, moneyInput, parseMoney, todayISO, uid, debounce, daysBetween } from '../lib/util.js';
+import { esc, $, $$, money, moneyInput, parseMoney, todayISO, uid, debounce, daysBetween, dz } from '../lib/util.js';
+import { sprache } from '../lib/sprache.js';
 import { icon, modal, confirmDialog, ok, warn, err } from '../lib/ui.js';
 import { store, sel, commit, upsertEntity, nextInvoiceNumber } from '../lib/store.js';
 import { router, navigate } from '../lib/router.js';
@@ -24,6 +25,7 @@ import {
   rechnungSpeichern, entwurfLoeschen, ausstellen, vergebeneNummern, alsVorlage, produktSpeichern,
 } from '../lib/rechnungsaktionen.js';
 import { vorschauDaten, pdfZeigen, bildWaehlen, bildAblegen, bildHolen, rahmenVon } from '../lib/rechnungsdateien.js';
+import { DOKUMENT_SPRACHEN } from '../lib/dokumenttexte.js';
 import { textDirektBearbeiten, bilderAusZwischenablage } from '../lib/textbearbeiten.js';
 
 const BEREICH_TITEL = { kaeufer: 'Kunde', rechnung: 'Rechnung', positionen: 'Positionen', zahlung: 'Zahlung', verkaeufer: 'Ihre Angaben' };
@@ -227,6 +229,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
           <div class="field"><label for="ra_art">Art</label><select id="ra_art" data-f="art">${optionen(['380', '326', '384', '381'].map((k) => [k, ARTEN[k]]), r.art || '380')}</select></div>
           <div class="field"><label for="ra_steuerfall">Umsatzsteuer</label><select id="ra_steuerfall" data-f="steuerfall">
             ${optionen(Object.entries(STEUERFAELLE).map(([k, f]) => [k, f.name]), r.steuerfall || 'standard')}</select></div>
+          <div class="field"><label for="ra_sprache">Sprache der Rechnung</label><select id="ra_sprache" data-f="sprache">${optionen(DOKUMENT_SPRACHEN.map((l) => [l.code, l.name]), r.sprache === 'en' ? 'en' : 'de')}</select></div>
           ${r.steuerfall === 'steuerfrei' ? `<div class="field full"><label for="ra_grund">Grund der Steuerbefreiung <span class="re-pflicht">Pflicht</span></label>
             <input id="ra_grund" data-f="befreiungsgrund" value="${esc(r.befreiungsgrund || '')}" placeholder="z. B. Steuerfreie Heilbehandlung nach § 4 Nr. 14 UStG"></div>` : ''}
           ${istVorlage ? '' : `
@@ -285,7 +288,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
           </div>
           <textarea data-p="beschreibung" rows="1" placeholder="Beschreibung (optional)" aria-label="Beschreibung Position ${i + 1}">${esc(p.beschreibung || '')}</textarea>
           <div class="re-pos-zahlen">
-            <label class="re-mini"><span>Menge</span><input data-p="menge" inputmode="decimal" value="${esc(String(p.menge ?? '').replace('.', ','))}"></label>
+            <label class="re-mini"><span>Menge</span><input data-p="menge" inputmode="decimal" value="${esc(dz(p.menge ?? ''))}"></label>
             <label class="re-mini"><span>Einheit</span><input data-p="einheit" list="reEinheiten" value="${esc(einheitText(p))}" autocomplete="off"></label>
             <label class="re-mini"><span>Preis netto €</span><input data-p="preis" inputmode="decimal" value="${esc(moneyInput(p.preis))}"></label>
             ${ohneSteuer ? '' : `<label class="re-mini"><span>USt</span><select data-p="satz">${optionen([[19, '19 %'], [7, '7 %'], [0, '0 %']].concat([19, 7, 0].includes(Number(p.satz)) ? [] : [[p.satz, satzText(p.satz)]]), Number(p.satz))}</select></label>`}
@@ -483,7 +486,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
             <span class="hint" id="rz_faelligHinweis"></span></div>
           <div class="field"><label for="rz_bereits">Bereits gezahlt (Anzahlung) €</label><input id="rz_bereits" inputmode="decimal" data-f="bereitsGezahlt" data-geld value="${esc(r.bereitsGezahlt ? moneyInput(r.bereitsGezahlt) : '')}"></div>
           <div class="field"><label for="rz_skontoT">Skonto: innerhalb von Tagen</label><input id="rz_skontoT" type="number" min="0" max="365" data-f="skontoTage" data-zahl value="${esc(r.skontoTage || '')}"></div>
-          <div class="field"><label for="rz_skontoP">Skonto in %</label><input id="rz_skontoP" inputmode="decimal" data-f="skontoProzent" data-prozent value="${esc(r.skontoProzent ? String(r.skontoProzent).replace('.', ',') : '')}"></div>
+          <div class="field"><label for="rz_skontoP">Skonto in %</label><input id="rz_skontoP" inputmode="decimal" data-f="skontoProzent" data-prozent value="${esc(r.skontoProzent ? dz(r.skontoProzent) : '')}"></div>
           <div class="field full mb0"><label for="rz_text">Zahlungsbedingungen</label>
             <textarea id="rz_text" data-f="zahlungsbedingungen" rows="2" placeholder="${esc(zahlungsText({ ...r, zahlungsbedingungen: '' }) || 'Werden aus Zahlungsziel und Skonto gebildet')}">${esc(r.zahlungsbedingungen || '')}</textarea>
             <span class="hint">Leer lassen, dann bildet Kontovia den Text aus Zahlungsziel und Skonto.</span></div>
@@ -599,7 +602,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
       const p = r.positionen.find((x) => x.id === zeile.dataset.pos);
       if (!p) return;
       const k = el.dataset.p;
-      if (k === 'menge') p.menge = Number(String(el.value).replace(/\./g, '').replace(',', '.')) || 0;
+      if (k === 'menge') p.menge = Number(sprache() === 'en' ? String(el.value).replace(/,/g, '') : String(el.value).replace(/\./g, '').replace(',', '.')) || 0;
       else if (k === 'preis') p.preis = parseMoney(el.value);
       else if (k === 'satz') p.satz = Number(el.value);
       else if (k === 'einheit') { const e2 = einheitAusText(el.value); p.einheit = e2.code; p.einheitText = e2.text; }

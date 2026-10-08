@@ -9,7 +9,7 @@
  */
 
 import {
-  html, raw, esc, $, $$, money, todayISO, int, ymLabel, addDays, relativeDays, sum, fmtDate, MONTHS_SHORT,
+  html, raw, esc, $, $$, money, todayISO, int, ymLabel, addDays, relativeDays, sum, fmtDate, MONTHS_SHORT, dz,
 } from '../lib/util.js';
 import { icon, statCard, deltaBadge, compareLabel, rankBars, donut, emptyState, chart, mountCharts, amountCell, ok } from '../lib/ui.js';
 import { store, sel } from '../lib/store.js';
@@ -195,7 +195,7 @@ const WIDGETS = {
       return statCard({
         label: cur.profit >= 0 ? 'Gewinn' : 'Verlust', icon: 'scale', value: euro(cur.profit), tone: cur.profit >= 0 ? 'pos' : 'neg',
         ziel: z('reports', { tab: 'guv', period: zeitraum() }, { haupt: true, titel: 'Gewinn- und Verlustrechnung öffnen' }),
-        foot: cur.margin !== null ? `<span>Marge ${esc((cur.margin * 100).toFixed(1).replace('.', ','))} %</span>` : '<span>–</span>',
+        foot: cur.margin !== null ? `<span>Marge ${esc(dz((cur.margin * 100).toFixed(1)))} %</span>` : '<span>–</span>',
       }).__raw;
     },
   },

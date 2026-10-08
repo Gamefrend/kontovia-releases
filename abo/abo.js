@@ -22,8 +22,81 @@
  */
 
 const $ = (id) => document.getElementById(id);
-const eur = (n) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }).format(n);
-const zahlDe = (stellen) => (n) => new Intl.NumberFormat('de-DE', { minimumFractionDigits: stellen, maximumFractionDigits: stellen }).format(n);
+
+/* ---------- Sprache ----------
+ * Deutsch ist der Text im HTML. Englisch kommt aus abo/en.js über dieselbe Maschine wie in der App
+ * (lib/sprache.js, die Wahl liegt im selben localStorage): fester Text übersetzt sie von selbst,
+ * Text aus abo.js und config.json läuft durch x() und T(). */
+let EN = false;
+let SP = null;
+const x = (de, en) => (EN ? en : de);
+const T = (s) => (EN && SP ? SP.t(s) : s);
+const ort = () => (EN ? 'en-GB' : 'de-DE');
+const eur = (n) => new Intl.NumberFormat(ort(), { style: 'currency', currency: 'EUR', minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 }).format(n);
+const zahlDe = (stellen) => (n) => new Intl.NumberFormat(ort(), { minimumFractionDigits: stellen, maximumFractionDigits: stellen }).format(n);
+const SPRACH_KEY = 'kontovia.sprache';
+
+const MONATE = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** Deutsche Schreibweise im festen Text (Datum, 1.234,56 €) in englische umsetzen; Wörter übersetzt die Maschine. */
+function zahlEn(s) {
+  return s
+    .replace(/(\d{1,2})\.(\d{1,2})\.(\d{4})?(?!\d)/g, (_, d, m, j) => `${Number(d)} ${MONATE[Number(m) - 1] || m}${j ? ` ${j}` : ''}`)
+    .replace(/(\d{1,3}(?:\.\d{3})+|\d+)(?:,(\d+))?/g, (_, g, z) => g.replace(/\./g, ',') + (z ? `.${z}` : ''))
+    .replace(/([\d.,]+) €/g, '€$1');
+}
+
+function seiteEnglisch() {
+  // Zahlen mit Währung: das Zeichen steht im Englischen vorn
+  for (const n of document.querySelectorAll('[data-cent]')) {
+    const nach = n.nextSibling;
+    const em = n.nextElementSibling;
+    if (nach && nach.nodeType === 3 && nach.data.trim() === '€') { nach.data = ''; n.before('€'); }
+    else if (em && em.tagName === 'EM' && em.textContent.trim() === '€') n.before(em);
+  }
+  const wurzel = document.createTreeWalker(document.querySelector('main'), NodeFilter.SHOW_TEXT);
+  const knoten = [];
+  while (wurzel.nextNode()) knoten.push(wurzel.currentNode);
+  for (const k of knoten) {
+    // Mit Buchstaben war es Text für die Maschine (sein Wörterbucheintrag ist schon englisch geschrieben).
+    if (/[A-Za-zÄÖÜäöüß]/.test(k.data) || k.parentElement.closest('[data-cent],[data-zahl],script,style')) continue;
+    const neu = zahlEn(k.data).replace(/^(\s*\d{1,2})\.(\s*)$/, '$1$2');
+    if (neu !== k.data) k.data = neu;
+  }
+  const meta = {
+    'meta[name="description"]': 'Invoices, e-invoices, receipts and tax in one place. Encrypted on your device, usable offline. Start free, try Standard, Pro and Max for 30 days.',
+    'meta[property="og:title"]': 'Kontovia: bookkeeping that stays with you',
+    'meta[property="og:description"]': 'Invoices, receipts and tax in one place. Encrypted on your device. Start free.',
+    'meta[property="og:locale"]': 'en_GB',
+  };
+  for (const [wahl, text] of Object.entries(meta)) document.querySelector(wahl)?.setAttribute('content', text);
+}
+
+/** Sprache laden (nie ein Fehler, die Seite bleibt sonst deutsch) und den Umschalter im Kopf verdrahten. */
+async function spracheVorbereiten() {
+  try {
+    SP = await import('../lib/sprache.js');
+    SP.woerterbuchSetzen((await import('./en.js')).default);
+    EN = SP.sprache() === 'en';
+    if (EN) { await SP.spracheStarten(); seiteEnglisch(); }
+  } catch (err) {
+    EN = false;
+    console.warn('Sprache nicht geladen', err);
+  }
+  document.documentElement.classList.remove('uebersetzt-folgt');
+  for (const b of document.querySelectorAll('[data-sprache]')) {
+    const an = b.dataset.sprache === (EN ? 'en' : 'de');
+    b.classList.toggle('aktiv', an);
+    b.setAttribute('aria-pressed', String(an));
+    b.addEventListener('click', () => {
+      try { localStorage.setItem(SPRACH_KEY, b.dataset.sprache); } catch { /* privater Modus */ }
+      // ?lang= aus der Adresse würde die Wahl sonst beim Neuladen überstimmen
+      const u = new URL(location.href);
+      u.searchParams.delete('lang');
+      history.replaceState(null, '', u);
+      location.reload();
+    });
+  }
+}
 
 const zustand = { cfg: null, zyklus: 'monat', tarif: '' };
 
@@ -225,19 +298,19 @@ function assistentSpielen(karte) {
       antwort.textContent = '';
       blase.classList.add('leer');
       await warten(600);
-      if (!await tippen(frage, frage.dataset.tippen, 26, nr)) return;
+      if (!await tippen(frage, T(frage.dataset.tippen), 26, nr)) return;
       await warten(300);
       if (nr !== lauf) return;
       blase.classList.remove('leer');
       denkt.classList.add('an');
       await warten(1300);
       denkt.classList.remove('an');
-      if (!await tippen(antwort, antwort.dataset.tippen, 13, nr)) return;
+      if (!await tippen(antwort, T(antwort.dataset.tippen), 13, nr)) return;
       await warten(4500);
     }
   }
   function ganz() {
-    for (const k of [frage, antwort]) { k.textContent = k.dataset.tippen; k.classList.remove('tippt'); }
+    for (const k of [frage, antwort]) { k.textContent = T(k.dataset.tippen); k.classList.remove('tippt'); }
     denkt.classList.remove('an');
     blase.classList.remove('leer');
   }
@@ -288,20 +361,20 @@ function tarifeZeichnen() {
     const k = el('article', `tarif glanz${t.empfohlen ? ' empfohlen' : ''}`);
     if (t.empfohlen) {
       const p = el('span', 'plakette');
-      p.append(icon('funke'), 'Beliebt');
+      p.append(icon('funke'), x('Beliebt', 'Popular'));
       k.append(p);
     }
-    k.append(el('h3', '', t.name), el('p', 'fuer', t.fuer));
+    k.append(el('h3', '', T(t.name)), el('p', 'fuer', T(t.fuer)));
 
     const preis = el('div', 'preis');
     const statt = el('s');
-    statt.append(el('span', 'sr', 'bisher '), eur(t.preisMonat));
+    statt.append(el('span', 'sr', x('bisher ', 'was ')), eur(t.preisMonat));
     const betrag = el('b');
-    preis.append(statt, betrag, el('span', '', istFrei(t) ? 'für immer' : 'im Monat'));
+    preis.append(statt, betrag, el('span', '', istFrei(t) ? x('für immer', 'forever') : x('im Monat', 'per month')));
     const unter = el('p', 'preis-unter');
     k.append(preis, unter);
 
-    const a = el('a', `knopf ${t.empfohlen ? 'akzent' : istFrei(t) ? '' : 'zweit'}`.trim(), istFrei(t) ? 'Kostenlos starten' : `${t.name} wählen`);
+    const a = el('a', `knopf ${t.empfohlen ? 'akzent' : istFrei(t) ? '' : 'zweit'}`.trim(), istFrei(t) ? x('Kostenlos starten', 'Start for free') : x(`${t.name} wählen`, `Choose ${T(t.name)}`));
     if (istFrei(t)) a.href = '../';
     else {
       a.href = '#anmelden';
@@ -309,11 +382,11 @@ function tarifeZeichnen() {
     }
     k.append(a);
 
-    if (t.basis) k.append(el('p', 'basis', t.basis));
+    if (t.basis) k.append(el('p', 'basis', T(t.basis)));
     const liste = el('ul');
     for (const p of t.punkte) {
       const li = el('li');
-      li.append(icon('haken'), el('span', '', p));
+      li.append(icon('haken'), el('span', '', T(p)));
       liste.append(li);
     }
     k.append(liste);
@@ -332,9 +405,9 @@ function preiseSetzen() {
     gezeigt.set(t.id, neu);
     statt.hidden = istFrei(t) || neu === t.preisMonat;
     unter.replaceChildren();
-    if (istFrei(t)) unter.textContent = 'Ohne Anmeldung, ohne Zahlungsdaten';
-    else if (zustand.zyklus === 'jahr') unter.append(`${eur(preisProJahr(t))} im Jahr · `, el('strong', '', `Sie sparen ${eur(ersparnis(t))}`));
-    else unter.textContent = `Monatlich kündbar · ${zustand.cfg.testTage} Tage gratis`;
+    if (istFrei(t)) unter.textContent = x('Ohne Anmeldung, ohne Zahlungsdaten', 'No sign-up, no payment details');
+    else if (zustand.zyklus === 'jahr') unter.append(`${eur(preisProJahr(t))} ${x('im Jahr', 'per year')} · `, el('strong', '', x(`Sie sparen ${eur(ersparnis(t))}`, `You save ${eur(ersparnis(t))}`)));
+    else unter.textContent = x(`Monatlich kündbar · ${zustand.cfg.testTage} Tage gratis`, `Cancel monthly · ${zustand.cfg.testTage} days free`);
   }
 }
 
@@ -343,17 +416,17 @@ function vergleichZeichnen() {
   const cfg = zustand.cfg;
   if (!cfg.vergleich?.length) { $('vergleichKnopf').parentElement.hidden = true; return; }
   const tab = el('table', 'vtab');
-  tab.append(el('caption', 'sr', 'Alle Funktionen der Tarife im Vergleich'));
+  tab.append(el('caption', 'sr', x('Alle Funktionen der Tarife im Vergleich', 'All plan features compared')));
   const kopf = el('thead');
   const zeile = el('tr');
   const ecke = el('th');
   ecke.scope = 'col';
-  ecke.append(el('span', 'sr', 'Funktion'));
+  ecke.append(el('span', 'sr', x('Funktion', 'Feature')));
   zeile.append(ecke);
   for (const t of cfg.tarife) {
     const th = el('th', t.empfohlen ? 'hervor' : '');
     th.scope = 'col';
-    th.append(t.name, el('small', '', istFrei(t) ? '0 €' : `${eur(t.preisMonat)} im Monat`));
+    th.append(T(t.name), el('small', '', istFrei(t) ? eur(0) : `${eur(t.preisMonat)} ${x('im Monat', 'per month')}`));
     zeile.append(th);
   }
   kopf.append(zeile);
@@ -361,22 +434,22 @@ function vergleichZeichnen() {
   for (const g of cfg.vergleich) {
     const rumpf = el('tbody');
     const gz = el('tr', 'gruppe');
-    const gth = el('th', '', g.gruppe);
+    const gth = el('th', '', T(g.gruppe));
     gth.scope = 'rowgroup';
     gth.colSpan = cfg.tarife.length + 1;
     gz.append(gth);
     rumpf.append(gz);
     for (const z of g.zeilen) {
       const tr = el('tr');
-      const th = el('th', '', z.name);
+      const th = el('th', '', T(z.name));
       th.scope = 'row';
       tr.append(th);
       for (const t of cfg.tarife) {
         const w = z.werte?.[t.id];
         const td = el('td', t.empfohlen ? 'hervor' : '');
-        if (w === true) td.append(icon('haken', 'ja'), el('span', 'sr', 'enthalten'));
-        else if (!w) td.append(el('span', 'nein'), el('span', 'sr', 'nicht enthalten'));
-        else td.textContent = String(w);
+        if (w === true) td.append(icon('haken', 'ja'), el('span', 'sr', x('enthalten', 'included')));
+        else if (!w) td.append(el('span', 'nein'), el('span', 'sr', x('nicht enthalten', 'not included')));
+        else td.textContent = T(String(w));
         tr.append(td);
       }
       rumpf.append(tr);
@@ -391,7 +464,7 @@ function vergleichUmschalten() {
   knopf.addEventListener('click', () => {
     const auf = knopf.getAttribute('aria-expanded') !== 'true';
     knopf.setAttribute('aria-expanded', String(auf));
-    text.textContent = auf ? 'Vergleich schließen' : 'Alle Funktionen vergleichen';
+    text.textContent = auf ? x('Vergleich schließen', 'Close comparison') : x('Alle Funktionen vergleichen', 'Compare all features');
     innen.inert = !auf;
     huelle.classList.remove('ganz');
     huelle.classList.toggle('offen', auf);
@@ -421,7 +494,7 @@ function tarifAuswahlZeichnen() {
     i.type = 'radio'; i.name = 'tarif'; i.value = t.id; i.checked = t.id === zustand.tarif;
     i.addEventListener('change', () => tarifWaehlen(t.id));
     const s = el('span');
-    s.append(el('b', '', t.name), el('small', '', ''));
+    s.append(el('b', '', T(t.name)), el('small', '', ''));
     l.append(i, s);
     wurzel.append(l);
   }
@@ -431,7 +504,7 @@ function tarifAuswahlZeichnen() {
 function auswahlPreiseSetzen() {
   for (const i of $('tarifWahl').querySelectorAll('input')) {
     i.checked = i.value === zustand.tarif;
-    i.nextElementSibling.querySelector('small').textContent = `${eur(preisProMonat(tarif(i.value)))} im Monat`;
+    i.nextElementSibling.querySelector('small').textContent = `${eur(preisProMonat(tarif(i.value)))} ${x('im Monat', 'per month')}`;
   }
 }
 
@@ -458,12 +531,14 @@ function knopfTextSetzen() {
   const t = tarif(zustand.tarif);
   if (!t) return;
   const test = zustand.cfg.testTage;
-  $('sendenKnopf').textContent = hatAnbindung() ? `${t.name} ${test} Tage testen` : `${t.name} vormerken`;
+  const name = T(t.name);
+  $('sendenKnopf').textContent = hatAnbindung() ? x(`${t.name} ${test} Tage testen`, `Try ${name} for ${test} days`) : x(`${t.name} vormerken`, `Pre-register for ${name}`);
   $('formHinweis').textContent = hatAnbindung()
-    ? `${t.name}, ${eur(preisProMonat(t))} im Monat${zustand.zyklus === 'jahr' ? ' bei jährlicher Zahlung' : ''}. Die ersten ${test} Tage sind kostenlos.`
+    ? x(`${t.name}, ${eur(preisProMonat(t))} im Monat${zustand.zyklus === 'jahr' ? ' bei jährlicher Zahlung' : ''}. Die ersten ${test} Tage sind kostenlos.`,
+      `${name}, ${eur(preisProMonat(t))} per month${zustand.zyklus === 'jahr' ? ' when paid yearly' : ''}. The first ${test} days are free.`)
     : anmeldungOffen()
-      ? 'Die Anmeldung ist noch nicht freigeschaltet. Sie schicken uns eine E-Mail, wir melden uns, sobald es losgeht.'
-      : 'Im Testbetrieb nehmen wir noch keine Anmeldungen an. Kostenlos können Sie Kontovia schon jetzt ausprobieren.';
+      ? x('Die Anmeldung ist noch nicht freigeschaltet. Sie schicken uns eine E-Mail, wir melden uns, sobald es losgeht.', 'Sign-up is not open yet. You send us an email and we will get back to you as soon as we start.')
+      : x('Im Testbetrieb nehmen wir noch keine Anmeldungen an. Kostenlos können Sie Kontovia schon jetzt ausprobieren.', 'We are not taking sign-ups during the test period. You can already try Kontovia for free.');
 }
 
 /* ---------- Formular ---------- */
@@ -480,9 +555,9 @@ function pruefen() {
   const name = $('fName').value.trim();
   const mail = $('fMail').value.trim();
   const fehler = {};
-  if (name.length < 2) fehler.fName = 'Bitte tragen Sie Ihren Namen ein.';
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail)) fehler.fMail = 'Bitte prüfen Sie die E-Mail-Adresse.';
-  if (!$('fZustimmung').checked) fehler.fZustimmung = 'Bitte bestätigen Sie die Nutzungsbedingungen und die Datenschutzhinweise.';
+  if (name.length < 2) fehler.fName = x('Bitte tragen Sie Ihren Namen ein.', 'Please enter your name.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(mail)) fehler.fMail = x('Bitte prüfen Sie die E-Mail-Adresse.', 'Please check the email address.');
+  if (!$('fZustimmung').checked) fehler.fZustimmung = x('Bitte bestätigen Sie die Nutzungsbedingungen und die Datenschutzhinweise.', 'Please confirm the terms of use and the privacy notice.');
   for (const id of ['fName', 'fMail', 'fZustimmung']) fehlerZeigen(id, fehler[id]);
   const erster = Object.keys(fehler)[0];
   if (erster) $(erster).focus();
@@ -505,8 +580,8 @@ function meldung(art, text, link) {
 async function absenden(e) {
   e.preventDefault();
   if (!anmeldungOffen()) {
-    meldung('info', 'Im Testbetrieb nehmen wir noch keine Anmeldungen an, Ihre Angaben wurden nicht gesendet. Kontovia können Sie schon jetzt kostenlos ausprobieren.',
-      { text: 'Kontovia öffnen', href: '../' });
+    meldung('info', x('Im Testbetrieb nehmen wir noch keine Anmeldungen an, Ihre Angaben wurden nicht gesendet. Kontovia können Sie schon jetzt kostenlos ausprobieren.', 'We are not taking sign-ups during the test period, your details were not sent. You can already try Kontovia for free.'),
+      { text: x('Kontovia öffnen', 'Open Kontovia'), href: '../' });
     return;
   }
   const daten = pruefen();
@@ -523,12 +598,12 @@ async function absenden(e) {
       });
       if (!r.ok) throw new Error(String(r.status));
       const kasse = kasseLink(t.id);
-      meldung('gut', 'Vielen Dank! Wir haben Ihnen eine E-Mail geschickt. Schauen Sie bitte auch im Spam-Ordner nach.',
-        kasse ? { text: 'Weiter zur Zahlung', href: kasse } : null);
+      meldung('gut', x('Vielen Dank! Wir haben Ihnen eine E-Mail geschickt. Schauen Sie bitte auch im Spam-Ordner nach.', 'Thank you! We have sent you an email. Please check your spam folder too.'),
+        kasse ? { text: x('Weiter zur Zahlung', 'Continue to payment'), href: kasse } : null);
       $('anmeldeForm').reset();
       tarifWaehlen(t.id);
     } catch {
-      meldung('fehl', 'Das hat leider nicht geklappt. Bitte versuchen Sie es gleich noch einmal oder schreiben Sie uns eine E-Mail.');
+      meldung('fehl', x('Das hat leider nicht geklappt. Bitte versuchen Sie es gleich noch einmal oder schreiben Sie uns eine E-Mail.', 'That did not work. Please try again in a moment or write us an email.'));
     } finally {
       knopf.disabled = false;
     }
@@ -539,17 +614,22 @@ async function absenden(e) {
   if (kasse) { location.href = kasse; return; }
 
   // Vorbestellung: die E-Mail wird im Mailprogramm des Besuchers vorbereitet und von ihm selbst abgeschickt.
-  const betreff = `Kontovia ${t.name}: Anmeldung`;
-  const text = [
+  const betreff = x(`Kontovia ${t.name}: Anmeldung`, `Kontovia ${T(t.name)}: sign-up`);
+  const text = (EN ? [
+    'Hello,', '',
+    `I would like to try Kontovia ${T(t.name)} (${zustand.zyklus === 'jahr' ? 'yearly' : 'monthly'}).`, '',
+    `Name: ${daten.name}`, `Email: ${daten.email}`, daten.firma ? `Company: ${daten.firma}` : '', '',
+    'I have read the terms of use and the privacy notice.',
+  ] : [
     'Guten Tag,', '',
     `ich möchte Kontovia ${t.name} (${zustand.zyklus === 'jahr' ? 'jährlich' : 'monatlich'}) ausprobieren.`, '',
     `Name: ${daten.name}`, `E-Mail: ${daten.email}`, daten.firma ? `Firma: ${daten.firma}` : '', '',
     'Ich habe die Nutzungsbedingungen und die Datenschutzhinweise gelesen.',
-  ].filter((z, i, a) => z !== '' || a[i - 1] !== '').join('\n');
+  ]).filter((z, i, a) => z !== '' || a[i - 1] !== '').join('\n');
   const ziel = zustand.cfg.kontakt;
   if (ziel) location.href = `mailto:${ziel}?subject=${encodeURIComponent(betreff)}&body=${encodeURIComponent(text)}`;
-  meldung('gut', 'Ihr Mailprogramm sollte sich jetzt mit einer vorbereiteten Nachricht öffnen. Schicken Sie sie ab, dann sind Sie vorgemerkt. Bis es losgeht, können Sie Kontovia schon kostenlos nutzen.',
-    { text: 'Kontovia öffnen', href: '../' });
+  meldung('gut', x('Ihr Mailprogramm sollte sich jetzt mit einer vorbereiteten Nachricht öffnen. Schicken Sie sie ab, dann sind Sie vorgemerkt. Bis es losgeht, können Sie Kontovia schon kostenlos nutzen.', 'Your mail program should now open with a prepared message. Send it and you are pre-registered. Until we start, you can already use Kontovia for free.'),
+    { text: x('Kontovia öffnen', 'Open Kontovia'), href: '../' });
 }
 
 /* ---------- Installieren ---------- */
@@ -569,12 +649,12 @@ function installierenVorbereiten() {
 
   const knopf = $('installKnopf'), hinweis = $('installHinweis');
   const schonApp = matchMedia('(display-mode: standalone)').matches;
-  if (schonApp) { knopf.hidden = true; hinweis.hidden = false; hinweis.textContent = 'Kontovia läuft hier bereits als App.'; }
+  if (schonApp) { knopf.hidden = true; hinweis.hidden = false; hinweis.textContent = x('Kontovia läuft hier bereits als App.', 'Kontovia is already running here as an app.'); }
 
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installAngebot = e; });
   window.addEventListener('appinstalled', () => {
     installAngebot = null; knopf.hidden = true;
-    hinweis.hidden = false; hinweis.textContent = 'Fertig! Kontovia ist jetzt installiert.';
+    hinweis.hidden = false; hinweis.textContent = x('Fertig! Kontovia ist jetzt installiert.', 'Done! Kontovia is now installed.');
   });
   knopf.addEventListener('click', async () => {
     if (installAngebot) {
@@ -585,9 +665,9 @@ function installierenVorbereiten() {
     }
     hinweis.hidden = false;
     hinweis.textContent = art === 'desktop'
-      ? 'Öffnen Sie Kontovia in Chrome oder Edge. In der Adressleiste erscheint dann ein Symbol zum Installieren, oder wählen Sie im Browsermenü „App installieren“.'
-      : 'Öffnen Sie Kontovia und wählen Sie im Browsermenü „App installieren“.';
-    const a = el('a', '', ' Kontovia öffnen');
+      ? x('Öffnen Sie Kontovia in Chrome oder Edge. In der Adressleiste erscheint dann ein Symbol zum Installieren, oder wählen Sie im Browsermenü „App installieren“.', 'Open Kontovia in Chrome or Edge. An install icon then appears in the address bar, or choose “Install app” in the browser menu.')
+      : x('Öffnen Sie Kontovia und wählen Sie im Browsermenü „App installieren“.', 'Open Kontovia and choose “Install app” in the browser menu.');
+    const a = el('a', '', x(' Kontovia öffnen', ' Open Kontovia'));
     a.href = '../';
     hinweis.append(a);
   });
@@ -596,6 +676,7 @@ function installierenVorbereiten() {
 /* ---------- Start ---------- */
 
 async function start() {
+  await spracheVorbereiten();
   kopfBeobachten();
   kalenderBauen();
   einblenden();
@@ -613,7 +694,7 @@ async function start() {
     if (!r.ok) throw new Error(String(r.status));
     cfg = await r.json();
   } catch {
-    $('tarife').replaceChildren(el('p', 'fein mitte', 'Die Preise konnten gerade nicht geladen werden. Bitte laden Sie die Seite neu.'));
+    $('tarife').replaceChildren(el('p', 'fein mitte', x('Die Preise konnten gerade nicht geladen werden. Bitte laden Sie die Seite neu.', 'The prices could not be loaded. Please reload the page.')));
     return;
   }
   zustand.cfg = cfg;
@@ -621,9 +702,9 @@ async function start() {
   zustand.tarif = (bezahlt.find((t) => t.empfohlen) || bezahlt[0])?.id || '';
 
   $('testTage').textContent = String(cfg.testTage);
-  if (cfg.jahresMonateGratis) $('jahrRabatt').textContent = `${cfg.jahresMonateGratis} Monate gratis`;
+  if (cfg.jahresMonateGratis) $('jahrRabatt').textContent = x(`${cfg.jahresMonateGratis} Monate gratis`, `${cfg.jahresMonateGratis} months free`);
   else document.querySelector('[data-zyklus="jahr"]').hidden = true;
-  $('preisHinweis').textContent = cfg.preisHinweis || '';
+  $('preisHinweis').textContent = T(cfg.preisHinweis || '');
 
   tarifeZeichnen();
   vergleichZeichnen();

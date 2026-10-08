@@ -29,6 +29,7 @@ import {
 } from '../lib/rechnung.js';
 import { vorschauDaten, bildAblegen, bildWaehlen, bildHolen } from '../lib/rechnungsdateien.js';
 import { pixelProMm } from '../lib/rechnungsdruck.js';
+import { DOKUMENT_SPRACHEN } from '../lib/dokumenttexte.js';
 import { textDirektBearbeiten, bilderAusZwischenablage } from '../lib/textbearbeiten.js';
 
 const PT = 72 / 25.4; // Punkt je mm
@@ -289,6 +290,7 @@ export async function gestaltungZeigen(root, params = {}) {
         <div class="form-grid">
           <div class="field"><label for="gp_praefix">Vor der Nummer</label><input id="gp_praefix" data-p="praefix" value="${esc(p.praefix)}" placeholder="z. B. RE-"><span class="hint" id="gp_nummerBeispiel"></span></div>
           <div class="field"><label for="gp_ziel">Zahlungsziel in Tagen</label><input id="gp_ziel" data-p="zahlungszielTage" type="number" min="0" max="365" value="${esc(p.zahlungszielTage)}"></div>
+          <div class="field"><label for="gp_sprache">Sprache neuer Rechnungen</label><select id="gp_sprache" data-p="sprache">${DOKUMENT_SPRACHEN.map((l) => `<option value="${l.code}" ${(p.sprache === 'en' ? 'en' : 'de') === l.code ? 'selected' : ''}>${l.name}</option>`).join('')}</select><span class="hint">Jede Rechnung lässt sich beim Schreiben ändern.</span></div>
           <div class="field full"><label for="gp_kopf">Text vor den Positionen</label><textarea id="gp_kopf" data-p="kopftext" rows="3">${esc(p.kopftext)}</textarea></div>
           <div class="field full mb0"><label for="gp_schluss">Text am Ende</label><textarea id="gp_schluss" data-p="schlusstext" rows="3">${esc(p.schlusstext)}</textarea></div>
         </div>

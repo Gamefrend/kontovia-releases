@@ -121,6 +121,10 @@ h3 { font-size: 1.08rem; font-weight: 620; letter-spacing: -.015em; line-height:
 .menue-marke { position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; width: var(--w, 0); transform: translateX(var(--x, 0)); background: var(--surface-2); border-radius: 999px; opacity: 0; transition: transform .5s var(--ease), width .5s var(--ease), opacity .3s; }
 .menue.hat-aktiv .menue-marke { opacity: 1; }
 .kopf-aktionen { justify-self: end; display: flex; align-items: center; gap: 6px; }
+.sprachen { display: inline-flex; padding: 2px; border: 1px solid var(--line-strong); border-radius: 10px; margin-right: 4px; }
+.sprachen button { min-width: 36px; min-height: 30px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); font: 600 13px/1 var(--schrift); cursor: pointer; transition: background .2s, color .2s; }
+.sprachen button:hover { color: var(--text); }
+.sprachen button.aktiv { background: var(--surface-2); color: var(--text); }
 .kopf .knopf { background: var(--accent); color: var(--accent-text); }
 .kopf .knopf:hover { background: var(--accent-hover); color: var(--accent-text); }
 
@@ -695,3 +699,6 @@ html:not(.js) .vergleich-start { display: none; }
   .band-spur { justify-content: center !important; width: auto !important; }
   .band-liste { flex-wrap: wrap !important; }
 }
+
+/* Bis die Übersetzung steht (vorab.js), bleibt die Seite unsichtbar. */
+.uebersetzt-folgt body { opacity: 0; }

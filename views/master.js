@@ -1,7 +1,7 @@
 /** Kontovia – Stammdaten: Kategorien, Kontakte, Konten, Anlagevermögen. */
 
 import {
-  html, raw, esc, $, $$, money, moneyInput, parseMoney, fmtDate, todayISO, uid, int, sum, sortBy,
+  html, raw, esc, $, $$, money, moneyInput, parseMoney, fmtDate, todayISO, uid, int, sum, sortBy, dz,
 } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, err } from '../lib/ui.js';
 import { store, sel, upsertEntity, deleteEntity, isLockedDate, lockedUntil } from '../lib/store.js';
@@ -359,7 +359,7 @@ function showPlan(id) {
     title: `Abschreibungsplan: ${a.name}`,
     body: html`
       <p class="mt0 small muted">Anschaffungskosten ${money(a.cost)} € · ${AFA_METHODE[afaMethod(a)]}${afaMethod(a) === 'sofort' ? ''
-        : ` · ${a.usefulLifeYears} Jahre${afaMethod(a) === 'degressiv' ? ` · ${String(Math.round(degressivSatz(a.usefulLifeYears) * 1000) / 10).replace('.', ',')} % vom Restwert` : ''}`}
+        : ` · ${a.usefulLifeYears} Jahre${afaMethod(a) === 'degressiv' ? ` · ${dz(Math.round(degressivSatz(a.usefulLifeYears) * 1000) / 10)} % vom Restwert` : ''}`}
       · ab ${fmtDate(a.purchaseDate)} · im ersten Jahr anteilig nach Monaten (§ 7 Abs. 1 Satz 4 EStG)</p>
       <table class="data compact">
         <thead><tr><th>Jahr</th><th class="num">Abschreibung</th><th class="num">Restbuchwert am Jahresende</th></tr></thead>

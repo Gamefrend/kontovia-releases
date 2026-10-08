@@ -1,7 +1,7 @@
 /** Kontovia – Auswertungen: GuV, EÜR, Umsatzsteuer, Vermögen, offene Posten. */
 
 import {
-  html, raw, esc, $, $$, money, fmtDate, todayISO, int, sum, ymLabel,
+  html, raw, esc, $, $$, money, fmtDate, todayISO, int, sum, ymLabel, dz,
 } from '../lib/util.js';
 import { icon, statCard, deltaBadge, compareLabel, rankBars, emptyState, ok, err, modal, chart, mountCharts, segToggle, wireSeg } from '../lib/ui.js';
 import { store, sel } from '../lib/store.js';
@@ -125,7 +125,7 @@ function guv(root, db) {
   const euerGewinn = euerReport(db, period.from, period.to).profit;
   const avg = averages(current);
   const perMonth = (v) => (avg.months ? Math.round(v / avg.months) : 0);
-  const anteilPct = (v, total) => (total ? (Math.abs(v) / total * 100).toFixed(1).replace('.', ',') : '0,0');
+  const anteilPct = (v, total) => (total ? dz((Math.abs(v) / total * 100).toFixed(1)) : dz('0.0'));
   const avgFoot = (v) => (avg.months > 1 ? `<span class="avg-foot">im Schnitt ${esc(money(v))} € je Monat</span>` : '');
 
   const incomeCats = current.byCategory.filter((c) => c.kind === 'income');
@@ -255,7 +255,7 @@ function guv(root, db) {
               <tr><td class="muted">${current.vatOutstanding < 0 ? 'mehr gezahlt, als im Zeitraum angefallen ist (etwa für den Vorzeitraum)' : 'danach noch offene Zahllast des Zeitraums'}</td><td class="num muted">${esc(money(Math.abs(current.vatOutstanding)))} €</td></tr>`) : ''}
           </tbody>
         </table>
-        ${current.margin !== null ? raw(`<p class="small muted mt16 mb0">Von jedem eingenommenen Euro bleiben ${esc((current.margin * 100).toFixed(1).replace('.', ','))} Cent als Gewinn übrig.</p>`) : ''}
+        ${current.margin !== null ? raw(`<p class="small muted mt16 mb0">Von jedem eingenommenen Euro bleiben ${esc(dz((current.margin * 100).toFixed(1)))} Cent als Gewinn übrig.</p>`) : ''}
       </div>
     </div>
 

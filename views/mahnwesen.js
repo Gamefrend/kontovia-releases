@@ -7,12 +7,13 @@
  * (Mahngebühr und Verzugsaufschlag) werden erst gebucht, wenn das Geld da ist.
  */
 
-import { esc, $, $$, money, moneyInput, parseMoney, fmtDate, todayISO, int, sum, addDays } from '../lib/util.js';
+import { esc, $, $$, money, moneyInput, parseMoney, fmtDate, todayISO, int, sum, addDays, dz } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, err, statCard } from '../lib/ui.js';
 import { store, sel, lockedUntil } from '../lib/store.js';
 import { navigate, refresh } from '../lib/router.js';
 import { mountTable } from '../lib/table.js';
-import { betragText, titel as titelVon } from '../lib/rechnung.js';
+import { betragText, titel as titelVon, dokumentSprache } from '../lib/rechnung.js';
+import { woerterbuchBereit, woerterbuchDa } from '../lib/sprache.js';
 import { isVoidPart } from '../lib/calc.js';
 import {
   MAHNSTUFEN, mahneinstellungen, mahnungKurz, mahnverlauf, stufenName, MAHNTEXTE, AUFSCHLAG_ARTEN, KUNDENARTEN, kundenartVon,
@@ -251,6 +252,8 @@ async function mahnungSpeichern(m) {
 export function mahnungDialog(rechnungId, { onFertig } = {}) {
   const r = sel.invoice(rechnungId);
   if (!r) { warn('Diese Rechnung gibt es nicht mehr'); return; }
+  // Ein Schreiben auf Englisch braucht das Wörterbuch, bevor das Fenster seine Vorschau baut.
+  if (dokumentSprache(r) === 'en' && !woerterbuchDa()) { woerterbuchBereit().then(() => mahnungDialog(rechnungId, { onFertig })); return; }
   const einst = mahneinstellungen(store.db.settings);
   const stand0 = mahnstand(r);
   if (!stand0.mahnbar) { warn('Nicht mahnbar', stand0.grund); return; }
@@ -333,7 +336,7 @@ export function mahnungDialog(rechnungId, { onFertig } = {}) {
     const b = v.berechnung;
     const pauschaleSchon = b.aufschlag.pauschale > 0 && !b.aufschlag.pauschaleNeu;
     g('prozentText').textContent = satzOk
-      ? `Prozent pro Jahr (${String(einst.aufschlag.prozent).replace('.', ',')} %), tageweise ab ${b.aufschlag.verzugAb ? `dem ${fmtDate(addDays(b.aufschlag.verzugAb, 1))}` : 'Beginn des Verzugs'}`
+      ? `Prozent pro Jahr (${dz(einst.aufschlag.prozent)} %), tageweise ab ${b.aufschlag.verzugAb ? `dem ${fmtDate(addDays(b.aufschlag.verzugAb, 1))}` : 'Beginn des Verzugs'}`
       : 'Prozent pro Jahr (in den Einstellungen ist noch kein Satz eingetragen)';
     g('prozent').disabled = !satzOk;
     g('pauschaleText').textContent = pauschaleSchon ? `Pauschale (${money(b.aufschlag.pauschale)} €, schon früher berechnet, bleibt in der Forderung)` : `Feste Pauschale (${money(einst.aufschlag.pauschale)} €, höchstens einmal je Rechnung)`;
@@ -352,7 +355,7 @@ export function mahnungDialog(rechnungId, { onFertig } = {}) {
       ${zeile('Offener Rechnungsbetrag', `${esc(money(b.rest))} €`)}
       ${b.gebuehrFrueher ? zeile('Mahngebühren früherer Schreiben', `${esc(money(b.gebuehrFrueher))} €`) : ''}
       ${b.gebuehr ? zeile(`Mahngebühr (${esc(MAHNSTUFEN[b.stufe].kurz)})`, `${esc(money(b.gebuehr))} €`) : ''}
-      ${b.aufschlag.zins ? zeile(`Verzugsaufschlag ${esc(String(b.aufschlag.satz).replace('.', ','))} % für ${int(b.aufschlag.tage)} Tage`, `${esc(money(b.aufschlag.zins))} €`) : ''}
+      ${b.aufschlag.zins ? zeile(`Verzugsaufschlag ${esc(dz(b.aufschlag.satz))} % für ${int(b.aufschlag.tage)} Tage`, `${esc(money(b.aufschlag.zins))} €`) : ''}
       ${b.aufschlag.pauschale ? zeile('Verzugsaufschlag (Pauschale)', `${esc(money(b.aufschlag.pauschale))} €`) : ''}
       ${b.aufschlag.anrechnung ? zeile('abzüglich Mahngebühren, auf die Pauschale angerechnet', `−${esc(money(b.aufschlag.anrechnung))} €`) : ''}
       ${b.nebenBezahlt ? zeile('abzüglich bereits gezahlter Mahnkosten', `−${esc(money(b.nebenBezahlt))} €`) : ''}

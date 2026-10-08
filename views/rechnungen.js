@@ -21,6 +21,7 @@ import { openMenu } from '../lib/popover.js';
 import { mountTable } from '../lib/table.js';
 import {
   EINHEITEN, berechnen, zustand, ZUSTAENDE, faelligkeit, neueRechnung, neuePosition, einheitText, einheitAusText, betragText, satzText, titel as titelVon,
+  dokumentVorbereiten,
 } from '../lib/rechnung.js';
 import {
   stornieren, alsBezahlt, kopieAlsEntwurf, ausVorlage, alsVorlage, versandVermerken, produktSpeichern, rechnungSpeichern,
@@ -383,6 +384,7 @@ const MS_ANHANG_MAX = 2.8 * 1024 * 1024;
 const mitTouch = () => globalThis.matchMedia?.('(pointer: coarse)').matches;
 
 async function sendenDialog(r, { offen = true } = {}) {
+  await dokumentVorbereiten(r);
   const an = r.kaeufer?.email || (r.kaeufer?.kontaktId && sel.contact(r.kaeufer.kontaktId))?.email || '';
   const mail = mailFuer(r, store.db.settings, { offen });
   const behoerde = !!String(r.kaeufer?.leitwegId || '').trim();

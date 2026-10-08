@@ -9,7 +9,7 @@
  * (Verkauf, Entnahme, Verschrottung; calc.js: restbuchwert).
  */
 
-import { html, raw, esc, moneyInput, parseMoney, todayISO, fmtDate, money, uid } from '../lib/util.js';
+import { html, raw, esc, moneyInput, parseMoney, todayISO, fmtDate, money, uid, dz } from '../lib/util.js';
 import { confirmDialog, warn } from '../lib/ui.js';
 import { store, isLockedDate, lockedUntil } from '../lib/store.js';
 import { degressivMoeglich, degressivSatz, DEGRESSIV_FENSTER, isKleinunternehmer, restbuchwert } from '../lib/calc.js';
@@ -130,11 +130,11 @@ export function wireAnlageFelder(root) {
     } else if (methode === 'degressiv') {
       const satz2 = Math.round(degressivSatz(jahre, datum) * 1000) / 10;
       text = degressivMoeglich(datum)
-        ? `${String(satz2).replace('.', ',')} % vom jeweiligen Restwert, im ersten Jahr anteilig nach Monaten; sobald die lineare Rate höher ist, wechselt Kontovia zu ihr (§ 7 Abs. 2 und 3 EStG).`
+        ? `${dz(satz2)} % vom jeweiligen Restwert, im ersten Jahr anteilig nach Monaten; sobald die lineare Rate höher ist, wechselt Kontovia zu ihr (§ 7 Abs. 2 und 3 EStG).`
           + (jahre < 4 ? ' Bei unter vier Jahren Nutzungsdauer bringt degressiv nichts, es bleibt praktisch linear.' : '')
         : `Degressiv nur für bewegliche Wirtschaftsgüter, angeschafft ${fensterText()}.`;
     } else {
-      text = `${String(Math.round(1000 / jahre) / 10).replace('.', ',')} % je Jahr, monatsgenau ab dem Anschaffungsmonat (§ 7 Abs. 1 EStG).`;
+      text = `${dz(Math.round(1000 / jahre) / 10)} % je Jahr, monatsgenau ab dem Anschaffungsmonat (§ 7 Abs. 1 EStG).`;
     }
     g('hint').textContent = text;
   };

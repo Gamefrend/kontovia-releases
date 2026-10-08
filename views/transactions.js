@@ -2,7 +2,7 @@
 
 import {
   html, raw, esc, $, money, moneyInput, parseMoney, fmtDate, todayISO, uid,
-  sortBy, sum, bytes, splitFromGross, splitFromNet, addDays, int, hueOf, norm,
+  sortBy, sum, bytes, splitFromGross, splitFromNet, addDays, int, hueOf, norm, dz,
 } from '../lib/util.js';
 import { icon, ok, err, warn, modal, confirmDialog, amountCell, emptyState } from '../lib/ui.js';
 import {
@@ -401,7 +401,7 @@ function parsePercent(input) {
 }
 
 function percentText(p) {
-  return p ? String(p).replace('.', ',') : '';
+  return p ? dz(p) : '';
 }
 
 function depositTitle(dep) {
