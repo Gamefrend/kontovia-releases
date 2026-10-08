@@ -477,8 +477,8 @@ kbd { margin-left: auto; font: 500 10.5px var(--schrift); color: var(--muted); b
 .tarife { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: clamp(40px, 6vw, 56px); align-items: stretch; }
 .tarif { position: relative; display: flex; flex-direction: column; padding: 28px 24px 30px; border: 1px solid var(--line); border-radius: 24px; background: var(--surface); transition: transform .45s var(--ease), box-shadow .45s var(--ease); }
 @media (hover: hover) { .tarif:hover { transform: translateY(-4px); box-shadow: var(--schatten); } }
-.tarif.empfohlen { border-color: transparent; background: linear-gradient(var(--surface), var(--surface)) padding-box, conic-gradient(from var(--winkel), var(--accent), color-mix(in oklab, var(--accent) 15%, var(--line)) 22%, color-mix(in oklab, var(--accent) 15%, var(--line)) 50%, #c084fc 70%, var(--accent)) border-box; box-shadow: 0 30px 60px -30px color-mix(in oklab, var(--accent) 55%, transparent); animation: drehen 7s linear infinite; }
-@keyframes drehen { to { --winkel: 360deg; } }
+.tarif.empfohlen { border-color: transparent; background: linear-gradient(var(--surface), var(--surface)) padding-box, conic-gradient(from var(--winkel), var(--accent), color-mix(in oklab, var(--accent) 15%, var(--line)) 22%, color-mix(in oklab, var(--accent) 15%, var(--line)) 50%, #c084fc 70%, var(--accent)) border-box; box-shadow: 0 30px 60px -30px color-mix(in oklab, var(--accent) 55%, transparent); animation: randDrehen 7s linear infinite; }
+@keyframes randDrehen { to { --winkel: 360deg; } }
 .plakette { position: absolute; top: 24px; right: 22px; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 999px; background: var(--accent); color: var(--accent-text); font-size: 11.5px; font-weight: 650; }
 .plakette .i { width: 12px; height: 12px; stroke-width: 2.2; }
 .tarif h3 { font-size: 1.2rem; font-weight: 650; }
@@ -681,7 +681,10 @@ html:not(.js) .vergleich-start { display: none; }
   .abschnitt { padding: 56px 0; }
   .schluss { padding: 64px 0; }
   .kopfzeile .unter, .sicher-text .unter { font-size: 15.5px; }
-  .demo { height: 210px; padding: 18px 18px; }
+  .demo { height: auto; min-height: 210px; padding: 18px 18px; }
+  .demo-assistent { height: 230px; }
+  .demo-rechnung .pruefliste { display: none; }
+  .app { overflow: hidden; }
   .bento { gap: 12px; }
   .karte-text p { font-size: 15px; }
   .sicher-punkte { gap: 18px; margin-top: 36px; }
@@ -715,7 +718,13 @@ html:not(.js) .vergleich-start { display: none; }
 .buehne *, .demo *, .tresor * { -webkit-user-drag: none; }
 a, button, summary, label { -webkit-tap-highlight-color: transparent; }
 .knopf:focus:not(:focus-visible), .textlink:focus:not(:focus-visible) { outline: none; }
-.installieren { margin-top: 20px; }
+.installieren { margin-top: 28px; }
+.installieren-titel { margin-bottom: 10px; }
+.install-reihe { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.install-reihe .knopf { flex: 0 1 auto; }
+.install-reihe .knopf.dieses { border-color: var(--accent); }
+@media (max-width: 640px) { .install-reihe { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .install-reihe .knopf { white-space: normal; } }
+#installHinweis { max-width: 36em; margin-inline: auto; }
 .schluss .fein { margin-top: 10px; }
 
 /* ---------- Anmeldung im Fenster ---------- */
@@ -738,11 +747,11 @@ a, button, summary, label { -webkit-tap-highlight-color: transparent; }
   .held-grund { animation: heben linear both; animation-timeline: scroll(root); animation-range: 0 900px; }
   .buehne-glut { animation: sinken linear both; animation-timeline: scroll(root); animation-range: 0 900px; }
   .karte .demo, .tarif { animation: eintreten linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
-  .schluss-logo { animation: drehen linear both; animation-timeline: view(); animation-range: entry 0% cover 55%; }
+  .schluss-logo { animation: logoEin linear both; animation-timeline: view(); animation-range: entry 0% cover 55%; }
   .sicher-punkte .punkt-icon { animation: eintreten linear both; animation-timeline: view(); animation-range: entry 10% entry 80%; }
 }
 @keyframes fortschritt { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes heben { to { translate: 0 140px; } }
 @keyframes sinken { to { translate: 0 -60px; opacity: .2; } }
 @keyframes eintreten { from { scale: .94; } to { scale: 1; } }
-@keyframes drehen { from { rotate: -14deg; scale: .7; } to { rotate: 0deg; scale: 1; } }
+@keyframes logoEin { from { rotate: -14deg; scale: .7; } to { rotate: 0deg; scale: 1; } }

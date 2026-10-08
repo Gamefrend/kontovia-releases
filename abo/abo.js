@@ -673,32 +673,55 @@ function geraetErkennen() {
   return 'desktop';
 }
 
-function installierenVorbereiten() {
+/** Plattform dieses Geräts: windows, mac, android oder ios (Linux zählt wie Windows: Chrome/Edge). */
+function plattformErkennen() {
   const art = geraetErkennen();
-  const knopf = $('installKnopf'), hinweis = $('installHinweis');
-  const schonApp = matchMedia('(display-mode: standalone)').matches;
-  if (schonApp) { knopf.hidden = true; hinweis.hidden = false; hinweis.textContent = x('Kontovia läuft hier bereits als App.', 'Kontovia is already running here as an app.'); }
+  if (art === 'ios' || art === 'android') return art;
+  return /Mac/.test(navigator.platform || '') ? 'mac' : 'windows';
+}
+
+function installAnleitung(plattform) {
+  switch (plattform) {
+    case 'ios': return x('Öffnen Sie Kontovia in Safari, tippen Sie auf „Teilen“ und wählen Sie „Zum Home-Bildschirm“.', 'Open Kontovia in Safari, tap “Share” and choose “Add to Home Screen”.');
+    case 'android': return x('Öffnen Sie Kontovia in Chrome, tippen Sie oben rechts auf das Menü und wählen Sie „App installieren“.', 'Open Kontovia in Chrome, tap the menu at the top right and choose “Install app”.');
+    case 'mac': return x('Öffnen Sie Kontovia in Chrome oder Edge und klicken Sie in der Adressleiste auf das Installieren-Symbol. In Safari: Menü „Ablage“ › „Zum Dock hinzufügen“.', 'Open Kontovia in Chrome or Edge and click the install icon in the address bar. In Safari: “File” › “Add to Dock”.');
+    default: return x('Öffnen Sie Kontovia in Chrome oder Edge und klicken Sie in der Adressleiste auf das Installieren-Symbol, oder wählen Sie im Browsermenü „App installieren“.', 'Open Kontovia in Chrome or Edge and click the install icon in the address bar, or choose “Install app” in the browser menu.');
+  }
+}
+
+function installierenVorbereiten() {
+  const hier = plattformErkennen();
+  const knoepfe = [...document.querySelectorAll('[data-plattform]')];
+  const hinweis = $('installHinweis');
+  const reihe = document.querySelector('.installieren');
+  knoepfe.find((k) => k.dataset.plattform === hier)?.classList.add('dieses');
+  if (matchMedia('(display-mode: standalone)').matches) {
+    reihe.hidden = true; hinweis.hidden = false;
+    hinweis.textContent = x('Kontovia läuft hier bereits als App.', 'Kontovia is already running here as an app.');
+  }
 
   window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installAngebot = e; });
   window.addEventListener('appinstalled', () => {
-    installAngebot = null; knopf.hidden = true;
+    installAngebot = null; reihe.hidden = true;
     hinweis.hidden = false; hinweis.textContent = x('Fertig! Kontovia ist jetzt installiert.', 'Done! Kontovia is now installed.');
   });
-  knopf.addEventListener('click', async () => {
-    if (installAngebot) {
-      installAngebot.prompt();
-      await installAngebot.userChoice.catch(() => {});
-      installAngebot = null;
-      return;
-    }
-    hinweis.hidden = false;
-    hinweis.textContent = art === 'desktop'
-      ? x('Öffnen Sie Kontovia in Chrome oder Edge. In der Adressleiste erscheint dann ein Symbol zum Installieren, oder wählen Sie im Browsermenü „App installieren“.', 'Open Kontovia in Chrome or Edge. An install icon then appears in the address bar, or choose “Install app” in the browser menu.')
-      : x('Öffnen Sie Kontovia und wählen Sie im Browsermenü „App installieren“.', 'Open Kontovia and choose “Install app” in the browser menu.');
-    const a = el('a', '', x(' Kontovia öffnen', ' Open Kontovia'));
-    a.href = '../';
-    hinweis.append(a);
-  });
+  for (const knopf of knoepfe) {
+    knopf.addEventListener('click', async () => {
+      const plattform = knopf.dataset.plattform;
+      // Auf der eigenen Plattform mit Angebot des Browsers: direkt installieren.
+      if (plattform === hier && installAngebot) {
+        installAngebot.prompt();
+        await installAngebot.userChoice.catch(() => {});
+        installAngebot = null;
+        return;
+      }
+      hinweis.hidden = false;
+      hinweis.textContent = (plattform === hier ? '' : x('Auf einem anderen Gerät: ', 'On another device: ')) + installAnleitung(plattform);
+      const a = el('a', '', x(' Kontovia öffnen', ' Open Kontovia'));
+      a.href = '../';
+      hinweis.append(a);
+    });
+  }
 }
 
 /* ---------- Start ---------- */
