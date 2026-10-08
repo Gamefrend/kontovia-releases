@@ -22,6 +22,7 @@ import { mahnKarte } from './mahneinstellungen.js';
 import { table, mountTables } from '../lib/table.js';
 import { bereichEin, markierung } from '../lib/bewegung.js';
 import { darf, verbotText } from '../lib/rollen.js';
+import { SPRACHEN, sprache, spracheSetzen } from '../lib/sprache.js';
 
 const api = window.kontovia;
 
@@ -376,6 +377,13 @@ async function draw(root) {
               <option value="dark" ${s.theme === 'dark' ? 'selected' : ''}>Dunkel</option>
             </select>
             <span class="hint">Wirkt sofort. Schneller geht es mit dem Umschalter links unten in der Seitenleiste.</span>
+          </div>
+          <div class="field">
+            <label for="s_sprache">Sprache</label>
+            <select id="s_sprache" translate="no">
+              ${raw(SPRACHEN.map((l) => `<option value="${l.code}" ${sprache() === l.code ? 'selected' : ''}>${l.name}</option>`).join(''))}
+            </select>
+            <span class="hint">Wirkt sofort und gilt für dieses Gerät. Rechnungen haben eine eigene Sprache.</span>
           </div>
           <div class="field">
             <label>Ansicht beim Start</label>
@@ -799,6 +807,9 @@ function wire(root) {
     applyTheme();
     saveNow();
   });
+
+  // Die Sprache gilt je Gerät (auch vor dem Entsperren) und wirkt sofort.
+  $('#s_sprache', root).addEventListener('change', (e) => spracheSetzen(e.target.value));
 
   $('#btnLock', root).addEventListener('click', () => lockNow());
   $('#btnAbmelden', root).addEventListener('click', () => abmelden());

@@ -21,6 +21,7 @@ import { feedbackOeffnen, feedbackNachsenden, entwicklerKlick } from './lib/feed
 import { rechtsfuss, rechtslinks, nutzungPruefen, nutzungVermerken, entwicklungsKasten, entwicklungsLeiste, ENTWICKLUNG_TITEL, ENTWICKLUNG_TEXT } from './lib/recht.js';
 import { nutzerWaehlen, nutzerMenue, nutzerAnzeigen, kannSchreiben } from './lib/benutzer.js';
 import { sucheOeffnen, SUCHE_KUERZEL } from './lib/suche.js';
+import { spracheStarten, spracheGewaehlt, spracheMerken, spracheSetzen, sprache, sprachWahl, sprachWahlVerdrahten, beiSprachwechsel } from './lib/sprache.js';
 
 /* Der Assistent lädt erst, wenn ihn jemand öffnet (lib/assistentfenster.js). */
 const KI_KUERZEL = `${MOD} J`;
@@ -150,6 +151,12 @@ async function boot() {
     setDevice(appInfo.deviceId);
   } catch { /* Standardwerte behalten */ }
   const status = await api.vault.status();
+  // Sprache: Wer Kontovia schon benutzt und nie gewählt hat, bleibt bei Deutsch.
+  if (!spracheGewaehlt() && status.exists) {
+    spracheMerken('de');
+    if (sprache() !== 'de') await spracheSetzen('de');
+  }
+  await spracheStarten();
   // Was der Vorgang vor dem Neuladen sagen wollte (Abmelden, Konto gewechselt).
   nachricht = nachrichtHolen();
   // Web-Fassung: zurück von einer Anmeldung per Weiterleitung zu Google?
@@ -192,6 +199,13 @@ async function boot() {
       ? 'Kontovia wurde aktualisiert. Bitte melden Sie sich dieses eine Mal mit Ihrem Passwort an.'
       : nachricht);
 }
+
+/* Sprachwechsel: Texte tauscht sprache.js selbst; Zahlen, Datum und Listen zeichnet die Ansicht neu. */
+beiSprachwechsel(() => {
+  if (!store.db || !$('#content')) return;
+  navNeuZeichnen();
+  refresh();
+});
 
 /** Was der Vorgang vor dem Neuladen sagen wollte; einmalig, wird beim Start gesetzt. */
 let nachricht = '';
@@ -524,11 +538,12 @@ function renderSetup(konten = null) {
             <div class="spacer"></div>
             <button class="btn primary lg" id="next">${step === 2 ? 'Tresor anlegen' : 'Weiter'}</button>
           </div>
-          ${raw(rechtsfuss())}
+          ${raw(rechtsfuss())}${raw(sprachWahl())}
         </div>
       </div>`;
 
     rechtslinks(app);
+    sprachWahlVerdrahten(app);
     kastenZeichnen();
     $('#setupZurueck')?.addEventListener('click', async () => {
       try { await api.konten.zurueck(); } catch (e) { err('Zurück nicht möglich', e.message); return; }
@@ -665,10 +680,11 @@ function renderCloudLaden(st, { neu }) {
           <button class="btn ghost sm" id="cloudAbmelden">Abmelden</button>
           <button class="btn ghost sm" id="cloudNeu">Stattdessen neu anfangen</button>
         </div>
-        ${raw(rechtsfuss())}
+        ${raw(rechtsfuss())}${raw(sprachWahl())}
       </div>
     </div>`;
   rechtslinks(app);
+  sprachWahlVerdrahten(app);
 
   const pw = $('#cloudPw');
   const btn = $('#cloudLaden');
@@ -885,10 +901,11 @@ function renderUnlock(message = '') {
           <p class="muted">Die automatischen Sicherungen sind mit dem Tresorpasswort verschlüsselt, das zu ihrer Zeit galt.</p>
         </details>
         <div id="kontenWahl" class="mt16"></div>
-        ${raw(rechtsfuss())}
+        ${raw(rechtsfuss())}${raw(sprachWahl())}
       </div>
     </div>`;
   rechtslinks(app);
+  sprachWahlVerdrahten(app);
 
   const pw = $('#pw');
   const errEl = $('#unlockerr');
