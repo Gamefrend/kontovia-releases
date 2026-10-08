@@ -1,0 +1,421 @@
+{
+  "preisHinweis": "Preise je Betrieb und Monat, inklusive gesetzlicher Umsatzsteuer.",
+  "testTage": 30,
+  "jahresMonateGratis": 2,
+  "anmeldeEndpunkt": "",
+  "kasse": {
+    "standard": {
+      "monat": "",
+      "jahr": ""
+    },
+    "pro": {
+      "monat": "",
+      "jahr": ""
+    },
+    "max": {
+      "monat": "",
+      "jahr": ""
+    }
+  },
+  "tarife": [
+    {
+      "id": "kostenlos",
+      "name": "Kostenlos",
+      "fuer": "Zum Kennenlernen und für den Nebenerwerb",
+      "preisMonat": 0,
+      "empfohlen": false,
+      "basis": "",
+      "punkte": [
+        "Einnahmen, Ausgaben und Belege ohne Grenze",
+        "5 Rechnungen im Monat, auch als E-Rechnung",
+        "E-Rechnungen empfangen und lesen",
+        "Übersicht, Gewinn und Verlust",
+        "Export als CSV und Excel",
+        "Ein Gerät, verschlüsselt und offline"
+      ]
+    },
+    {
+      "id": "standard",
+      "name": "Standard",
+      "fuer": "Für Selbstständige und Freiberufler",
+      "preisMonat": 9,
+      "empfohlen": false,
+      "basis": "Alles aus Kostenlos, dazu:",
+      "punkte": [
+        "Unbegrenzt Rechnungen mit eigenem Logo",
+        "Umsatzsteuer-Voranmeldung und Anlage EÜR",
+        "Kontoauszug einlesen",
+        "Export für DATEV und das Finanzamt",
+        "Cloud-Sicherung und zwei Geräte"
+      ]
+    },
+    {
+      "id": "pro",
+      "name": "Pro",
+      "fuer": "Für Betriebe mit vielen Kunden",
+      "preisMonat": 18,
+      "empfohlen": true,
+      "basis": "Alles aus Standard, dazu:",
+      "punkte": [
+        "Mahnwesen mit Erinnerung und Mahnstufen",
+        "Direkt aus Gmail oder Outlook senden",
+        "Assistent auf dem Gerät (Vorschau)",
+        "Google Kalender abgleichen",
+        "3 Benutzer und 5 Geräte"
+      ]
+    },
+    {
+      "id": "max",
+      "name": "Max",
+      "fuer": "Für Teams und mehrere Firmen",
+      "preisMonat": 36,
+      "empfohlen": false,
+      "basis": "Alles aus Pro, dazu:",
+      "punkte": [
+        "10 Benutzer mit Rollen",
+        "Bis zu 5 Firmen getrennt führen",
+        "Unbegrenzt Geräte",
+        "Bevorzugte Hilfe per E-Mail"
+      ]
+    }
+  ],
+  "vergleich": [
+    {
+      "gruppe": "Buchen und Belege",
+      "zeilen": [
+        {
+          "name": "Einnahmen, Ausgaben und Belege",
+          "werte": {
+            "kostenlos": true,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Private Buchungen ausblenden",
+          "werte": {
+            "kostenlos": true,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Wiederkehrende Buchungen",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Kontoauszug einlesen",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Anlagen und Abschreibungen",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        }
+      ]
+    },
+    {
+      "gruppe": "Rechnungen",
+      "zeilen": [
+        {
+          "name": "Rechnungen schreiben",
+          "werte": {
+            "kostenlos": "5 im Monat",
+            "standard": "unbegrenzt",
+            "pro": "unbegrenzt",
+            "max": "unbegrenzt"
+          }
+        },
+        {
+          "name": "E-Rechnung (XRechnung, ZUGFeRD)",
+          "werte": {
+            "kostenlos": true,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "E-Rechnungen empfangen und lesen",
+          "werte": {
+            "kostenlos": true,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "QR-Code zum Bezahlen",
+          "werte": {
+            "kostenlos": true,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Eigenes Logo und freie Gestaltung",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Produkte und Vorlagen",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Mahnwesen mit Mahnstufen",
+          "werte": {
+            "kostenlos": false,
+            "standard": false,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Direkt aus Gmail oder Outlook senden",
+          "werte": {
+            "kostenlos": false,
+            "standard": false,
+            "pro": true,
+            "max": true
+          }
+        }
+      ]
+    },
+    {
+      "gruppe": "Steuer und Auswertung",
+      "zeilen": [
+        {
+          "name": "Übersicht, Gewinn und Verlust",
+          "werte": {
+            "kostenlos": true,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Journal und Festschreibung nach GoBD",
+          "werte": {
+            "kostenlos": true,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Umsatzsteuer-Voranmeldung als ELSTER-Datei",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Anlage EÜR nach amtlichem Vordruck",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Steuertermine und Jahresvergleich",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Zusammenfassende Meldung für EU-Kunden",
+          "werte": {
+            "kostenlos": false,
+            "standard": false,
+            "pro": true,
+            "max": true
+          }
+        }
+      ]
+    },
+    {
+      "gruppe": "Export und Sicherung",
+      "zeilen": [
+        {
+          "name": "CSV und Excel",
+          "werte": {
+            "kostenlos": true,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Sicherung als Datei",
+          "werte": {
+            "kostenlos": true,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "DATEV für Ihre Kanzlei",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Paket fürs Finanzamt",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Verschlüsselte Cloud-Sicherung in der EU",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Datenträger für die Betriebsprüfung",
+          "werte": {
+            "kostenlos": false,
+            "standard": false,
+            "pro": true,
+            "max": true
+          }
+        }
+      ]
+    },
+    {
+      "gruppe": "Geräte und Team",
+      "zeilen": [
+        {
+          "name": "Geräte",
+          "werte": {
+            "kostenlos": "1",
+            "standard": "2",
+            "pro": "5",
+            "max": "unbegrenzt"
+          }
+        },
+        {
+          "name": "Benutzer mit Rollen",
+          "werte": {
+            "kostenlos": "1",
+            "standard": "1",
+            "pro": "3",
+            "max": "10"
+          }
+        },
+        {
+          "name": "Getrennte Firmen",
+          "werte": {
+            "kostenlos": "1",
+            "standard": "1",
+            "pro": "1",
+            "max": "5"
+          }
+        },
+        {
+          "name": "Zweites Gerät per QR-Code koppeln",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Google Kalender abgleichen",
+          "werte": {
+            "kostenlos": false,
+            "standard": false,
+            "pro": true,
+            "max": true
+          }
+        }
+      ]
+    },
+    {
+      "gruppe": "Extras und Hilfe",
+      "zeilen": [
+        {
+          "name": "Suche über alles",
+          "werte": {
+            "kostenlos": true,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Assistent auf dem Gerät (Vorschau)",
+          "werte": {
+            "kostenlos": false,
+            "standard": false,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Hilfe im Programm",
+          "werte": {
+            "kostenlos": true,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Hilfe per E-Mail",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": "bevorzugt"
+          }
+        }
+      ]
+    }
+  ],
+  "kontakt": "platzhalter@example.org"
+}

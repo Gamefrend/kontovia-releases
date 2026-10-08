@@ -1,0 +1,623 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>Kontovia Preise: Buchhaltung, die bei Ihnen bleibt</title>
+  <meta name="description" content="Rechnungen, E-Rechnung, Belege und Steuer an einem Ort. Verschlüsselt auf Ihrem Gerät, offline nutzbar. Kostenlos starten, Standard, Pro und Max 30 Tage testen.">
+  <link rel="canonical" href="https://gamefrend.github.io/kontovia-releases/abo/">
+  <meta name="robots" content="index, follow">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Kontovia">
+  <meta property="og:locale" content="de_DE">
+  <meta property="og:title" content="Kontovia: Buchhaltung, die bei Ihnen bleibt">
+  <meta property="og:description" content="Rechnungen, Belege und Steuer an einem Ort. Verschlüsselt auf Ihrem Gerät. Kostenlos starten.">
+  <meta property="og:image" content="https://gamefrend.github.io/kontovia-releases/icons/icon-512.png">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0c0b09" media="(prefers-color-scheme: dark)">
+  <link rel="icon" type="image/png" href="../icons/icon-192.png">
+  <link rel="preload" href="../fonts/geist-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="abo.css">
+  <script src="vorab.js"></script>
+</head>
+<body>
+<!-- Symbole, einmal definiert und per <use> eingesetzt. Strich und Farbe kommen aus .i in abo.css. -->
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="i-uebersicht" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></symbol>
+  <symbol id="i-liste" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-bank" viewBox="0 0 24 24"><path d="M3 10h18M5.5 10v8M10 10v8M14 10v8M18.5 10v8M3 21h18M12 3l9 5H3z"/></symbol>
+  <symbol id="i-datei" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></symbol>
+  <symbol id="i-kalender" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-aufgabe" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="3.5"/><path d="M8 12.2l2.8 2.8L16 9.5"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19V5M4 19h16M8 15l3-4 3 2 5-6"/></symbol>
+  <symbol id="i-pfeile" viewBox="0 0 24 24"><path d="M7 4v13M3.5 13.5L7 17l3.5-3.5M17 20V7M13.5 10.5L17 7l3.5 3.5"/></symbol>
+  <symbol id="i-schloss" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3M12 15v2"/></symbol>
+  <symbol id="i-schild" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-wolke" viewBox="0 0 24 24"><path d="M7 18.5a4 4 0 0 1-.6-7.95A6 6 0 0 1 18 9.5a4.5 4.5 0 0 1-.5 9z"/></symbol>
+  <symbol id="i-offline" viewBox="0 0 24 24"><path d="M5 12.5a10 10 0 0 1 3.4-2.1M15.6 10.4A10 10 0 0 1 19 12.5M2 9a15 15 0 0 1 4-2.6M10 5.1A15 15 0 0 1 22 9M8.5 16a5 5 0 0 1 7 0M12 19.5h.01M3 3l18 18"/></symbol>
+  <symbol id="i-buch" viewBox="0 0 24 24"><path d="M5 5a2 2 0 0 1 2-2h12v15H7a2 2 0 0 0-2 2z"/><path d="M5 20a2 2 0 0 0 2 1h12v-3M9 7h6M9 10.5h4"/></symbol>
+  <symbol id="i-haken" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-pfeil" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-funke" viewBox="0 0 24 24"><path d="M11 3.5l1.9 5.1L18 10.5l-5.1 1.9L11 17.5l-1.9-5.1L4 10.5l5.1-1.9z"/><path d="M18.5 15l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></symbol>
+  <symbol id="i-brief" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.5 7.5l8.5 6 8.5-6"/></symbol>
+  <symbol id="i-personen" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M21.5 20a6.5 6.5 0 0 0-3.8-5.9"/></symbol>
+  <symbol id="i-firma" viewBox="0 0 24 24"><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16M16 9h2a2 2 0 0 1 2 2v10M3 21h18M8 7h4M8 11h4M8 15h4"/></symbol>
+  <symbol id="i-laptop" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="11" rx="1.8"/><path d="M2 19.5h20"/></symbol>
+  <symbol id="i-handy" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></symbol>
+  <symbol id="i-tablet" viewBox="0 0 24 24"><rect x="4.5" y="3" width="15" height="18" rx="2.5"/><path d="M11 18h2"/></symbol>
+  <symbol id="i-wiederholen" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></symbol>
+  <symbol id="i-suche" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+  <symbol id="i-qr" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1"/><rect x="14" y="3.5" width="6.5" height="6.5" rx="1"/><rect x="3.5" y="14" width="6.5" height="6.5" rx="1"/><path d="M14 14h2.5v2.5H14zM18 18h2.5v2.5H18zM14 20.5h.01M20.5 14h.01"/></symbol>
+  <symbol id="i-stapel" viewBox="0 0 24 24"><path d="M12 3.5l8.5 4.5-8.5 4.5L3.5 8z"/><path d="M3.5 12.5l8.5 4.5 8.5-4.5M3.5 16.5l8.5 4.5 8.5-4.5"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-glocke" viewBox="0 0 24 24"><path d="M6 16v-5a6 6 0 0 1 12 0v5l2 2H4z"/><path d="M10 21h4"/></symbol>
+  <symbol id="i-ordner" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+  <symbol id="i-privat" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 6.1A10 10 0 0 1 12 6c5.5 0 9 6 9 6a17 17 0 0 1-2.6 3.3M6.6 6.6C4.2 8.2 3 12 3 12s3.5 6 9 6a9 9 0 0 0 4.4-1.1M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+  <symbol id="i-tastatur" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6.5 10h.01M10.5 10h.01M14.5 10h.01M18 10h.01M7.5 14h9"/></symbol>
+  <symbol id="i-mond" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+  <symbol id="i-saeulen" viewBox="0 0 24 24"><path d="M6 20V11M12 20V4M18 20v-6"/></symbol>
+  <symbol id="i-hoch" viewBox="0 0 24 24"><path d="M12 15V3.5M7 8.5l5-5 5 5M5 20.5h14"/></symbol>
+  <symbol id="i-welt" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+</svg>
+
+<a class="skip" href="#inhalt">Zum Inhalt</a>
+
+<div class="test-leiste" role="note"><b>Testbetrieb</b><span>Kontovia ist noch in Entwicklung. Tarife und Preise sind vorläufig, es wird nichts abgerechnet. Keine Haftung und keine Gewährleistung.</span></div>
+
+<header class="kopf" id="kopf">
+  <div class="rahmen kopf-innen">
+    <a class="marke" href="./" aria-label="Kontovia, zum Seitenanfang">
+      <img src="../icons/icon-192.png" alt="" width="28" height="28">
+      <span>Kontovia</span>
+    </a>
+    <nav class="menue" id="menue" aria-label="Seitenbereiche">
+      <span class="menue-marke" aria-hidden="true"></span>
+      <a href="#funktionen">Funktionen</a>
+      <a href="#sicherheit">Sicherheit</a>
+      <a href="#preise">Preise</a>
+      <a href="#fragen">Fragen</a>
+    </nav>
+    <div class="kopf-aktionen">
+      <a class="textlink klein nur-breit" href="../">Öffnen</a>
+      <a class="knopf klein" href="../">Kostenlos starten</a>
+    </div>
+  </div>
+</header>
+
+<main id="inhalt">
+  <!-- ============ Held ============ -->
+  <section class="held" aria-labelledby="held-titel">
+    <div class="held-grund" aria-hidden="true"></div>
+    <div class="rahmen held-text">
+      <a class="pille anim a1" href="#assistent-karte">
+        <span class="pille-neu">Neu</span>
+        Assistent direkt auf Ihrem Gerät
+        <svg class="i" aria-hidden="true"><use href="#i-pfeil"/></svg>
+      </a>
+      <h1 id="held-titel">
+        <span class="w">Buchhaltung,</span> <br class="umbruch">
+        <span class="w">die</span> <span class="w">bei</span>
+        <span class="w unterstrich">Ihnen<svg viewBox="0 0 200 20" preserveAspectRatio="none" aria-hidden="true"><path pathLength="1" d="M3 14 C 50 5, 120 4, 197 9"/></svg></span>
+        <span class="w">bleibt.</span>
+      </h1>
+      <p class="lead anim a3">Rechnungen, Belege und Steuer an einem Ort. Kontovia arbeitet auf Ihrem Gerät, verschlüsselt alles mit Ihrem Passwort und funktioniert auch ohne Internet.</p>
+      <div class="held-knoepfe anim a4">
+        <a class="knopf gross" href="../">Kostenlos starten <svg class="i" aria-hidden="true"><use href="#i-pfeil"/></svg></a>
+        <a class="knopf gross zweit" href="#preise">Preise ansehen</a>
+      </div>
+      <ul class="vorteile anim a5">
+        <li><svg class="i" aria-hidden="true"><use href="#i-haken"/></svg>Ohne Anmeldung</li>
+        <li><svg class="i" aria-hidden="true"><use href="#i-haken"/></svg>Ohne Kreditkarte</li>
+        <li><svg class="i" aria-hidden="true"><use href="#i-haken"/></svg>Daten jederzeit exportierbar</li>
+      </ul>
+    </div>
+
+    <!-- Nachbau der Übersicht aus der App, rein zur Ansicht -->
+    <div class="buehne rahmen" aria-hidden="true">
+      <div class="buehne-glut"></div>
+      <div class="buehne-innen anim a5">
+        <div class="app-rahmen" id="vorschau">
+          <div class="app-leiste"><i></i><i></i><i></i><span class="app-adresse"><svg class="i"><use href="#i-schloss"/></svg>kontovia</span></div>
+          <div class="app">
+            <aside class="app-seite">
+              <div class="app-marke"><span class="app-logo">K</span><span><b>Kontovia</b><small>Studio Lichtwerk</small></span></div>
+              <span class="app-neu"><svg class="i"><use href="#i-plus"/></svg>Neue Buchung</span>
+              <span class="app-suche"><svg class="i"><use href="#i-suche"/></svg>Suchen<kbd>Strg K</kbd></span>
+              <ul class="app-nav">
+                <li class="an"><svg class="i"><use href="#i-uebersicht"/></svg>Übersicht</li>
+                <li><svg class="i"><use href="#i-liste"/></svg>Buchungen</li>
+                <li><svg class="i"><use href="#i-bank"/></svg>Kontoauszug</li>
+                <li><svg class="i"><use href="#i-datei"/></svg>Rechnungen</li>
+                <li><svg class="i"><use href="#i-kalender"/></svg>Kalender</li>
+                <li><svg class="i"><use href="#i-aufgabe"/></svg>Aufgaben</li>
+                <li class="trenn"><svg class="i"><use href="#i-chart"/></svg>Auswertungen</li>
+                <li><svg class="i"><use href="#i-pfeile"/></svg>Import &amp; Export</li>
+              </ul>
+            </aside>
+            <div class="app-inhalt">
+              <div class="app-kopf"><b>Übersicht</b><span class="app-zeitraum"><svg class="i"><use href="#i-kalender"/></svg>Jahr 2026</span></div>
+              <div class="app-stats">
+                <div class="app-stat"><small>Einnahmen</small><b><span data-cent="8431240">84.312,40</span><em>€</em></b><span class="trend pos">▲ 12,4 %</span></div>
+                <div class="app-stat"><small>Ausgaben</small><b><span data-cent="1790512">17.905,12</span><em>€</em></b><span class="trend gut">▼ 3,1 %</span></div>
+                <div class="app-stat"><small>Gewinn</small><b><span data-cent="6640728">66.407,28</span><em>€</em></b><span class="trend neutral">Marge 78,8 %</span></div>
+                <div class="app-stat nur-breit"><small>Umsatzsteuer</small><b><span data-cent="1261890">12.618,90</span><em>€</em></b><span class="trend neutral">bis 10.11.</span></div>
+              </div>
+              <div class="app-unten">
+                <div class="app-karte">
+                  <div class="app-karte-kopf"><b>Verlauf</b><span class="app-seg"><i class="an">Säulen</i><i>Linien</i></span></div>
+                  <svg class="app-chart" viewBox="0 0 400 150" preserveAspectRatio="none">
+                    <g class="raster"><path d="M0 30H400M0 70H400M0 110H400"/></g>
+                    <g class="ein">
+                      <rect x="10" y="88" width="14" height="52" rx="3"/><rect x="50" y="70" width="14" height="70" rx="3"/><rect x="90" y="78" width="14" height="62" rx="3"/>
+                      <rect x="130" y="52" width="14" height="88" rx="3"/><rect x="170" y="30" width="14" height="110" rx="3"/><rect x="210" y="62" width="14" height="78" rx="3"/>
+                      <rect x="250" y="24" width="14" height="116" rx="3"/><rect x="290" y="40" width="14" height="100" rx="3"/><rect x="330" y="72" width="14" height="68" rx="3"/><rect x="370" y="46" width="14" height="94" rx="3"/>
+                    </g>
+                    <g class="aus">
+                      <rect x="26" y="118" width="10" height="22" rx="2.5"/><rect x="66" y="112" width="10" height="28" rx="2.5"/><rect x="106" y="120" width="10" height="20" rx="2.5"/>
+                      <rect x="146" y="110" width="10" height="30" rx="2.5"/><rect x="186" y="116" width="10" height="24" rx="2.5"/><rect x="226" y="108" width="10" height="32" rx="2.5"/>
+                      <rect x="266" y="114" width="10" height="26" rx="2.5"/><rect x="306" y="118" width="10" height="22" rx="2.5"/><rect x="346" y="110" width="10" height="30" rx="2.5"/><rect x="386" y="116" width="10" height="24" rx="2.5"/>
+                    </g>
+                    <path class="linie" pathLength="1" d="M22 112 L62 98 L102 108 L142 82 L182 58 L222 92 L262 50 L302 66 L342 98 L382 72"/>
+                  </svg>
+                </div>
+                <div class="app-karte posten">
+                  <div class="app-karte-kopf"><b>Offene Posten</b></div>
+                  <p class="posten-summe"><small>Ihre Forderungen</small><b class="pos">10.774,17 €</b></p>
+                  <ul>
+                    <li><span>Website-Relaunch</span><i class="tage">38 Tage</i><b>2.735,81 €</b></li>
+                    <li><span>Bildrechte</span><i class="tage">25 Tage</i><b>605,62 €</b></li>
+                    <li><span>Hochzeitsreportage</span><i class="tage">21 Tage</i><b>2.380,00 €</b></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="schwebe sw1"><span class="sw-icon gut"><svg class="i"><use href="#i-haken"/></svg></span><span><b>E-Rechnung erstellt</b><small>RE-2026-041 · XRechnung</small></span></div>
+        <div class="schwebe sw2"><span class="sw-icon"><svg class="i"><use href="#i-schloss"/></svg></span><span><b>Verschlüsselt</b><small>nur auf diesem Gerät</small></span></div>
+        <div class="schwebe sw3"><span class="sw-icon akzent"><svg class="i"><use href="#i-bank"/></svg></span><span><b>Zahlung erkannt</b><small>+ 1.190,00 € · Müller GmbH</small></span></div>
+        <small class="beispiel">Beispielzahlen</small>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Formate ============ -->
+  <section class="band" aria-label="Unterstützte Formate">
+    <p class="band-titel">Spricht die Formate, die in Deutschland zählen</p>
+    <div class="band-fenster">
+      <div class="band-spur" id="bandSpur">
+        <ul class="band-liste">
+          <li>XRechnung</li><li>ZUGFeRD</li><li>ELSTER</li><li>DATEV</li><li>GoBD</li><li>DIN 5008</li>
+          <li>GiroCode</li><li>PDF/A</li><li>Excel</li><li>CAMT</li><li>MT940</li><li>vCard</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Funktionen ============ -->
+  <section id="funktionen" class="abschnitt" aria-labelledby="funktionen-titel">
+    <div class="rahmen">
+      <div class="kopfzeile mitte reveal">
+        <p class="kicker">Funktionen</p>
+        <h2 id="funktionen-titel">Von der Rechnung bis zur Anlage EÜR.</h2>
+        <p class="unter">Kontovia nimmt Ihnen die Routine ab und lässt Ihnen die Entscheidungen. Alles in einem Programm, das sich anfühlt wie eine gute App und nicht wie ein Formular.</p>
+      </div>
+
+      <div class="bento">
+        <!-- Rechnungen -->
+        <article class="karte glanz breit reveal" data-demo="rechnung">
+          <div class="demo demo-rechnung" aria-hidden="true">
+            <div class="blatt">
+              <div class="blatt-kopf">
+                <span class="blatt-logo">L</span>
+                <span class="blatt-titel">Rechnung<small>RE-2026-041</small></span>
+              </div>
+              <div class="blatt-an"><i></i><i></i><i></i></div>
+              <div class="blatt-pos">
+                <p><span>Website-Relaunch</span><b>2.400,00 €</b></p>
+                <p><span>Fotoproduktion, 1 Tag</span><b>980,00 €</b></p>
+                <p><span>Bildrechte</span><b>320,00 €</b></p>
+              </div>
+              <div class="blatt-summe"><span>Gesamt inkl. 19 % USt</span><b><span data-cent="440300">4.403,00</span> €</b></div>
+              <div class="blatt-fuss">
+                <svg class="blatt-qr" viewBox="0 0 21 21"><path d="M0 0h7v7H0zM2 2v3h3V2zM14 0h7v7h-7zM16 2v3h3V2zM0 14h7v7H0zM2 16v3h3v-3zM9 0h2v2H9zM9 4h3v2H9zM8 8h2v2H8zM12 8h3v2h-3zM17 9h2v3h-2zM9 12h2v3H9zM13 13h3v2h-3zM18 14h3v2h-3zM9 17h2v4H9zM13 17h2v2h-2zM16 18h2v3h-2zM19 19h2v2h-2z"/></svg>
+                <span class="blatt-linien"><i></i><i></i></span>
+              </div>
+              <span class="stempel">E-Rechnung</span>
+            </div>
+            <ul class="pruefliste">
+              <li><svg class="i"><use href="#i-haken"/></svg>Pflichtangaben vollständig</li>
+              <li><svg class="i"><use href="#i-haken"/></svg>XRechnung erzeugt</li>
+              <li><svg class="i"><use href="#i-haken"/></svg>ZUGFeRD im PDF</li>
+              <li><svg class="i"><use href="#i-haken"/></svg>QR-Code zum Bezahlen</li>
+            </ul>
+          </div>
+          <div class="karte-text">
+            <h3>Rechnungen, die einfach stimmen.</h3>
+            <p>Gestalten Sie Ihre Rechnung direkt auf dem Blatt. Kontovia achtet auf alle Pflichtangaben, setzt den QR-Code zum Bezahlen und legt die E-Rechnung gleich mit bei.</p>
+          </div>
+        </article>
+
+        <!-- Steuer -->
+        <article class="karte glanz reveal d1" data-demo="steuer">
+          <div class="demo demo-steuer" aria-hidden="true">
+            <div class="ust-kopf"><b>Voranmeldung</b><span>Oktober 2026</span></div>
+            <div class="kz">
+              <p><span class="kz-nr">81</span><span>Umsätze zu 19 %</span><b><span data-cent="1842000" data-stellen="0">18.420</span> €</b></p>
+              <p><span class="kz-nr">66</span><span>Vorsteuer</span><b><span data-cent="61240">612,40</span> €</b></p>
+              <p class="summe"><span class="kz-nr">83</span><span>Zahllast</span><b><span data-cent="288740">2.887,40</span> €</b></p>
+            </div>
+            <span class="chip-datei"><svg class="i"><use href="#i-hoch"/></svg>ELSTER-Datei bereit</span>
+          </div>
+          <div class="karte-text">
+            <h3>Steuer ohne Rätselraten.</h3>
+            <p>Umsatzsteuer-Voranmeldung und Anlage EÜR, fertig zum Einlesen in Mein ELSTER.</p>
+          </div>
+        </article>
+
+        <!-- Kontoauszug -->
+        <article class="karte glanz reveal" data-demo="konto">
+          <div class="demo demo-konto" aria-hidden="true">
+            <div class="umsatz"><span class="u-tag">02.10.</span><span class="u-text">Müller GmbH<small>RE-2026-038</small></span><b class="pos">+ 1.190,00 €</b><span class="treffer gut"><svg class="i"><use href="#i-haken"/></svg>Rechnung bezahlt</span></div>
+            <div class="umsatz"><span class="u-tag">03.10.</span><span class="u-text">Cloud-Speicher<small>Abo Oktober</small></span><b class="neg">− 9,99 €</b><span class="treffer gut"><svg class="i"><use href="#i-haken"/></svg>Software</span></div>
+            <div class="umsatz"><span class="u-tag">05.10.</span><span class="u-text">Bahnfahrt Köln<small>Fahrkarte</small></span><b class="neg">− 89,90 €</b><span class="treffer frage">Reisekosten?</span></div>
+          </div>
+          <div class="karte-text">
+            <h3>Kontoauszug rein, fertig gebucht.</h3>
+            <p>Datei aus dem Onlinebanking einlesen. Kontovia erkennt bezahlte Rechnungen, Sie entscheiden, was gebucht wird.</p>
+          </div>
+        </article>
+
+        <!-- Mahnwesen -->
+        <article class="karte glanz reveal d1" data-demo="mahnung">
+          <div class="demo demo-mahnung" aria-hidden="true">
+            <div class="mahn-rechnung"><span>RE-2026-033<small>Studio Nord</small></span><b>2.735,81 €</b></div>
+            <ol class="stufen">
+              <li><i></i><span>Erinnerung</span><small>Tag 7</small></li>
+              <li><i></i><span>1. Mahnung</span><small>Tag 21</small></li>
+              <li class="bezahlt"><i><svg class="i"><use href="#i-haken"/></svg></i><span>Bezahlt</span><small>Tag 24</small></li>
+            </ol>
+          </div>
+          <div class="karte-text">
+            <h3>Freundlich erinnern.</h3>
+            <p>Offene Posten im Blick, Erinnerung und Mahnungen mit Frist, höflich formuliert und rechtlich sauber.</p>
+          </div>
+        </article>
+
+        <!-- Assistent -->
+        <article class="karte glanz reveal d2" data-demo="assistent" id="assistent-karte">
+          <div class="demo demo-assistent" aria-hidden="true">
+            <div class="blase frage"><span data-tippen="Wie viel habe ich im September verdient?">Wie viel habe ich im September verdient?</span></div>
+            <div class="blase antwort"><span class="denkt"><i></i><i></i><i></i></span><span data-tippen="Im September 8.265 € Gewinn, 1.140 € mehr als im August.">Im September 8.265 € Gewinn, 1.140 € mehr als im August.</span></div>
+            <div class="as-eingabe"><svg class="i"><use href="#i-funke"/></svg><span>Frage stellen</span><kbd>Strg J</kbd></div>
+          </div>
+          <div class="karte-text">
+            <h3>Fragen Sie Ihre Zahlen. <span class="marke-vorschau">Vorschau</span></h3>
+            <p>Der Assistent rechnet auf Ihrem Gerät. Fragen und Antworten verlassen es nie.</p>
+          </div>
+        </article>
+
+        <!-- Export -->
+        <article class="karte glanz halb reveal" data-demo="export">
+          <div class="demo demo-export" aria-hidden="true">
+            <div class="dateien">
+              <span>DATEV</span><span>Excel</span><span>GoBD</span><span>PDF</span><span>ELSTER</span>
+            </div>
+            <div class="ziel-ordner">
+              <span class="ordner-icon"><svg class="i"><use href="#i-ordner"/></svg></span>
+              <span><b>Finanzamt 2026.zip</b><small>Alles beisammen, mit Anleitung</small></span>
+            </div>
+          </div>
+          <div class="karte-text">
+            <h3>Bereit für Ihre Kanzlei.</h3>
+            <p>DATEV, Excel, Datenträger für die Betriebsprüfung und ein Paket fürs Finanzamt. Ihre Daten gehören Ihnen.</p>
+          </div>
+        </article>
+
+        <!-- Kalender -->
+        <article class="karte glanz halb reveal d1" data-demo="kalender">
+          <div class="demo demo-kalender" aria-hidden="true">
+            <div class="kal">
+              <div class="kal-kopf"><b>November 2026</b></div>
+              <div class="kal-tage"><i>Mo</i><i>Di</i><i>Mi</i><i>Do</i><i>Fr</i><i>Sa</i><i>So</i></div>
+              <div class="kal-raster" id="kalRaster"></div>
+            </div>
+            <ul class="kal-termine">
+              <li class="steuer"><b>10.</b><span>Umsatzsteuer Oktober</span></li>
+              <li class="faellig"><b>16.</b><span>RE-2026-041 fällig</span></li>
+              <li><b>24.</b><span>Termin Studio Nord</span></li>
+            </ul>
+          </div>
+          <div class="karte-text">
+            <h3>Fristen, die Sie nicht verpassen.</h3>
+            <p>Steuertermine, Fälligkeiten und Aufgaben in einem Kalender, auf Wunsch abgeglichen mit Google Kalender.</p>
+          </div>
+        </article>
+      </div>
+
+      <div class="mehr reveal">
+        <h3 class="mehr-titel">Und vieles mehr</h3>
+        <ul class="mehr-liste">
+          <li><svg class="i" aria-hidden="true"><use href="#i-wiederholen"/></svg>Wiederkehrende Buchungen</li>
+          <li><svg class="i" aria-hidden="true"><use href="#i-stapel"/></svg>Anlagen und Abschreibungen</li>
+          <li><svg class="i" aria-hidden="true"><use href="#i-buch"/></svg>Journal nach GoBD</li>
+          <li><svg class="i" aria-hidden="true"><use href="#i-personen"/></svg>Benutzer mit Rollen</li>
+          <li><svg class="i" aria-hidden="true"><use href="#i-privat"/></svg>Private Buchungen ausblenden</li>
+          <li><svg class="i" aria-hidden="true"><use href="#i-suche"/></svg>Suche über alles</li>
+          <li><svg class="i" aria-hidden="true"><use href="#i-qr"/></svg>Zweites Gerät per QR-Code</li>
+          <li><svg class="i" aria-hidden="true"><use href="#i-saeulen"/></svg>Jahresvergleich</li>
+          <li><svg class="i" aria-hidden="true"><use href="#i-hoch"/></svg>Belege per Ziehen</li>
+          <li><svg class="i" aria-hidden="true"><use href="#i-welt"/></svg>Zusammenfassende Meldung</li>
+          <li><svg class="i" aria-hidden="true"><use href="#i-tastatur"/></svg>Tastenkürzel</li>
+          <li><svg class="i" aria-hidden="true"><use href="#i-mond"/></svg>Hell und Dunkel</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Sicherheit ============ -->
+  <section id="sicherheit" class="abschnitt dunkel" aria-labelledby="sicherheit-titel">
+    <div class="dunkel-glut" aria-hidden="true"></div>
+    <div class="rahmen">
+      <div class="sicher-raster">
+        <div class="sicher-text reveal">
+          <p class="kicker">Sicherheit</p>
+          <h2 id="sicherheit-titel">Ihre Zahlen gehen niemanden etwas an.</h2>
+          <p class="unter">Viele Programme speichern Ihre Buchhaltung lesbar auf ihren Servern. Kontovia verschlüsselt alles auf Ihrem Gerät, bevor irgendetwas es verlässt. Ohne Ihren Schlüssel sind die Daten nur Zeichensalat.</p>
+        </div>
+        <div class="tresor reveal d1" data-demo="tresor" aria-hidden="true">
+          <div class="t-seite">
+            <p class="t-titel"><svg class="i"><use href="#i-laptop"/></svg>Auf Ihrem Gerät</p>
+            <ul class="t-zeilen" id="tresorKlar">
+              <li>Rechnung RE-2026-041</li>
+              <li>Müller GmbH, Köln</li>
+              <li>4.403,00 €</li>
+              <li>Fällig am 16.11.2026</li>
+            </ul>
+          </div>
+          <div class="t-weg"><span class="t-strom"></span><span class="t-schloss"><svg class="i"><use href="#i-schloss"/></svg></span></div>
+          <div class="t-seite">
+            <p class="t-titel"><svg class="i"><use href="#i-wolke"/></svg>In der Cloud</p>
+            <ul class="t-zeilen salat" id="tresorSalat">
+              <li>9f2c·e81a·44d0·b7</li>
+              <li>a03d·7be2·c91f·0</li>
+              <li>5e8b·d4·17</li>
+              <li>c2f0·99ab·3e6d·81a</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <ul class="sicher-punkte">
+        <li class="reveal">
+          <span class="punkt-icon"><svg class="i" aria-hidden="true"><use href="#i-schloss"/></svg></span>
+          <h3>Verschlüsselt mit Ihrem Passwort</h3>
+          <p>Jeder Eintrag und jeder Beleg. Den Schlüssel kennt nur Ihr Gerät.</p>
+        </li>
+        <li class="reveal d1">
+          <span class="punkt-icon"><svg class="i" aria-hidden="true"><use href="#i-offline"/></svg></span>
+          <h3>Funktioniert offline</h3>
+          <p>Im Zug, im Keller, im Funkloch. Internet brauchen Sie nur zum Abgleichen und Senden.</p>
+        </li>
+        <li class="reveal d2">
+          <span class="punkt-icon"><svg class="i" aria-hidden="true"><use href="#i-welt"/></svg></span>
+          <h3>Sicherung in der EU</h3>
+          <p>Auf Wunsch eine verschlüsselte Sicherung, gespeichert in der Europäischen Union.</p>
+        </li>
+        <li class="reveal d3">
+          <span class="punkt-icon"><svg class="i" aria-hidden="true"><use href="#i-buch"/></svg></span>
+          <h3>Lückenlos nach GoBD</h3>
+          <p>Jede Änderung steht im Journal. Festgeschriebene Zeiträume bleiben, wie sie sind.</p>
+        </li>
+      </ul>
+
+      <dl class="kennzahlen reveal">
+        <div><dt>automatische Prüfungen vor jeder neuen Version</dt><dd><span data-zahl="2100">2.100</span>+</dd></div>
+        <div><dt>Werbung, Tracking oder Datenhandel</dt><dd>0</dd></div>
+        <div><dt>Tage Standard, Pro und Max gratis testen</dt><dd><span data-zahl="30">30</span></dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- ============ Preise ============ -->
+  <section id="preise" class="abschnitt" aria-labelledby="preise-titel">
+    <div class="rahmen">
+      <div class="kopfzeile mitte reveal">
+        <p class="kicker">Preise</p>
+        <h2 id="preise-titel">Klein anfangen. Mitwachsen.</h2>
+        <p class="unter">Kostenlos starten, ganz ohne Anmeldung. Standard, Pro und Max <span id="testTage">30</span> Tage gratis testen.</p>
+        <div class="umschalter" id="umschalter" role="group" aria-label="Abrechnung">
+          <span class="umschalter-marke" aria-hidden="true"></span>
+          <button type="button" class="aktiv" data-zyklus="monat" aria-pressed="true">Monatlich</button>
+          <button type="button" data-zyklus="jahr" aria-pressed="false">Jährlich <em id="jahrRabatt"></em></button>
+        </div>
+      </div>
+      <div class="testhinweis reveal" role="note">
+        <span class="testhinweis-marke">Testbetrieb</span>
+        <p>Alles auf dieser Seite ist vorläufig. Die Tarife lassen sich noch nicht buchen, Preise und Leistungen können sich bis zum Start ändern, und es wird nichts abgerechnet. Kontovia ist in Entwicklung: Es gibt keine Haftung und keine Gewährleistung für Funktion und Ergebnisse. Bitte sichern Sie Ihre Daten regelmäßig.</p>
+      </div>
+      <div class="tarife reveal d1" id="tarife"><noscript><p class="fein mitte">Für die Preisübersicht wird JavaScript gebraucht.</p></noscript></div>
+      <p class="fein mitte" id="preisHinweis"></p>
+
+      <div class="vergleich-start reveal">
+        <button type="button" class="knopf zweit" id="vergleichKnopf" aria-expanded="false" aria-controls="vergleichHuelle">
+          <span id="vergleichText">Alle Funktionen vergleichen</span> <svg class="i" aria-hidden="true"><use href="#i-plus"/></svg>
+        </button>
+      </div>
+      <div class="vergleich-huelle" id="vergleichHuelle">
+        <div class="vergleich-innen" id="vergleichInnen" inert>
+          <div class="vergleich-rolle" id="vergleich"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Anmelden ============ -->
+  <section id="anmelden" class="abschnitt getoent" aria-labelledby="anmelden-titel">
+    <div class="rahmen anmelde-raster">
+      <div class="anmelde-text reveal">
+        <p class="kicker">Lizenz holen</p>
+        <h2 id="anmelden-titel">In zwei Minuten startklar.</h2>
+        <ol class="schritte">
+          <li><b>Tarif wählen</b><span>Wechseln geht jederzeit, nach oben wie nach unten.</span></li>
+          <li><b>Angaben eintragen</b><span>Nur Name und E-Mail-Adresse.</span></li>
+          <li><b>Loslegen</b><span>Programm öffnen und Buchhaltung einrichten.</span></li>
+        </ol>
+        <p class="fein">Ihre Buchhaltungsdaten gehen dabei nie an uns. Wir erfahren nur, wer eine Lizenz hat.</p>
+        <p class="hinweis-frei"><svg class="i" aria-hidden="true"><use href="#i-funke"/></svg><span>Erst einmal nur schauen? Für den kostenlosen Tarif brauchen Sie nichts davon. <a href="../">Kontovia direkt öffnen</a></span></p>
+      </div>
+
+      <form class="formular reveal d1" id="anmeldeForm" novalidate>
+        <fieldset class="feld wahl">
+          <legend>Tarif</legend>
+          <div id="tarifWahl" class="wahl-raster"></div>
+        </fieldset>
+
+        <div class="feld">
+          <label for="fName">Name</label>
+          <input id="fName" name="name" type="text" autocomplete="name" required>
+          <p class="fehler" id="fNameFehler" hidden></p>
+        </div>
+        <div class="feld">
+          <label for="fMail">E-Mail-Adresse</label>
+          <input id="fMail" name="email" type="email" autocomplete="email" inputmode="email" required>
+          <p class="fehler" id="fMailFehler" hidden></p>
+        </div>
+        <div class="feld">
+          <label for="fFirma">Firma <span class="leise">(freiwillig)</span></label>
+          <input id="fFirma" name="firma" type="text" autocomplete="organization">
+        </div>
+
+        <div class="feld haken">
+          <input id="fZustimmung" name="zustimmung" type="checkbox" required>
+          <label for="fZustimmung">Ich habe die <a href="../recht/nutzungsbedingungen.html">Nutzungsbedingungen</a> und die <a href="../recht/datenschutz.html">Datenschutzhinweise</a> gelesen und bin einverstanden.</label>
+        </div>
+        <p class="fehler" id="fZustimmungFehler" hidden></p>
+
+        <button type="submit" class="knopf gross voll" id="sendenKnopf">Vormerken</button>
+        <p class="fein mitte" id="formHinweis"></p>
+        <div class="meldung" id="formMeldung" role="status" aria-live="polite" hidden></div>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ Laden ============ -->
+  <section id="laden" class="abschnitt" aria-labelledby="laden-titel">
+    <div class="rahmen">
+      <div class="kopfzeile mitte reveal">
+        <p class="kicker">Programm laden</p>
+        <h2 id="laden-titel">Auf jedem Gerät zu Hause.</h2>
+        <p class="unter">Kontovia läuft im Browser und lässt sich wie eine normale App installieren. Nichts Schweres zum Herunterladen, Updates nur, wenn Sie es wollen.</p>
+      </div>
+
+      <div class="geraete" id="geraete">
+        <article class="geraet glanz reveal" data-plattform="desktop">
+          <span class="punkt-icon"><svg class="i" aria-hidden="true"><use href="#i-laptop"/></svg></span>
+          <h3>Windows, Mac und Linux</h3>
+          <p>Mit Chrome oder Edge auf „Installieren“ klicken. Kontovia bekommt ein eigenes Fenster und ein Symbol auf dem Desktop.</p>
+          <button type="button" class="knopf" id="installKnopf">Auf diesem Gerät installieren</button>
+          <p class="fein" id="installHinweis" hidden></p>
+        </article>
+        <article class="geraet glanz reveal d1" data-plattform="android">
+          <span class="punkt-icon"><svg class="i" aria-hidden="true"><use href="#i-handy"/></svg></span>
+          <h3>Android</h3>
+          <p>In Chrome öffnen, oben rechts das Menü antippen und „App installieren“ wählen.</p>
+          <a class="knopf zweit" href="../">Kontovia öffnen</a>
+        </article>
+        <article class="geraet glanz reveal d2" data-plattform="ios">
+          <span class="punkt-icon"><svg class="i" aria-hidden="true"><use href="#i-tablet"/></svg></span>
+          <h3>iPhone und iPad</h3>
+          <p>In Safari öffnen, auf „Teilen“ tippen und „Zum Home-Bildschirm“ wählen.</p>
+          <a class="knopf zweit" href="../">Kontovia öffnen</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Fragen ============ -->
+  <section id="fragen" class="abschnitt getoent" aria-labelledby="fragen-titel">
+    <div class="rahmen fragen-raster">
+      <div class="kopfzeile fragen-kopf reveal">
+        <p class="kicker">Fragen</p>
+        <h2 id="fragen-titel">Gut zu wissen.</h2>
+        <p class="unter">Noch etwas offen? Schreiben Sie uns, die Adresse steht im <a href="../recht/impressum.html">Impressum</a>.</p>
+      </div>
+      <div class="faq reveal d1">
+        <details>
+          <summary>Kann ich Kontovia schon im Alltag nutzen?</summary>
+          <p>Kontovia ist im Testbetrieb. Sie können alles ausprobieren, es gibt aber noch keine Haftung und keine Gewährleistung, und Tarife lassen sich noch nicht buchen. Prüfen Sie Ergebnisse, bevor Sie sie ans Finanzamt geben, und sichern Sie Ihre Daten regelmäßig.</p>
+        </details>
+        <details>
+          <summary>Was kann der kostenlose Tarif?</summary>
+          <p>Buchungen und Belege ohne Grenze, fünf Rechnungen im Monat samt E-Rechnung, die Übersicht und den Export als CSV und Excel. Er läuft auf einem Gerät und braucht keine Anmeldung. Für Umsatzsteuer, Anlage EÜR und Cloud-Sicherung wechseln Sie zu Standard.</p>
+        </details>
+        <details>
+          <summary>Wo liegen meine Daten?</summary>
+          <p>Auf Ihrem Gerät, verschlüsselt mit Ihrem Passwort. Ab Standard können Sie zusätzlich eine verschlüsselte Sicherung in der Cloud anlegen und mehrere Geräte abgleichen. Die Cloud liegt in der EU und bekommt nur verschlüsselte Daten.</p>
+        </details>
+        <details>
+          <summary>Brauche ich Internet?</summary>
+          <p>Nur zum Installieren, zum Abgleich zwischen Geräten und für den E-Mail-Versand. Alles andere funktioniert auch offline.</p>
+        </details>
+        <details>
+          <summary>Muss ich E-Rechnungen schreiben können?</summary>
+          <p>Seit 2025 müssen Unternehmen in Deutschland E-Rechnungen empfangen können. Ausstellen müssen sie größere Betriebe ab 2027, die übrigen ab 2028 (Kleinunternehmer ausgenommen). Kontovia kann beides, schon im kostenlosen Tarif.</p>
+        </details>
+        <details>
+          <summary>Kann ich den Tarif wechseln oder kündigen?</summary>
+          <p>Ja, jederzeit. Monatliche Tarife enden zum Ende des bezahlten Monats, Jahrestarife zum Ende des bezahlten Jahres. Ihre Daten bleiben bei Ihnen und lassen sich vorher exportieren.</p>
+        </details>
+        <details>
+          <summary>Was passiert nach dem Test?</summary>
+          <p>Sie entscheiden: Tarif behalten oder kostenlos weitermachen. Es wird nichts abgebucht, solange Sie keine Zahlungsart hinterlegt haben, und Ihre Daten bleiben in jedem Fall bei Ihnen.</p>
+        </details>
+        <details>
+          <summary>Ersetzt Kontovia meine Steuerberatung?</summary>
+          <p>Nein. Kontovia bereitet Ihre Zahlen sauber auf und gibt sie in gängigen Formaten weiter, auch an DATEV. Steuerliche Beratung bleibt Sache Ihrer Beraterin oder Ihres Beraters.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Schluss ============ -->
+  <section class="schluss" aria-labelledby="schluss-titel">
+    <div class="schluss-glut" aria-hidden="true"></div>
+    <div class="rahmen schluss-innen reveal">
+      <img src="../icons/icon-192.png" alt="" width="56" height="56" class="schluss-logo">
+      <h2 id="schluss-titel">Eine Buchhaltung, die Ihnen gehört.</h2>
+      <p class="unter">In einer Minute eingerichtet. Kostenlos, solange Sie wollen.</p>
+      <div class="held-knoepfe">
+        <a class="knopf gross" href="../">Kostenlos starten <svg class="i" aria-hidden="true"><use href="#i-pfeil"/></svg></a>
+        <a class="knopf gross zweit" href="#preise">Tarife vergleichen</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="fuss">
+  <div class="rahmen fuss-innen">
+    <div class="fuss-marke">
+      <a class="marke" href="./"><img src="../icons/icon-192.png" alt="" width="24" height="24"><span>Kontovia</span></a>
+      <p>Buchhaltung, die auf Ihrem Gerät bleibt.</p>
+    </div>
+    <nav class="fuss-spalte" aria-label="Programm">
+      <p class="fuss-titel">Programm</p>
+      <a href="#funktionen">Funktionen</a>
+      <a href="#preise">Preise</a>
+      <a href="#laden">Installieren</a>
+      <a href="../">Kontovia öffnen</a>
+    </nav>
+    <nav class="fuss-spalte" aria-label="Rechtliches">
+      <p class="fuss-titel">Rechtliches</p>
+      <a href="../recht/impressum.html">Impressum</a>
+      <a href="../recht/nutzungsbedingungen.html">Nutzungsbedingungen</a>
+      <a href="../recht/datenschutz.html">Datenschutz</a>
+    </nav>
+  </div>
+  <p class="rahmen fuss-test">Testbetrieb: Kontovia ist in Entwicklung. Alle Angaben auf dieser Seite sind vorläufig, ohne Haftung und ohne Gewährleistung.</p>
+</footer>
+
+<script type="module" src="abo.js"></script>
+</body>
+</html>

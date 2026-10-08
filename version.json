@@ -1,8 +1,33 @@
 {
-  "version": "2.28.0",
-  "released": "2026-10-07T22:46:50.140Z",
-  "notes": "Der Assistent wird schneller und hilft mehr\n\n- Der Assistent antwortet spürbar schneller, weil er im Gespräch nichts doppelt liest. Bricht der Grafikchip ab, startet er bei der nächsten Frage neu.\n- Neu: „Was steht heute an?“ zeigt Termine, fällige Aufgaben, Fristen und überfällige Rechnungen auf einen Blick.\n- Fragen zur Bedienung wie „Wie schreibe ich eine Rechnung?“ beantwortet er aus der Hilfe.\n- „Müller hat bezahlt“ trägt die Zahlung ein, „Mahne das Weingut“ bereitet die Mahnung vor. Gespeichert wird erst, wenn Sie bestätigen.\n- Er versteht „diese Rechnung“, zeigt Verläufe Monat für Monat, prüft ein Jahr vor der Steuer und liest Anlage EÜR und Abschreibungen.",
+  "version": "2.28.1",
+  "released": "2026-10-08T09:08:26.330Z",
+  "notes": "Neue Seite mit Tarifen\n\n- Neu: Eine eigene Seite stellt Kontovia vor und zeigt die geplanten Tarife Kostenlos, Standard, Pro und Max.\n- Alles läuft noch im Testbetrieb. Tarife lassen sich noch nicht buchen, und es wird nichts abgerechnet.",
   "files": [
+    {
+      "path": "abo/abo.css",
+      "sha256": "76da46509e0ccca87564579e025808d34709d3869ae2aac621356bace70aa6d3",
+      "size": 64476
+    },
+    {
+      "path": "abo/abo.js",
+      "sha256": "f61a953ae40dce75493a62c7f1b2e19767fb0e07aadf00acf5be8b9266208ea5",
+      "size": 26193
+    },
+    {
+      "path": "abo/config.json",
+      "sha256": "38dce1bd73c274b990fa33f988be4211bb4238c1782e9be3f7809b8b6b03a1a4",
+      "size": 9925
+    },
+    {
+      "path": "abo/index.html",
+      "sha256": "e0ef1d15a156c9577ef3048ad4b43c1286fb8fb7b9e91a64969e8a8cc814e870",
+      "size": 40338
+    },
+    {
+      "path": "abo/vorab.js",
+      "sha256": "3def3be989022733d0da9cdd70d9e1a560cf07e93200c2aff909eb8ffd044d6e",
+      "size": 232
+    },
     {
       "path": "app.js",
       "sha256": "285f8d411d67c088207a14da52ef728746699927e0ec882567b6e3f939e12270",
@@ -390,8 +415,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "2225e6051229bc96c2a7e3d0aaabac19151f38a5f89a4a0f2d99a4db760dcdfe",
-      "size": 40101
+      "sha256": "26c882efe2c1442650db31e1d3fb946bc872c94d1821424cced34b0205c3fe05",
+      "size": 40446
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -420,12 +445,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "3757d3319c80a9ae6f08247bac46fa7b3d5d3fc31f6d03306c203d6b1bed0b66",
+      "sha256": "c3cabc69d5fa19cc7c47165aa4e91875e0432109eba960f95921c8b9265320c1",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "c534d4c9adc734f5bd1eb2bc6f09250d957e04e15cca60bace54017bfde24a92",
+      "sha256": "aaf7c8920f50e4017573bf4aabaf246092cbd5f2958c5def527afed7d57ad208",
       "size": 31282
     },
     {
@@ -440,7 +465,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "f4a0d5db349575b81ffcac5cd22a5cb11f5497c9c4471a2856005466dee01203",
+      "sha256": "8f09b1646e1fdb95c05d266ae55192921a66aa7ef5b4d47b1ec14454e88af235",
       "size": 34938
     },
     {
@@ -460,8 +485,8 @@
     },
     {
       "path": "sitemap.xml",
-      "sha256": "3a7d53a73459efe0d75c03b322c0e95d86528b2e6acde83e7c7de955ad1361c3",
-      "size": 466
+      "sha256": "338d57b9778a73ef6fc8cdd712935776c1b3095c8336c93932e1024796adc404",
+      "size": 541
     },
     {
       "path": "styles.css",
@@ -595,7 +620,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "2a3bfbe57b02cf4642e3f984f17f83d3f712617e35a9f90e5b774e167138f06d",
+      "sha256": "e8ad3c66e95120c94d0a59a62f2d70293cc87b7e0f0521b43207d09179f62a5c",
       "size": 6906
     },
     {
@@ -812,6 +837,11 @@
       "path": "web/zulassung.js",
       "sha256": "1d7f210757ffdeca843ad33ddb809201a8a9433c9f8bae7ee98f2cf8d0d817d2",
       "size": 6886
+    },
+    {
+      "path": "abo/",
+      "sha256": "e0ef1d15a156c9577ef3048ad4b43c1286fb8fb7b9e91a64969e8a8cc814e870",
+      "size": 40338
     }
   ]
 }
