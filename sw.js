@@ -12,6 +12,8 @@
  * (siehe aktualisierung.js). So gilt auch hier die Zusage der Windows-
  * Fassung: installiert wird nur nach ausdrücklicher Zustimmung.
  *
+ * Ausnahme: Die Abo-Seite unter abo/ ist eine normale Webseite und kommt immer frisch vom Server.
+ *
  * Diese Datei ändert sich deshalb von Fassung zu Fassung nicht. Der Browser
  * sieht keinen Grund, sie zu ersetzen, und nichts wird im Hintergrund
  * ausgetauscht.
@@ -73,6 +75,13 @@ self.addEventListener('fetch', (event) => {
   // Dateien einer neuen Fassung, die gerade geladen und geprüft wird.
   const rel = url.pathname.slice(s.pathname.length);
   if (rel === 'version.json' || rel === 'sw.js' || url.searchParams.has('kv-neu')) return;
+
+  // Die Abo-Seite ist eine gewöhnliche Webseite und gehört nicht zum installierten Programm:
+  // immer vom Server (mit Rückfrage, ob sich etwas geändert hat), nie aus dem Zwischenspeicher der Fassung.
+  if (rel === 'abo' || rel.startsWith('abo/')) {
+    event.respondWith(fetch(req, { cache: 'no-cache' }));
+    return;
+  }
 
   event.respondWith((async () => {
     const version = await zeigerLesen();

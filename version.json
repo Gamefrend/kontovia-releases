@@ -1,7 +1,7 @@
 {
-  "version": "2.28.1",
-  "released": "2026-10-08T09:08:26.330Z",
-  "notes": "Neue Seite mit Tarifen\n\n- Neu: Eine eigene Seite stellt Kontovia vor und zeigt die geplanten Tarife Kostenlos, Standard, Pro und Max.\n- Alles läuft noch im Testbetrieb. Tarife lassen sich noch nicht buchen, und es wird nichts abgerechnet.",
+  "version": "2.28.2",
+  "released": "2026-10-08T09:41:57.622Z",
+  "notes": "Textcursor in Fenstern\n\n- Behoben: In manchen Fenstern, etwa bei der Sicherung, war der blinkende Textcursor nicht zu sehen.",
   "files": [
     {
       "path": "abo/abo.css",
@@ -400,8 +400,8 @@
     },
     {
       "path": "lib/ui.js",
-      "sha256": "db5cd4bbb67db84f3f564783402132c5d280ddad73426066b2bc8d4f3afc1ca9",
-      "size": 47215
+      "sha256": "ac4ed81dc25f2b7e6dae3fa7dcae038bc2928767ade62161a40676eeda955a6e",
+      "size": 47769
     },
     {
       "path": "lib/updates.js",
@@ -415,8 +415,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "26c882efe2c1442650db31e1d3fb946bc872c94d1821424cced34b0205c3fe05",
-      "size": 40446
+      "sha256": "c73ad3dc3f36a5ee98d8a721c4a432949ef09a8ec423e39747a3cc1f6dcf417d",
+      "size": 40669
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -445,12 +445,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "c3cabc69d5fa19cc7c47165aa4e91875e0432109eba960f95921c8b9265320c1",
+      "sha256": "b6d75f5196547b45e4693da6f2d3ac209141633b090b96b39ed216c0fc7e4a48",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "aaf7c8920f50e4017573bf4aabaf246092cbd5f2958c5def527afed7d57ad208",
+      "sha256": "295fe1f8faff323aa945c7010c71603c827ba17bbf47a8f63b3a40d626bd8b35",
       "size": 31282
     },
     {
@@ -465,7 +465,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "8f09b1646e1fdb95c05d266ae55192921a66aa7ef5b4d47b1ec14454e88af235",
+      "sha256": "fad838d5268e992945b0532bd51d2755e47d48b9e404894ab7cc7b5883e7cd8b",
       "size": 34938
     },
     {
@@ -490,8 +490,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "8e26b06c5875fccbda9dcbc46a8ddcbecae7bb8e6de4788eb1511b0fd870990c",
-      "size": 125804
+      "sha256": "6ec77b8843ac7153cd5f4903d78ff415ea2c98a86aa24bda55701c97d2bb3c8b",
+      "size": 125832
     },
     {
       "path": "views/anlageform.js",
@@ -620,7 +620,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "e8ad3c66e95120c94d0a59a62f2d70293cc87b7e0f0521b43207d09179f62a5c",
+      "sha256": "7e934ac205b190db496b4d3383a5638351603862e3d8edcd3f0ef8570587990d",
       "size": 6906
     },
     {
