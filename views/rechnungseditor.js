@@ -10,7 +10,9 @@
  * wie im PDF (lib/rechnungsdruck.js → lib/pdfvorschau.js).
  */
 
-import { esc, $, $$, money, moneyInput, parseMoney, todayISO, uid, debounce, daysBetween, dz } from '../lib/util.js';
+import { esc, html, raw, $, $$, money, moneyInput, parseMoney, todayISO, uid, debounce, daysBetween, dz, fmtDate } from '../lib/util.js';
+import { TURNUS } from '../lib/wiederkehrend.js';
+import { ratenPlan, ratenAnzahl, MAX_RATEN } from '../lib/raten.js';
 import { sprache } from '../lib/sprache.js';
 import { icon, modal, confirmDialog, ok, warn, err } from '../lib/ui.js';
 import { store, sel, commit, upsertEntity, nextInvoiceNumber } from '../lib/store.js';
@@ -91,6 +93,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
         <section class="card" id="reTexte"></section>
         <section class="card" id="reBilder"></section>
         <section class="card" id="reZahlung" data-bereich="zahlung"></section>
+        ${istVorlage ? '' : '<section class="card" id="reWiederholung"></section>'}
       </div>
       <aside class="re-seitenspalte">
         <div class="card re-check" id="reCheck"></div>
@@ -487,6 +490,12 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
           <div class="field"><label for="rz_bereits">Bereits gezahlt (Anzahlung) €</label><input id="rz_bereits" inputmode="decimal" data-f="bereitsGezahlt" data-geld value="${esc(r.bereitsGezahlt ? moneyInput(r.bereitsGezahlt) : '')}"></div>
           <div class="field"><label for="rz_skontoT">Skonto: innerhalb von Tagen</label><input id="rz_skontoT" type="number" min="0" max="365" data-f="skontoTage" data-zahl value="${esc(r.skontoTage || '')}"></div>
           <div class="field"><label for="rz_skontoP">Skonto in %</label><input id="rz_skontoP" inputmode="decimal" data-f="skontoProzent" data-prozent value="${esc(r.skontoProzent ? dz(r.skontoProzent) : '')}"></div>
+          ${gut || istVorlage ? '' : `
+          <div class="field"><label for="rz_raten">Zahlung in Raten</label>
+            <input id="rz_raten" type="number" min="0" max="${MAX_RATEN}" data-f="raten.anzahl" data-zahl placeholder="keine" value="${esc(r.raten?.anzahl || '')}"></div>
+          <div class="field"><label for="rz_ratenFreq">Rhythmus der Raten</label>
+            <select id="rz_ratenFreq" data-f="raten.freq">${optionen(Object.entries(TURNUS).map(([k, t]) => [k, t[0]]), r.raten?.freq || 'monthly')}</select></div>
+          <div class="field full"><span class="hint" id="rz_ratenHinweis"></span></div>`}
           <div class="field full mb0"><label for="rz_text">Zahlungsbedingungen</label>
             <textarea id="rz_text" data-f="zahlungsbedingungen" rows="2" placeholder="${esc(zahlungsText({ ...r, zahlungsbedingungen: '' }) || 'Werden aus Zahlungsziel und Skonto gebildet')}">${esc(r.zahlungsbedingungen || '')}</textarea>
             <span class="hint">Leer lassen, dann bildet Kontovia den Text aus Zahlungsziel und Skonto.</span></div>
@@ -514,6 +523,49 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
   function zahlungsPlatzhalter() {
     const t = $('#rz_text', root);
     if (t) t.placeholder = zahlungsText({ ...r, zahlungsbedingungen: '' }) || 'Werden aus Zahlungsziel und Skonto gebildet';
+    ratenZeigen();
+  }
+
+  /** Was die Raten ergeben: Zahl, Betrag und erster Termin, damit man vor dem Ausstellen sieht, was gebucht wird. */
+  function ratenZeigen() {
+    const h = $('#rz_ratenHinweis', root);
+    if (!h) return;
+    const plan = ratenPlan(berechnen(r).zahlbetrag, { anzahl: r.raten?.anzahl, freq: r.raten?.freq, start: faelligkeit(r) || r.datum });
+    h.textContent = plan.length
+      ? `${plan.length} Raten zu ${money(plan[0].betrag)} €, die erste am ${fmtDate(plan[0].datum)}, die letzte am ${fmtDate(plan[plan.length - 1].datum)}. Jede wird eine eigene Buchung.`
+      : 'Leer lassen für eine Zahlung auf einmal. Mit Raten wird jede Rate eine eigene Buchung mit eigener Fälligkeit.';
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /* Wiederholung                                                             */
+  /* ------------------------------------------------------------------------ */
+
+  function wiederholungZeichnen() {
+    const box = $('#reWiederholung', root);
+    if (!box) return;
+    // Eine ausgestellte Wiederholung steht in der Regel; diese Rechnung gehört schon zu ihr.
+    const regel = r.wiederkehrendId ? sel.recurringRule(r.wiederkehrendId) : null;
+    const w = r.wiederholung || {};
+    const aus = !w.freq;
+    const turnusOptionen = optionen(Object.entries(TURNUS).map(([k, t]) => [k, t[0]]), w.freq || '');
+    const formular = html`
+        <div class="form-grid">
+          <div class="field"><label for="rw_freq">Rechnung wiederholen</label>
+            <select id="rw_freq" data-f="wiederholung.freq"><option value="">nicht wiederholen</option>${raw(turnusOptionen)}</select></div>
+          <div class="field"><label for="rw_bis">Endet am (freiwillig)</label>
+            <input id="rw_bis" type="date" data-f="wiederholung.bis" value="${w.bis || ''}" ${aus ? 'disabled' : ''}></div>
+          <div class="field"><label for="rw_anzahl">Oder nach so vielen Rechnungen (freiwillig)</label>
+            <input id="rw_anzahl" type="number" min="0" max="999" data-f="wiederholung.anzahl" data-zahl value="${w.anzahl || ''}" ${aus ? 'disabled' : ''}>
+            <span class="hint">Diese Rechnung zählt mit.</span></div>
+        </div>
+        <p class="hint mt8 mb0">Beim Ausstellen merkt sich Kontovia die Rechnung als Vorlage. Ist der nächste Termin erreicht, legt es einen
+          Entwurf an, den Sie prüfen und selbst ausstellen. Nichts wird von allein verschickt.</p>`;
+    box.innerHTML = html`
+      <div class="card-head"><h2>${icon('refresh', 16)} Wiederholung</h2><span class="sub">für gleichbleibende Rechnungen, etwa Wartung oder Miete</span></div>
+      <div class="card-body">${raw(regel
+    ? html`<div class="notice small mb0">Diese Rechnung gehört zu einer wiederkehrenden Rechnung (${TURNUS[regel.freq]?.[0] || ''}).
+          Den Turnus ändern Sie unter Stammdaten → Wiederkehrend.</div>`
+    : formular)}</div>`;
   }
 
   /* ------------------------------------------------------------------------ */
@@ -594,6 +646,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
       setzen(r, el.dataset.f, wertAus(el));
       if (el.dataset.f === 'zahlungszielTage') r.faellig = '';
       if (el.dataset.f === 'zahlungszielTage' || el.dataset.f === 'datum') { faelligZeigen(); zahlungsPlatzhalter(); }
+      if (el.dataset.f.startsWith('raten.')) zahlungsPlatzhalter();
       aktualisieren();
       return;
     }
@@ -621,6 +674,9 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
       aktualisieren();
     }
     if (el.dataset.f === 'zahlungsart' || el.dataset.f === 'art') zahlungZeichnen();
+    if (el.dataset.f === 'wiederholung.freq') {
+      for (const id of ['#rw_bis', '#rw_anzahl']) { const f = $(id, root); if (f) f.disabled = !el.value; }
+    }
   });
 
   /* ------------------------------------------------------------------------ */
@@ -703,6 +759,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
 
   function aktualisieren({ summen = true } = {}) {
     if (summen) summenZeichnen();
+    ratenZeigen();
     pruefungZeichnen();
     leisteZeichnen();
     vorschauNeu();
@@ -778,6 +835,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
     const b = berechnen(r);
     const konten = sel.accounts();
     const p = profilAus(s);
+    const raten = ratenAnzahl(r.raten?.anzahl) > 1 && !istGutschrift(r);
     let antwort = null;
     const m = modal({
       title: `${titelVon(r)} ausstellen`,
@@ -789,11 +847,11 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
         </div>
         <p class="mt0">Danach steht die Rechnung fest: Kontovia legt das PDF mit der E-Rechnung und die XRechnung unverändert ab.
           Ändern lässt sie sich dann nur noch durch Stornieren oder Korrigieren.</p>
-        <label class="check"><input type="checkbox" id="reBuchen" checked> ${istGutschrift(r) ? 'Als Minderung der Einnahmen buchen' : 'Als offene Einnahme buchen'}${b.steuern.length > 1 ? ` (je Steuersatz eine Buchung)` : ''}</label>
+        <label class="check"><input type="checkbox" id="reBuchen" checked> ${istGutschrift(r) ? 'Als Minderung der Einnahmen buchen' : 'Als offene Einnahme buchen'}${raten ? ` (je Rate eine Buchung${b.steuern.length > 1 ? ' und Steuersatz' : ''})` : (b.steuern.length > 1 ? ` (je Steuersatz eine Buchung)` : '')}</label>
         <div id="reBuchenOpt" class="form-grid mt8">
           <div class="field"><label for="reKonto">Zahlungskonto</label><select id="reKonto">${optionen(konten.map((k) => [k.id, k.name]), konten[0]?.id || '')}</select></div>
           <div class="field"><label for="reBezahlt">Schon bezahlt am</label><input type="date" id="reBezahlt" value="${r.zahlungsart === 'bar' ? esc(r.datum || todayISO()) : ''}">
-            <span class="hint">leer lassen, wenn die Zahlung noch aussteht</span></div>
+            <span class="hint">${raten ? 'gilt für die erste Rate; leer lassen, wenn sie noch aussteht' : 'leer lassen, wenn die Zahlung noch aussteht'}</span></div>
         </div>`,
       foot: `<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>${icon('check', 15).__raw} Rechnung ausstellen</button>`,
       onClose: () => {},
@@ -875,6 +933,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
   texteZeichnen();
   bilderZeichnen();
   zahlungZeichnen();
+  wiederholungZeichnen();
   aktualisieren();
 }
 

@@ -295,7 +295,14 @@ function anleitung(root) {
         <p><strong>Miete, Telefon, Abos:</strong> Beim Erfassen unter <em>Weitere Angaben → Wiederholen</em>
         einen Turnus wählen. Sobald die nächste Buchung fällig ist, bietet Kontovia sie nach dem Entsperren
         zum Anlegen an. Jede wird eine gewöhnliche Buchung, an die Sie den Beleg hängen. Verwalten
-        können Sie das unter <a data-go="master">Stammdaten → Wiederkehrend</a>.</p>
+        können Sie das unter <a data-go="master">Stammdaten → Wiederkehrend</a>. Möglich sind wöchentlich bis jährlich,
+        ein Enddatum oder eine Anzahl.</p>
+        <p><strong>Rechnungen wiederholen:</strong> Im Rechnungsformular unter <em>Wiederholung</em> einen Turnus wählen.
+        Beim Ausstellen merkt sich Kontovia die Rechnung. Zum nächsten Termin legt es einen Entwurf an, den Sie prüfen
+        und selbst ausstellen. Nichts wird von allein verschickt.</p>
+        <p><strong>Ratenzahlung:</strong> Bei einer Rechnung unter <em>Zahlung → Zahlung in Raten</em>, bei einer Buchung unter
+        <em>Weitere Angaben → In Raten aufteilen</em>. Jede Rate wird eine eigene Buchung mit eigener Fälligkeit, die Sie einzeln
+        als bezahlt eintragen. Das Mahnwesen und die offenen Posten behandeln jede Rate für sich.</p>
         <p><strong>Steuertermine:</strong> Übersicht und Kalender zeigen, wann die nächste
         Umsatzsteuer-Voranmeldung fällig ist (samt der Zahllast nach heutigem Stand) und bis wann die
         Jahreserklärungen abzugeben sind. Fällt eine Frist auf ein Wochenende oder einen Feiertag,

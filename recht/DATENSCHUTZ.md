@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 9. Oktober 2026, Programmversion 2.31.0
+Stand: 9. Oktober 2026, Programmversion 2.32.0
 
 ---
 

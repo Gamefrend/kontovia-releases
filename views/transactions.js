@@ -18,6 +18,7 @@ import { neuesAnlagegut, anlageFelder, wireAnlageFelder, anlageAusFeldern } from
 import { eRechnungLesen, eRechnungAusDatei, xmlAusPdf, richtung } from '../lib/erechnung.js';
 import { eRechnungHtml, zeigeERechnung } from './erechnung.js';
 import { regelAusBuchung, TURNUS } from '../lib/wiederkehrend.js';
+import { ratenAnzahl, ratenPlan, ratenBuchungen, MAX_RATEN } from '../lib/raten.js';
 import { faelligeAnbieten } from './wiederkehrend.js';
 import { aufgabenAbschnitt } from './todos.js';
 import { journalPdf } from '../lib/reports.js';
@@ -517,7 +518,9 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
   /** Eine E-Rechnung aus einem in diesem Dialog angehängten Beleg (lib/erechnung.js). */
   let erkannt = null;
   /** Wiederholung, die mit dem Speichern als Regel entsteht – gehört nicht zur Buchung selbst. */
-  const wiederholung = { freq: TURNUS[turnusVorgabe] ? turnusVorgabe : '', until: '' };
+  const wiederholung = { freq: TURNUS[turnusVorgabe] ? turnusVorgabe : '', until: '', anzahl: 0 };
+  /** Aufteilung in Raten: beim Speichern entstehen daraus mehrere Buchungen (lib/raten.js). */
+  const ratenWahl = { anzahl: 0, freq: 'monthly' };
   /* Stand nach dem ersten Zeichnen; weicht die Eingabe davon ab, fragt das
      Fenster vor dem Wegklicken nach. */
   let ausgangslage = null;
@@ -540,7 +543,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       if (ausgangslage === null || saved) return false;
       collect();
       return JSON.stringify(tx) !== ausgangslage || addedAttachments.length > 0
-        || wiederholung.freq !== (TURNUS[turnusVorgabe] ? turnusVorgabe : '');
+        || wiederholung.freq !== (TURNUS[turnusVorgabe] ? turnusVorgabe : '') || ratenAnzahl(ratenWahl.anzahl) > 1;
     },
   });
 
@@ -731,7 +734,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         </div>
       </div>
 
-      <details class="mt8" ${(tx.notes || tx.reference || tx.vatTreatment || asset || wiederholung.freq || tx.recurringId) ? 'open' : ''}>
+      <details class="mt8" ${(tx.notes || tx.reference || tx.vatTreatment || asset || wiederholung.freq || tx.recurringId || tx.ratenId || ratenAnzahl(ratenWahl.anzahl) > 1) ? 'open' : ''}>
         <summary class="small muted" style="cursor:pointer;padding:6px 0">Weitere Angaben</summary>
         <div class="form-grid mt8">
           <div class="field">
@@ -755,6 +758,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
             <textarea id="i_notes" placeholder="Interne Bemerkung, betrieblicher Anlass bei Bewirtung, …">${tx.notes || ''}</textarea>
           </div>
           ${raw(wiederholungsFelder())}
+          ${raw(ratenFelder())}
         </div>
 
         ${tx.type === 'expense' ? raw(`
@@ -819,6 +823,30 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       <div class="field">
         <label for="i_repeatUntil">Wiederholen bis (freiwillig)</label>
         <input type="date" id="i_repeatUntil" value="${esc(wiederholung.until)}" ${wiederholung.freq ? '' : 'disabled'}>
+      </div>
+      <div class="field">
+        <label for="i_repeatCount">Oder nach so vielen Buchungen (freiwillig)</label>
+        <input type="number" min="0" max="999" id="i_repeatCount" value="${wiederholung.anzahl || ''}" ${wiederholung.freq ? '' : 'disabled'}>
+        <span class="hint">Diese Buchung zählt mit.</span>
+      </div>`;
+  }
+
+  /** Ratenzahlung: eine neue Buchung in mehrere aufteilen – oder der Hinweis, dass diese schon eine Rate ist. */
+  function ratenFelder() {
+    if (tx.ratenId) {
+      return `<div class="field full"><label>Ratenzahlung</label><div class="small">Das ist Rate ${esc(String(tx.rate || ''))} von ${esc(String(tx.raten || ''))}.
+        Jede Rate hat ihre eigene Fälligkeit und wird einzeln als bezahlt eingetragen.</div></div>`;
+    }
+    if (!isNew || stornoTeil) return '';
+    return `<div class="field">
+        <label for="i_raten">In Raten aufteilen</label>
+        <input type="number" min="0" max="${MAX_RATEN}" id="i_raten" placeholder="keine" value="${ratenWahl.anzahl || ''}">
+        <span class="hint" id="ratenHinweis">Für Anschaffungen auf Raten oder Rechnungen mit Zahlungsplan: Jede Rate wird eine eigene Buchung mit eigener Fälligkeit.</span>
+      </div>
+      <div class="field">
+        <label for="i_ratenFreq">Rhythmus der Raten</label>
+        <select id="i_ratenFreq">${Object.entries(TURNUS).map(([k, [name]]) => `<option value="${k}" ${ratenWahl.freq === k ? 'selected' : ''}>${esc(name)}</option>`).join('')}</select>
+        <span class="hint">Die erste Rate ist zum Fälligkeitsdatum fällig, sonst zum Datum der Buchung.</span>
       </div>`;
   }
 
@@ -943,6 +971,11 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     if (g('repeat')) {
       wiederholung.freq = g('repeat').value;
       wiederholung.until = wiederholung.freq ? (g('repeatUntil')?.value || '') : '';
+      wiederholung.anzahl = wiederholung.freq ? Math.max(0, Math.round(Number(g('repeatCount')?.value) || 0)) : 0;
+    }
+    if (g('raten')) {
+      ratenWahl.anzahl = Math.max(0, Math.round(Number(g('raten').value) || 0));
+      ratenWahl.freq = g('ratenFreq')?.value || 'monthly';
     }
     // Ort und Anzahlung gibt es nur bei Einnahmen; wechselt die Art, fallen sie weg.
     if (tx.type === 'income') {
@@ -1145,9 +1178,29 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       form.querySelector('#dueField').hidden = e.target.checked;
     });
     form.querySelector('#i_repeat')?.addEventListener('change', (e) => {
-      const bis = form.querySelector('#i_repeatUntil');
-      if (bis) bis.disabled = !e.target.value;
+      for (const id of ['#i_repeatUntil', '#i_repeatCount']) {
+        const feld = form.querySelector(id);
+        if (feld) feld.disabled = !e.target.value;
+      }
     });
+    // Eine Vorschau der Raten, damit man vor dem Speichern sieht, was gebucht wird.
+    const ratenVorschau = () => {
+      const h = form.querySelector('#ratenHinweis');
+      if (!h) return;
+      // Raten gibt es nur für Offenes: Wer Raten wählt, nimmt „bezahlt“ damit zurück (die Fälligkeit erscheint).
+      const bezahlt = form.querySelector('#i_isPaid');
+      if (Number(form.querySelector('#i_raten')?.value) > 1 && bezahlt?.checked) {
+        bezahlt.checked = false;
+        bezahlt.dispatchEvent(new Event('change'));
+      }
+      collect();
+      const plan = ratenPlan(tx.gross, { anzahl: ratenWahl.anzahl, freq: ratenWahl.freq, start: tx.dueDate || tx.date });
+      h.textContent = plan.length
+        ? `${plan.length} Raten zu ${money(plan[0].betrag)} €, die erste am ${fmtDate(plan[0].datum)}, die letzte am ${fmtDate(plan[plan.length - 1].datum)}.`
+        : 'Für Anschaffungen auf Raten oder Rechnungen mit Zahlungsplan: Jede Rate wird eine eigene Buchung mit eigener Fälligkeit.';
+    };
+    form.querySelector('#i_raten')?.addEventListener('input', ratenVorschau);
+    form.querySelector('#i_ratenFreq')?.addEventListener('change', ratenVorschau);
     form.querySelector('#i_unlisted').addEventListener('change', (e) => {
       form.querySelector('#unlistedHint').style.display = e.target.checked ? '' : 'none';
     });
@@ -1257,6 +1310,14 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       fieldError(form.querySelector('#i_repeatUntil'), 'Das Ende liegt vor dem Datum der Buchung.');
       return false;
     }
+    const inRaten = isNew && ratenAnzahl(ratenWahl.anzahl) > 1;
+    if (inRaten) {
+      const feld = form.querySelector('#i_raten');
+      if (wiederholung.freq) { fieldError(feld, 'Raten und Wiederholen lassen sich nicht verbinden. Wählen Sie eines davon.'); return false; }
+      if (tx.paidDate) { fieldError(feld, 'Eine bezahlte Buchung lässt sich nicht in Raten aufteilen. Nehmen Sie das Häkchen „bezahlt“ heraus; jede Rate tragen Sie einzeln ein.'); return false; }
+      if (tx.assetId) { fieldError(feld, 'Eine Buchung mit Anlagegut lässt sich nicht in Raten aufteilen.'); return false; }
+      if (tx.isDeposit) { fieldError(feld, 'Eine Anzahlung lässt sich nicht in Raten aufteilen.'); return false; }
+    }
     // Eine Betriebseinnahme als „privat“ zu kennzeichnen, hielte sie aus EÜR und Umsatzsteuer heraus. Dann
     // fragt Kontovia einmal nach, bevor es geschieht (§ 146 Abs. 1 AO).
     if (tx.unlisted && !existing?.unlisted && tx.type === 'income' && !sel.category(tx.categoryId)?.private) {
@@ -1269,8 +1330,15 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     }
     saved = true;
     // Eine neue Wiederholung: Diese Buchung ist ihr erstes Vorkommen.
-    const regel = wiederholung.freq && !tx.recurringId ? regelAusBuchung(tx, wiederholung.freq, { id: uid('rec'), until: wiederholung.until }) : null;
+    const regel = wiederholung.freq && !tx.recurringId ? regelAusBuchung(tx, wiederholung.freq, { id: uid('rec'), until: wiederholung.until, anzahl: wiederholung.anzahl }) : null;
     if (regel) tx.recurringId = regel.id;
+    if (inRaten) {
+      // Jede Rate eine Buchung; die erste behält Kennung und Belege.
+      const raten = ratenBuchungen(tx, { anzahl: ratenWahl.anzahl, freq: ratenWahl.freq });
+      for (const [i, rate] of raten.entries()) await upsertTransaction(rate, i === 0 ? attachments : []);
+      if (onSaved) await onSaved(raten[0]);
+      return true;
+    }
     await upsertTransaction(tx, attachments);
     if (regel) await upsertEntity('recurring', regel, 'wiederkehrend');
     if (onSaved) await onSaved(tx);
@@ -1348,7 +1416,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     m.close();
     const copy = { ...structuredClone(tx), id: uid('tx'), date: todayISO(), paidDate: '', invoiceNumber: '', attachments: [], voided: false, isReversal: false, createdAt: new Date().toISOString() };
     // Die Kopie ist eine neue, eigenständige Buchung – ohne Storno-Verweise und Termine.
-    for (const k of ['reversalOf', 'reversedBy', 'voidedAt', 'voidReason', 'updatedAt', 'assetId', 'recurringId']) delete copy[k];
+    for (const k of ['reversalOf', 'reversedBy', 'voidedAt', 'voidReason', 'updatedAt', 'assetId', 'recurringId', 'ratenId', 'rate', 'raten']) delete copy[k];
     copy.appointmentIds = [];
     if (copy.isReversal === false && tx.isReversal) { copy.gross = -copy.gross; copy.net = -copy.net; copy.vat = -copy.vat; copy.description = copy.description.replace(/^Storno: /, ''); }
     setTimeout(() => openTransactionDialog(copy), 60);

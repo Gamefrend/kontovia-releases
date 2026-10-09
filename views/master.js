@@ -339,6 +339,10 @@ function recurring(root) {
       (Weitere Angaben → Wiederholen). Sobald die nächste fällig ist, bietet Kontovia sie zum Anlegen an,
       nach dem Entsperren oder über „Jetzt anlegen“. Jede wird eine gewöhnliche Buchung mit eigenem Beleg.
     </div>
+    <div class="notice mb16">
+      Auch Rechnungen lassen sich wiederholen (beim Erstellen unter „Wiederholung“). Fällige Termine legt Kontovia
+      als Rechnungsentwurf an; Sie prüfen ihn und stellen die Rechnung dann selbst aus.
+    </div>
     ${faellig ? raw(`<div class="notice warn mb16 row between wrap" style="gap:8px"><span>${int(faellig)} fällig.</span>
       <button type="button" class="btn sm" id="recNow">Jetzt anlegen</button></div>`) : ''}
     <div class="card">${regelTabelle()}</div>`;

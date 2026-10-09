@@ -27,7 +27,7 @@ import { aufgabenHtml, klartext, bildIds } from '../lib/richtext.js';
 import {
   teilaufgaben, neueTeilaufgabe, fortschritt, verknuepfungen, verknuepfungHinzu, verknuepfungenRoh, aufgabenZu,
   horizontNormal, horizontEnde, horizontText, horizontTitel, aufgabenText, EINHEITEN, VERKNUEPFUNG_ARTEN,
-  ARTEN, aufgabenArt, zielRechnung, zielPrognose, zielSatz, zielRest, zielNormal, zielMitStand, mengeText, wiederholungNormal, wiederholungText, WIEDERHOLUNG_EINHEITEN,
+  aufgabenArt, zielRechnung, zielPrognose, zielSatz, zielRest, zielNormal, zielMitStand, mengeText, wiederholungNormal, wiederholungText, WIEDERHOLUNG_EINHEITEN,
   naechsteFaelligkeit,
 } from '../lib/aufgaben.js';
 import { sucheIndex, suchen } from '../lib/suchindex.js';
@@ -541,30 +541,38 @@ export function openTodoDialog(id, preset = {}, { nachSpeichern = null } = {}) {
           <label for="d_title">Aufgabe *</label>
           <input id="d_title" value="${t.title}" placeholder="z. B. Unterlagen für den Steuerberater zusammenstellen">
         </div>
-        <div class="field">
-          <label>Art</label>
-          <div class="seg" id="d_art" role="group" aria-label="Art der Aufgabe">
-            ${raw(Object.entries(ARTEN).map(([k, n]) => `<button type="button" data-art="${k}" aria-pressed="${k === art}" class="${k === art ? 'active' : ''}">${esc(n)}</button>`).join(''))}
+        <div class="tgl-karten">
+          <div class="tgl-karte" id="d_zielKarte" data-an="${art === 'ziel'}">
+            <label class="tgl">
+              <input type="checkbox" role="switch" id="d_tZiel" data-art="ziel" ${art === 'ziel' ? 'checked' : ''}>
+              <span class="tgl-spur" aria-hidden="true"></span>
+              <span class="tgl-text"><span class="tgl-titel">Ziel</span><span class="tgl-info">Eine Menge bis zu einem Tag, zum Beispiel 20 Seiten in 10 Tagen.</span></span>
+            </label>
+            <div class="tgl-inhalt" id="d_zielBox" hidden>
+              <div class="form-grid">
+                <div class="field"><label for="d_zGesamt">Wie viel insgesamt?</label><input type="number" id="d_zGesamt" min="0" step="any" value="${zz.gesamt}"></div>
+                <div class="field"><label for="d_zEinheit">Einheit</label><input id="d_zEinheit" value="${zz.einheit}" placeholder="z. B. Seiten, Belege, km" maxlength="30"></div>
+                <div class="field"><label for="d_zStand">Schon geschafft</label><input type="number" id="d_zStand" min="0" step="any" value="${zz.stand}"></div>
+                <div class="field"><label for="d_zStart">Beginn</label><input type="date" id="d_zStart" value="${zz.start}"></div>
+              </div>
+              <p class="tgl-plan" id="d_zInfo"></p>
+            </div>
           </div>
-          <span class="hint" id="d_artHint"></span>
-        </div>
-        <div class="field" id="d_zielBox" hidden>
-          <div class="form-grid">
-            <div class="field"><label for="d_zGesamt">Wie viel insgesamt?</label><input type="number" id="d_zGesamt" min="0" step="any" value="${zz.gesamt}"></div>
-            <div class="field"><label for="d_zEinheit">Einheit</label><input id="d_zEinheit" value="${zz.einheit}" placeholder="z. B. Seiten, Belege, km" maxlength="30"></div>
-            <div class="field"><label for="d_zStand">Schon geschafft</label><input type="number" id="d_zStand" min="0" step="any" value="${zz.stand}"></div>
-            <div class="field"><label for="d_zStart">Beginn</label><input type="date" id="d_zStart" value="${zz.start}"></div>
+          <div class="tgl-karte" id="d_wdhKarte" data-an="${art === 'wiederholend'}">
+            <label class="tgl">
+              <input type="checkbox" role="switch" id="d_tWdh" data-art="wiederholend" ${art === 'wiederholend' ? 'checked' : ''}>
+              <span class="tgl-spur" aria-hidden="true"></span>
+              <span class="tgl-text"><span class="tgl-titel">Wiederholt sich</span><span class="tgl-info">Kommt nach dem Abhaken von selbst wieder, etwa jeden Monat.</span></span>
+            </label>
+            <div class="tgl-inhalt" id="d_wdhBox" hidden>
+              <div class="row" style="gap:8px;align-items:center">
+                <label for="d_wN">alle</label>
+                <input type="number" id="d_wN" min="1" max="365" step="1" value="${ww.n}" style="width:72px">
+                <select id="d_wF" aria-label="Einheit">${raw(Object.entries(WIEDERHOLUNG_EINHEITEN).map(([k, [, viele]]) => `<option value="${k}" ${k === ww.freq ? 'selected' : ''}>${viele}</option>`).join(''))}</select>
+              </div>
+              <span class="hint">Die Unteraufgaben sind beim nächsten Mal wieder offen.</span>
+            </div>
           </div>
-          <p class="hint" id="d_zInfo" style="margin:8px 0 0"></p>
-        </div>
-        <div class="field" id="d_wdhBox" hidden>
-          <label for="d_wN">Wiederholt sich</label>
-          <div class="row" style="gap:8px;align-items:center">
-            <span>alle</span>
-            <input type="number" id="d_wN" min="1" max="365" step="1" value="${ww.n}" style="width:72px">
-            <select id="d_wF" aria-label="Einheit">${raw(Object.entries(WIEDERHOLUNG_EINHEITEN).map(([k, [, viele]]) => `<option value="${k}" ${k === ww.freq ? 'selected' : ''}>${viele}</option>`).join(''))}</select>
-          </div>
-          <span class="hint">Nach dem Abhaken kommt die Aufgabe am nächsten Termin wieder, die Unteraufgaben sind dann wieder offen.</span>
         </div>
         <div class="form-grid">
           <div class="field">
@@ -613,11 +621,6 @@ export function openTodoDialog(id, preset = {}, { nachSpeichern = null } = {}) {
   editor = richEditor(g('editor'), { html: aufgabenHtml(t), beiNeuemBild: (bid) => neueBilder.add(bid) });
 
   /* Art: einfach, Ziel, Wiederholung */
-  const ART_HINWEIS = {
-    einfach: '',
-    ziel: 'Eine Menge bis zu einem Tag, zum Beispiel 20 Seiten in 10 Tagen. Kontovia rechnet aus, was pro Tag noch nötig ist.',
-    wiederholend: 'Eine Aufgabe, die immer wieder anfällt, etwa jeden Monat die Umsatzsteuer vorbereiten.',
-  };
   const zielInfo = () => {
     const heute = todayISO();
     const probe = {
@@ -633,21 +636,21 @@ export function openTodoDialog(id, preset = {}, { nachSpeichern = null } = {}) {
   const artZeigen = () => {
     g('zielBox').hidden = art !== 'ziel';
     g('wdhBox').hidden = art !== 'wiederholend';
-    g('artHint').textContent = ART_HINWEIS[art];
+    for (const [karte, k] of [['zielKarte', 'ziel'], ['wdhKarte', 'wiederholend']]) {
+      g(karte).dataset.an = String(art === k);
+      g(karte).querySelector('input[data-art]').checked = art === k;
+    }
     g('dueLabel').textContent = art === 'ziel' ? 'Frist *' : art === 'wiederholend' ? 'Nächstes Mal am' : 'Fällig am';
     g('dueHint').textContent = art === 'ziel' ? 'Bis dahin soll die ganze Menge geschafft sein.'
       : art === 'wiederholend' ? 'Freiwillig. Ohne Datum gilt der Tag des ersten Abhakens als Start.' : 'Freiwillig. Ohne Datum gilt der verknüpfte Termin.';
-    for (const b of g('art').querySelectorAll('[data-art]')) {
-      b.classList.toggle('active', b.dataset.art === art);
-      b.setAttribute('aria-pressed', String(b.dataset.art === art));
-    }
     if (g('done')) g('done').closest('label').hidden = art !== 'einfach';
     if (art === 'ziel') zielInfo();
   };
-  g('art').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-art]');
+  // Zwei Schalter, es gilt höchstens eine Art; wer einen ausschaltet, hat wieder eine einfache Aufgabe.
+  m.root.querySelector('.tgl-karten').addEventListener('change', (e) => {
+    const b = e.target.closest('input[data-art]');
     if (!b) return;
-    art = b.dataset.art;
+    art = b.checked ? b.dataset.art : 'einfach';
     artZeigen();
   });
   for (const k of ['zGesamt', 'zEinheit', 'zStand', 'zStart', 'due']) g(k).addEventListener('input', () => { if (art === 'ziel') zielInfo(); });
