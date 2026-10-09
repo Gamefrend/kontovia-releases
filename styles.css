@@ -1303,6 +1303,12 @@ textarea.invalid { border-color: var(--neg); }
 .todo-note { color: var(--muted); }
 .todo-ziel { margin-top: 8px; cursor: default; max-width: 520px; }
 .todo-ziel .bar-track { height: 8px; }
+.todo-ziel-balken { display: flex; align-items: center; gap: 10px; }
+.todo-ziel-balken .bar-track { flex: 1 1 auto; min-width: 0; }
+.todo-ziel-pct { flex: none; min-width: 38px; text-align: right; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text-2); }
+.todo-ziel-heute { margin-top: 6px; display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.todo-ziel-heute[hidden] { display: none; }
+.todo-ziel-heute .badge { font-variant-numeric: tabular-nums; font-size: 12px; }
 .todo-ziel-text { margin-top: 5px; font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
 /* Stand als Zahl: Feld mit „von 20 Seiten“ daneben, rechts davon, was noch fehlt. */
 .todo-ziel-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-top: 8px; }

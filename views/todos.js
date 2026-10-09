@@ -27,10 +27,11 @@ import { aufgabenHtml, klartext, bildIds } from '../lib/richtext.js';
 import {
   teilaufgaben, neueTeilaufgabe, fortschritt, verknuepfungen, verknuepfungHinzu, verknuepfungenRoh, aufgabenZu,
   horizontNormal, horizontEnde, horizontText, horizontTitel, aufgabenText, EINHEITEN, VERKNUEPFUNG_ARTEN,
-  ARTEN, aufgabenArt, zielRechnung, zielPrognose, zielSatz, zielRest, zielNormal, mengeText, wiederholungNormal, wiederholungText, WIEDERHOLUNG_EINHEITEN,
+  ARTEN, aufgabenArt, zielRechnung, zielPrognose, zielSatz, zielRest, zielNormal, zielMitStand, mengeText, wiederholungNormal, wiederholungText, WIEDERHOLUNG_EINHEITEN,
   naechsteFaelligkeit,
 } from '../lib/aufgaben.js';
 import { sucheIndex, suchen } from '../lib/suchindex.js';
+import { sprache } from '../lib/sprache.js';
 
 const state = {
   show: 'open', // open | done | all
@@ -137,6 +138,34 @@ function prognoseText(todo, heute) {
     : `<span title="${esc(titel)}">Voraussichtlich fertig am ${esc(fmtDate(p.fertig))}</span>`;
 }
 
+/** „42 %“ neben dem Balken. */
+function prozentText(r) {
+  const n = Math.round(r.anteil * 100);
+  return sprache() === 'en' ? `${n}%` : `${n} %`;
+}
+
+/** Tageszähler „Heute 7 / 20 Seiten“; leer, wenn es kein Tagesziel gibt (ohne Frist, Frist vorbei, nichts mehr offen). */
+function heuteWerte(todo, heute) {
+  const r = zielRechnung(todo, heute);
+  if (r.tagesziel == null || (r.tagesziel === 0 && !r.heuteGeschafft)) return null;
+  const e = r.einheit ? ` ${r.einheit}` : '';
+  return { text: `${mengeText(r.heuteGeschafft)} / ${mengeText(r.tagesziel)}${e}`, erreicht: r.heuteGeschafft >= r.tagesziel };
+}
+
+/** Schreibt den Tageszähler in sein Element (beim Hochzählen, ohne die Liste neu aufzubauen). */
+function heuteSetzen(tag, todo, heute) {
+  const w = heuteWerte(todo, heute);
+  tag.hidden = !w;
+  const zahl = tag.querySelector('[data-ziel-heute-zahl]');
+  zahl.textContent = w ? w.text : '';
+  zahl.classList.toggle('pos', !!w?.erreicht);
+}
+
+function balkenHtml(r) {
+  const n = Math.round(r.anteil * 100);
+  return `<div class="todo-ziel-balken"><div class="bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${n}"><div class="bar-fill" style="width:${n}%;background:var(--${r.status === 'hinten' ? 'warn' : r.status === 'verfehlt' ? 'neg' : 'accent'}, var(--accent))"></div></div><span class="todo-ziel-pct" data-ziel-pct>${esc(prozentText(r))}</span></div>`;
+}
+
 /** Fortschrittsbalken, Satz zum Stand und Eintragen des Fortschritts bei einem Ziel. */
 function zielBlock(todo, compact) {
   const heute = todayISO();
@@ -145,12 +174,15 @@ function zielBlock(todo, compact) {
   const e = r.einheit ? ` ${r.einheit}` : '';
   const pt = prognoseText(todo, heute);
   const prog = `<div class="todo-ziel-prog" data-ziel-prog${pt ? '' : ' hidden'}>${pt}</div>`;
-  const balken = `<div class="bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(r.anteil * 100)}"><div class="bar-fill" style="width:${Math.round(r.anteil * 100)}%;background:var(--${r.status === 'hinten' ? 'warn' : r.status === 'verfehlt' ? 'neg' : 'accent'}, var(--accent))"></div></div>`;
+  const balken = balkenHtml(r);
+  const hw = heuteWerte(todo, heute);
+  const tag = `<div class="todo-ziel-heute" data-ziel-heute title="Heute geschafft, gemessen am Tagesziel"${hw ? '' : ' hidden'}><span>Heute</span> <span class="badge tiny${hw?.erreicht ? ' pos' : ''}" data-ziel-heute-zahl>${esc(hw ? hw.text : '')}</span></div>`;
   const badge = text ? `<span class="badge tiny ${kl}">${esc(text)}</span> ` : '';
   // Klein (Übersicht): nur Balken und Satz. Groß: der Stand steht als Zahl im Feld, das sich tippen oder mit den Pfeilen ändern lässt.
   if (compact) {
     return `<div class="todo-ziel">${balken}
       <div class="todo-ziel-text">${badge}${esc(zielSatz(todo, heute))}</div>
+      ${tag}
       ${prog}
     </div>`;
   }
@@ -162,6 +194,7 @@ function zielBlock(todo, compact) {
       </label>
       <div class="todo-ziel-text" data-ziel-text>${badge}${esc(zielRest(todo, heute))}</div>
     </div>
+    ${tag}
     ${prog}
   </div>`;
 }
@@ -248,6 +281,8 @@ export function wireTodoRows(root, redraw) {
       const r = zielRechnung(jetzt, todayISO());
       const balken = block.querySelector('.bar-fill');
       balken.style.width = `${Math.round(r.anteil * 100)}%`;
+      block.querySelector('[data-ziel-pct]').textContent = prozentText(r);
+      heuteSetzen(block.querySelector('[data-ziel-heute]'), jetzt, todayISO());
       balken.style.background = `var(--${r.status === 'hinten' ? 'warn' : r.status === 'verfehlt' ? 'neg' : 'accent'}, var(--accent))`;
       block.querySelector('[role="progressbar"]').setAttribute('aria-valuenow', String(Math.round(r.anteil * 100)));
       const [kl, text] = ZIEL_STATUS[r.status];
@@ -731,7 +766,9 @@ export function openTodoDialog(id, preset = {}, { nachSpeichern = null } = {}) {
     t.art = art === 'einfach' ? '' : art;
     if (art === 'ziel') {
       const stand = Math.max(0, Number(g('zStand').value) || 0);
-      t.ziel = { gesamt: Number(g('zGesamt').value), einheit: g('zEinheit').value.trim(), stand, start: g('zStart').value || todayISO() };
+      const neu = { ...(t.ziel || {}), gesamt: Number(g('zGesamt').value), einheit: g('zEinheit').value.trim(), start: g('zStart').value || todayISO() };
+      // Ein neues Ziel beginnt mit seinem Anfangsstand; das gilt nicht als heute geschafft.
+      t.ziel = t.ziel ? zielMitStand({ ...neu, stand: zielNormal(t, todayISO()).stand }, stand, todayISO()) : { ...neu, stand };
     } else delete t.ziel;
     if (art === 'wiederholend') t.wiederholung = { ...(t.wiederholung || {}), ...wiederholungNormal({ freq: g('wF').value, n: g('wN').value }) };
     else delete t.wiederholung;

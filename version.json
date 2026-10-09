@@ -1,7 +1,7 @@
 {
-  "version": "2.30.3",
-  "released": "2026-10-09T08:05:01.773Z",
-  "notes": "Englisch noch sauberer\n\n- Auf Englisch sind jetzt auch Stellen übersetzt, die vorher noch deutsch blieben, zum Beispiel in den Einstellungen und bei wiederkehrenden Buchungen.\n- Hinweise zum Abgleich und die Suchfelder lesen sich auf Englisch natürlicher.",
+  "version": "2.31.0",
+  "released": "2026-10-09T12:35:09.527Z",
+  "notes": "Ziele mit Tageszähler\n\n- Bei Zielen steht neben dem Balken jetzt der Fortschritt in Prozent.\n- Neu: „Heute 7 / 20“ zeigt, wie viel vom Tagesziel heute geschafft ist, und zählt beim Eintragen live mit.",
   "files": [
     {
       "path": "abo/abo.css",
@@ -120,8 +120,8 @@
     },
     {
       "path": "lib/aufgaben.js",
-      "sha256": "413cf83da0c37b3159785e32a41663842e1f6b9c1da81bb3d719cab982152323",
-      "size": 11324
+      "sha256": "cc9604a40f3ac92f948aa4e0a35c94b4f0b77eed87a983560695e4fe31620f45",
+      "size": 12545
     },
     {
       "path": "lib/benutzer.js",
@@ -500,13 +500,13 @@
     },
     {
       "path": "lib/sprache/en/zusatz.js",
-      "sha256": "dbaabd10e928f2dd8cf2c35f690bc9c3c6254ce62895a4402843d9130ad6ace1",
-      "size": 8244
+      "sha256": "8745385f78263ec81d96c246372d18a1e3ce1ca09b5f9bee0c6d2a8030174bf7",
+      "size": 8796
     },
     {
       "path": "lib/store.js",
-      "sha256": "4f10903eda0626463804c3365c866e65001f5143bafef2e9f71067708c1fb33d",
-      "size": 44339
+      "sha256": "f3d38c48333262d4e705a35f4dfb44c9048468f977cbf270fddeb81978fc50c6",
+      "size": 44391
     },
     {
       "path": "lib/suche.js",
@@ -555,8 +555,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "e5b4d31f4cd81c4678ff0c308cdc55c35731a2336600695a47f5a0d1cc8e58ca",
-      "size": 42978
+      "sha256": "54b69914f2e3e4834cb0e432de39baff010ac9eb99fa41265b292c4bbe8308b8",
+      "size": 43290
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -585,12 +585,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "5d63f8c3ae76253d9898da9414185396c8fe6ce243365835bf132e5a8a2c6bf1",
+      "sha256": "37d675f5d3d35dafa668ff0a3e35475e589cca9d10110befe2b92b2eeab65b63",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "108a748bec0ba71cf88380e3069c5a21176180b10d0c8db78e9857caec792754",
+      "sha256": "88d57c030e97626f05b3151359922228d8c6ef8e8bccf17a66ab7949cb19f866",
       "size": 31282
     },
     {
@@ -605,7 +605,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "0b06d4e2dd0b6aa7462dcf3d62ccf5ee50e7ee890194c0e79ec75f8a3185c344",
+      "sha256": "a5f1e58bf9e49a98dbcfcd4a0d43d36a6ad0e7eeba42413b86bd639c2e819639",
       "size": 34938
     },
     {
@@ -630,8 +630,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "109201d623735768919c7b73f6c91848bfb9994d50a8a14cf31c8ff5dcb0a054",
-      "size": 126422
+      "sha256": "67281a7dd111b56b3f9c36702d580380e0ada9001bc91b68a0db0dbbf468e8db",
+      "size": 126965
     },
     {
       "path": "views/anlageform.js",
@@ -740,8 +740,8 @@
     },
     {
       "path": "views/todos.js",
-      "sha256": "36d980b96ee2cbe1d9720fcac1ae9699b12a34905045b1ed7177824e0255993b",
-      "size": 42470
+      "sha256": "194f71a1e9cddaac7f81f8c3ec535be9b7e62c22b053bcbbe08deefd2dc17b84",
+      "size": 44359
     },
     {
       "path": "views/transactions.js",
@@ -760,7 +760,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "3ae96dd62c136f4d3d8fd74006bb82a8ef45dbfe5e1b56e6bf9702fdf8cc0425",
+      "sha256": "f555d406d1033226768f32017ffd90dd010ec12c41bcaa4c36b30fec6758dbf6",
       "size": 6906
     },
     {
