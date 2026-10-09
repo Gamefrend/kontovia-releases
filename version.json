@@ -1,7 +1,7 @@
 {
-  "version": "2.30.2",
-  "released": "2026-10-08T20:37:21.507Z",
-  "notes": "Tarifseite: Fehler behoben\n\n- Der Rahmen um den empfohlenen Tarif läuft wieder flüssig.\n- Am Handy überlappen sich keine Inhalte mehr.\n- Zum Installieren gibt es jetzt Knöpfe für Windows, macOS, Android und iPhone.",
+  "version": "2.30.3",
+  "released": "2026-10-09T08:05:01.773Z",
+  "notes": "Englisch noch sauberer\n\n- Auf Englisch sind jetzt auch Stellen übersetzt, die vorher noch deutsch blieben, zum Beispiel in den Einstellungen und bei wiederkehrenden Buchungen.\n- Hinweise zum Abgleich und die Suchfelder lesen sich auf Englisch natürlicher.",
   "files": [
     {
       "path": "abo/abo.css",
@@ -380,8 +380,8 @@
     },
     {
       "path": "lib/sprache.js",
-      "sha256": "d56e4f7e47ac15cf79a1cef207d854edf92aa5e91930fc2fac94414daeb89bd2",
-      "size": 26090
+      "sha256": "30a16d9a48d24d67d2ec6eebc2ce0498f662a812505afc1fa8966a7f19357cb7",
+      "size": 26324
     },
     {
       "path": "lib/sprache/en.js",
@@ -500,8 +500,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz.js",
-      "sha256": "5fe5d046ebc4b9d8e9e1b705ee521b049d8ee13a4ac58a338f13dfc2d54845f9",
-      "size": 6723
+      "sha256": "dbaabd10e928f2dd8cf2c35f690bc9c3c6254ce62895a4402843d9130ad6ace1",
+      "size": 8244
     },
     {
       "path": "lib/store.js",
@@ -555,8 +555,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "baa9bbffbd6d1dacad2750ea29c75d1b3f326e3d52e7f702a3c2ce998df33f00",
-      "size": 42615
+      "sha256": "e5b4d31f4cd81c4678ff0c308cdc55c35731a2336600695a47f5a0d1cc8e58ca",
+      "size": 42978
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -585,12 +585,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "e9a5ee35e14d827f8238b27db1a1d029a794e9c951767b68531813a1db1ffd0e",
+      "sha256": "5d63f8c3ae76253d9898da9414185396c8fe6ce243365835bf132e5a8a2c6bf1",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "ea33ae823dbea357a3a17babdcd982e3ba400398a1650d8288f8681af7e6da5f",
+      "sha256": "108a748bec0ba71cf88380e3069c5a21176180b10d0c8db78e9857caec792754",
       "size": 31282
     },
     {
@@ -605,7 +605,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "08923e4a2b81febf3ea32afb31995fe7c7f6ceb2cf8c4c15af8cf6c0154e38f8",
+      "sha256": "0b06d4e2dd0b6aa7462dcf3d62ccf5ee50e7ee890194c0e79ec75f8a3185c344",
       "size": 34938
     },
     {
@@ -760,7 +760,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "b8fe0b9d34718c7ee09e2bc77bf3070737cca888ae88e60bf06483789379c82a",
+      "sha256": "3ae96dd62c136f4d3d8fd74006bb82a8ef45dbfe5e1b56e6bf9702fdf8cc0425",
       "size": 6906
     },
     {
