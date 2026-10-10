@@ -16,6 +16,7 @@ import { calState, onCalendarSync, refreshCalendarStatus, syncCalendar, calendar
 import { eventIdFor } from '../lib/gcal.js';
 import { openMenu } from '../lib/popover.js';
 import { steuertermine } from '../lib/fristen.js';
+import { kann } from '../lib/lizenz.js';
 import { oeffneFrist } from './spruenge.js';
 import { openTodoDialog } from './todos.js';
 
@@ -88,6 +89,7 @@ function todoEntries(from, to) {
 
 /** Steuertermine (Voranmeldung, Jahreserklärungen) als Kalendereinträge. */
 function taxEntries(from, to) {
+  if (!kann('steuertermine')) return [];
   return steuertermine(sel.settings(), from, to).map((t, i) => ({
     ...t,
     id: `tax_${t.datum}_${i}`,

@@ -21,6 +21,8 @@ import { feedbackOeffnen, feedbackNachsenden, entwicklerKlick } from './lib/feed
 import { rechtsfuss, rechtslinks, nutzungPruefen, nutzungVermerken, entwicklungsKasten, entwicklungsLeiste, ENTWICKLUNG_TITEL, ENTWICKLUNG_TEXT } from './lib/recht.js';
 import { nutzerWaehlen, nutzerMenue, nutzerAnzeigen, kannSchreiben } from './lib/benutzer.js';
 import { sucheOeffnen, SUCHE_KUERZEL } from './lib/suche.js';
+import { lizenzLaden, lizenzVergessen, kann } from './lib/lizenz.js';
+import { lizenzOberflaeche, erlaubt } from './lib/lizenzui.js';
 import { spracheStarten, spracheGewaehlt, spracheMerken, spracheSetzen, sprache, sprachWahl, sprachWahlVerdrahten, beiSprachwechsel } from './lib/sprache.js';
 
 /* Der Assistent lädt erst, wenn ihn jemand öffnet (lib/assistentfenster.js). */
@@ -144,6 +146,8 @@ async function boot() {
   // Jede Beschriftung nennt ihr Feld (Bildschirmleser, Klick auf die Beschriftung).
   beschriftungenBeobachten();
   betragHinweiseBeobachten();
+  // Krone und Sperre der Premium-Funktionen (Attribute data-krone / data-premium).
+  lizenzOberflaeche();
   try {
     appInfo = await api.app.info();
     // Ohne Gerätekennung könnte das Änderungsjournal beim Abgleich zweier
@@ -260,9 +264,11 @@ function neuigkeitenHinweis() {
 }
 
 /** Öffnet die Buchhaltung, sobald der Tresor entsperrt ist. */
-function eintreten(db) {
+async function eintreten(db) {
   setDb(db);
   applyTheme();
+  // Die Stufe steht fest, bevor etwas gezeichnet wird: Ohne Lizenzschein lizenziert sich das Konto in der Testphase hier selbst.
+  await lizenzLaden();
   renderShell();
   navigate(db.settings.startView || 'dashboard', {}, { ersetzen: true });
   afterUnlock();
@@ -588,6 +594,7 @@ function renderSetup(konten = null) {
         setDb(db);
         await nutzungVermerken(appInfo.version).catch(() => {});
         applyTheme();
+        await lizenzLaden();
         renderShell();
         navigate('dashboard', {}, { ersetzen: true });
         ohneNeuigkeiten = true;
@@ -692,9 +699,10 @@ function renderCloudLaden(st, { neu }) {
   wirePasswordToggles(app);
   pw.focus();
 
-  const geladen = (db) => {
+  const geladen = async (db) => {
     setDb(db);
     applyTheme();
+    await lizenzLaden();
     renderShell();
     navigate(db.settings?.startView || 'dashboard', {}, { ersetzen: true });
     ohneNeuigkeiten = true;
@@ -1143,10 +1151,13 @@ export function renderUpdateButton() {
 /* Hülle                                                                       */
 /* -------------------------------------------------------------------------- */
 
+/** Bereiche, die ganz zu einer Premium-Funktion gehören (Krone in der Seitenleiste; die Ansicht zeigt die Sperrkarte). */
+const BEREICH_FUNKTION = { kontoimport: 'kontoauszug' };
+
 function navItem(key) {
   const v = VIEWS[key];
   return html`
-    <div class="nav-item ${router.view === key ? 'active' : ''}" data-view="${key}" role="button" tabindex="0" aria-current="${router.view === key ? 'page' : 'false'}" title="${v.key ? `${v.title} (${/\d/.test(v.key) ? 'Alt' : MOD}+${v.key})` : v.title}">
+    <div class="nav-item ${router.view === key ? 'active' : ''}" data-view="${key}" ${raw(BEREICH_FUNKTION[key] ? `data-krone="${BEREICH_FUNKTION[key]}"` : '')} role="button" tabindex="0" aria-current="${router.view === key ? 'page' : 'false'}" title="${v.key ? `${v.title} (${/\d/.test(v.key) ? 'Alt' : MOD}+${v.key})` : v.title}">
       ${icon(v.icon, 18)}<span>${v.title}</span>
     </div>`;
 }
@@ -1251,7 +1262,7 @@ function renderShell() {
         <button class="such-knopf" id="searchBtn" type="button" aria-haspopup="dialog" title="Alles durchsuchen (${SUCHE_KUERZEL})">
           ${icon('search', 16)}<span class="grow">Suchen</span><kbd>${SUCHE_KUERZEL}</kbd>
         </button>
-        <button class="such-knopf as-knopf" id="asSideBtn" type="button" data-as-knopf aria-expanded="false" aria-controls="asPanel" title="Assistent fragen (${KI_KUERZEL})">
+        <button class="such-knopf as-knopf" id="asSideBtn" type="button" data-krone="assistent" data-as-knopf aria-expanded="false" aria-controls="asPanel" title="Assistent fragen (${KI_KUERZEL})">
           ${icon('sparkle', 16)}<span class="grow">Assistent</span><kbd>${KI_KUERZEL}</kbd>
         </button>
         <nav class="nav" id="nav" aria-label="Hauptnavigation">
@@ -1277,7 +1288,7 @@ function renderShell() {
             <h1 id="viewTitle">Übersicht</h1>
             <button class="icon-btn top-hilfe" id="viewHilfe" type="button" hidden aria-label="Hilfe zu diesem Bereich" title="Hilfe zu diesem Bereich">${icon('help', 18)}</button>
             <button class="icon-btn top-suche" id="topSearch" type="button" aria-label="Suchen" title="Alles durchsuchen">${icon('search', 20)}</button>
-            <button class="icon-btn top-as" id="topAs" type="button" data-as-knopf aria-expanded="false" aria-controls="asPanel" aria-label="Assistent" title="Assistent fragen">${icon('sparkle', 20)}</button>
+            <button class="icon-btn top-as" id="topAs" type="button" data-krone="assistent" data-as-knopf aria-expanded="false" aria-controls="asPanel" aria-label="Assistent" title="Assistent fragen">${icon('sparkle', 20)}</button>
           </header>
           <div id="topActions" class="row"></div>
         </div>
@@ -1491,6 +1502,7 @@ api.on.locked(async ({ reason }) => {
   scope.includeUnlisted = false;
   stopCalendarSync();
   clearDb();
+  lizenzVergessen();
   const texts = {
     inaktiv: 'Kontovia wurde wegen Inaktivität gesperrt.',
     standby: 'Das Gerät war im Ruhezustand, deshalb wurde Kontovia gesperrt.',

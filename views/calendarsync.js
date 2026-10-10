@@ -64,7 +64,7 @@ export async function renderCalendarCard(el) {
 
   el.innerHTML = html`
     <div class="card">
-      <div class="card-head"><h2>${icon('calendar', 16)} Kalender-Abgleich</h2><span class="sub">Google Kalender und Kalenderdateien</span></div>
+      <div class="card-head"><h2 data-krone="kalender">${icon('calendar', 16)} Kalender-Abgleich</h2><span class="sub">Google Kalender und Kalenderdateien</span></div>
       <div class="card-body">
         <div class="grid c2">
           <div>
@@ -83,7 +83,7 @@ export async function renderCalendarCard(el) {
                 Tipp, meist ohne erneute Anmeldung.</div>`) : ''}
               ${!st.bestaetigen && (st.lastError || calState.lastError) ? raw(`<div class="notice danger mt8">${esc(calState.lastError || st.lastError)}</div>`) : ''}
               <div class="row wrap mt16" style="gap:8px">
-                <button class="btn primary" data-cal="sync">${icon('refresh', 15)} ${st.bestaetigen ? 'Bestätigen und abgleichen' : 'Jetzt abgleichen'}</button>
+                <button class="btn primary" data-cal="sync" data-premium="kalender">${icon('refresh', 15)} ${st.bestaetigen ? 'Bestätigen und abgleichen' : 'Jetzt abgleichen'}</button>
                 <button class="btn danger" data-cal="disconnect">Trennen</button>
               </div>
               ${raw(optionen)}
@@ -94,7 +94,7 @@ export async function renderCalendarCard(el) {
               „Kontovia“ eintragen, erscheint hier. Auf Wunsch kommen Ihre übrigen Kalender dazu, etwa
               der Hauptkalender, ebenfalls in beide Richtungen.</p>
               ${st?.lastError ? raw(`<div class="notice warn mb8">${esc(st.lastError)}</div>`) : ''}
-              <button class="btn primary" data-cal="connect">${icon('calendar', 15)} Mit Google Kalender verbinden</button>`)}
+              <button class="btn primary" data-cal="connect" data-premium="kalender">${icon('calendar', 15)} Mit Google Kalender verbinden</button>`)}
           </div>
           <div>
             <p class="small mt0" style="line-height:1.6"><strong>Kalenderdatei (.ics):</strong> für
@@ -148,14 +148,14 @@ function weitereAbschnitt(st, cfg) {
       Dafür braucht Kontovia einmal zusätzlich Ihre Freigabe bei Google.</p>
       ${namen.length ? `<div class="notice warn small mb8">Ausgewählt sind ${esc(namen.join(', '))}, auf diesem Gerät
         fehlt aber noch die Freigabe.</div>` : ''}
-      <button class="btn" data-cal="weitere-freigeben">${icon('calendar', 15).__raw} Weitere Kalender einbeziehen</button>`;
+      <button class="btn" data-cal="weitere-freigeben" data-premium="kalender">${icon('calendar', 15).__raw} Weitere Kalender einbeziehen</button>`;
   }
   return `<hr class="sep">
     <strong style="font-size:13px">Weitere Google-Kalender</strong>
     <p class="small mt8 mb8" style="line-height:1.6">${namen.length
       ? `In beide Richtungen abgeglichen: <strong>${esc(namen.join(', '))}</strong>. Termine ab gut einem Jahr zurück.`
       : 'Noch kein weiterer Kalender ausgewählt.'}</p>
-    <button class="btn" data-cal="weitere-waehlen">${icon('calendar', 15).__raw} Kalender auswählen</button>`;
+    <button class="btn" data-cal="weitere-waehlen" data-premium="kalender">${icon('calendar', 15).__raw} Kalender auswählen</button>`;
 }
 
 /**

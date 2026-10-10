@@ -1945,3 +1945,47 @@ html[data-theme="dark"] .hb { box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045
      Ohne !important gewänne die allgemeine Regel oben (.01ms), und er stünde still. */
   .as-dreht { animation-duration: 2.4s !important; animation-iteration-count: infinite !important; }
 }
+
+/* Premium-Funktionen: Krone und Sperre (lib/lizenzui.js). Die Kennfarbe gilt nur für die Krone. */
+:root { --krone: #b0770b; }
+html[data-theme="dark"] { --krone: #f0bf61; }
+.krone { display: inline-flex; align-items: center; justify-content: center; margin-left: 6px; color: var(--krone); flex: none; vertical-align: -2px; }
+.krone .krone-ico { width: 14px; height: 14px; }
+.krone.zu { opacity: .95; }
+.nav-item .krone { margin-left: auto; }
+.nav-item .krone .krone-ico { width: 14px; height: 14px; }
+.seg button .krone { margin-left: 5px; }
+.seg button .krone .krone-ico { width: 13px; height: 13px; }
+.card-head h2 .krone { margin-left: 8px; }
+.btn .krone { margin-left: 2px; }
+.premium-zu { cursor: pointer; }
+.premium-zu:is(.btn, button, .seg button) { opacity: .72; }
+.sperr-titel { display: inline-flex; align-items: center; gap: 8px; }
+.sperr-titel .krone-ico { color: var(--krone); width: 20px; height: 20px; }
+.sperr-karte { max-width: 520px; margin: 40px auto; text-align: center; }
+.sperr-karte .card-body { padding: 36px 28px; }
+.sperr-krone { display: inline-grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; background: var(--warn-soft); color: var(--krone); margin-bottom: 12px; }
+.sperr-karte h2 { margin: 0 0 6px; }
+.sperr-karte .lead { margin: 0 0 6px; }
+.sperr-knoepfe { justify-content: center; }
+.top-as { position: relative; }
+.top-as .krone { position: absolute; top: 2px; right: 2px; margin: 0; }
+.top-as .krone .krone-ico { width: 11px; height: 11px; }
+.sperr-klein { text-align: center; padding: 8px 0; }
+.sperr-klein p { margin: 0 0 8px; }
+.lz-kopf { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.lz-stufe-name { display: inline-flex; align-items: center; gap: 6px; font-size: 1.25rem; font-weight: 650; }
+.lz-stufe-name .krone { margin: 0; }
+.lz-spalten { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+.lz-h { margin: 0 0 6px; font-size: .8125rem; color: var(--muted); font-weight: 600; text-transform: none; }
+.lz-liste { margin: 0; padding-left: 18px; line-height: 1.7; }
+.lz-stufe .lz-liste { list-style: none; padding-left: 0; }
+.lz-stufe { margin-bottom: 10px; }
+.lz-liste li.zu { color: var(--muted); }
+.lz-liste .krone { margin: 0 4px 0 0; }
+.lz-grenzen { list-style: none; padding-left: 0; }
+.lz-grenzen li { display: flex; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--border); padding: 2px 0; }
+.lz-wert { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lz-aktuell { margin-left: 8px; font-size: .8125rem; }
+.such-knopf .krone { margin-left: 6px; }
+.shell.nav-schmal .such-knopf .krone, .shell.nav-schmal .nav-item .krone { display: none; }

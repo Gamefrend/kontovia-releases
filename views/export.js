@@ -115,7 +115,7 @@ function draw(root) {
         body: 'Alle Unterlagen für Ihre Steuererklärung in einem Ordner, mit einer Anleitung zum Übertragen nach ELSTER.',
         mehr: `Enthalten sind die Zeilen der Anlage EÜR${klein ? '' : ', die Kennzahlen der Umsatzsteuer'}, das Buchungsjournal,
           die offenen Posten, das Anlagenverzeichnis und ein DATEV-Stapel für die Kanzlei, dazu die vollständigen Berichte als PDF.`,
-        button: `<button class="btn primary" id="btnPackAll">${icon('export', 16).__raw} Paket erstellen</button>
+        button: `<button class="btn primary" id="btnPackAll" data-premium="finanzamt">${icon('export', 16).__raw} Paket erstellen</button>
                  <button class="btn" id="btnPackCsv">Nur Tabellen (CSV)</button>`,
       }))}
 
@@ -135,7 +135,7 @@ function draw(root) {
           Verwendet die Sachkonten des ${esc(db.settings.chartOfAccounts || 'SKR03')} aus Ihren Kategorien und bucht
           ${basisOf(db, period.from) === 'soll' && !klein ? 'Rechnungen über Sammeldebitor und -kreditor, Zahlungen aufs Geldkonto' : 'nach Zahlungsdatum gegen das Geldkonto'}.
           Steuerschlüssel für Konten ohne Automatik lassen sich auf Wunsch mitgeben.`,
-        button: `<button class="btn primary" id="btnDatev">${icon('file', 16).__raw} Buchungsstapel</button>`,
+        button: `<button class="btn primary" id="btnDatev" data-premium="datev">${icon('file', 16).__raw} Buchungsstapel</button>`,
       }))}
 
       ${raw(card({
@@ -143,7 +143,7 @@ function draw(root) {
         body: 'Alle Daten so, wie eine Prüferin oder ein Prüfer sie verlangt, samt Nachweis, dass nichts nachträglich verändert wurde.',
         mehr: `Datenträgerüberlassung nach GoBD (Z3): alle Daten in maschinell auswertbarer Form mit beschreibender
           <code>index.xml</code> nach dem GDPdU-Beschreibungsstandard. Enthält auch das verkettete Änderungsjournal.`,
-        button: `<button class="btn primary" id="btnGobd">${icon('archive', 16).__raw} Prüfungsordner</button>`,
+        button: `<button class="btn primary" id="btnGobd" data-premium="pruefungsordner">${icon('archive', 16).__raw} Prüfungsordner</button>`,
       }))}
 
       ${raw(card({
@@ -170,7 +170,7 @@ function draw(root) {
         mehr: `In „Mein ELSTER“: Formular „Umsatzsteuer-Voranmeldung“ öffnen, Jahr wählen, Reiter „XML-Import“,
           Datei hochladen, prüfen, absenden. Bemessungsgrundlagen stehen darin wie verlangt in vollen Euro.`,
         extra: ustvaWahl(period),
-        button: `<button class="btn primary" id="btnElster" ${ustvaZeitraum(period) ? '' : 'disabled'}>${icon('euro', 16).__raw} ELSTER-Datei erstellen</button>`,
+        button: `<button class="btn primary" id="btnElster" data-premium="elster" ${ustvaZeitraum(period) ? '' : 'disabled'}>${icon('euro', 16).__raw} ELSTER-Datei erstellen</button>`,
       }))}
 
       ${raw(card({
@@ -181,7 +181,7 @@ function draw(root) {
         button: `<button class="btn primary" id="btnXlsx">${icon('table', 16).__raw} Excel-Mappe</button>
                  <button class="btn" id="btnVcf">Kontakte (vCard)</button>
                  <button class="btn" id="btnProdukte">Produkte (CSV)</button>
-                 ${klein ? '' : '<button class="btn" id="btnZm">Zusammenfassende Meldung</button>'}`,
+                 ${klein ? '' : '<button class="btn" id="btnZm" data-premium="zm">Zusammenfassende Meldung</button>'}`,
       }))}
     </div>
 
@@ -190,7 +190,7 @@ function draw(root) {
       <div class="card-body">
         <div class="row wrap" style="gap:8px">
           <button class="btn" data-pdf="guv">${icon('chart', 15)} Gewinn & Verlust</button>
-          <button class="btn" data-pdf="euer">${icon('file', 15)} Anlage EÜR</button>
+          <button class="btn" data-pdf="euer" data-premium="euer">${icon('file', 15)} Anlage EÜR</button>
           ${klein ? '' : raw(`<button class="btn" data-pdf="ust">${icon('euro', 15).__raw} Umsatzsteuer-Voranmeldung</button>`)}
           <button class="btn" data-pdf="bilanz">${icon('scale', 15)} Vermögensübersicht</button>
           <button class="btn" data-pdf="opos">${icon('clock', 15)} Offene Posten</button>

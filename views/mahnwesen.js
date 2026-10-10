@@ -23,6 +23,7 @@ import {
   mahnungPdfLesen, mahnkostenBuchen,
 } from '../lib/mahnungsaktionen.js';
 import { base64 } from '../lib/pdfausgabe.js';
+import { erlaubt } from '../lib/lizenzui.js';
 
 const api = window.kontovia;
 const PDF_FILTER = [{ name: 'PDF-Dokument', extensions: ['pdf'] }];
@@ -208,7 +209,7 @@ export function mahnungenKarte(host, r) {
     ${kosten.gesamt > 0 ? `<p class="small mt8 mb0">Mahnkosten (Gebühr und Verzugsaufschlag): ${esc(money(kosten.gesamt))} €${kosten.bezahlt ? `, davon ${esc(money(kosten.bezahlt))} € eingegangen` : ''}.
       ${kosten.offen > 0 ? `Noch offen: <strong>${esc(money(kosten.offen))} €</strong>. Gebucht wird erst, wenn das Geld eingegangen ist.` : 'Alles eingegangen.'}</p>` : ''}
     <div class="re-aktionen mt8">
-      ${stand.mahnbar ? `<button class="btn ${stand.fristLaeuft ? '' : 'primary'}" id="mhNeu">${icon('plus', 15).__raw} ${stand.alleDurch ? 'Mahnung erneut erstellen' : `${esc(MAHNSTUFEN[stand.vorschlag].name)} erstellen`}</button>` : ''}
+      ${stand.mahnbar ? `<button class="btn ${stand.fristLaeuft ? '' : 'primary'}" id="mhNeu" data-premium="mahnwesen">${icon('plus', 15).__raw} ${stand.alleDurch ? 'Mahnung erneut erstellen' : `${esc(MAHNSTUFEN[stand.vorschlag].name)} erstellen`}</button>` : ''}
       ${kosten.offen > 0 ? `<button class="btn" id="mhKosten">${icon('check', 15).__raw} Mahnkosten als eingegangen buchen</button>` : ''}
     </div>`;
 
@@ -250,6 +251,7 @@ async function mahnungSpeichern(m) {
  * @param {{onFertig?:Function}} [opt]
  */
 export function mahnungDialog(rechnungId, { onFertig } = {}) {
+  if (!erlaubt('mahnwesen')) return;
   const r = sel.invoice(rechnungId);
   if (!r) { warn('Diese Rechnung gibt es nicht mehr'); return; }
   // Ein Schreiben auf Englisch braucht das Wörterbuch, bevor das Fenster seine Vorschau baut.

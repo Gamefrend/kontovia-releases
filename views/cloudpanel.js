@@ -38,7 +38,7 @@ export async function renderCloudCard(root) {
   root.innerHTML = html`
     <div class="card">
       <div class="card-head">
-        <h2>${icon('archive', 16)} Cloud-Abgleich und Sicherung</h2>
+        <h2 data-krone="cloud">${icon('archive', 16)} Cloud-Abgleich und Sicherung</h2>
         <div class="spacer"></div>
         ${status.linked ? raw(`<span class="badge pos">verbunden${status.email ? ': ' + esc(status.email) : ''}</span>`)
           : raw('<span class="badge">nicht verbunden</span>')}
@@ -66,8 +66,8 @@ export async function renderCloudCard(root) {
 
         ${status.configured && !status.linked ? raw(`
           <div class="row wrap" style="gap:8px">
-            <button class="btn primary" id="btnConnect">${icon('key', 15).__raw} Mit Google verbinden</button>
-            ${status.weiterleitung ? '<button class="btn ghost" id="btnConnectCode">Klappt nicht? Mit Code verbinden</button>' : ''}
+            <button class="btn primary" id="btnConnect" data-premium="cloud">${icon('key', 15).__raw} Mit Google verbinden</button>
+            ${status.weiterleitung ? '<button class="btn ghost" id="btnConnectCode" data-premium="cloud">Klappt nicht? Mit Code verbinden</button>' : ''}
           </div>
           <p class="small muted mt16 mb0">${status.weiterleitung
             ? `Sie werden zu Google weitergeleitet und kommen nach der Anmeldung hierher zurück. Kontovia
@@ -106,7 +106,7 @@ export async function renderCloudCard(root) {
           </div>
 
           <div class="row wrap mt16" style="gap:8px">
-            <button class="btn primary" id="btnSync">${icon('refresh', 15).__raw} Jetzt abgleichen</button>
+            <button class="btn primary" id="btnSync" data-premium="cloud">${icon('refresh', 15).__raw} Jetzt abgleichen</button>
             ${conflicts.length ? `<button class="btn" id="btnConflicts">${icon('alert', 15).__raw} ${conflicts.length} Konflikt${conflicts.length > 1 ? 'e' : ''} ansehen</button>` : ''}
             <div class="spacer"></div>
             <button class="btn danger" id="btnUnlink">Verbindung trennen</button>
@@ -121,7 +121,7 @@ export async function renderCloudCard(root) {
           versehentlichen Löschen.</p>
           ${status.cloudBackupError ? `<div class="notice warn mb8 small">Die letzte Sicherung in der Cloud ist fehlgeschlagen: ${esc(status.cloudBackupError)}</div>` : ''}
           <div class="row wrap" style="gap:8px">
-            <button class="btn" id="btnCloudBackup">${icon('save', 15).__raw} Jetzt in der Cloud sichern</button>
+            <button class="btn" id="btnCloudBackup" data-premium="cloud">${icon('save', 15).__raw} Jetzt in der Cloud sichern</button>
             <button class="btn" id="btnCloudBackups">${icon('history', 15).__raw} Sicherungen ansehen</button>
             <span class="small muted">${status.lastCloudBackupAt ? `Zuletzt ${esc(fmtDateTime(status.lastCloudBackupAt))}` : 'Noch keine Sicherung von diesem Gerät'}</span>
           </div>

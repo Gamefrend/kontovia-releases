@@ -34,6 +34,7 @@ import './mobil.js';
 import * as I from './installation.js';
 import * as R from './rueckmeldung.js';
 import * as KI from './ki.js';
+import * as LZ from './lizenz.js';
 
 /* Läuft diese Seite nur als kleines Fenster für Google Kalender? Dann reicht
    sie die Antwort an das eigentliche Kontovia-Fenster weiter und schließt
@@ -71,6 +72,8 @@ const rueckkehrFertig = (() => {
    Adresse entfernen und nur für diesen Tab, nur kurz merken (koppeln.js). */
 if (!nurGoogleFenster) { const c = KP.codeAusAdresse(); if (c) KP.codeMerken(c); }
 const device = { id: '', name: '' };
+/* Stufe des offenen Kontos (lizenz.js). Der Schein ist an die Kennung dieses Geräts gebunden. */
+const lizenz = new LZ.Lizenz({ geraet: () => device.id });
 
 let autoLockMinutes = 10;
 /** Tresorschlüssel aus der Übergabe nach einer Aktualisierung (uebergabe.js), nur für diesen Start. */
@@ -93,7 +96,7 @@ const str = (v, max = 500) => String(v ?? '').slice(0, max);
 /* Ereignisse                                                                  */
 /* -------------------------------------------------------------------------- */
 
-const hoerer = { locked: new Set(), updateProgress: new Set(), cloudProgress: new Set(), cloudTick: new Set(), menu: new Set(), speicher: new Set(), umstellung: new Set() };
+const hoerer = { locked: new Set(), updateProgress: new Set(), cloudProgress: new Set(), cloudTick: new Set(), menu: new Set(), speicher: new Set(), umstellung: new Set(), lizenz: new Set() };
 
 function send(kanal, payload) {
   for (const fn of hoerer[kanal]) {
@@ -1129,8 +1132,24 @@ const api = {
     speicher: handle(async () => KI.speicher()),
   },
 
+  /* Lizenz (lizenz.js): Die Oberfläche bekommt nur den Stand (Stufe, Laufzeit), nie den Schein. Ohne Schein lizenziert
+     sich das Konto in der Testphase beim ersten Abruf selbst. */
+  lizenz: {
+    status: handle(async () => kopie(await lizenz.status())),
+    /** Einen Lizenzschein einlösen; wirft mit Code LIZENZ_*, wenn er nicht echt ist, zu einem anderen Gerät gehört oder abgelaufen ist. */
+    aktivieren: handle(async (schein) => {
+      const s = kopie(await lizenz.aktivieren(str(schein, 4000)));
+      send('lizenz', s);
+      return s;
+    }),
+    entfernen: handle(async () => { const s = kopie(await lizenz.entfernen()); send('lizenz', s); return s; }),
+    /** Nur in der Testphase: eine kleinere Stufe ausprobieren ('' = die volle). */
+    vorschau: handle(async (stufe) => { const s = kopie(await lizenz.vorschauSetzen(str(stufe, 20))); send('lizenz', s); return s; }),
+  },
+
   on: {
     locked: anmelden('locked'),
+    lizenz: anmelden('lizenz'),
     updateProgress: anmelden('updateProgress'),
     cloudProgress: anmelden('cloudProgress'),
     cloudTick: anmelden('cloudTick'),

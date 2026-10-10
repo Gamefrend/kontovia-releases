@@ -41,6 +41,8 @@ import { gestaltungZeigen } from './rechnungsgestalter.js';
 import { openTransactionDialog } from './transactions.js';
 import { aufgabenAbschnitt } from './todos.js';
 import { mahnwesenZeigen, mahnungenKarte } from './mahnwesen.js';
+import { sperrKarteZeigen, erlaubt } from '../lib/lizenzui.js';
+import { kann } from '../lib/lizenz.js';
 
 const api = window.kontovia;
 
@@ -54,6 +56,8 @@ const TABS = {
   produkte: 'Produkte',
   gestaltung: 'Gestaltung',
 };
+/** Reiter, die zu einer Premium-Funktion gehören (Krone am Reiter, Sperrkarte statt Inhalt). */
+const TAB_FUNKTION = { mahnwesen: 'mahnwesen', vorlagen: 'vorlagen', produkte: 'vorlagen', gestaltung: 'gestaltung' };
 const TAB_TITEL = {
   ausgang: 'Rechnungen, die Sie schreiben',
   eingang: 'E-Rechnungen, die Sie erhalten',
@@ -104,17 +108,19 @@ export async function render(root, params = {}, { actions } = {}) {
 
   root.innerHTML = `
     <div class="seg tabs mb16" role="group" aria-label="Bereich">
-      ${Object.entries(TABS).map(([k, v]) => `<button data-tab="${k}" class="${tab === k ? 'active' : ''}" title="${esc(TAB_TITEL[k])}">${esc(v)}</button>`).join('')}
+      ${Object.entries(TABS).map(([k, v]) => `<button data-tab="${k}" ${TAB_FUNKTION[k] ? `data-krone="${TAB_FUNKTION[k]}"` : ''} class="${tab === k ? 'active' : ''}" title="${esc(TAB_TITEL[k])}">${esc(v)}</button>`).join('')}
     </div>
     <div id="reBody"></div>`;
   $$('[data-tab]', root).forEach((b) => b.addEventListener('click', () => { navigate('rechnungen', { tab: b.dataset.tab }, { ersetzen: true }); }));
   const body = $('#reBody', root);
+  if (TAB_FUNKTION[tab] && sperrKarteZeigen(body, TAB_FUNKTION[tab])) return;
   ({ ausgang, eingang, produkte, vorlagen, mahnwesen: mahnwesenZeigen, gestaltung }[tab])(body, params);
 }
 
 /** „Neue Rechnung“: leer oder aus einer Vorlage. */
 function neuMenue(anker) {
-  const v = sel.invoiceTemplates();
+  // Vorlagen gehören zu Standard; darunter gibt es nur die leere Rechnung.
+  const v = kann('vorlagen') ? sel.invoiceTemplates() : [];
   if (!v.length) { navigate('rechnungen', { neu: true }); return; }
   openMenu(anker, {
     label: 'Neue Rechnung',
@@ -278,7 +284,7 @@ async function detailZeigen(root, r, actions) {
         </div>
 
         <div class="card">
-          <div class="card-head"><h2>${icon('alert', 16).__raw} Mahnungen</h2></div>
+          <div class="card-head"><h2 data-krone="mahnwesen">${icon('alert', 16).__raw} Mahnungen</h2></div>
           <div class="card-body" id="reMahnungen"></div>
         </div>
 
@@ -296,7 +302,7 @@ async function detailZeigen(root, r, actions) {
               ${!r.storno && !r.storniertDurch ? `<button class="btn" id="reKorrigieren">${icon('refresh', 15).__raw} Korrigieren</button>
               <button class="btn danger" id="reStornieren">${icon('x', 15).__raw} Stornieren</button>` : ''}
               <button class="btn" id="reDuplizieren">${icon('copy', 15).__raw} Duplizieren</button>
-              <button class="btn ghost" id="reVorlage">${icon('save', 15).__raw} Als Vorlage</button>
+              <button class="btn ghost" id="reVorlage" data-premium="vorlagen">${icon('save', 15).__raw} Als Vorlage</button>
             </div>
           </div>
         </div>
@@ -428,12 +434,14 @@ async function sendenDialog(r, { offen = true } = {}) {
   if (!m.root.isConnected) return;
 
   const wege = WEGE.filter((w) => (DIREKT.includes(w) ? !!konten?.[w]?.verfuegbar : w !== 'teilen' || kannTeilen([dateien.pdf])));
-  const vorschlag = () => DIREKT.find((w) => wege.includes(w) && konten?.[w]?.email)
+  // Direkt senden gehört zu Pro; die Wege bleiben sichtbar (mit Krone), gewählt wird dann einer der übrigen.
+  const frei = (w) => !DIREKT.includes(w) || kann('mailDirekt');
+  const vorschlag = () => DIREKT.find((w) => frei(w) && wege.includes(w) && konten?.[w]?.email)
     || (mitTouch() && wege.includes('teilen') ? 'teilen' : 'eml');
-  let weg = wege.includes(prefs.mailWeg) ? prefs.mailWeg : vorschlag();
+  let weg = wege.includes(prefs.mailWeg) && frei(prefs.mailWeg) ? prefs.mailWeg : vorschlag();
 
   const zeigen = () => {
-    $m('#reWege').innerHTML = wege.map((w) => `<label class="check"><input type="radio" name="reWeg" value="${w}" ${w === weg ? 'checked' : ''}> ${esc(WEG_TEXT[w].name)}</label>`).join('');
+    $m('#reWege').innerHTML = wege.map((w) => `<label class="check" ${DIREKT.includes(w) ? 'data-premium="mailDirekt"' : ''}><input type="radio" name="reWeg" value="${w}" ${w === weg ? 'checked' : ''}> ${esc(WEG_TEXT[w].name)}</label>`).join('');
     const liste = gewaehlt();
     const email = konten?.[weg]?.email || '';
     let hinweis = WEG_TEXT[weg].text(email);
@@ -506,6 +514,7 @@ async function sendenDialog(r, { offen = true } = {}) {
     const text = $m('#reText').value;
     const liste = gewaehlt();
     const empfaenger = ziel.join(', ');
+    if (DIREKT.includes(weg) && !erlaubt('mailDirekt')) return;
     knopf.disabled = true;
     try {
       if (DIREKT.includes(weg)) {

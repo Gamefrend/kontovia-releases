@@ -5,6 +5,8 @@ import {
   sortBy, sum, bytes, splitFromGross, splitFromNet, addDays, int, hueOf, norm, dz,
 } from '../lib/util.js';
 import { icon, ok, err, warn, modal, confirmDialog, amountCell, emptyState } from '../lib/ui.js';
+import { erlaubt } from '../lib/lizenzui.js';
+import { kann } from '../lib/lizenz.js';
 import {
   store, sel, upsertTransaction, deleteTransaction, voidTransaction, isLockedDate, lockedUntil,
   newTransactionDraft, commit, nextInvoiceNumber, upsertEntity, removeAttachmentRecord, restAusbuchen,
@@ -94,7 +96,7 @@ export async function render(root, params = {}, { actions } = {}) {
 
   // Drucken und PDF braucht man am Telefon selten; dort bleiben sie weg (nur-breit, web.css).
   actions.innerHTML = html`<div id="txPeriod"></div>
-    <button class="btn" id="txKonto" title="Umsätze aus einer Datei Ihrer Bank übernehmen">${icon('bank', 16)} Kontoauszug einlesen</button>
+    <button class="btn" id="txKonto" data-premium="kontoauszug" title="Umsätze aus einer Datei Ihrer Bank übernehmen">${icon('bank', 16)} Kontoauszug einlesen</button>
     ${druckenMoeglich() ? raw(`<button class="btn nur-breit" id="txDruck">${icon('print', 16).__raw} Drucken</button>`) : ''}
     <button class="btn nur-breit" id="txPdf">${icon('pdf', 16)} Als PDF</button>`;
   periodCtl = periodControl($('#txPeriod', actions), period, () => list?.render());
@@ -769,7 +771,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
                  (${esc(money(asset.cost))} €, ${esc(AFA_METHODE[afaMethod(asset)])}${afaMethod(asset) === 'sofort' ? '' : `, ${esc(asset.usefulLifeYears)} Jahre`}).
                  <button class="btn sm mt8" id="btnUnlinkAsset">Verknüpfung lösen</button></div>`
             : `<div class="row" style="gap:8px">
-                 <button class="btn sm" id="btnMakeAsset">Als Anlagegut abschreiben …</button>
+                 <button class="btn sm" id="btnMakeAsset" data-premium="anlagen">Als Anlagegut abschreiben …</button>
                  <span class="hint">Für Anschaffungen über 800 € netto, die über mehrere Jahre genutzt werden.</span>
                </div>`}
         </div>`) : ''}
@@ -812,19 +814,19 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         Stammdaten → Wiederkehrend.</div></div>`;
     }
     if (locked) return '';
-    return `<div class="field">
-        <label for="i_repeat">Wiederholen</label>
+    return `<div class="field" data-premium="wiederkehrend" data-ohne-krone>
+        <label for="i_repeat" data-krone="wiederkehrend">Wiederholen</label>
         <select id="i_repeat">
           <option value="">nicht wiederholen</option>
           ${Object.entries(TURNUS).map(([k, [name]]) => `<option value="${k}" ${wiederholung.freq === k ? 'selected' : ''}>${esc(name)}</option>`).join('')}
         </select>
         <span class="hint">Für Miete, Telefon, Abos: Kontovia bietet die nächsten Buchungen zum Anlegen an, sobald sie fällig sind.</span>
       </div>
-      <div class="field">
+      <div class="field" data-premium="wiederkehrend" data-ohne-krone>
         <label for="i_repeatUntil">Wiederholen bis (freiwillig)</label>
         <input type="date" id="i_repeatUntil" value="${esc(wiederholung.until)}" ${wiederholung.freq ? '' : 'disabled'}>
       </div>
-      <div class="field">
+      <div class="field" data-premium="wiederkehrend" data-ohne-krone>
         <label for="i_repeatCount">Oder nach so vielen Buchungen (freiwillig)</label>
         <input type="number" min="0" max="999" id="i_repeatCount" value="${wiederholung.anzahl || ''}" ${wiederholung.freq ? '' : 'disabled'}>
         <span class="hint">Diese Buchung zählt mit.</span>
@@ -1340,7 +1342,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       return true;
     }
     await upsertTransaction(tx, attachments);
-    if (regel) await upsertEntity('recurring', regel, 'wiederkehrend');
+    if (regel && kann('wiederkehrend')) await upsertEntity('recurring', regel, 'wiederkehrend');
     if (onSaved) await onSaved(tx);
     return true;
   }
@@ -1510,6 +1512,7 @@ export function quickContactDialog(kind = 'customer') {
 
 export function assetDialog(preset = {}) {
   return new Promise((resolve) => {
+    if (!erlaubt('anlagen')) { resolve(null); return; }
     let settled = false;
     const entwurf = neuesAnlagegut(preset);
     const m = modal({

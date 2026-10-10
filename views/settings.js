@@ -16,6 +16,7 @@ import { abmelden, zugaengeKarte, kontenKarte, kontoSchluessel } from '../lib/zu
 import { geraeteKarte } from '../lib/koppeln.js';
 import { zulassungKarte } from '../lib/zulassung.js';
 import { benutzerKarte } from '../lib/benutzer.js';
+import { lizenzKarte } from '../lib/lizenzkarte.js';
 import { renderCloudCard, renderUpdateCard } from './cloudpanel.js';
 import { renderCalendarCard } from './calendarsync.js';
 import { mahnKarte } from './mahneinstellungen.js';
@@ -45,7 +46,7 @@ const BEREICHE = [
   { id: 'darstellung', icon: 'settings', titel: 'Darstellung & Update', sub: 'Erscheinungsbild, Start, Programmfassung' },
 ];
 /** Wohin ein Sprung aus anderen Ansichten (`abschnitt`) führt. */
-const ABSCHNITT_BEREICH = { cloud: 'daten', speicher: 'daten', mahnwesen: 'firma', benutzer: 'sicherheit', konten: 'sicherheit' };
+const ABSCHNITT_BEREICH = { cloud: 'daten', speicher: 'daten', mahnwesen: 'firma', benutzer: 'sicherheit', konten: 'sicherheit', lizenz: 'sicherheit' };
 const HINWEIS = 'Firmendaten, Steuer, Sicherheit und Darstellung gelten erst nach dem Übernehmen.';
 let bereich = BEREICHE[0].id;
 
@@ -108,7 +109,7 @@ export async function render(root, params, { actions } = {}) {
   if (ABSCHNITT_BEREICH[params?.abschnitt]) bereich = ABSCHNITT_BEREICH[params.abschnitt];
   await draw(root);
   // Aus der Statusleiste („Cloud-Sicherung einrichten“) direkt zur Cloud-Karte.
-  const ZIEL = { cloud: '#cloudCard', speicher: '#speicherCard', mahnwesen: '#mahnCard', benutzer: '#benutzerCard', konten: '#kontenCard' };
+  const ZIEL = { cloud: '#cloudCard', speicher: '#speicherCard', mahnwesen: '#mahnCard', benutzer: '#benutzerCard', konten: '#kontenCard', lizenz: '#lizenzCard' };
   if (ZIEL[params?.abschnitt]) $(ZIEL[params.abschnitt], root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
@@ -314,6 +315,8 @@ async function draw(root) {
     <div class="card" id="benutzerCard"></div>
 
     <div class="card" id="kontenCard"></div>
+
+    <div class="card" id="lizenzCard"></div>
     </section>
 
     <section class="set-panel" id="panel_daten" data-panel="daten" role="tabpanel" aria-labelledby="tab_daten" hidden>
@@ -820,6 +823,7 @@ function wire(root) {
   zulassungKarte($('#zulassungCard', root));
   benutzerKarte($('#benutzerCard', root), { konto: appInfo.konto });
   kontenKarte($('#kontenCard', root));
+  lizenzKarte($('#lizenzCard', root));
 
   $('#btnPw', root).addEventListener('click', async () => {
     const oldPw = await askPassword({ title: 'Passwort ändern', text: 'Zuerst zur Sicherheit das aktuelle Passwort.', label: 'Aktuelles Passwort', confirmLabel: 'Weiter' });

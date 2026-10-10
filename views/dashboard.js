@@ -18,6 +18,8 @@ import {
   receiptCoverage, healthChecks, topCategories, isKleinunternehmer, scopeDb, averages, vatReturn, listedOnly,
 } from '../lib/calc.js';
 import { steuertermine } from '../lib/fristen.js';
+import { kann } from '../lib/lizenz.js';
+import { sperrHinweis } from '../lib/lizenzui.js';
 import {
   prefs, scope, scopeToggleHtml, wireScopeToggle, verlaufControls, wireVerlauf, verlaufBody,
   anteilControls, wireAnteil, loadDashLayout, saveDashLayout,
@@ -153,9 +155,9 @@ function context() {
   return c;
 }
 
-const card = (title, body, { head = '', sub = '', tight = false, ziel = '' } = {}) => `
+const card = (title, body, { head = '', sub = '', tight = false, ziel = '', krone = '' } = {}) => `
   <div class="card">
-    <div class="card-head"><h2>${ziel ? `<span${ziel}>${esc(title)}</span>` : esc(title)}</h2>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}${head ? `<div class="spacer"></div>${head}` : ''}</div>
+    <div class="card-head"><h2${krone ? ` data-krone="${krone}"` : ''}>${ziel ? `<span${ziel}>${esc(title)}</span>` : esc(title)}</h2>${sub ? `<span class="sub">${esc(sub)}</span>` : ''}${head ? `<div class="spacer"></div>${head}` : ''}</div>
     <div class="card-body${tight ? ' tight' : ''}">${body}</div>
   </div>`;
 
@@ -331,6 +333,7 @@ const WIDGETS = {
     title: 'Steuertermine', size: 4, sichtbarWennNeu: true,
     render: () => {
       const heute = todayISO();
+      if (!kann('steuertermine')) return card('Steuertermine', sperrHinweis('steuertermine'), { sub: 'nächste Fristen', krone: 'steuertermine' });
       const termine = steuertermine(store.db.settings, heute, addDays(heute, 150)).slice(0, 5);
       // Beträge wie in den Unterlagen fürs Finanzamt: ohne private Buchungen.
       const amtlich = listedOnly(store.db);
@@ -352,7 +355,7 @@ const WIDGETS = {
       }).join('')}</div>
         <p class="tiny muted mt8 mb0">Fällt eine Frist auf ein Wochenende oder einen Feiertag, gilt der nächste Werktag. ${store.db.settings.vatDeadline === 'dauerfrist' ? 'Mit Dauerfristverlängerung.' : 'Eine Dauerfristverlängerung stellen Sie in den Einstellungen ein.'}</p>`
         : emptyState('Keine Termine', 'In den nächsten Monaten steht keine Steuerfrist an.').__raw;
-      return card('Steuertermine', body, { sub: 'nächste Fristen', tight: false, ziel: z('calendar', {}, { haupt: true, titel: 'Im Kalender ansehen' }) });
+      return card('Steuertermine', body, { sub: 'nächste Fristen', tight: false, krone: 'steuertermine', ziel: z('calendar', {}, { haupt: true, titel: 'Im Kalender ansehen' }) });
     },
   },
   aufgaben: {

@@ -17,6 +17,7 @@ import { fokusMerken } from '../lib/fokus.js';
 import { table, mountTable, mountTables } from '../lib/table.js';
 import { aufgabenAbschnitt } from './todos.js';
 import { markierung } from '../lib/bewegung.js';
+import { sperrKarteZeigen, erlaubt } from '../lib/lizenzui.js';
 
 
 let tab = 'categories';
@@ -28,6 +29,9 @@ const TABS = {
   assets: 'Anlagevermögen',
   recurring: 'Wiederkehrend',
 };
+
+/** Reiter, die zu einer Premium-Funktion gehören (Krone am Reiter, Sperrkarte statt Inhalt). */
+const TAB_FUNKTION = { assets: 'anlagen', recurring: 'wiederkehrend' };
 
 /** Der Knopf oben sagt, was er anlegt; er folgt dem Reiter. */
 const NEU_TEXT = {
@@ -46,6 +50,7 @@ export async function render(root, params, { actions } = {}) {
   neuKnopf = actions.querySelector('#btnNew');
   neuText();
   actions.querySelector('#btnNew').addEventListener('click', () => {
+    if (TAB_FUNKTION[tab] && !erlaubt(TAB_FUNKTION[tab])) return;
     // Eine Wiederholung entsteht aus ihrer ersten Buchung.
     if (tab === 'recurring') openTransactionDialog(null, 'expense', { wiederholen: 'monthly' });
     else openDialog(tab, null);
@@ -56,7 +61,7 @@ export async function render(root, params, { actions } = {}) {
 function draw(root) {
   root.innerHTML = html`
     <div class="seg tabs mb16" role="group" aria-label="Bereich">
-      ${raw(Object.entries(TABS).map(([k, v]) => `<button data-tab="${k}" class="${tab === k ? 'active' : ''}">${esc(v)}</button>`).join(''))}
+      ${raw(Object.entries(TABS).map(([k, v]) => `<button data-tab="${k}" ${TAB_FUNKTION[k] ? `data-krone="${TAB_FUNKTION[k]}"` : ''} class="${tab === k ? 'active' : ''}">${esc(v)}</button>`).join(''))}
     </div>
     <div id="body"></div>`;
   // Die Leiste bleibt beim Wechsel stehen, damit die Marke zum neuen Reiter gleiten kann.
@@ -72,6 +77,7 @@ function draw(root) {
 }
 
 function zeigen(root) {
+  if (TAB_FUNKTION[tab] && sperrKarteZeigen($('#body', root), TAB_FUNKTION[tab])) return;
   ({ categories, contacts, accounts, assets, recurring }[tab])($('#body', root));
 }
 

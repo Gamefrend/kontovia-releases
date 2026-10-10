@@ -22,12 +22,16 @@ import { openTransactionDialog } from './transactions.js';
 import { navigate } from '../lib/router.js';
 import { checkNotice, wireCheckLinks } from './spruenge.js';
 import { vergleich, vergleichEinstellung } from './jahresvergleich.js';
+import { sperrKarteZeigen, erlaubt } from '../lib/lizenzui.js';
 
 const api = window.kontovia;
 const period = defaultPeriod();
 let tab = 'guv';
 /** Die Zeitraumwahl oben rechts – der Umsatzsteuer-Reiter setzt den Zeitraum auch von sich aus. */
 let periodCtl = null;
+
+/** Reiter, die zu einer Premium-Funktion gehören (Krone am Reiter, Sperrkarte statt Inhalt). */
+const TAB_FUNKTION = { euer: 'euer', anlagen: 'anlagen', vergleich: 'jahresvergleich' };
 
 const TABS = {
   guv: 'Gewinn & Verlust',
@@ -70,7 +74,7 @@ function draw(root) {
       <div class="seg tabs" id="tabs" role="group" aria-label="Auswertung">
         ${raw(Object.entries(TABS)
           .filter(([k]) => !(k === 'ust' && ohneUst))
-          .map(([k, v]) => `<button aria-pressed="${tab === k}" data-tab="${k}" class="${tab === k ? 'active' : ''}">${esc(v)}</button>`).join(''))}
+          .map(([k, v]) => `<button aria-pressed="${tab === k}" data-tab="${k}" ${TAB_FUNKTION[k] ? `data-krone="${TAB_FUNKTION[k]}"` : ''} class="${tab === k ? 'active' : ''}">${esc(v)}</button>`).join(''))}
       </div>
       <div class="spacer"></div>
       ${scopeToggleHtml(store.db, period.from, period.to)}
@@ -86,6 +90,7 @@ function draw(root) {
 
   periodAnzeigen();
   const body = $('#tabBody', root);
+  if (TAB_FUNKTION[tab] && sperrKarteZeigen(body, TAB_FUNKTION[tab])) return;
   ({ guv, euer, ust, bilanz, opos, konten, anlagen, vergleich }[tab] || guv)(body, db);
   mountCharts(body);
   mountTables(body);
@@ -738,6 +743,7 @@ function anlagen(root, db) {
  * @param {'speichern'|'zeigen'|'drucken'} wie
  */
 async function exportPdf(wie) {
+  if (TAB_FUNKTION[tab] && !erlaubt(TAB_FUNKTION[tab])) return;
   // Das PDF zeigt, was die Ansicht zeigt – samt Vermerk, falls nicht
   // gelistete Buchungen darin stecken.
   const db = scopeDb(store.db, scope.includeUnlisted);

@@ -503,6 +503,21 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
+        <h2 class="mt0">Tarif, Lizenz und die Krone</h2>
+        <p>Manche Funktionen sind Premium-Funktionen. Sie tragen eine <strong>Krone</strong>. Ob sie bei Ihnen frei sind, hängt vom Tarif
+        Ihres Kontos ab: Kostenlos, Standard, Pro oder Max. Jeder Tarif enthält alles aus dem darunter.</p>
+        <ul>
+          <li><strong>Testphase:</strong> Solange Kontovia getestet wird, bekommt jedes Konto beim Anmelden von selbst alle Funktionen.
+          Eine Lizenz brauchen Sie dafür nicht. Unter Einstellungen › Sicherheit &amp; Zugang › Lizenz können Sie ausprobieren, wie sich ein kleinerer Tarif anfühlt.</li>
+          <li><strong>Gesperrt:</strong> Was der Tarif nicht enthält, ist gesperrt. Ein Klick darauf sagt, ab welchem Tarif es die Funktion gibt.
+          Ihre Daten bleiben immer da: Ansehen, Sichern und der Export als CSV oder Excel gehen in jedem Tarif.</li>
+          <li><strong>Lizenzschein:</strong> Eine Lizenz ist ein Schein, der für ein Gerät ausgestellt wird. Sie lösen ihn unter Einstellungen › Sicherheit &amp; Zugang › Lizenz ein.
+          Kontovia prüft ihn auf dem Gerät, auch ohne Internet. Nach Ablauf gilt noch eine kurze Schonfrist.</li>
+          <li><strong>Grenzen:</strong> Der kostenlose Tarif enthält höchstens 5 Rechnungen im Monat, ein Gerät, einen Benutzer und eine Firma.</li>
+        </ul>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
         <h2 class="mt0">Tastenkürzel</h2>
         <table class="data compact">
           <tbody>

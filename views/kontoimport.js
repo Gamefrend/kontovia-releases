@@ -19,6 +19,7 @@ import { kontoauszugLesen, SPALTENROLLEN, zusammenfassung } from '../lib/kontoau
 import {
   fingerabdruecke, zuordnungsKontext, zuordnen, vorausgewaehlt, zaehlen, SICHERHEIT,
 } from '../lib/zuordnung.js';
+import { sperrKarteZeigen } from '../lib/lizenzui.js';
 import {
   zeilePruefen, importBuchen, regelSpeichern, regelLoeschen, vorlageSpeichern, vorlageLoeschen, vorlageFuer,
 } from '../lib/importaktionen.js';
@@ -43,6 +44,7 @@ const IBAN_KURZ = (s) => String(s || '').replace(/\s/g, '').toUpperCase();
 
 export async function render(root, params = {}, { actions } = {}) {
   router.leaveGuard = null;
+  if (sperrKarteZeigen(root, 'kontoauszug')) { actions.replaceChildren(); return; }
   // Eine neue Navigation (neues Params-Objekt) beginnt von vorn: Von einer früher eingelesenen Datei bleibt nichts
   // im Speicher. Ein Neuzeichnen von außen (refresh) reicht dasselbe Objekt durch und lässt den Stand stehen.
   if (params.neu || params !== st.paramsRef) st = neuStart();

@@ -29,6 +29,7 @@ import {
 import { vorschauDaten, pdfZeigen, bildWaehlen, bildAblegen, bildHolen, rahmenVon } from '../lib/rechnungsdateien.js';
 import { DOKUMENT_SPRACHEN } from '../lib/dokumenttexte.js';
 import { textDirektBearbeiten, bilderAusZwischenablage } from '../lib/textbearbeiten.js';
+import { erlaubt, lizenzFehlerZeigen } from '../lib/lizenzui.js';
 
 const BEREICH_TITEL = { kaeufer: 'Kunde', rechnung: 'Rechnung', positionen: 'Positionen', zahlung: 'Zahlung', verkaeufer: 'Ihre Angaben' };
 
@@ -93,12 +94,12 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
         <section class="card" id="reTexte"></section>
         <section class="card" id="reBilder"></section>
         <section class="card" id="reZahlung" data-bereich="zahlung"></section>
-        ${istVorlage ? '' : '<section class="card" id="reWiederholung"></section>'}
+        ${istVorlage ? '' : '<section class="card" id="reWiederholung" data-premium="wiederkehrend" data-ohne-krone></section>'}
       </div>
       <aside class="re-seitenspalte">
         <div class="card re-check" id="reCheck"></div>
         <div class="row between re-vorschau-kopf"><span class="small muted">Vorschau</span>
-          <button type="button" class="btn sm ghost" id="reZurGestaltung">${icon('layout', 14).__raw} Aussehen ändern</button></div>
+          <button type="button" class="btn sm ghost" id="reZurGestaltung" data-premium="gestaltung">${icon('layout', 14).__raw} Aussehen ändern</button></div>
         <div class="re-vorschau" id="reVorschau" aria-label="Vorschau"></div>
       </aside>
     </div>
@@ -287,7 +288,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
         <div class="re-pos-haupt">
           <div class="re-pos-name">
             <input data-p="name" value="${esc(p.name || '')}" placeholder="Bezeichnung, z. B. Beratung" aria-label="Bezeichnung Position ${i + 1}" autocomplete="off">
-            <button type="button" class="btn sm ghost" data-produkt="${esc(p.id)}" title="Aus Produkten wählen" aria-label="Aus Produkten wählen">${icon('tag', 14).__raw}</button>
+            <button type="button" class="btn sm ghost" data-premium="vorlagen" data-ohne-krone data-produkt="${esc(p.id)}" title="Aus Produkten wählen" aria-label="Aus Produkten wählen">${icon('tag', 14).__raw}</button>
           </div>
           <textarea data-p="beschreibung" rows="1" placeholder="Beschreibung (optional)" aria-label="Beschreibung Position ${i + 1}">${esc(p.beschreibung || '')}</textarea>
           <div class="re-pos-zahlen">
@@ -311,7 +312,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
         ${einheitenListe}
         <div class="row wrap mt8">
           <button type="button" class="btn sm" id="rePosNeu">${icon('plus', 14).__raw} Position</button>
-          <button type="button" class="btn sm" id="rePosProdukt">${icon('tag', 14).__raw} Aus Produkten</button>
+          <button type="button" class="btn sm" id="rePosProdukt" data-premium="vorlagen">${icon('tag', 14).__raw} Aus Produkten</button>
         </div>
         <div class="re-summen" id="reSummen"></div>
       </div>`;
@@ -400,6 +401,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
           r.positionen.splice(i, 1);
           if (!r.positionen.length) r.positionen.push(neuePosition(s));
         } else if (was === 'produkt') {
+          if (!erlaubt('vorlagen')) return;
           await positionAlsProdukt(p);
           return;
         }
@@ -561,7 +563,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
         <p class="hint mt8 mb0">Beim Ausstellen merkt sich Kontovia die Rechnung als Vorlage. Ist der nächste Termin erreicht, legt es einen
           Entwurf an, den Sie prüfen und selbst ausstellen. Nichts wird von allein verschickt.</p>`;
     box.innerHTML = html`
-      <div class="card-head"><h2>${icon('refresh', 16)} Wiederholung</h2><span class="sub">für gleichbleibende Rechnungen, etwa Wartung oder Miete</span></div>
+      <div class="card-head"><h2 data-krone="wiederkehrend">${icon('refresh', 16)} Wiederholung</h2><span class="sub">für gleichbleibende Rechnungen, etwa Wartung oder Miete</span></div>
       <div class="card-body">${raw(regel
     ? html`<div class="notice small mb0">Diese Rechnung gehört zu einer wiederkehrenden Rechnung (${TURNUS[regel.freq]?.[0] || ''}).
           Den Turnus ändern Sie unter Stammdaten → Wiederkehrend.</div>`
@@ -744,7 +746,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
       </div>
       <div class="spacer"></div>
       ${!istVorlage && sel.invoice(r.id) ? `<button type="button" class="btn ghost danger-text" id="reLoeschen" title="Entwurf löschen">${icon('trash', 15).__raw}<span class="re-weg-schmal">Löschen</span></button>` : ''}
-      ${istVorlage ? '' : `<button type="button" class="btn" id="reAlsVorlage">${icon('copy', 15).__raw}<span class="re-weg-schmal">Als Vorlage</span></button>
+      ${istVorlage ? '' : `<button type="button" class="btn" id="reAlsVorlage" data-premium="vorlagen">${icon('copy', 15).__raw}<span class="re-weg-schmal">Als Vorlage</span></button>
       <button type="button" class="btn" id="rePdf">${icon('pdf', 15).__raw}<span class="re-weg-schmal">PDF</span></button>`}
       <button type="button" class="btn" id="reSpeichern">${icon('save', 15).__raw} Speichern</button>
       ${istVorlage ? '' : `<button type="button" class="btn primary" id="reAusstellen">${icon('check', 15).__raw} Ausstellen</button>`}`;
@@ -875,7 +877,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
         navigate('rechnungen', { id: fertig.id }, { ersetzen: true });
       } catch (ex) {
         e.currentTarget.disabled = false;
-        err('Nicht ausgestellt', ex.message);
+        if (!lizenzFehlerZeigen(ex)) err('Nicht ausgestellt', ex.message);
       }
     });
   }
