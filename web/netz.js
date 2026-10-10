@@ -14,6 +14,8 @@ const ERLAUBT = new Set([
   'identitytoolkit.googleapis.com',
   'securetoken.googleapis.com',
   'firebasestorage.googleapis.com',
+  // Automatische Lizenz (functions/lizenzlogik.js): Cloud Function des eigenen Projekts, nur mit Google-Anmeldung
+  'europe-west3-finanztracker-149f2.cloudfunctions.net',
   // E-Mail senden (mailversand.js), nur auf Klick und nach Freigabe beim Anbieter
   'gmail.googleapis.com',
   'login.microsoftonline.com',

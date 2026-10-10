@@ -470,16 +470,44 @@ export class FirebaseBackend {
     const serverZeit = (Number(angaben.iat) || 0) * 1000;
     const email = String(angaben.email || '').trim().toLowerCase();
     if (!email || angaben.email_verified === false) return { art: 'unklar', serverZeit };
-    try {
+    const lesen = async () => {
       const res = await request(this.objectUrl(`lizenzen/${email}.json`, '?alt=media'), {
         headers: { authorization: `Firebase ${idToken}` }, timeoutMs: 20000, maxBytes: 64 * 1024,
       });
       if (res.status === 404) return { art: 'fehlt', serverZeit, status: 404 };
       if (res.status !== 200) return { art: 'unklar', serverZeit, status: res.status };
       const d = JSON.parse(new TextDecoder().decode(res.body));
-      return { art: 'gefunden', text: String(d?.schein || ''), serverZeit, status: 200 };
+      // Der Betreiber hat die Lizenz entzogen: wie „nicht da“, und die Funktion legt keine neue an.
+      if (d?.quelle === 'entzogen') return { art: 'fehlt', serverZeit, status: 200, entzogen: true };
+      return { art: 'gefunden', text: String(d?.schein || ''), serverZeit, status: 200, automatisch: d?.quelle === 'auto' };
+    };
+    try {
+      const erst = await lesen();
+      // Keine Lizenz oder nur eine automatische: Der Server gibt (oder erneuert) sie, je nach Testbetrieb.
+      if ((erst.status === 404 || erst.automatisch) && await this.lizenzAnlegen(idToken)) return await lesen();
+      return erst;
     } catch {
       return { art: 'netz', serverZeit };
+    }
+  }
+
+  /**
+   * Die Cloud Function `lizenzAnlegen` (functions/) bitten, dem Konto die automatische Lizenz zu geben. Sie prüft die
+   * Anmeldung selbst und legt nur die Datei der eigenen Adresse an. Fehlt die Funktion (noch nicht veröffentlicht)
+   * oder ist sie nicht erreichbar, bleibt alles, wie es ist.
+   * @returns {Promise<boolean>} wahr, wenn sie eine neue Lizenz angelegt hat
+   */
+  async lizenzAnlegen(idToken) {
+    try {
+      const projekt = this.cfg.projectId || String(this.cfg.bucket || '').split('.')[0];
+      const url = `https://europe-west3-${projekt}.cloudfunctions.net/lizenzAnlegen`;
+      const res = await requestJson(url, {
+        method: 'POST', headers: { authorization: `Bearer ${idToken}`, 'content-type': 'application/json' },
+        body: new TextEncoder().encode(JSON.stringify({ data: {} })), timeoutMs: 20000,
+      });
+      return res?.result?.art === 'angelegt';
+    } catch {
+      return false;
     }
   }
 

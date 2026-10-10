@@ -1,7 +1,7 @@
 {
-  "version": "2.33.2",
-  "released": "2026-10-10T22:27:46.221Z",
-  "notes": "Lizenzvergabe sicherer\n\n- Die Vergabe von Lizenzen im Hintergrund ist sicherer und einfacher geworden. Für Ihre Nutzung ändert sich nichts.",
+  "version": "2.33.3",
+  "released": "2026-10-10T22:54:34.016Z",
+  "notes": "Lizenz automatisch\n\n- Wer sich mit Google anmeldet und noch keine Lizenz hat, bekommt sie jetzt automatisch. Solange Kontovia getestet wird, ist das die höchste Stufe.",
   "files": [
     {
       "path": "abo/abo.css",
@@ -80,8 +80,8 @@
     },
     {
       "path": "index.html",
-      "sha256": "87e4f04473629d3327607355f3eb69e99fcdbe1721f89061cb1aad83aa11a775",
-      "size": 4658
+      "sha256": "2fe644aa27c8871c47ae43de9ae91c604a3207bd6c1b1be90362e6c934841e24",
+      "size": 4718
     },
     {
       "path": "lib/assistent.js",
@@ -275,8 +275,8 @@
     },
     {
       "path": "lib/lizenzverwaltung.js",
-      "sha256": "49ac86ad7a728ad234569716b943624aad9bb33da9f54b01b0a5caf5e543e2f7",
-      "size": 13874
+      "sha256": "11a6da29215bac0ce0fa5a87f011a92c89b5afa9d1cf446caf7ddeaf91b98038",
+      "size": 18752
     },
     {
       "path": "lib/mahnungsaktionen.js",
@@ -530,8 +530,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz.js",
-      "sha256": "8ae0ba664f04dfeb642be5a0ab9c6b545e61c5c904b7974584d26edd51c98051",
-      "size": 43015
+      "sha256": "09a5f55771140aed83dfd5752c77e558ed0367123d7f8009594593b805eed56c",
+      "size": 46962
     },
     {
       "path": "lib/store.js",
@@ -590,8 +590,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "249fb884b193733f94525eb3e3bfbbf21c924fa418750db12c0a22849248214e",
-      "size": 45268
+      "sha256": "8038ba46cb41afdf2c6bf1625d96533efaa011056ffa09999e098e22dc25d799",
+      "size": 45535
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -620,13 +620,13 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "2a71cd96c4491735a8afceb32f40076674adfc356a87c3f7c2bcaa026f5debe9",
+      "sha256": "bf7631e7b63f471b2ae7c3cc12dc7574815c40772fd818e71509aa01aac1923b",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "e9c770ca522a17f7a16341f2c54e106d90ac8f501e7b05b22fdefe8f3c4d45dc",
-      "size": 32591
+      "sha256": "01024e9c1ee785abfaa3a52eabde5a283fc6ebdfe645ca27f363427be19c4163",
+      "size": 33396
     },
     {
       "path": "recht/IMPRESSUM.md",
@@ -640,8 +640,8 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "58705a1d77b92bd96f02c446b16a870893855b3f69eb008902973e4fb493ad3d",
-      "size": 36293
+      "sha256": "0cfe022ebfd82bd6b9cf681cf049f3ff2e721ecf9c898b8c861c0249ad7c9d76",
+      "size": 37099
     },
     {
       "path": "recht/impressum.html",
@@ -795,7 +795,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "9c3794f3d9dc49870b90024df1d8a2b35c6c3bd143e8e40208875189ed2e2307",
+      "sha256": "941216629c7fb6445837be2adc0be3bdd7f49495df607486974fc459fc761c0e",
       "size": 6906
     },
     {
@@ -805,8 +805,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "db19e62795903d8d6e44ae0b9acf5bd179c8f93a025346c53527fc1be8de991e",
-      "size": 63739
+      "sha256": "1e3386a07003fdfc4600a37b4f368480389063e9b22efedb20700fb40f2cf109",
+      "size": 64396
     },
     {
       "path": "web/cloud.js",
@@ -835,8 +835,8 @@
     },
     {
       "path": "web/firebase.js",
-      "sha256": "f983cf7f115fa224e6d5694aa75314410f796c86131ceedf6ff3d44a0e77af13",
-      "size": 23695
+      "sha256": "d144633aaca0c33591e0dced4d37e733f9632c836ff5fdc53e7013121ab8421e",
+      "size": 25197
     },
     {
       "path": "web/gcal.js",
@@ -890,8 +890,8 @@
     },
     {
       "path": "web/lizenzverwaltung.js",
-      "sha256": "68f6a94c5c88deff3da2cce50b46a3d0c8fff93dba4722abaeb609717942312e",
-      "size": 15387
+      "sha256": "532ba8841f9fabe001c6f517d37009e8e14ce64143a6331cc2c1f5fd6ce1f018",
+      "size": 19865
     },
     {
       "path": "web/mailversand.js",
@@ -905,8 +905,8 @@
     },
     {
       "path": "web/netz.js",
-      "sha256": "48c0154b13e4fd4aeccc56d76b5b2d1dd90101e0f282a942fa44a326f70f917a",
-      "size": 4923
+      "sha256": "e8a34056da00a0f7715cc157d89d87fc082fa27f8e6823b0110f201b57915a79",
+      "size": 5095
     },
     {
       "path": "web/rueckmeldung.js",

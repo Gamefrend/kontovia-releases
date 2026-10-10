@@ -1184,7 +1184,12 @@ const api = {
       zuweisen: handle(async (angaben = {}) => kopie(await LV.zuweisen(await betreiberKopf('lizenzen'), {
         email: str(angaben.email, 254), stufe: str(angaben.stufe, 20), tage: Number(angaben.tage), schonfrist: Number(angaben.schonfrist), notiz: str(angaben.notiz, 200),
       }))),
-      entziehen: handle(async (email) => LV.entziehen(await betreiberKopf('lizenzen'), str(email, 254))),
+      entziehen: handle(async (email, zuruecksetzen = false) => LV.entziehen(await betreiberKopf('lizenzen'), str(email, 254), null, { zuruecksetzen: zuruecksetzen === true })),
+      /* Server (Cloud Function für die automatische Lizenz): Schlüssel hochladen, Testbetrieb umschalten. */
+      serverStand: handle(async () => kopie(await LV.serverStand(await betreiberKopf('lizenzen')))),
+      serverSchluessel: handle(async (jwkText) => LV.serverSchluesselSetzen(await betreiberKopf('lizenzen'), str(jwkText, 4000))),
+      serverSchluesselLoeschen: handle(async () => LV.serverSchluesselLoeschen(await betreiberKopf('lizenzen'))),
+      serverModus: handle(async (testbetrieb) => LV.serverModusSetzen(await betreiberKopf('lizenzen'), testbetrieb === true)),
       kontoEntfernen: handle(async (uid) => LV.kontoEntfernen(await betreiberKopf('lizenzen'), str(uid, 128))),
     },
   },

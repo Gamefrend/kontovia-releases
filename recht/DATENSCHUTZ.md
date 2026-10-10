@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 10. Oktober 2026, Programmversion 2.33.2
+Stand: 10. Oktober 2026, Programmversion 2.33.3
 
 ---
 
@@ -249,6 +249,16 @@ verbunden, kommt dazu:
   anlegen und nur Ihr Konto lesen kann). Übertragen werden dabei nur die Anmeldung
   und das Lesen dieser Datei. Die Lizenz bleibt auf dem Gerät und gilt dort ohne
   Netz bis zu 30 Tage, dann muss sie einmal bestätigt werden.
+* **Automatische Lizenz.** Hat Ihre Adresse noch keine Lizenz, fragt Kontovia dabei
+  eine Funktion in unserem Cloud-Projekt in Frankfurt (Google Cloud Functions), ob
+  sie Ihnen eine ausstellt. Gesendet wird nur Ihre Anmeldung; die Funktion liest
+  daraus Ihre bestätigte Adresse, legt für sie die Lizenzdatei an und signiert sie.
+  Das gilt auch für Konten, die schon vor den Lizenzen bestanden. Solange Kontovia
+  getestet wird, ist das die höchste Stufe, später die Stufe Standard. Zu Ihrer
+  Buchhaltung sagt die Funktion nichts, und sie speichert nichts außer dieser Datei
+  (Tarif, Laufzeit, Hinweis „automatisch“). Google verarbeitet dabei als unser
+  Auftragsverarbeiter technische Protokolldaten des Aufrufs (Zeitpunkt, Adresse der
+  Funktion, IP-Adresse), wie bei jedem Cloud-Dienst.
 
 Wenn Sie eine Lizenz erwerben, speichern wir zur Adresse den Tarif, die Laufzeit
 und eine kurze Notiz (etwa die Rechnungsnummer), solange die Lizenz läuft und die

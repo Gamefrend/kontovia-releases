@@ -16,6 +16,11 @@
  * er wird nicht exportierbar eingelesen, nur im Arbeitsspeicher gehalten und beim Sperren vergessen. Ein
  * Schlüssel, der nicht zum öffentlichen im Programm passt, wird abgelehnt (Scheine damit wären überall ungültig).
  *
+ * Automatische Lizenz (functions/): Eine Cloud Function signiert Scheine für Konten ohne Lizenz (Testbetrieb: Max,
+ * danach Standard). Dafür liegt der Schlüssel auf dem Server (`server/signierschluessel.json`, hier nur hochladen
+ * und löschen, nie lesbar) und der Modus in `server/modus.json`. Entzogene Konten bekommen einen Vermerk statt
+ * einer gelöschten Datei, sonst legte die Funktion ihnen wieder eine an.
+ *
  * Schlüssel in der Cloud: zwei getrennte Sperren. (1) Die Regeln lassen die Datei nur dem Betreiber-Konto zu
  * (`istBetreiber()`), alle anderen bekommen auch das Chiffrat nicht. (2) Die Datei enthält den Schlüssel nur
  * verschlüsselt, mit einer Passphrase (scrypt wie im Tresor, AES-256-GCM). Wer das Google-Konto oder die
@@ -229,14 +234,19 @@ export async function laden(kopf, cfg = null, schluessel = OEFFENTLICHER_SCHLUES
     for (const x of l) {
       const email = emailNorm(x.name.slice(0, -5));
       if (!email || !x.daten) continue;
+      const e = eintrag(email);
+      if (x.daten.quelle === 'entzogen') {
+        // Vermerk ohne Schein (siehe entziehen): zählt nicht als Lizenz, hält aber die automatische fern.
+        if (!e.lizenz) e.lizenz = { echt: false, entzogen: true, id: '', stufe: '', ab: '', bis: '', schonfristTage: 0, notiz: '', ausgestellt: String(x.daten.ausgestellt || x.updated || '') };
+        continue;
+      }
       let echt = true;
       let s = null;
       try { s = await scheinPruefen(x.daten.schein, schluessel); } catch { echt = false; }
-      const e = eintrag(email);
       // Bei gmail/googlemail liegen zwei gleiche Scheine: einer reicht für die Liste.
       if (e.lizenz && e.lizenz.echt) continue;
       e.lizenz = {
-        echt, id: s?.id || '', stufe: s?.stufe || String(x.daten.stufe || ''), ab: s?.ab || '', bis: s?.bis || String(x.daten.bis || ''),
+        echt, automatisch: x.daten.quelle === 'auto', id: s?.id || '', stufe: s?.stufe || String(x.daten.stufe || ''), ab: s?.ab || '', bis: s?.bis || String(x.daten.bis || ''),
         schonfristTage: s?.schonfristTage ?? 0, notiz: String(x.daten.notiz || '').slice(0, MAX_NOTIZ), ausgestellt: String(x.daten.ausgestellt || x.updated || ''),
       };
     }
@@ -281,23 +291,94 @@ export async function zuweisen(kopf, angaben, cfg = null, jetzt = Date.now()) {
   return { email, id, stufe, ab, bis, schonfristTage: schonfrist, notiz };
 }
 
-/** Die Lizenz einer Adresse entziehen. Das Konto fällt beim nächsten Abgleich zurück, spätestens nach der Prüffrist. */
-export async function entziehen(kopf, email, cfg = null) {
+/**
+ * Die Lizenz einer Adresse entziehen. Das Konto fällt beim nächsten Abgleich zurück, spätestens nach der Prüffrist.
+ * Die Datei bleibt als Vermerk ohne Schein stehen (`quelle: 'entzogen'`): Wäre sie weg, legte die Cloud Function
+ * dem Konto beim nächsten Anmelden wieder die automatische Lizenz an. Mit `zuruecksetzen` wird die Datei gelöscht,
+ * das Konto bekommt dann wieder die automatische Lizenz.
+ */
+export async function entziehen(kopf, email, cfg = null, { zuruecksetzen = false, jetzt = Date.now() } = {}) {
   const e = emailNorm(email);
   if (!e) throw fehler('LIZENZ_EMAIL', 'Bitte eine gültige E-Mail-Adresse eingeben.');
   const b = bucket(cfg);
   try {
     for (const variante of emailVarianten(e)) {
-      try {
-        await requestJson(`${STORAGE}/${enc(b)}/o/${enc(`lizenzen/${variante}.json`)}`, { method: 'DELETE', headers: { ...kopf }, timeoutMs: 20000 });
-      } catch (err) {
-        if (err.status !== 404) throw err;
+      if (zuruecksetzen) {
+        try {
+          await requestJson(`${STORAGE}/${enc(b)}/o/${enc(`lizenzen/${variante}.json`)}`, { method: 'DELETE', headers: { ...kopf }, timeoutMs: 20000 });
+        } catch (err) {
+          if (err.status !== 404) throw err;
+        }
+      } else {
+        const inhalt = new TextEncoder().encode(JSON.stringify({ v: 1, email: variante, quelle: 'entzogen', ausgestellt: new Date(jetzt).toISOString() }));
+        await requestJson(`${STORAGE}/${enc(b)}/o?uploadType=media&name=${enc(`lizenzen/${variante}.json`)}`, {
+          method: 'POST', headers: { ...kopf, 'content-type': 'application/json' }, body: inhalt, timeoutMs: 30000,
+        });
       }
     }
   } catch (err) {
     throw deutlich(err);
   }
   return true;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Server: Schlüssel und Modus der Cloud Function (functions/lizenzlogik.js)    */
+/* -------------------------------------------------------------------------- */
+
+const SERVER_SCHLUESSEL = 'server/signierschluessel.json';
+const SERVER_MODUS = 'server/modus.json';
+
+/**
+ * Liegt auf dem Server ein Schlüssel, und läuft der Testbetrieb? Den Schlüssel selbst kann niemand lesen: Das Auflisten
+ * zeigt nur, dass die Datei da ist. Ohne modus.json läuft der Testbetrieb.
+ * @returns {Promise<{schluessel:boolean, schluesselSeit:string, testbetrieb:boolean}>}
+ */
+export async function serverStand(kopf, cfg = null) {
+  const b = bucket(cfg);
+  try {
+    const namen = await liste(b, 'server/', kopf).catch((err) => { if (err.status === 404) return []; throw err; });
+    const schluessel = namen.find((n) => n.name === 'signierschluessel.json');
+    const modus = namen.some((n) => n.name === 'modus.json') ? await jsonLesen(b, SERVER_MODUS, kopf) : null;
+    return { schluessel: !!schluessel, schluesselSeit: schluessel?.updated || '', testbetrieb: modus?.testbetrieb !== false };
+  } catch (err) {
+    throw deutlich(err);
+  }
+}
+
+/** privat.jwk zum Server hochladen (Klartext, damit die Funktion signieren kann; danach liest ihn niemand mehr). Wird geprüft wie beim Laden. */
+export async function serverSchluesselSetzen(kopf, jwkText, cfg = null, oeffentlich = OEFFENTLICHER_SCHLUESSEL) {
+  const jwk = jwkPruefen(jwkText, oeffentlich);
+  try {
+    await requestJson(`${STORAGE}/${enc(bucket(cfg))}/o?uploadType=media&name=${enc(SERVER_SCHLUESSEL)}`, {
+      method: 'POST', headers: { ...kopf, 'content-type': 'application/json' }, body: new TextEncoder().encode(JSON.stringify(jwk)), timeoutMs: 30000,
+    });
+  } catch (err) {
+    throw deutlich(err);
+  }
+  return true;
+}
+
+export async function serverSchluesselLoeschen(kopf, cfg = null) {
+  try {
+    await requestJson(`${STORAGE}/${enc(bucket(cfg))}/o/${enc(SERVER_SCHLUESSEL)}`, { method: 'DELETE', headers: { ...kopf }, timeoutMs: 20000 });
+  } catch (err) {
+    if (err.status !== 404) throw deutlich(err);
+  }
+  return true;
+}
+
+/** Testbetrieb ein- oder ausschalten: an = neue Konten bekommen Max, aus = Standard. Bereits ausgestellte automatische Scheine wechseln beim nächsten Anmelden des Kontos. */
+export async function serverModusSetzen(kopf, testbetrieb, cfg = null) {
+  try {
+    await requestJson(`${STORAGE}/${enc(bucket(cfg))}/o?uploadType=media&name=${enc(SERVER_MODUS)}`, {
+      method: 'POST', headers: { ...kopf, 'content-type': 'application/json' },
+      body: new TextEncoder().encode(JSON.stringify({ v: 1, testbetrieb: !!testbetrieb, ts: new Date().toISOString() })), timeoutMs: 30000,
+    });
+  } catch (err) {
+    throw deutlich(err);
+  }
+  return !!testbetrieb;
 }
 
 /** Einen Eintrag der Kontenliste entfernen (z. B. auf Wunsch der Person). */
