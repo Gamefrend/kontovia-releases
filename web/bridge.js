@@ -1175,6 +1175,11 @@ const api = {
     verwaltung: {
       schluessel: handle(async (jwkText) => LV.schluesselLaden(str(jwkText, 4000))),
       schluesselDa: handle(async () => LV.schluesselDa()),
+      /* Schlüssel in der Cloud: verschlüsselt mit einer Passphrase, nur das Betreiber-Konto kommt an die Datei. */
+      schluesselCloud: handle(async () => kopie(await LV.schluesselCloudStand(await betreiberKopf('lizenzen')))),
+      schluesselSichern: handle(async (jwkText, passphrase) => LV.schluesselSichern(await betreiberKopf('lizenzen'), str(jwkText, 4000), str(passphrase, 500))),
+      schluesselHolen: handle(async (passphrase) => LV.schluesselAusCloud(await betreiberKopf('lizenzen'), str(passphrase, 500))),
+      schluesselCloudLoeschen: handle(async () => LV.schluesselCloudLoeschen(await betreiberKopf('lizenzen'))),
       laden: handle(async () => kopie(await LV.laden(await betreiberKopf('lizenzen')))),
       zuweisen: handle(async (angaben = {}) => kopie(await LV.zuweisen(await betreiberKopf('lizenzen'), {
         email: str(angaben.email, 254), stufe: str(angaben.stufe, 20), tage: Number(angaben.tage), schonfrist: Number(angaben.schonfrist), notiz: str(angaben.notiz, 200),

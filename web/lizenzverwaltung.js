@@ -12,19 +12,28 @@
  * (`istBetreiber()`); die Anmeldung kommt von der Cloud-Verbindung (`kopf`, bridge.js: betreiberKopf).
  *
  * Signiert wird hier im Browser mit dem privaten Schlüssel aus scripts/lizenz-schluessel.js (privat.jwk).
- * Der Betreiber wählt die Datei je Sitzung; sie wird nicht exportierbar eingelesen, nur im Arbeitsspeicher
- * gehalten und beim Sperren vergessen. Ein Schlüssel, der nicht zum öffentlichen im Programm passt, wird
- * abgelehnt (Scheine damit wären überall ungültig).
+ * Der Schlüssel kommt je Sitzung entweder aus der Datei oder aus der Cloud (`betreiber/signierschluessel.json`);
+ * er wird nicht exportierbar eingelesen, nur im Arbeitsspeicher gehalten und beim Sperren vergessen. Ein
+ * Schlüssel, der nicht zum öffentlichen im Programm passt, wird abgelehnt (Scheine damit wären überall ungültig).
+ *
+ * Schlüssel in der Cloud: zwei getrennte Sperren. (1) Die Regeln lassen die Datei nur dem Betreiber-Konto zu
+ * (`istBetreiber()`), alle anderen bekommen auch das Chiffrat nicht. (2) Die Datei enthält den Schlüssel nur
+ * verschlüsselt, mit einer Passphrase (scrypt wie im Tresor, AES-256-GCM). Wer das Google-Konto oder die
+ * Firebase-Konsole in die Hand bekommt, hat damit noch keinen Schlüssel; die Passphrase steht nirgends.
  */
 
 import { request, requestJson } from './netz.js';
 import BUILTIN from './cloudconfig.js';
 import { scheinAusstellen, scheinPruefen, emailNorm, emailVarianten, OEFFENTLICHER_SCHLUESSEL, STUFEN } from './lizenz.js';
+import { DEFAULT_KDF, deriveKey, seal, open, randomBytes, toBase64, fromBase64, utf8, fromUtf8, wipe } from './kern.js';
 
 const STORAGE = 'https://firebasestorage.googleapis.com/v0/b';
 const enc = encodeURIComponent;
 const TAG = 86400000;
 const MAX_NOTIZ = 200;
+const SCHLUESSEL_PFAD = 'betreiber/signierschluessel.json';
+const SCHLUESSEL_AAD = utf8('kontovia/lizenz-signierschluessel/v1');
+const MIN_PASSPHRASE = 12;
 
 const fehler = (code, text) => Object.assign(new Error(text), { code });
 
@@ -48,8 +57,8 @@ function deutlich(err) {
 
 let signierer = null;
 
-/** Liest privat.jwk ein. Wirft, wenn es kein privater P-256-Schlüssel ist oder er nicht zum Programm passt. */
-export async function schluesselLaden(jwkText, oeffentlich = OEFFENTLICHER_SCHLUESSEL) {
+/** Prüft privat.jwk: privater P-256-Schlüssel, der zum öffentlichen im Programm passt. Gibt nur die nötigen Felder zurück. */
+function jwkPruefen(jwkText, oeffentlich) {
   let jwk;
   try { jwk = JSON.parse(String(jwkText || '')); } catch { jwk = null; }
   if (!jwk || jwk.kty !== 'EC' || jwk.crv !== 'P-256' || typeof jwk.d !== 'string') {
@@ -59,12 +68,110 @@ export async function schluesselLaden(jwkText, oeffentlich = OEFFENTLICHER_SCHLU
     throw fehler('LIZENZ_SCHLUESSEL', 'Dieser Schlüssel passt nicht zum Programm. Scheine damit wären ungültig.');
   }
   const { kty, crv, x, y, d } = jwk;
-  signierer = await crypto.subtle.importKey('jwk', { kty, crv, x, y, d }, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  return { kty, crv, x, y, d };
+}
+
+async function signiererSetzen(jwk) {
+  signierer = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+}
+
+/** Liest privat.jwk ein. Wirft, wenn es kein privater P-256-Schlüssel ist oder er nicht zum Programm passt. */
+export async function schluesselLaden(jwkText, oeffentlich = OEFFENTLICHER_SCHLUESSEL) {
+  await signiererSetzen(jwkPruefen(jwkText, oeffentlich));
   return { geladen: true };
 }
 
 export const schluesselDa = () => !!signierer;
 export function schluesselVergessen() { signierer = null; }
+
+/* -------------------------------------------------------------------------- */
+/* Signierschlüssel in der Cloud (verschlüsselt, nur für den Betreiber)         */
+/* -------------------------------------------------------------------------- */
+
+function passphrasePruefen(passphrase) {
+  const pw = String(passphrase || '');
+  if ([...pw].length < MIN_PASSPHRASE) {
+    throw fehler('LIZENZ_PASSPHRASE', `Die Passphrase braucht mindestens ${MIN_PASSPHRASE} Zeichen. Wähle eine lange, die du nirgends sonst benutzt.`);
+  }
+  return pw;
+}
+
+async function schluesselDatei(b, kopf) {
+  const res = await request(`${STORAGE}/${enc(b)}/o/${enc(SCHLUESSEL_PFAD)}?alt=media`, { headers: { ...kopf }, timeoutMs: 30000, maxBytes: 16 * 1024 });
+  if (res.status === 404) return null;
+  if (res.status !== 200) throw deutlich(Object.assign(new Error(`HTTP ${res.status}`), { status: res.status }));
+  try { return JSON.parse(new TextDecoder().decode(res.body)); } catch { return null; }
+}
+
+/** Liegt schon ein Schlüssel in der Cloud? (Nur ja/nein und Zeitpunkt, nichts Geheimes.) */
+export async function schluesselCloudStand(kopf, cfg = null) {
+  try {
+    const d = await schluesselDatei(bucket(cfg), kopf);
+    return { vorhanden: !!(d && d.v === 1 && d.blob), seit: String(d?.ts || '') };
+  } catch (err) {
+    throw deutlich(err);
+  }
+}
+
+/**
+ * privat.jwk mit einer Passphrase verschlüsseln und in der Cloud ablegen. Ersetzt einen vorhandenen. Danach ist der
+ * Schlüssel auch für diese Sitzung geladen.
+ * @param {object} [kdf] nur für Prüfungen (schwächer = schneller); beim Öffnen gilt, was in der Datei steht
+ */
+export async function schluesselSichern(kopf, jwkText, passphrase, cfg = null, oeffentlich = OEFFENTLICHER_SCHLUESSEL, kdf = DEFAULT_KDF) {
+  const jwk = jwkPruefen(jwkText, oeffentlich);
+  const pw = passphrasePruefen(passphrase);
+  const b = bucket(cfg);
+  const salt = randomBytes(16);
+  const key = await deriveKey(pw, salt, kdf);
+  const klar = utf8(JSON.stringify(jwk));
+  try {
+    const blob = await seal(key, klar, SCHLUESSEL_AAD);
+    const inhalt = utf8(JSON.stringify({ v: 1, kdf, salt: toBase64(salt), blob: toBase64(blob), ts: new Date().toISOString() }));
+    await requestJson(`${STORAGE}/${enc(b)}/o?uploadType=media&name=${enc(SCHLUESSEL_PFAD)}`, {
+      method: 'POST', headers: { ...kopf, 'content-type': 'application/json' }, body: inhalt, timeoutMs: 30000,
+    });
+  } catch (err) {
+    throw deutlich(err);
+  } finally {
+    wipe(key);
+    wipe(klar);
+  }
+  await signiererSetzen(jwk);
+  return { gesichert: true };
+}
+
+/** Den Schlüssel aus der Cloud holen, mit der Passphrase öffnen und für diese Sitzung laden. */
+export async function schluesselAusCloud(kopf, passphrase, cfg = null, oeffentlich = OEFFENTLICHER_SCHLUESSEL) {
+  let d;
+  try { d = await schluesselDatei(bucket(cfg), kopf); } catch (err) { throw deutlich(err); }
+  if (!d || d.v !== 1 || !d.blob || !d.salt) throw fehler('LIZENZ_KEIN_SCHLUESSEL', 'In der Cloud liegt noch kein Signierschlüssel.');
+  const key = await deriveKey(String(passphrase || ''), fromBase64(d.salt), d.kdf);
+  let klar;
+  try {
+    klar = await open(key, fromBase64(d.blob), SCHLUESSEL_AAD);
+  } catch {
+    throw fehler('LIZENZ_PASSPHRASE', 'Die Passphrase stimmt nicht.');
+  } finally {
+    wipe(key);
+  }
+  try {
+    await signiererSetzen(jwkPruefen(fromUtf8(klar), oeffentlich));
+  } finally {
+    wipe(klar);
+  }
+  return { geladen: true };
+}
+
+/** Den Schlüssel aus der Cloud löschen (die Datei privat.jwk bleibt, wo sie ist). */
+export async function schluesselCloudLoeschen(kopf, cfg = null) {
+  try {
+    await requestJson(`${STORAGE}/${enc(bucket(cfg))}/o/${enc(SCHLUESSEL_PFAD)}`, { method: 'DELETE', headers: { ...kopf }, timeoutMs: 20000 });
+  } catch (err) {
+    if (err.status !== 404) throw deutlich(err);
+  }
+  return true;
+}
 
 /* -------------------------------------------------------------------------- */
 /* Speicher                                                                    */
