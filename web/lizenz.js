@@ -20,10 +20,9 @@
  * bleibt danach auf „Kostenlos“ – Lesen und Exportieren (CSV, Excel, Sicherung) gehen immer. Wird die Uhr
  * zurückgestellt, zählt der höchste je gesehene Zeitpunkt.
  *
- * Testphase (`TESTPHASE`): Solange sie läuft, hat jedes Konto mindestens die höchste Stufe, ohne Schein und
- * ohne Netz. Das ist bewusst großzügig und kann jeder umgehen: Die Testphase verschenkt nur. Zugewiesene
- * Scheine werden trotzdem abgeholt und angezeigt (`lizenz`) und tragen, sobald `TESTPHASE = false` ist.
- * Nur in der Testphase lässt sich eine kleinere Stufe zum Ausprobieren wählen (`vorschau`).
+ * Testphase (`TESTPHASE`): Sie bestimmt nur die Standardlizenz: Ein Konto ohne gültigen Schein hat die höchste
+ * Stufe, ohne Netz. Sobald ein Schein gilt (zugewiesen, abgeholt), zählt dessen Stufe, auch eine kleinere.
+ * Nur ohne Schein lässt sich eine kleinere Stufe zum Ausprobieren wählen (`vorschau`).
  *
  * Grenzen des Schutzes: Alles hier läuft auf dem Gerät des Nutzers. Wer den Programmcode verändert oder die
  * Ablage des Browsers von Hand bearbeitet, kommt an jeder Prüfung vorbei; geschützt ist das Fälschen und
@@ -242,17 +241,16 @@ export class Lizenz {
     const beste = besser(g, await this.#kontoLizenz(konto, jetzt));
     const kurz = beste && { quelle: beste.quelle, zustand: beste.zustand, stufe: beste.gebucht, bis: beste.bis, id: beste.id };
 
-    if (this.testphase) {
-      // Mindestens die Stufe der Testphase; der Merker gibt die Kennung und die gewählte Vorschau.
+    if (this.testphase && !beste) {
+      // Die Testphase ist nur die Standardlizenz für Konten ohne Schein: Max. Mit Schein gilt dessen Stufe.
       if (!g && rec?.art !== 'testphase') {
         rec = { v: 1, art: 'testphase', id: crypto.randomUUID(), seit: new Date(jetzt).toISOString(), vorschau: '' };
         await A.schreiben('dateien', MERKER, rec).catch(() => {});
       }
       const vorschau = rec?.art === 'testphase' && STUFEN.includes(rec.vorschau) ? rec.vorschau : null;
-      const voll = beste && rang(beste.stufe) > rang(TESTPHASE_STUFE) ? beste.stufe : TESTPHASE_STUFE;
       return {
-        ...basis, zustand: 'testphase', id: rec?.art === 'testphase' ? rec.id : beste?.id || '', gebucht: voll, stufe: vorschau || voll, vorschau,
-        lizenz: kurz,
+        ...basis, zustand: 'testphase', id: rec?.art === 'testphase' ? rec.id : '', gebucht: TESTPHASE_STUFE, stufe: vorschau || TESTPHASE_STUFE, vorschau,
+        lizenz: null,
       };
     }
 

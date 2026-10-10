@@ -1,7 +1,7 @@
 {
-  "version": "2.33.3",
-  "released": "2026-10-10T22:54:34.016Z",
-  "notes": "Lizenz automatisch\n\n- Wer sich mit Google anmeldet und noch keine Lizenz hat, bekommt sie jetzt automatisch. Solange Kontovia getestet wird, ist das die höchste Stufe.",
+  "version": "2.33.4",
+  "released": "2026-10-10T23:42:33.166Z",
+  "notes": "Lizenz gilt\n\n- Eine zugewiesene Lizenz gilt jetzt auch in der Testphase. Nur wer keine hat, bekommt automatisch die höchste Stufe.",
   "files": [
     {
       "path": "abo/abo.css",
@@ -530,8 +530,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz.js",
-      "sha256": "09a5f55771140aed83dfd5752c77e558ed0367123d7f8009594593b805eed56c",
-      "size": 46962
+      "sha256": "3d02a53206e53d04e1d39dc72efe44f9fac7947e0ae57d7c9ace988c8d3011fd",
+      "size": 47246
     },
     {
       "path": "lib/store.js",
@@ -590,8 +590,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "8038ba46cb41afdf2c6bf1625d96533efaa011056ffa09999e098e22dc25d799",
-      "size": 45535
+      "sha256": "8f7135db4b935fa7d78653ecdb88b9cd6653298ce65cb48a8846d11fcdf46521",
+      "size": 45765
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -620,12 +620,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "bf7631e7b63f471b2ae7c3cc12dc7574815c40772fd818e71509aa01aac1923b",
+      "sha256": "67b4fb2459fc07a01368438d94b9ad699b4f42dc2a3d9803bfd298eaca0e4edc",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "01024e9c1ee785abfaa3a52eabde5a283fc6ebdfe645ca27f363427be19c4163",
+      "sha256": "3c9b9c07f8e2311b81432fdafed2363f57ed95fd8fef64c0b6a71f6257f5e2b9",
       "size": 33396
     },
     {
@@ -640,7 +640,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "0cfe022ebfd82bd6b9cf681cf049f3ff2e721ecf9c898b8c861c0249ad7c9d76",
+      "sha256": "4f2608db7cbc674954959e8553828257e5e06b9152292d527bc383913495e6b3",
       "size": 37099
     },
     {
@@ -795,7 +795,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "941216629c7fb6445837be2adc0be3bdd7f49495df607486974fc459fc761c0e",
+      "sha256": "efefde5b7df62e4af8b84a837ab874203f7fa0a3e269fa6419d8f8a8cb8a5eea",
       "size": 6906
     },
     {
@@ -880,8 +880,8 @@
     },
     {
       "path": "web/lizenz.js",
-      "sha256": "68d8fc23eb71756de80c7f6c6ec8dcbd043f568a04b81343215f95f5aed76f48",
-      "size": 18611
+      "sha256": "b0647698b3e9c48fbcd6a696ba2125340fc5b1629ad217a19be479c66d91d0dc",
+      "size": 18430
     },
     {
       "path": "web/lizenzschluessel.js",
