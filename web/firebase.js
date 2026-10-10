@@ -452,6 +452,55 @@ export class FirebaseBackend {
     }
   }
 
+  /**
+   * Den Lizenzschein des angemeldeten Kontos lesen (lizenz.js): lizenzen/<email>.json, angelegt vom
+   * Betreiber, lesbar nur mit genau dieser bestätigten Adresse. Adresse und Zeit stammen aus einem
+   * frischen Token des Servers, nicht vom Gerät.
+   * @returns {Promise<{art:'gefunden'|'fehlt'|'unklar'|'netz'|'anmeldung', text?:string, serverZeit:number, status?:number}>}
+   */
+  async lizenzLesen() {
+    let idToken;
+    try {
+      this.token = null;
+      idToken = await this.idToken();
+    } catch (err) {
+      return { art: err?.code === 'NEU_ANMELDEN' || err?.status ? 'anmeldung' : 'netz', serverZeit: 0 };
+    }
+    const angaben = readIdToken(idToken);
+    const serverZeit = (Number(angaben.iat) || 0) * 1000;
+    const email = String(angaben.email || '').trim().toLowerCase();
+    if (!email || angaben.email_verified === false) return { art: 'unklar', serverZeit };
+    try {
+      const res = await request(this.objectUrl(`lizenzen/${email}.json`, '?alt=media'), {
+        headers: { authorization: `Firebase ${idToken}` }, timeoutMs: 20000, maxBytes: 64 * 1024,
+      });
+      if (res.status === 404) return { art: 'fehlt', serverZeit, status: 404 };
+      if (res.status !== 200) return { art: 'unklar', serverZeit, status: res.status };
+      const d = JSON.parse(new TextDecoder().decode(res.body));
+      return { art: 'gefunden', text: String(d?.schein || ''), serverZeit, status: 200 };
+    } catch {
+      return { art: 'netz', serverZeit };
+    }
+  }
+
+  /**
+   * Das Konto einmal in die Kontenliste des Betreibers eintragen: konten/<uid>.json mit Adresse und
+   * Datum, sonst nichts. Nur Anlegen ist erlaubt; steht der Eintrag schon, lehnen die Regeln ab.
+   */
+  async kontoMelden() {
+    const headers = { ...(await this.auth()), 'content-type': 'application/json' };
+    if (!this.state.uid) throw new Error('Keine Kontokennung vorhanden.');
+    const inhalt = new TextEncoder().encode(JSON.stringify({ v: 1, email: this.state.email || '', seit: new Date().toISOString() }));
+    try {
+      await requestJson(`${STORAGE}/${enc(this.cfg.bucket)}/o?uploadType=media&name=${enc(`konten/${this.state.uid}.json`)}`, {
+        method: 'POST', headers, body: inhalt, timeoutMs: 20000,
+      });
+    } catch (err) {
+      if (err?.status !== 403) throw err; // 403: schon eingetragen
+    }
+    return true;
+  }
+
   /** Nur auf ausdrücklichen Wunsch („Cloud trennen und dort löschen“): alles im eigenen Zweig. */
   async removeAll() {
     for (const e of await this.koppelnListe().catch(() => [])) await this.koppelnLoeschen(e.name).catch(() => {});
@@ -462,6 +511,11 @@ export class FirebaseBackend {
     await this.entfernen(TRESOR_V2);
     await this.entfernen(VAULT_NAME);
     await this.schluesselLoeschen().catch(() => {});
+    // Auch der Eintrag in der Kontenliste des Betreibers (Lizenzen). Eine zugewiesene Lizenz bleibt beim Betreiber.
+    const headers = await this.auth().catch(() => null);
+    if (headers && this.state.uid) {
+      await requestJson(this.objectUrl(`konten/${this.state.uid}.json`), { method: 'DELETE', headers, timeoutMs: 20000 }).catch(() => {});
+    }
     return true;
   }
 

@@ -35,6 +35,7 @@ import * as I from './installation.js';
 import * as R from './rueckmeldung.js';
 import * as KI from './ki.js';
 import * as LZ from './lizenz.js';
+import * as LV from './lizenzverwaltung.js';
 
 /* Läuft diese Seite nur als kleines Fenster für Google Kalender? Dann reicht
    sie die Antwort an das eigentliche Kontovia-Fenster weiter und schließt
@@ -72,8 +73,18 @@ const rueckkehrFertig = (() => {
    Adresse entfernen und nur für diesen Tab, nur kurz merken (koppeln.js). */
 if (!nurGoogleFenster) { const c = KP.codeAusAdresse(); if (c) KP.codeMerken(c); }
 const device = { id: '', name: '' };
-/* Stufe des offenen Kontos (lizenz.js). Der Schein ist an die Kennung dieses Geräts gebunden. */
-const lizenz = new LZ.Lizenz({ geraet: () => device.id });
+/* Stufe des offenen Kontos (lizenz.js). Ein Geräteschein ist an die Kennung dieses Geräts gebunden, ein Kontoschein
+   an die Adresse des Google-Kontos, mit dem die Cloud verbunden ist; ihn holt `abgleichen` aus dem Cloud-Speicher. */
+const lizenzKonto = () => {
+  const st = vault.isLocked ? null : vault.db?.cloud?.state?.firebase;
+  return st?.refreshToken && st.uid && st.email ? { email: st.email, uid: st.uid } : null;
+};
+const lizenz = new LZ.Lizenz({
+  geraet: () => device.id,
+  konto: lizenzKonto,
+  abruf: () => cloud.be().lizenzLesen(),
+  melden: () => cloud.be().kontoMelden(),
+});
 
 let autoLockMinutes = 10;
 /** Tresorschlüssel aus der Übergabe nach einer Aktualisierung (uebergabe.js), nur für diesen Start. */
@@ -90,6 +101,11 @@ const RECHTSTEXTE = {
 };
 
 const kopie = (v) => (v === undefined ? v : structuredClone(v));
+/** Friert ein Objekt samt aller Unterobjekte ein (Funktionen bleiben, wie sie sind). */
+const tiefFrieren = (o) => {
+  for (const v of Object.values(o)) if (v && typeof v === 'object' && !Object.isFrozen(v)) tiefFrieren(v);
+  return Object.freeze(o);
+};
 const str = (v, max = 500) => String(v ?? '').slice(0, max);
 
 /* -------------------------------------------------------------------------- */
@@ -207,6 +223,8 @@ function nachSperre(reason) {
   cloud.koppelnVerbindenAbbrechen();
   KP.codeVergessen();
   Z.bildschirmBeenden();
+  // Der Signierschlüssel der Lizenzverwaltung gilt nur für die offene Sitzung.
+  LV.schluesselVergessen();
   if (lockTimer) clearTimeout(lockTimer);
   lockTimer = null;
   restartAutoSync();
@@ -374,12 +392,14 @@ window.addEventListener('online', () => { if (!vault.isLocked) send('cloudTick',
 /* -------------------------------------------------------------------------- */
 
 /**
- * Anmeldung der Cloud für das Lesen der Rückmeldungen. Ohne Verbindung fehlt
- * sie, und die Regeln lehnen ab (nur der Betreiber darf lesen).
+ * Anmeldung der Cloud für das Entwicklermenü (Rückmeldungen lesen, Lizenzen verwalten). Ohne
+ * Verbindung fehlt sie, und die Regeln lehnen ab (nur der Betreiber darf das).
  */
-async function betreiberKopf() {
+async function betreiberKopf(wofuer = 'rueckmeldungen') {
   if (vault.isLocked || !cloud.status().linked) {
-    throw Object.assign(new Error('Zum Lesen der Rückmeldungen mit dem Konto des Betreibers bei der Cloud anmelden.'), { code: 'NEU_ANMELDEN' });
+    throw Object.assign(new Error(wofuer === 'lizenzen'
+      ? 'Zum Verwalten der Lizenzen mit dem Konto des Betreibers bei der Cloud anmelden.'
+      : 'Zum Lesen der Rückmeldungen mit dem Konto des Betreibers bei der Cloud anmelden.'), { code: 'NEU_ANMELDEN' });
   }
   return cloud.be().auth();
 }
@@ -1145,6 +1165,23 @@ const api = {
     entfernen: handle(async () => { const s = kopie(await lizenz.entfernen()); send('lizenz', s); return s; }),
     /** Nur in der Testphase: eine kleinere Stufe ausprobieren ('' = die volle). */
     vorschau: handle(async (stufe) => { const s = kopie(await lizenz.vorschauSetzen(str(stufe, 20))); send('lizenz', s); return s; }),
+    /** Den Schein des angemeldeten Google-Kontos aus dem Cloud-Speicher holen (oder einen entzogenen entfernen). */
+    abgleichen: handle(async () => {
+      const r = kopie(await lizenz.abgleichen());
+      send('lizenz', r.status);
+      return r;
+    }),
+    /* Lizenzverwaltung (lizenzverwaltung.js), nur im Entwicklermenü: Die Regeln lassen allein den Betreiber zu. */
+    verwaltung: {
+      schluessel: handle(async (jwkText) => LV.schluesselLaden(str(jwkText, 4000))),
+      schluesselDa: handle(async () => LV.schluesselDa()),
+      laden: handle(async () => kopie(await LV.laden(await betreiberKopf('lizenzen')))),
+      zuweisen: handle(async (angaben = {}) => kopie(await LV.zuweisen(await betreiberKopf('lizenzen'), {
+        email: str(angaben.email, 254), stufe: str(angaben.stufe, 20), tage: Number(angaben.tage), schonfrist: Number(angaben.schonfrist), notiz: str(angaben.notiz, 200),
+      }))),
+      entziehen: handle(async (email) => LV.entziehen(await betreiberKopf('lizenzen'), str(email, 254))),
+      kontoEntfernen: handle(async (uid) => LV.kontoEntfernen(await betreiberKopf('lizenzen'), str(uid, 128))),
+    },
   },
 
   on: {
@@ -1214,7 +1251,8 @@ if (nurGoogleFenster) {
   await ortBeschreiben().catch(() => {});
   einzigesFenster();
   ruhezustandBeobachten();
-  window.kontovia = Object.freeze(api);
+  // Bis in jeden Bereich eingefroren: Sonst ließe sich etwa `kontovia.lizenz.status` aus der Konsole ersetzen.
+  window.kontovia = tiefFrieren(api);
 
   U.registrieren().then(() => U.aufraeumen());
 

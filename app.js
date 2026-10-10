@@ -21,7 +21,7 @@ import { feedbackOeffnen, feedbackNachsenden, entwicklerKlick } from './lib/feed
 import { rechtsfuss, rechtslinks, nutzungPruefen, nutzungVermerken, entwicklungsKasten, entwicklungsLeiste, ENTWICKLUNG_TITEL, ENTWICKLUNG_TEXT } from './lib/recht.js';
 import { nutzerWaehlen, nutzerMenue, nutzerAnzeigen, kannSchreiben } from './lib/benutzer.js';
 import { sucheOeffnen, SUCHE_KUERZEL } from './lib/suche.js';
-import { lizenzLaden, lizenzVergessen, kann } from './lib/lizenz.js';
+import { lizenzLaden, lizenzAbgleichen, lizenzVergessen, kann } from './lib/lizenz.js';
 import { lizenzOberflaeche, erlaubt } from './lib/lizenzui.js';
 import { spracheStarten, spracheGewaehlt, spracheMerken, spracheSetzen, sprache, sprachWahl, sprachWahlVerdrahten, beiSprachwechsel } from './lib/sprache.js';
 
@@ -1007,6 +1007,8 @@ async function afterUnlock() {
   // Hat das Konto Benutzer, jetzt klären, wer arbeitet; alles Weitere (auch das Journal) kennt dann den Namen.
   if (!await nutzerWaehlen({ konto: appInfo.konto, sperren: lockNow })) return;
   api.cloud.status().then((st) => setCloudVerbunden(st.configured ? !!st.linked : null)).catch(() => {});
+  // Die Lizenz des Google-Kontos im Hintergrund abholen (oder eine entzogene entfernen); ohne Konto passiert nichts.
+  lizenzAbgleichen().catch((e) => console.error('Lizenz abgleichen:', e));
   // Web-Fassung: eben per Weiterleitung verbunden – der erste Abgleich entscheidet, welcher Stand gilt.
   api.cloud.rueckmeldung?.().then((rm) => {
     if (rm?.ebenVerbunden) import('./views/cloudpanel.js').then((m) => m.nachWeiterleitung(rm.email));

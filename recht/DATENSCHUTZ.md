@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 10. Oktober 2026, Programmversion 2.33.0
+Stand: 10. Oktober 2026, Programmversion 2.33.1
 
 ---
 
@@ -232,6 +232,28 @@ wiederholter Bestätigung im Abstand von mindestens 24 Stunden und nachdem sie
 gesichert in der Cloud liegt; die Cloud-Kopie bleibt erhalten. Bei Störungen oder
 ohne Netz geschieht nichts dergleichen. Mit „Verbindung trennen“ endet die
 Prüfung. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (Sicherheit der Daten).
+
+## Lizenz (bei Verbindung mit Google)
+
+Ihren Tarif prüft Kontovia auf dem Gerät. Ist ein Gerät mit einem Google-Konto
+verbunden, kommt dazu:
+
+* **Kontenliste.** Beim ersten Mal legt Kontovia im Cloud-Speicher einen kleinen
+  Eintrag mit Ihrer E-Mail-Adresse, Ihrer Kontokennung und dem Datum an. Er dient
+  allein dazu, dass wir Ihrer Adresse eine Lizenz zuweisen können. Lesen kann ihn
+  außer Ihnen nur der Betreiber; er wird nicht geändert und enthält nichts zu Ihrer
+  Buchhaltung, Ihrem Gerät oder Ihrer Nutzung. Mit „Cloud trennen und dort löschen“
+  wird er entfernt, auf Wunsch auch von uns.
+* **Lizenz abholen.** Beim Entsperren und auf „Jetzt prüfen“ fragt Kontovia, ob zu
+  Ihrer Adresse eine Lizenz hinterlegt ist (eine kleine Datei, die nur der Betreiber
+  anlegen und nur Ihr Konto lesen kann). Übertragen werden dabei nur die Anmeldung
+  und das Lesen dieser Datei. Die Lizenz bleibt auf dem Gerät und gilt dort ohne
+  Netz bis zu 30 Tage, dann muss sie einmal bestätigt werden.
+
+Wenn Sie eine Lizenz erwerben, speichern wir zur Adresse den Tarif, die Laufzeit
+und eine kurze Notiz (etwa die Rechnungsnummer), solange die Lizenz läuft und die
+Aufbewahrungsfristen es verlangen. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO
+(Vertrag) und lit. f (Durchsetzung der Tarife).
 
 ## Rückmeldungen
 

@@ -1,7 +1,7 @@
 {
-  "version": "2.33.0",
-  "released": "2026-10-10T18:56:55.341Z",
-  "notes": "Tarife und Premium-Funktionen\n\n- Premium-Funktionen tragen jetzt eine Krone. Was Ihr Tarif nicht enthält, ist gesperrt; ein Klick sagt, ab welchem Tarif es die Funktion gibt.\n- Solange Kontovia getestet wird, bekommt jedes Konto automatisch alle Funktionen. Eine Lizenz brauchen Sie dafür nicht.\n- Unter Einstellungen › Sicherheit & Zugang › Lizenz sehen Sie Ihren Tarif, können einen Lizenzschein einlösen und ausprobieren, wie sich ein kleinerer Tarif anfühlt.\n- Ihre Daten bleiben in jedem Tarif erhalten: Ansehen, Sichern und der Export als CSV oder Excel gehen immer.",
+  "version": "2.33.1",
+  "released": "2026-10-10T22:08:02.529Z",
+  "notes": "Lizenz für Ihr Google-Konto\n\n- Eine Lizenz kann jetzt Ihrem Google-Konto zugewiesen werden. Kontovia holt sie dann von selbst ab, auf jedem Gerät.\n- Unter Einstellungen › Sicherheit & Zugang › Lizenz sehen Sie, woher Ihre Lizenz stammt und bis wann sie gilt. „Jetzt prüfen“ gleicht sie sofort ab.\n- Ohne Verbindung gilt eine abgeholte Lizenz weiter; nach 30 Tagen ohne Prüfung bittet Kontovia um einen Abgleich.",
   "files": [
     {
       "path": "abo/abo.css",
@@ -35,8 +35,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "9f67ca7c5b78c75069730ea426fd8d7163366f0ca24162a30cb6bc55c0e3fc9c",
-      "size": 82507
+      "sha256": "dd482cef719e66f3718bfa4c37488c73ebd9d1c17b1690e48efd39d6ee502158",
+      "size": 82718
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -195,8 +195,8 @@
     },
     {
       "path": "lib/feedback.js",
-      "sha256": "72e7f04575eaa48d6d728ae07f8e7c9ed1da116d19571805c608e12ed548de0c",
-      "size": 18621
+      "sha256": "98ce434c6bf0d6cb7d91a1e46eeb34709fbe787b42d8e13e40cd58becfd203c6",
+      "size": 19683
     },
     {
       "path": "lib/fokus.js",
@@ -260,18 +260,23 @@
     },
     {
       "path": "lib/lizenz.js",
-      "sha256": "9022273436120823b213a616e4f8184eaf3cbe07852b4ca0c81d94f18c9ffa87",
-      "size": 5219
+      "sha256": "cbde4050d7074f2de1ceb2e823603dc563b5a1fc3ddbf9b0e85a20975db7586a",
+      "size": 6269
     },
     {
       "path": "lib/lizenzkarte.js",
-      "sha256": "2ba4e08265faecb996bc25691e42b0813940b1cb2e6cd04c3a447dd203c74bbf",
-      "size": 7940
+      "sha256": "fc6e840cef08bd5b61f0ea42144a0cf645e4395fbcba908fafbc373241fea347",
+      "size": 11088
     },
     {
       "path": "lib/lizenzui.js",
       "sha256": "736cf18f94ddcf02a4eb42ad12a6d4923f220d8ecefb6669bf77eeb182999b9d",
       "size": 9324
+    },
+    {
+      "path": "lib/lizenzverwaltung.js",
+      "sha256": "14536ebccfbe5b3ebc5cdab9f8c42398527b196d8761571ed3b3f44740aaeff5",
+      "size": 9965
     },
     {
       "path": "lib/mahnungsaktionen.js",
@@ -525,8 +530,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz.js",
-      "sha256": "7a958211a7874a29165ba8a0e7a83c2d0fd8cfc80548c0b8ac9eea8991d8aa74",
-      "size": 31590
+      "sha256": "49adb772fa813933cc0dee7514704d84a18cdd1bf935c02a7231b72ebb5795fc",
+      "size": 39870
     },
     {
       "path": "lib/store.js",
@@ -585,8 +590,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "9cb32ff2062423c031fba8bb9bcd2740b88096e0b960851eeb4a343896ac8eb8",
-      "size": 44492
+      "sha256": "894d40937a006c7eb4dbd151683954f2ccfa4db092d521aa730c526e42f9f6d7",
+      "size": 45028
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -615,13 +620,13 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "48bed24e0de0d4089ba651a99bb063194c323db366967e6e3f5e7331df98dfe7",
+      "sha256": "fc7e249350bb7289f4a5695968a59fe8e517c58c6b580347ac4fb3c6847e2d39",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "eaa7c5a461a6400624ef07a6ee6c6164d1367125790ea44055d001f3ba4b9b9c",
-      "size": 31283
+      "sha256": "5db352dd850302b20ada488ab5749a3b2387a934100095ff43cee481343c066b",
+      "size": 32591
     },
     {
       "path": "recht/IMPRESSUM.md",
@@ -635,8 +640,8 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "a68aaa0c8029895dd367880f5cab9e0ed8ae4c3053f10dd148a22edbaf555ba3",
-      "size": 34939
+      "sha256": "5aa6d3e6da0d47fecb5e7cfe0473cb3d66536f3c9e96c966b82d5cfa5010c9c6",
+      "size": 36293
     },
     {
       "path": "recht/impressum.html",
@@ -680,8 +685,8 @@
     },
     {
       "path": "views/cloudpanel.js",
-      "sha256": "182ead739ef2f1f685f1cd93840e249304566204f7f7f3e3834a46205200ad20",
-      "size": 42545
+      "sha256": "f2ae796e322bf474aef1dd954ddc5ae5d5acbe7b1879af96c00a6d79a3ad7d24",
+      "size": 43024
     },
     {
       "path": "views/dashboard.js",
@@ -785,12 +790,12 @@
     },
     {
       "path": "web/ablage.js",
-      "sha256": "b2d25f9197988ce909f01e65ed430c2e57255ba810cbe48771d7c9edf50ad0a1",
-      "size": 28107
+      "sha256": "af6b878220f0de80f832e32581450bb86004914c63ae3f0cab5419c6e11f29e0",
+      "size": 28142
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "e4d94661625d574cee99108cc6971d5486a53762d43cc1a346655d9ebce4fdbe",
+      "sha256": "dbaadb3bb9b83e981b3c2f2ad043d0bbadb3ba4e98702339104364f1e4b4c0d9",
       "size": 6906
     },
     {
@@ -800,8 +805,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "be8f6d6e1b4c7822c0b80fa2bf8a423d5dbeee88fc86a7f99241b54412f37498",
-      "size": 60823
+      "sha256": "1cc475af316e502010f2b11e8db61ff8f52bbaeeea4b4b2f6cf2045bb8020c28",
+      "size": 63103
     },
     {
       "path": "web/cloud.js",
@@ -830,8 +835,8 @@
     },
     {
       "path": "web/firebase.js",
-      "sha256": "e6c986246b108d0e1497eb19317f90af8f172ae49b01bf406f371f3d541c11bf",
-      "size": 20990
+      "sha256": "f983cf7f115fa224e6d5694aa75314410f796c86131ceedf6ff3d44a0e77af13",
+      "size": 23695
     },
     {
       "path": "web/gcal.js",
@@ -875,13 +880,18 @@
     },
     {
       "path": "web/lizenz.js",
-      "sha256": "7f79ab517d0c9c39312c4f5e91375ef403c289e8646d7310b6a295ac6d2e27c2",
-      "size": 9628
+      "sha256": "68d8fc23eb71756de80c7f6c6ec8dcbd043f568a04b81343215f95f5aed76f48",
+      "size": 18611
     },
     {
       "path": "web/lizenzschluessel.js",
       "sha256": "2fe9bd24e0293b2d5e8bf3d662caecd634038517149dadcdefde4e9f152bd88a",
       "size": 537
+    },
+    {
+      "path": "web/lizenzverwaltung.js",
+      "sha256": "eced5940acac1ac3b8babc67630e4ff065f61c43cdb87f0d6fa199add212722e",
+      "size": 10473
     },
     {
       "path": "web/mailversand.js",

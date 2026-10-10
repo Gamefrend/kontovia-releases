@@ -8,6 +8,7 @@ import { checkUpdates, markNotified } from '../lib/updates.js';
 import { refresh, navigate } from '../lib/router.js';
 import { appInfo, setCloudVerbunden } from '../app.js';
 import { table, mountTables } from '../lib/table.js';
+import { lizenzAbgleichen, kann } from '../lib/lizenz.js';
 
 const api = window.kontovia;
 /** Wie SICHERUNG_BEHALTEN in src/web/cloud.js. */
@@ -66,8 +67,8 @@ export async function renderCloudCard(root) {
 
         ${status.configured && !status.linked ? raw(`
           <div class="row wrap" style="gap:8px">
-            <button class="btn primary" id="btnConnect" data-premium="cloud">${icon('key', 15).__raw} Mit Google verbinden</button>
-            ${status.weiterleitung ? '<button class="btn ghost" id="btnConnectCode" data-premium="cloud">Klappt nicht? Mit Code verbinden</button>' : ''}
+            <button class="btn primary" id="btnConnect">${icon('key', 15).__raw} Mit Google verbinden</button>
+            ${status.weiterleitung ? '<button class="btn ghost" id="btnConnectCode">Klappt nicht? Mit Code verbinden</button>' : ''}
           </div>
           <p class="small muted mt16 mb0">${status.weiterleitung
             ? `Sie werden zu Google weitergeleitet und kommen nach der Anmeldung hierher zurück. Kontovia
@@ -415,8 +416,18 @@ export async function nachWeiterleitung(email) {
   if (root) await firstLink(root);
 }
 
-/** Erster Abgleich nach dem Verbinden – hier entscheidet sich, welcher Stand gilt. */
+/**
+ * Erster Abgleich nach dem Verbinden – hier entscheidet sich, welcher Stand gilt.
+ * Anmelden darf jedes Konto (darüber kommt auch eine zugewiesene Lizenz); Abgleich und Sicherung in der
+ * Cloud erst mit dem Tarif dafür. Deshalb zuerst die Lizenz des Kontos holen, dann entscheiden.
+ */
 async function firstLink(root) {
+  await lizenzAbgleichen().catch((e) => console.error('Lizenz abgleichen:', e));
+  if (!kann('cloud')) {
+    toast('Mit Google angemeldet', 'Abgleich und Sicherung in der Cloud gibt es ab dem Tarif Standard.');
+    renderCloudCard(root);
+    return;
+  }
   let begin;
   try {
     begin = await api.cloud.begin();
