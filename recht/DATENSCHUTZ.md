@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 11. Oktober 2026, Programmversion 2.33.4
+Stand: 11. Oktober 2026, Programmversion 2.34.0
 
 ---
 
@@ -463,6 +463,14 @@ USA) zwangsläufig Ihre IP-Adresse und den Zeitpunkt der Anfrage. Es werden kein
 Kennungen Ihres Geräts und keine Angaben aus Ihrer Buchhaltung mitgesendet. Sie
 können die Prüfung jederzeit unter *Einstellungen → Programmaktualisierung*
 wieder abschalten.
+
+Mit derselben Prüfung holt Kontovia eine kleine, vom Betreiber signierte Datei,
+in der steht, welche Funktion zu welchem Tarif gehört. Sie liegt im
+Cloud-Speicher von Google Firebase (Google Ireland Limited bzw. Google LLC);
+dabei erfährt Google Ihre IP-Adresse und den Zeitpunkt der Anfrage. Es werden
+keine Anmeldung, keine Kennungen Ihres Geräts und keine Angaben aus Ihrer
+Buchhaltung mitgesendet. Ohne Zustimmung zur Prüfung und ohne Cloud-Konto wird
+die Datei nicht abgerufen.
 
 **Angemeldet bleiben beim Update:** Lädt Kontovia eine neue Fassung, wird der Schlüssel Ihrer Buchhaltung für das Neuladen geteilt
 abgelegt: umhüllt im Speicher des Browsers, der passende Gegenschlüssel nur im

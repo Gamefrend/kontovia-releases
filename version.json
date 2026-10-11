@@ -1,7 +1,7 @@
 {
-  "version": "2.33.4",
-  "released": "2026-10-10T23:42:33.166Z",
-  "notes": "Lizenz gilt\n\n- Eine zugewiesene Lizenz gilt jetzt auch in der Testphase. Nur wer keine hat, bekommt automatisch die höchste Stufe.",
+  "version": "2.34.0",
+  "released": "2026-10-11T11:58:50.038Z",
+  "notes": "Tarife und Abmelden\n\n- Welche Bereiche und Funktionen zu welchem Tarif gehören, kann jetzt angepasst werden. Was ein Tarif nicht enthält, zeigt eine klare Erklärung, Ihre Daten bleiben erhalten.\n- Neben „Sperren“ gibt es wieder einen Knopf „Abmelden“ in der Seitenleiste.",
   "files": [
     {
       "path": "abo/abo.css",
@@ -35,8 +35,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "dd482cef719e66f3718bfa4c37488c73ebd9d1c17b1690e48efd39d6ee502158",
-      "size": 82718
+      "sha256": "4e80de6e442539deaedc45a4b99e27f8cfeda25da463d281593162907e96ed43",
+      "size": 86016
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -82,6 +82,11 @@
       "path": "index.html",
       "sha256": "2fe644aa27c8871c47ae43de9ae91c604a3207bd6c1b1be90362e6c934841e24",
       "size": 4718
+    },
+    {
+      "path": "lib/admin.js",
+      "sha256": "1685fff32b8f99532bb2c19f76e5d0daf352c46917c0886bcc5a3a03bb49ba81",
+      "size": 952
     },
     {
       "path": "lib/assistent.js",
@@ -195,8 +200,8 @@
     },
     {
       "path": "lib/feedback.js",
-      "sha256": "98ce434c6bf0d6cb7d91a1e46eeb34709fbe787b42d8e13e40cd58becfd203c6",
-      "size": 19683
+      "sha256": "5a86e437ec14c1f698a2089ee7c5cbeb1fb1775685394bc0ed5e04ba1b4ba66e",
+      "size": 20931
     },
     {
       "path": "lib/fokus.js",
@@ -260,8 +265,8 @@
     },
     {
       "path": "lib/lizenz.js",
-      "sha256": "cbde4050d7074f2de1ceb2e823603dc563b5a1fc3ddbf9b0e85a20975db7586a",
-      "size": 6269
+      "sha256": "2c164346022df6bd354af7c356f82a18a55439431eb90cc8810a8b04d4406c12",
+      "size": 6692
     },
     {
       "path": "lib/lizenzkarte.js",
@@ -270,8 +275,8 @@
     },
     {
       "path": "lib/lizenzui.js",
-      "sha256": "736cf18f94ddcf02a4eb42ad12a6d4923f220d8ecefb6669bf77eeb182999b9d",
-      "size": 9324
+      "sha256": "2c7d13f690a6647fbdd0cf16065297acd2a0624f9d3adae4afa26751fd05c54a",
+      "size": 9785
     },
     {
       "path": "lib/lizenzverwaltung.js",
@@ -530,8 +535,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz.js",
-      "sha256": "3d02a53206e53d04e1d39dc72efe44f9fac7947e0ae57d7c9ace988c8d3011fd",
-      "size": 47246
+      "sha256": "b3ed06e0139530e923babe83b09ad16b16bbaeb742160956b9a25d845f4744b9",
+      "size": 52924
     },
     {
       "path": "lib/store.js",
@@ -560,8 +565,18 @@
     },
     {
       "path": "lib/tarife.js",
-      "sha256": "4e37a71145e35c154d9846ff622bc590c7c9b5e0b7f9cc7ea5d9c7716e4b2505",
-      "size": 4880
+      "sha256": "3dbc86d5b4ac27822c86b68fe998b0e09d312d9726d6a120ad878776ae1892dd",
+      "size": 11867
+    },
+    {
+      "path": "lib/tarifkonfig.js",
+      "sha256": "8a1041c1b8c76f40198d0407cc9f84a879a81101b283b89e474da4d549011428",
+      "size": 4067
+    },
+    {
+      "path": "lib/tarifverwaltung.js",
+      "sha256": "b5a298ddc71f498d9de46edf5c9e1cbb556d14d92e167e0d2f81dbe74177bc73",
+      "size": 12235
     },
     {
       "path": "lib/termine.js",
@@ -580,8 +595,8 @@
     },
     {
       "path": "lib/updates.js",
-      "sha256": "ec6ecd25c5bc85fc60edc208cadbcf75cbb818055aae42084a2230491369d19a",
-      "size": 3343
+      "sha256": "1d47e9d2a6da3095419aaff74d5a4aab8dd50a7a0c68000e8dc84ac59fe41950",
+      "size": 3660
     },
     {
       "path": "lib/util.js",
@@ -590,8 +605,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "8f7135db4b935fa7d78653ecdb88b9cd6653298ce65cb48a8846d11fcdf46521",
-      "size": 45765
+      "sha256": "1d966c5b099d4bdaee4f06f840ddf6082c1e79e7aa8207f5ce965b0a1147ed98",
+      "size": 46153
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -620,13 +635,13 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "67b4fb2459fc07a01368438d94b9ad699b4f42dc2a3d9803bfd298eaca0e4edc",
+      "sha256": "463531d776645e3fd51ce72045217e8fcb2a7ac9894ceea841f1d0b741fffe12",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "3c9b9c07f8e2311b81432fdafed2363f57ed95fd8fef64c0b6a71f6257f5e2b9",
-      "size": 33396
+      "sha256": "6d14f46c72d80e76b0f753936d68e952059a90bf6aa941de3e4b7cfded66c775",
+      "size": 33885
     },
     {
       "path": "recht/IMPRESSUM.md",
@@ -640,8 +655,8 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "4f2608db7cbc674954959e8553828257e5e06b9152292d527bc383913495e6b3",
-      "size": 37099
+      "sha256": "1b61c59b38fe5369f6580ba2fb9451c4502aa0b68e77fe336e4c6f75657076c6",
+      "size": 37594
     },
     {
       "path": "recht/impressum.html",
@@ -665,8 +680,13 @@
     },
     {
       "path": "styles.css",
-      "sha256": "a81c65492c9a01178874cb770351c1af97f8feda5d79a531190cd9f92bae82dd",
-      "size": 131649
+      "sha256": "f4fa8206aa9a57e0c117d215f36fe2fb89673e3a90bd7151f5f81b82bbd84b1f",
+      "size": 134381
+    },
+    {
+      "path": "views/admin.js",
+      "sha256": "333e1fb92416ca79e16760de94265d863ccddb880edf48ab73a9b86a165e2365",
+      "size": 1410
     },
     {
       "path": "views/anlageform.js",
@@ -685,8 +705,8 @@
     },
     {
       "path": "views/cloudpanel.js",
-      "sha256": "f2ae796e322bf474aef1dd954ddc5ae5d5acbe7b1879af96c00a6d79a3ad7d24",
-      "size": 43024
+      "sha256": "93e5f69f534139009306d3fa21f70151732d9034400c11c9c6bf3d0f41b79299",
+      "size": 43231
     },
     {
       "path": "views/dashboard.js",
@@ -795,7 +815,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "efefde5b7df62e4af8b84a837ab874203f7fa0a3e269fa6419d8f8a8cb8a5eea",
+      "sha256": "5958c1c540982cc4300dcfa724075fb631c348b2259ff7acfaf130737e8b5ada",
       "size": 6906
     },
     {
@@ -805,8 +825,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "1e3386a07003fdfc4600a37b4f368480389063e9b22efedb20700fb40f2cf109",
-      "size": 64396
+      "sha256": "fd2e3787e8058664d561bcabc3c25d27d33e5b8dd6af08de9b65669513166425",
+      "size": 65669
     },
     {
       "path": "web/cloud.js",
@@ -835,8 +855,8 @@
     },
     {
       "path": "web/firebase.js",
-      "sha256": "d144633aaca0c33591e0dced4d37e733f9632c836ff5fdc53e7013121ab8421e",
-      "size": 25197
+      "sha256": "17536e3a248b4a5ff07036a0cadb1a8a4359289dfa6938555439bb762644feed",
+      "size": 26165
     },
     {
       "path": "web/gcal.js",
@@ -880,8 +900,8 @@
     },
     {
       "path": "web/lizenz.js",
-      "sha256": "b0647698b3e9c48fbcd6a696ba2125340fc5b1629ad217a19be479c66d91d0dc",
-      "size": 18430
+      "sha256": "60c3cb1a34bb9d2bd8054c8bd93d87b3cb6e986d5c1c48d65550746a3b264cca",
+      "size": 20143
     },
     {
       "path": "web/lizenzschluessel.js",
@@ -890,8 +910,8 @@
     },
     {
       "path": "web/lizenzverwaltung.js",
-      "sha256": "532ba8841f9fabe001c6f517d37009e8e14ce64143a6331cc2c1f5fd6ce1f018",
-      "size": 19865
+      "sha256": "e588961c49a3de10173d64c58da36d26be6944f97371ea6934805ad4f9fcbaa1",
+      "size": 23383
     },
     {
       "path": "web/mailversand.js",

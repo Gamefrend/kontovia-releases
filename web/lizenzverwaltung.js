@@ -29,7 +29,7 @@
 
 import { request, requestJson } from './netz.js';
 import BUILTIN from './cloudconfig.js';
-import { scheinAusstellen, scheinPruefen, emailNorm, emailVarianten, OEFFENTLICHER_SCHLUESSEL, STUFEN } from './lizenz.js';
+import { scheinAusstellen, scheinPruefen, tarifeSignieren, tarifePruefenSigniert, emailNorm, emailVarianten, OEFFENTLICHER_SCHLUESSEL, STUFEN } from './lizenz.js';
 import { DEFAULT_KDF, deriveKey, seal, open, randomBytes, toBase64, fromBase64, utf8, fromUtf8, wipe } from './kern.js';
 
 const STORAGE = 'https://firebasestorage.googleapis.com/v0/b';
@@ -379,6 +379,89 @@ export async function serverModusSetzen(kopf, testbetrieb, cfg = null) {
     throw deutlich(err);
   }
   return !!testbetrieb;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Tarif-Einstellung: welcher Bereich und welche Funktion zu welchem Tarif gehört */
+/* -------------------------------------------------------------------------- */
+
+const TARIFE_PFAD = 'konfig/tarife.json';
+const KEY_RE = /^[A-Za-z][A-Za-z0-9_]{0,39}$/;
+
+/**
+ * Prüft die Form der Einstellung (die inhaltliche Prüfung gegen die bekannten Funktionen macht lib/tarife.js beim
+ * Anwenden): Funktionen → Stufe, Grenzen → Stufe → Name → Zahl oder null. Gibt eine bereinigte Kopie zurück.
+ */
+export function tarifePruefen(roh) {
+  const aus = { v: 1, funktionen: {}, grenzen: {} };
+  const f = roh?.funktionen;
+  if (f && typeof f === 'object') {
+    for (const [k, v] of Object.entries(f)) {
+      if (!KEY_RE.test(k)) continue;
+      if (!STUFEN.includes(v)) throw fehler('TARIFE_FORM', `Ungültige Stufe für ${k}.`);
+      aus.funktionen[k] = v;
+    }
+  }
+  const g = roh?.grenzen;
+  if (g && typeof g === 'object') {
+    for (const [stufe, zeile] of Object.entries(g)) {
+      if (!STUFEN.includes(stufe) || !zeile || typeof zeile !== 'object') continue;
+      for (const [was, n] of Object.entries(zeile)) {
+        if (!KEY_RE.test(was)) continue;
+        if (n !== null && !(Number.isInteger(n) && n >= 0 && n <= 100000)) throw fehler('TARIFE_FORM', `Ungültige Grenze für ${was}.`);
+        (aus.grenzen[stufe] ??= {})[was] = n;
+      }
+    }
+  }
+  return aus;
+}
+
+/**
+ * Die veröffentlichte Einstellung (nur Abweichungen) oder `null`, wenn keine liegt. Eine Datei ohne gültige
+ * Signatur (ältere Fassung, von Hand gelegt) gilt bei keinem Konto: dann `{unsigniert: true}`.
+ */
+export async function tarifeLesen(kopf, cfg = null, schluessel = OEFFENTLICHER_SCHLUESSEL) {
+  let d;
+  try {
+    d = await jsonLesen(bucket(cfg), TARIFE_PFAD, kopf);
+  } catch (err) {
+    throw deutlich(err);
+  }
+  if (!d) return null;
+  try {
+    return { ...(await tarifePruefenSigniert(d.signiert, schluessel)), signiert: d.signiert };
+  } catch {
+    return { unsigniert: true };
+  }
+}
+
+/**
+ * Die Einstellung signieren und veröffentlichen: gilt für jedes Konto beim nächsten Abgleich mit der Cloud oder bei
+ * der nächsten Suche nach Updates. Ohne geladenen Signierschlüssel geht es nicht (sonst nähme kein Konto sie an).
+ * Die Datei ist öffentlich lesbar; geheim ist nichts daran, echt macht sie allein die Signatur.
+ */
+export async function tarifeSetzen(kopf, konfig, cfg = null) {
+  if (!signierer) throw fehler('LIZENZ_SCHLUESSEL', 'Zuerst im Reiter „Lizenzen“ den Signierschlüssel laden.');
+  const inhalt = { ...tarifePruefen(konfig), ts: new Date().toISOString() };
+  const signiert = await tarifeSignieren(inhalt, signierer);
+  try {
+    await requestJson(`${STORAGE}/${enc(bucket(cfg))}/o?uploadType=media&name=${enc(TARIFE_PFAD)}`, {
+      method: 'POST', headers: { ...kopf, 'content-type': 'application/json' }, body: new TextEncoder().encode(JSON.stringify({ v: 2, signiert })), timeoutMs: 30000,
+    });
+  } catch (err) {
+    throw deutlich(err);
+  }
+  return { ...inhalt, signiert };
+}
+
+/** Die Veröffentlichung entfernen: Es gelten wieder die eingebauten Werte. */
+export async function tarifeLoeschen(kopf, cfg = null) {
+  try {
+    await requestJson(`${STORAGE}/${enc(bucket(cfg))}/o/${enc(TARIFE_PFAD)}`, { method: 'DELETE', headers: { ...kopf }, timeoutMs: 20000 });
+  } catch (err) {
+    if (err.status !== 404) throw deutlich(err);
+  }
+  return true;
 }
 
 /** Einen Eintrag der Kontenliste entfernen (z. B. auf Wunsch der Person). */

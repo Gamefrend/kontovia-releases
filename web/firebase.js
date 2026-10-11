@@ -48,6 +48,25 @@ export function anmeldungUngueltig(err) {
   );
 }
 
+/**
+ * Die signierte Tarif-Einstellung des Betreibers holen: konfig/tarife.json, öffentlich lesbar, ohne Anmeldung und
+ * ohne jede Angabe über das Konto (nur beim Cloud-Abgleich oder mit der erlaubten Update-Prüfung, lib/tarifkonfig.js).
+ * Geprüft wird die Signatur in bridge.js (lizenz.js: tarifePruefenSigniert).
+ * @returns {Promise<{art:'gefunden'|'fehlt'|'unklar'|'netz', signiert?:string}>}
+ */
+export async function tarifeHolen(bucket) {
+  if (!bucket) return { art: 'unklar' };
+  try {
+    const res = await request(`${STORAGE}/${enc(bucket)}/o/${enc('konfig/tarife.json')}?alt=media`, { timeoutMs: 20000, maxBytes: 32 * 1024 });
+    if (res.status === 404) return { art: 'fehlt' };
+    if (res.status !== 200) return { art: 'unklar' };
+    const d = JSON.parse(new TextDecoder().decode(res.body));
+    return typeof d?.signiert === 'string' ? { art: 'gefunden', signiert: d.signiert } : { art: 'unklar' };
+  } catch {
+    return { art: 'netz' };
+  }
+}
+
 export class FirebaseBackend {
   /**
    * @param {{apiKey:string, bucket:string, clientId:string, clientSecret:string, zeigeCode:Function}} cfg

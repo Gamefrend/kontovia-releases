@@ -94,11 +94,49 @@ const vonBase64Url = (text) => {
   return Uint8Array.from(atob(s + '='.repeat((4 - (s.length % 4)) % 4)), (c) => c.charCodeAt(0));
 };
 
-/** Schein bauen und signieren (Lizenzverwaltung, scripts/lizenz-ausstellen.js, Prüfungen). `privat` ist ein CryptoKey zum Signieren. */
-export async function scheinAusstellen(inhalt, privat) {
-  const kopf = `${PRAEFIX}.${zuBase64Url(new TextEncoder().encode(JSON.stringify({ v: 1, ...inhalt })))}`;
+/** `<praefix>.<Inhalt>.<Signatur>` bauen. Das Präfix trennt Scheine (KV1) von der Tarif-Einstellung (KT1). */
+async function signieren(praefix, inhalt, privat) {
+  const kopf = `${praefix}.${zuBase64Url(new TextEncoder().encode(JSON.stringify({ v: 1, ...inhalt })))}`;
   const signatur = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, privat, new TextEncoder().encode(kopf));
   return `${kopf}.${zuBase64Url(signatur)}`;
+}
+
+/** Signatur und Präfix prüfen; gibt den Inhalt zurück oder `null`, wenn etwas nicht stimmt. */
+async function signiertLesen(praefix, text, schluessel) {
+  const teile = String(text || '').trim().split('.');
+  if (teile.length !== 3 || teile[0] !== praefix) return { format: false };
+  let echt = false;
+  try {
+    const key = await crypto.subtle.importKey('jwk', schluessel, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+    echt = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, vonBase64Url(teile[2]), new TextEncoder().encode(`${teile[0]}.${teile[1]}`));
+  } catch { echt = false; }
+  if (!echt) return { format: true, echt: false };
+  let inhalt;
+  try { inhalt = JSON.parse(new TextDecoder().decode(vonBase64Url(teile[1]))); } catch { inhalt = null; }
+  return { format: true, echt: true, inhalt };
+}
+
+/** Schein bauen und signieren (Lizenzverwaltung, scripts/lizenz-ausstellen.js, Prüfungen). `privat` ist ein CryptoKey zum Signieren. */
+export const scheinAusstellen = (inhalt, privat) => signieren(PRAEFIX, inhalt, privat);
+
+/** Präfix der signierten Tarif-Einstellung (konfig/tarife.json). */
+export const TARIF_PRAEFIX = 'KT1';
+
+/** Die Tarif-Einstellung des Betreibers signieren (lizenzverwaltung.js: tarifeSetzen). */
+export const tarifeSignieren = (inhalt, privat) => signieren(TARIF_PRAEFIX, inhalt, privat);
+
+/**
+ * Prüft die signierte Tarif-Einstellung und gibt ihren Inhalt `{funktionen, grenzen, ts}` zurück. Ohne gültige
+ * Signatur des Betreibers wirft sie (TARIFE_SIGNATUR): Eine selbst geschriebene Einstellung im Browser-Speicher
+ * oder im Cloud-Speicher gilt nie. Die inhaltliche Bereinigung macht lib/tarife.js: konfigBereinigen.
+ */
+export async function tarifePruefenSigniert(text, schluessel = OEFFENTLICHER_SCHLUESSEL) {
+  const r = await signiertLesen(TARIF_PRAEFIX, text, schluessel);
+  const inhalt = r.inhalt;
+  if (!r.echt || !inhalt || inhalt.v !== 1 || typeof inhalt !== 'object') {
+    throw fehler('TARIFE_SIGNATUR', 'Die Tarif-Einstellung ist nicht vom Betreiber signiert.');
+  }
+  return { funktionen: inhalt.funktionen || {}, grenzen: inhalt.grenzen || {}, ts: typeof inhalt.ts === 'string' ? inhalt.ts : '' };
 }
 
 /**
@@ -107,16 +145,10 @@ export async function scheinAusstellen(inhalt, privat) {
  * Ein Schein gilt entweder für ein Gerät (`geraet`) oder für ein Konto (`email`), nie für beides.
  */
 export async function scheinPruefen(text, schluessel = OEFFENTLICHER_SCHLUESSEL) {
-  const teile = String(text || '').trim().split('.');
-  if (teile.length !== 3 || teile[0] !== PRAEFIX) throw fehler('LIZENZ_FORMAT', 'Das ist kein Lizenzschein von Kontovia.');
-  let echt = false;
-  try {
-    const key = await crypto.subtle.importKey('jwk', schluessel, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
-    echt = await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, key, vonBase64Url(teile[2]), new TextEncoder().encode(`${teile[0]}.${teile[1]}`));
-  } catch { echt = false; }
-  if (!echt) throw fehler('LIZENZ_SIGNATUR', 'Der Lizenzschein ist nicht echt oder wurde verändert.');
-  let inhalt;
-  try { inhalt = JSON.parse(new TextDecoder().decode(vonBase64Url(teile[1]))); } catch { inhalt = null; }
+  const r = await signiertLesen(PRAEFIX, text, schluessel);
+  if (!r.format) throw fehler('LIZENZ_FORMAT', 'Das ist kein Lizenzschein von Kontovia.');
+  if (!r.echt) throw fehler('LIZENZ_SIGNATUR', 'Der Lizenzschein ist nicht echt oder wurde verändert.');
+  const inhalt = r.inhalt;
   const ab = Date.parse(inhalt?.ab);
   const bis = Date.parse(inhalt?.bis);
   const geraet = typeof inhalt?.geraet === 'string' ? inhalt.geraet : '';

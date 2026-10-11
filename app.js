@@ -16,13 +16,16 @@ import { startCalendarSync, stopCalendarSync } from './lib/gcalsync.js';
 import { VERSIONEN } from './lib/versionen.js';
 import { mitCodeVerbinden, nachDemVerbinden } from './lib/koppeln.js';
 import { beimEntsperren, hinweisKasten, hinweisVerdrahten } from './lib/zulassung.js';
-import { entsperrWege, kontenMenue, kontenAufSperrbildschirm, nachrichtHolen, kontoName, kontoSchluessel } from './lib/zugaenge.js';
+import { abmelden, entsperrWege, kontenMenue, kontenAufSperrbildschirm, nachrichtHolen, kontoName, kontoSchluessel } from './lib/zugaenge.js';
 import { feedbackOeffnen, feedbackNachsenden, entwicklerKlick } from './lib/feedback.js';
 import { rechtsfuss, rechtslinks, nutzungPruefen, nutzungVermerken, entwicklungsKasten, entwicklungsLeiste, ENTWICKLUNG_TITEL, ENTWICKLUNG_TEXT } from './lib/recht.js';
 import { nutzerWaehlen, nutzerMenue, nutzerAnzeigen, kannSchreiben } from './lib/benutzer.js';
 import { sucheOeffnen, SUCHE_KUERZEL } from './lib/suche.js';
-import { lizenzLaden, lizenzAbgleichen, lizenzVergessen, kann } from './lib/lizenz.js';
-import { lizenzOberflaeche, erlaubt } from './lib/lizenzui.js';
+import { lizenzLaden, lizenzAbgleichen, lizenzVergessen, kann, beiLizenz } from './lib/lizenz.js';
+import { lizenzOberflaeche, erlaubt, sperrKarteZeigen } from './lib/lizenzui.js';
+import { bereichFunktion } from './lib/tarife.js';
+import { tarifkonfigAusCache } from './lib/tarifkonfig.js';
+import { istBetreiber } from './lib/admin.js';
 import { spracheStarten, spracheGewaehlt, spracheMerken, spracheSetzen, sprache, sprachWahl, sprachWahlVerdrahten, beiSprachwechsel } from './lib/sprache.js';
 
 /* Der Assistent lädt erst, wenn ihn jemand öffnet (lib/assistentfenster.js). */
@@ -49,6 +52,8 @@ export const VIEWS = {
   master: { title: 'Stammdaten', icon: 'master', mod: () => import('./views/master.js'), key: '8' },
   settings: { title: 'Einstellungen', icon: 'settings', mod: () => import('./views/settings.js'), key: ',' },
   help: { title: 'Hilfe', icon: 'help', mod: () => import('./views/help.js') },
+  // Nur für den Betreiber (Knopf in der Seitenleiste statt „Feedback“); nicht in NAV_GRUPPEN.
+  admin: { title: 'Admin', icon: 'shield', mod: () => import('./views/admin.js') },
 };
 
 /** Nach der ersten Ansicht die übrigen in Ruhe vorladen, damit der Wechsel nicht wartet. */
@@ -148,6 +153,8 @@ async function boot() {
   betragHinweiseBeobachten();
   // Krone und Sperre der Premium-Funktionen (Attribute data-krone / data-premium).
   lizenzOberflaeche();
+  // Was der Betreiber zuletzt an den Tarifen eingestellt hat, gilt auch ohne Netz (nur mit gültiger Signatur).
+  await tarifkonfigAusCache().catch(() => {});
   try {
     appInfo = await api.app.info();
     // Ohne Gerätekennung könnte das Änderungsjournal beim Abgleich zweier
@@ -1153,13 +1160,14 @@ export function renderUpdateButton() {
 /* Hülle                                                                       */
 /* -------------------------------------------------------------------------- */
 
-/** Bereiche, die ganz zu einer Premium-Funktion gehören (Krone in der Seitenleiste; die Ansicht zeigt die Sperrkarte). */
-const BEREICH_FUNKTION = { kontoimport: 'kontoauszug' };
+/* Bereiche, die ganz zu einer Premium-Funktion gehören, stehen in lib/tarife.js (`bereichFunktion`): Krone in der
+   Seitenleiste, die Ansicht zeigt die Sperrkarte. Welcher Bereich zu welchem Tarif gehört, stellt der Betreiber ein. */
 
 function navItem(key) {
   const v = VIEWS[key];
+  const sperre = bereichFunktion(key);
   return html`
-    <div class="nav-item ${router.view === key ? 'active' : ''}" data-view="${key}" ${raw(BEREICH_FUNKTION[key] ? `data-krone="${BEREICH_FUNKTION[key]}"` : '')} role="button" tabindex="0" aria-current="${router.view === key ? 'page' : 'false'}" title="${v.key ? `${v.title} (${/\d/.test(v.key) ? 'Alt' : MOD}+${v.key})` : v.title}">
+    <div class="nav-item ${router.view === key ? 'active' : ''}" data-view="${key}" ${raw(sperre ? `data-krone="${sperre}"` : '')} role="button" tabindex="0" aria-current="${router.view === key ? 'page' : 'false'}" title="${v.key ? `${v.title} (${/\d/.test(v.key) ? 'Alt' : MOD}+${v.key})` : v.title}">
       ${icon(v.icon, 18)}<span>${v.title}</span>
     </div>`;
 }
@@ -1172,6 +1180,19 @@ function navHtml() {
   });
   return a + (a && b ? '<div class="nav-sep"></div>' : '') + b + '<div class="nav-spacer"></div>' + c;
 }
+
+/** Zeigt dem Betreiber „Admin“ statt „Feedback“, sobald sein Cloud-Konto verbunden ist. */
+export async function adminKnopfAktualisieren() {
+  const betreiber = await istBetreiber();
+  const admin = document.getElementById('adminBtn');
+  const rueck = document.getElementById('feedbackBtn');
+  if (!admin || !rueck) return;
+  admin.hidden = !betreiber;
+  rueck.hidden = betreiber;
+  admin.classList.toggle('active', router.view === 'admin');
+}
+// Die Cloud-Karte meldet, wenn sich die Verbindung geändert hat (Verbinden, Trennen).
+document.addEventListener('kontovia:cloud-geaendert', () => adminKnopfAktualisieren());
 
 /** Zeichnet die Einträge neu, nachdem Auswahl oder Reihenfolge sich geändert haben; die Marke bleibt. */
 export function navNeuZeichnen() {
@@ -1274,10 +1295,12 @@ function renderShell() {
           <div id="updateSlot"></div>
           <div id="themeSlot"></div>
           <button class="btn ghost block" id="feedbackBtn" title="Rückmeldung geben, auf Wunsch mit Bildschirmfoto">${icon('chat', 16)}<span class="knopf-text">Feedback</span></button>
+          <button class="btn ghost block admin-knopf" id="adminBtn" type="button" data-view="admin" title="Admin: Tarife, Lizenzen und Rückmeldungen" hidden>${icon('shield', 16)}<span class="knopf-text">Admin</span></button>
           <button class="btn ghost block nutzer-knopf" id="nutzerBtn" type="button" aria-haspopup="menu" hidden></button>
           ${raw(rechtsfuss())}
           <div class="foot-knoepfe">
             <button class="btn ghost" id="lockBtn" title="Sperren (${MOD}+L)">${icon('lock', 16)}<span class="knopf-text">Sperren</span></button>
+            <button class="btn ghost" id="logoutBtn" title="Abmelden: dieses Konto von diesem Gerät entfernen, vorher wird abgeglichen">${icon('logout', 16)}<span class="knopf-text">Abmelden</span></button>
           </div>
         </div>
       </aside>
@@ -1343,7 +1366,12 @@ function renderShell() {
   subscribe((ev) => { if (ev?.type === 'nutzer' || ev?.type === 'db') nutzerAnzeigen(); });
   nutzerAnzeigen();
   $('#lockBtn').addEventListener('click', () => lockNow());
+  // Fragt vor dem Entfernen nach und gleicht vorher ab (lib/zugaenge.js).
+  $('#logoutBtn').addEventListener('click', () => abmelden());
   $('#feedbackBtn').addEventListener('click', () => feedbackOeffnen());
+  // Der Betreiber hat statt „Feedback“ den Admin-Bereich (Rückmeldungen lesen sich dort).
+  $('#adminBtn').addEventListener('click', () => { $('.shell')?.classList.remove('nav-offen'); navigate('admin'); });
+  adminKnopfAktualisieren();
   entwicklerKlick($('#versionLabel'));
   $('#newTxBtn').addEventListener('click', (e) => neueBuchungMenue(e.currentTarget));
   $('#searchBtn').addEventListener('click', () => sucheOeffnen({ sperren: lockNow }));
@@ -1443,6 +1471,19 @@ function hilfeKnopfSetzen(view, params) {
 }
 
 let ansichtLauf = 0;
+/** Der Bereich, der gerade statt der Ansicht als gesperrt erklärt wird (leer = die Ansicht läuft). */
+let gesperrterBereich = '';
+
+// Ändert sich die Lizenz oder die Tarif-Einstellung des Betreibers (nach dem Abgleich), stimmt eventuell die offene
+// Ansicht nicht mehr: gesperrt, obwohl frei geworden, oder umgekehrt. Dann neu zeichnen; die Seitenleiste bekommt ihre Kronen neu.
+beiLizenz((stand) => {
+  // Beim Sperren wird der Stand vergessen (null): dann nichts mehr zeichnen.
+  if (!stand || !$('#nav')) return;
+  navNeuZeichnen();
+  const soll = router.view === 'kontoimport' ? '' : bereichFunktion(router.view);
+  const sperrt = soll && !kann(soll) ? soll : '';
+  if (sperrt !== gesperrterBereich) refresh();
+});
 onNavigate(async (view, params) => {
   if (UMLEITUNG[view]) {
     const [ziel, extra] = UMLEITUNG[view];
@@ -1458,6 +1499,7 @@ onNavigate(async (view, params) => {
     n.classList.toggle('active', aktiv);
     n.setAttribute('aria-current', aktiv ? 'page' : 'false');
   });
+  $('#adminBtn')?.classList.toggle('active', view === 'admin');
   $('#viewTitle').textContent = conf.title;
   hilfeKnopfSetzen(view, params);
   $('#topActions').innerHTML = '';
@@ -1467,6 +1509,16 @@ onNavigate(async (view, params) => {
   seitenwechsel();
   content.innerHTML = '<div class="skeleton" style="height:120px"></div>';
   const lauf = ++ansichtLauf;
+  // Gehört der ganze Bereich zu einem höheren Tarif, steht hier die Erklärung statt der Ansicht.
+  // (Der Kontoauszug zeigt seine Karte selbst, weil er in der Ansicht auch Reiter hat.)
+  const bereich = view === 'kontoimport' ? '' : bereichFunktion(view);
+  gesperrterBereich = bereich && !kann(bereich) ? bereich : '';
+  if (gesperrterBereich) {
+    sperrKarteZeigen(content, gesperrterBereich);
+    seite(content);
+    updateStatus();
+    return;
+  }
   try {
     const mod = await conf.mod();
     // Inzwischen weitergeklickt: die neuere Ansicht zeichnet.

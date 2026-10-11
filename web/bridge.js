@@ -36,6 +36,7 @@ import * as R from './rueckmeldung.js';
 import * as KI from './ki.js';
 import * as LZ from './lizenz.js';
 import * as LV from './lizenzverwaltung.js';
+import { tarifeHolen } from './firebase.js';
 
 /* Läuft diese Seite nur als kleines Fenster für Google Kalender? Dann reicht
    sie die Antwort an das eigentliche Kontovia-Fenster weiter und schließt
@@ -1171,8 +1172,26 @@ const api = {
       send('lizenz', r.status);
       return r;
     }),
-    /* Lizenzverwaltung (lizenzverwaltung.js), nur im Entwicklermenü: Die Regeln lassen allein den Betreiber zu. */
+    /**
+     * Die Tarif-Einstellung des Betreibers (welche Funktion ab welchem Tarif), nur mit gültiger Signatur. Geholt wird
+     * beim Cloud-Abgleich oder, ohne Cloud-Konto, nur mit `{ohneKonto:true}` aus der erlaubten Update-Prüfung.
+     */
+    tarife: handle(async (opt) => {
+      if (!cloud.status().linked && !opt?.ohneKonto) return { art: 'ohne-konto' };
+      const r = await tarifeHolen(BUILTIN.firebase?.bucket);
+      if (r.art !== 'gefunden') return r;
+      try {
+        return { art: 'gefunden', signiert: r.signiert, konfig: kopie(await LZ.tarifePruefenSigniert(r.signiert)) };
+      } catch {
+        return { art: 'ungueltig' };
+      }
+    }),
+    /** Eine gemerkte Einstellung beim Start prüfen (vor dem Entsperren; nur die Signatur, nichts Geheimes). */
+    tarifePruefen: handle(async (text) => kopie(await LZ.tarifePruefenSigniert(str(text, 40000))), { needsUnlock: false }),
+    /* Lizenzverwaltung (lizenzverwaltung.js), nur im Admin-Bereich: Die Regeln lassen allein den Betreiber zu. */
     verwaltung: {
+      tarifeLesen: handle(async () => kopie(await LV.tarifeLesen(await betreiberKopf('lizenzen')))),
+      tarifeSetzen: handle(async (konfig) => kopie(await LV.tarifeSetzen(await betreiberKopf('lizenzen'), kopie(konfig || {})))),      tarifeLoeschen: handle(async () => LV.tarifeLoeschen(await betreiberKopf('lizenzen'))),
       schluessel: handle(async (jwkText) => LV.schluesselLaden(str(jwkText, 4000))),
       schluesselDa: handle(async () => LV.schluesselDa()),
       /* Schlüssel in der Cloud: verschlüsselt mit einer Passphrase, nur das Betreiber-Konto kommt an die Datei. */

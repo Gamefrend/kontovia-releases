@@ -1989,3 +1989,45 @@ html[data-theme="dark"] { --krone: #f0bf61; }
 .lz-aktuell { margin-left: 8px; font-size: .8125rem; }
 .such-knopf .krone { margin-left: 6px; }
 .shell.nav-schmal .such-knopf .krone, .shell.nav-schmal .nav-item .krone { display: none; }
+
+/* Sperrkarte: wofür, ab welchem Tarif, was das Konto hat. Am Telefon volle Breite, Knöpfe untereinander. */
+.sperr-stufen { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+@media (max-width: 640px) {
+  .sperr-karte { margin: 16px auto; max-width: none; }
+  .sperr-karte .card-body { padding: 28px 18px; }
+  .sperr-knoepfe { flex-direction: column; align-items: stretch; }
+  .sperr-knoepfe .btn { width: 100%; min-height: 44px; justify-content: center; }
+}
+
+/* Admin: Knopf in der Seitenleiste (ersetzt „Feedback“) und der Bereich selbst. */
+#feedbackBtn[hidden], .admin-knopf[hidden] { display: none; }
+.admin-knopf.active { background: var(--accent-soft, var(--surface-2)); color: var(--accent, inherit); }
+.admin .admin-reiter { display: flex; flex-wrap: wrap; }
+.admin .admin-reiter button { flex: 1 1 auto; }
+
+/* Tarife einstellen (lib/tarifverwaltung.js) */
+.tv-leiste { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; position: sticky; top: 0; z-index: 2; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.tv-leiste-stand, .tv-leiste-knoepfe { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.tv-liste { display: flex; flex-direction: column; }
+.tv-zeile { display: flex; align-items: center; justify-content: space-between; gap: 12px 20px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.tv-zeile.geaendert { box-shadow: inset 3px 0 0 var(--krone); padding-left: 10px; }
+.tv-name { display: flex; flex-direction: column; min-width: 0; flex: 1 1 200px; }
+.tv-titel { font-weight: 600; overflow-wrap: anywhere; }
+.tv-stufen { flex: 0 0 auto; }
+.tv-stufen button { min-height: 32px; }
+.tv-zahlen { display: grid; grid-template-columns: repeat(4, minmax(0, 92px)); gap: 8px; }
+.tv-zahl { display: flex; flex-direction: column; gap: 2px; }
+.tv-zahl input { width: 100%; min-height: 36px; }
+.tv-zahl input[aria-invalid="true"] { border-color: var(--neg); box-shadow: 0 0 0 1px var(--neg); }
+@media (max-width: 640px) {
+  .tv-leiste { padding: 8px; position: static; }
+  .tv-name { flex: 0 0 auto; }
+  .tv-leiste-knoepfe { width: 100%; }
+  .tv-leiste-knoepfe .btn { flex: 1 1 auto; min-height: 44px; justify-content: center; }
+  .tv-zeile { flex-direction: column; align-items: stretch; }
+  .tv-stufen { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; }
+  .tv-stufen button { min-height: 44px; padding-inline: 2px; font-size: .8125rem; }
+  .tv-zahlen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tv-zahl input { min-height: 44px; }
+  .tv-fuss .btn { width: 100%; min-height: 44px; justify-content: center; }
+}

@@ -273,6 +273,7 @@ function wireCloud(root, status) {
     } catch (e) {
       err('Trennen fehlgeschlagen', e.message);
     }
+    document.dispatchEvent(new CustomEvent('kontovia:cloud-geaendert'));
     renderCloudCard(root);
   });
 }
@@ -423,6 +424,8 @@ export async function nachWeiterleitung(email) {
  */
 async function firstLink(root) {
   await lizenzAbgleichen().catch((e) => console.error('Lizenz abgleichen:', e));
+  // Der Betreiber bekommt mit seinem Konto den Admin-Bereich.
+  document.dispatchEvent(new CustomEvent('kontovia:cloud-geaendert'));
   if (!kann('cloud')) {
     toast('Mit Google angemeldet', 'Abgleich und Sicherung in der Cloud gibt es ab dem Tarif Standard.');
     renderCloudCard(root);
