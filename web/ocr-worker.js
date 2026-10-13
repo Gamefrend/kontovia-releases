@@ -7,7 +7,7 @@
  *
  * Netz: Die CSP der Seite gilt in einem Worker nicht. Deshalb ersetzt diese Datei vor allem anderen fetch und
  * importScripts durch eine Sperre: Durch kommen nur die eigenen Dateien unter vendor/tesseract/ (Rechenkern und
- * Sprachpaket, beide liegen mit jeder Fassung im Zwischenspeicher). XMLHttpRequest, WebSocket, EventSource und
+ * Sprachpakete Deutsch und Englisch, alle liegen mit jeder Fassung im Zwischenspeicher). XMLHttpRequest, WebSocket, EventSource und
  * WebTransport gibt es hier nicht. Ohne Netz und ohne Zwischenspeicher im Browser (cacheMethod 'none' in ocr.js).
  */
 

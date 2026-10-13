@@ -3,9 +3,10 @@
  *
  * Seitenseite von Tesseract.js (vendor/tesseract/tesseract.esm.min.js): bereitet das Bild auf (drehen nach den
  * Angaben der Kamera, verkleinern, Graustufen, Kontrast) und schickt es an den abgeschotteten Worker
- * (ocr-worker.js), der den Text liest. Sprachpaket Deutsch (erkennt auch englische Wörter und Ziffern).
+ * (ocr-worker.js), der den Text liest. Sprachpakete Deutsch und Englisch (Deutsch zuerst; unsichere Wörter liest
+ * Tesseract mit dem englischen Paket nach, etwa bei Rechnungen ausländischer Anbieter).
  * Nichts davon geht ins Netz; Rechenkern und Sprachpaket kommen aus der eigenen Fassung im Zwischenspeicher.
- * Der Worker startet erst beim ersten Beleg (gut 5 MB laden, eine Sekunde einrichten) und wird nach zwei Minuten
+ * Der Worker startet erst beim ersten Beleg (gut 8 MB laden, ein, zwei Sekunden einrichten) und wird nach zwei Minuten
  * ohne Arbeit beendet, damit er keinen Speicher hält.
  *
  * Was im Text steht, deutet lib/beleglesen.js (Betrag, Datum, Lieferant); das hier liefert nur den Text.
@@ -15,6 +16,8 @@ const PFAD = (p) => new URL(p, import.meta.url).href;
 const LEERLAUF_MS = 2 * 60 * 1000;
 /** Längste Seite des aufbereiteten Bildes: genug für Kassenbons, ohne den Speicher kleiner Telefone zu sprengen. */
 const MAX_PIXEL = 2400;
+/** Sprachpakete in vendor/tesseract/ (HERKUNFT.md): Deutsch zuerst, Englisch für den Rest. */
+const SPRACHEN = 'deu+eng';
 
 let arbeiter = null; // Promise<Tesseract-Worker>
 let zeitgeber = null;
@@ -32,7 +35,7 @@ export function texterkennungMoeglich() {
 
 async function holen() {
   if (!arbeiter) {
-    arbeiter = import('./vendor/tesseract/tesseract.esm.min.js').then((m) => (m.default || m).createWorker('deu', 1, {
+    arbeiter = import('./vendor/tesseract/tesseract.esm.min.js').then((m) => (m.default || m).createWorker(SPRACHEN, 1, {
       workerPath: PFAD('./ocr-worker.js'),
       corePath: PFAD('./vendor/tesseract/tesseract-core-simd-lstm.wasm.js'),
       langPath: PFAD('./vendor/tesseract'),

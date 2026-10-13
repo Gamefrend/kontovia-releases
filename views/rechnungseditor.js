@@ -28,6 +28,7 @@ import {
 } from '../lib/rechnungsaktionen.js';
 import { vorschauDaten, pdfZeigen, bildWaehlen, bildAblegen, bildHolen, rahmenVon } from '../lib/rechnungsdateien.js';
 import { DOKUMENT_SPRACHEN } from '../lib/dokumenttexte.js';
+import { WAEHRUNGEN, istFremd, kursLesen, kursEingabe, kursGueltig, inEuro } from '../lib/waehrung.js';
 import { textDirektBearbeiten, bilderAusZwischenablage } from '../lib/textbearbeiten.js';
 import { erlaubt, lizenzFehlerZeigen } from '../lib/lizenzui.js';
 import { BELEGARTEN, istBeleg, belegPruefen, naechsteNummer } from '../lib/angebote.js';
@@ -262,6 +263,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
           ${ls ? '' : `<div class="field"><label for="ra_steuerfall">Umsatzsteuer</label><select id="ra_steuerfall" data-f="steuerfall">
             ${optionen(Object.entries(STEUERFAELLE).map(([k, f]) => [k, f.name]), r.steuerfall || 'standard')}</select></div>`}
           <div class="field"><label for="ra_sprache">Sprache</label><select id="ra_sprache" data-f="sprache">${optionen(DOKUMENT_SPRACHEN.map((l) => [l.code, l.name]), r.sprache === 'en' ? 'en' : 'de')}</select></div>
+          ${ls ? '' : waehrungFelder()}
           <div class="field"><label for="ra_nummer">Nummer</label><input id="ra_nummer" data-f="nummer" value="${esc(r.nummer || '')}" placeholder="${esc(vorschlag)}"></div>
           <div class="field"><label for="ra_datum">Datum</label><input id="ra_datum" type="date" data-f="datum" value="${esc(r.datum || '')}"></div>
           ${belegart === 'angebot' ? `<div class="field"><label for="ra_gueltig">Gültig bis</label><input id="ra_gueltig" type="date" data-f="gueltigBis" value="${esc(r.gueltigBis || '')}">
@@ -280,6 +282,21 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
     }));
   }
 
+  /** Währung der Rechnung; bei Fremdwährung der Kurs, mit dem Kontovia in Euro bucht (lib/waehrung.js). */
+  function waehrungFelder() {
+    const w = r.waehrung || 'EUR';
+    const liste = Object.entries(WAEHRUNGEN).concat(WAEHRUNGEN[w] ? [] : [[w, w]]).map(([k, n]) => [k, `${k} · ${n}`]);
+    return `<div class="field"><label for="ra_waehrung">Währung</label><select id="ra_waehrung" data-f="waehrung">${optionen(liste, w)}</select></div>
+      ${istFremd(w) ? `<div class="field"><label for="ra_kurs">Umrechnungskurs (1 € = … ${esc(w)}) <span class="re-pflicht">Pflicht</span></label>
+        <input id="ra_kurs" data-f="kurs" data-kurs inputmode="decimal" value="${esc(kursEingabe(r.kurs))}" placeholder="z. B. 1,0850">
+        <span class="hint">Gebucht wird in Euro. Für die Umsatzsteuer gilt der Monatskurs des Bundesfinanzministeriums.</span></div>` : ''}`;
+  }
+
+  /** Zeichen der Währung hinter Beträgen in den Positionen. */
+  function zeichen() { return istFremd(r.waehrung) ? r.waehrung : '€'; }
+  /** Summe einer Position: bei Euro mit €, bei Fremdwährung steht der Code in der Überschrift (sonst zu breit). */
+  function posSumme(cent) { return istFremd(r.waehrung) ? money(cent) : `${money(cent)} €`; }
+
   function angabenZeichnen() {
     if (BA) { belegAngabenZeichnen(); return; }
     const bezugNoetig = r.art === '384' || r.art === '381' || r.storno;
@@ -293,6 +310,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
           <div class="field"><label for="ra_steuerfall">Umsatzsteuer</label><select id="ra_steuerfall" data-f="steuerfall">
             ${optionen(Object.entries(STEUERFAELLE).map(([k, f]) => [k, f.name]), r.steuerfall || 'standard')}</select></div>
           <div class="field"><label for="ra_sprache">Sprache der Rechnung</label><select id="ra_sprache" data-f="sprache">${optionen(DOKUMENT_SPRACHEN.map((l) => [l.code, l.name]), r.sprache === 'en' ? 'en' : 'de')}</select></div>
+          ${waehrungFelder()}
           ${r.steuerfall === 'steuerfrei' ? `<div class="field full"><label for="ra_grund">Grund der Steuerbefreiung <span class="re-pflicht">Pflicht</span></label>
             <input id="ra_grund" data-f="befreiungsgrund" value="${esc(r.befreiungsgrund || '')}" placeholder="z. B. Steuerfreie Heilbehandlung nach § 4 Nr. 14 UStG"></div>` : ''}
           ${istVorlage ? '' : `
@@ -354,9 +372,9 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
           <div class="re-pos-zahlen">
             <label class="re-mini"><span>Menge</span><input data-p="menge" inputmode="decimal" value="${esc(dz(p.menge ?? ''))}"></label>
             <label class="re-mini"><span>Einheit</span><input data-p="einheit" list="reEinheiten" value="${esc(einheitText(p))}" autocomplete="off"></label>
-            <label class="re-mini"><span>Preis netto €</span><input data-p="preis" inputmode="decimal" value="${esc(moneyInput(p.preis))}"></label>
+            <label class="re-mini"><span>Preis netto ${esc(zeichen())}</span><input data-p="preis" inputmode="decimal" value="${esc(moneyInput(p.preis))}"></label>
             ${ohneSteuer ? '' : `<label class="re-mini"><span>USt</span><select data-p="satz">${optionen([[19, '19 %'], [7, '7 %'], [0, '0 %']].concat([19, 7, 0].includes(Number(p.satz)) ? [] : [[p.satz, satzText(p.satz)]]), Number(p.satz))}</select></label>`}
-            <div class="re-mini re-pos-summe"><span>Gesamt</span><strong data-summe="${esc(p.id)}">${esc(money(netto))} €</strong></div>
+            <div class="re-mini re-pos-summe"><span>Gesamt${istFremd(r.waehrung) ? ` <span translate="no">${esc(r.waehrung)}</span>` : ''}</span><strong data-summe="${esc(p.id)}">${esc(posSumme(netto))}</strong></div>
           </div>
         </div>
         <div class="re-pos-menue">
@@ -501,7 +519,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
     if (anz) anz.textContent = n === 1 ? '1 Position' : `${n} Positionen`;
     for (const p of r.positionen) {
       const el = root.querySelector(`[data-summe="${CSS.escape(p.id)}"]`);
-      if (el) el.textContent = `${money(Math.round((Number(p.menge) || 0) * (Number(p.preis) || 0)))} €`;
+      if (el) el.textContent = posSumme(Math.round((Number(p.menge) || 0) * (Number(p.preis) || 0)));
     }
   }
 
@@ -696,6 +714,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
 
   function wertAus(el) {
     if (el.dataset.geld !== undefined) return parseMoney(el.value);
+    if (el.dataset.kurs !== undefined) return kursLesen(el.value);
     if (el.dataset.zahl !== undefined) return el.value === '' ? 0 : Math.max(0, Math.round(Number(el.value) || 0));
     if (el.dataset.prozent !== undefined) return Math.max(0, Number(String(el.value).replace(',', '.')) || 0);
     return el.value;
@@ -736,6 +755,12 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
       aktualisieren();
     }
     if (el.dataset.f === 'zahlungsart' || el.dataset.f === 'art') zahlungZeichnen();
+    if (el.dataset.f === 'waehrung') {
+      if (!istFremd(r.waehrung)) r.kurs = 0;
+      angabenZeichnen();
+      positionenZeichnen();
+      aktualisieren();
+    }
     if (el.dataset.f === 'wiederholung.freq') {
       for (const id of ['#rw_bis', '#rw_anzahl']) { const f = $(id, root); if (f) f.disabled = !el.value; }
     }
@@ -947,7 +972,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
         <div class="kpi-list mb16">
           <div><div class="k">Nummer</div><div class="v">${esc(String(r.nummer || '').trim() || nextInvoiceNumber(Number(String(r.datum || todayISO()).slice(0, 4)), p.praefix))}</div></div>
           <div><div class="k">Kunde</div><div class="v">${esc(r.kaeufer?.name || '–')}</div></div>
-          <div><div class="k">Betrag</div><div class="v">${esc(betragText(b.brutto, r.waehrung))}</div></div>
+          <div><div class="k">Betrag</div><div class="v">${esc(betragText(b.brutto, r.waehrung))}${istFremd(r.waehrung) && kursGueltig(r.kurs) ? ` <span class="muted">(gebucht als ${esc(money(inEuro(b.brutto, r.kurs)))} €)</span>` : ''}</div></div>
         </div>
         <p class="mt0">Danach steht die Rechnung fest: Kontovia legt das PDF mit der E-Rechnung und die XRechnung unverändert ab.
           Ändern lässt sie sich dann nur noch durch Stornieren oder Korrigieren.</p>

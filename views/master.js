@@ -244,7 +244,7 @@ function contacts(root) {
 /* Konten                                                                      */
 /* -------------------------------------------------------------------------- */
 
-const ACCOUNT_KIND = { bank: 'Bankkonto', cash: 'Kasse', other: 'Sonstiges' };
+const ACCOUNT_KIND = { bank: 'Bankkonto', cash: 'Kasse', zahlungsdienst: 'Zahlungsdienst', other: 'Sonstiges' };
 
 function accounts(root) {
   const rows = sel.accounts();
@@ -635,7 +635,8 @@ function accountForm(a) {
         <select id="f_kind">
           <option value="bank" ${a.kind === 'bank' ? 'selected' : ''}>Bankkonto</option>
           <option value="cash" ${a.kind === 'cash' ? 'selected' : ''}>Kasse (Bargeld)</option>
-          <option value="other" ${a.kind === 'other' ? 'selected' : ''}>Sonstiges (PayPal, Kreditkarte …)</option>
+          <option value="zahlungsdienst" ${a.kind === 'zahlungsdienst' ? 'selected' : ''}>Zahlungsdienst (PayPal, Stripe)</option>
+          <option value="other" ${a.kind === 'other' ? 'selected' : ''}>Sonstiges (Kreditkarte …)</option>
         </select>
       </div>
       <div class="field"><label>IBAN</label><input id="f_iban" value="${a.iban || ''}"></div>

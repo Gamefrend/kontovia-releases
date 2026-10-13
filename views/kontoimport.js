@@ -11,6 +11,7 @@
  */
 
 import { esc, $, $$, money, fmtDate, fmtDateTime, int } from '../lib/util.js';
+import { istDienstKonto } from '../lib/zahlungsdienste.js';
 import { icon, modal, confirmDialog, ok, warn, err } from '../lib/ui.js';
 import { store, sel, beimSperren } from '../lib/store.js';
 import { navigate, router } from '../lib/router.js';
@@ -100,7 +101,7 @@ function schrittDatei(host, root) {
         <div class="ki-drop" id="kiDrop">
           ${icon('bank', 28).__raw}
           <strong>Kontoauszug hierher ziehen oder auswählen</strong>
-          <span class="small muted">CSV (Sparkasse, Volksbank, ING, DKB und andere), CAMT.053 (XML) und MT940</span>
+          <span class="small muted">CSV (Sparkasse, Volksbank, ING, DKB und andere), CAMT.053 (XML) und MT940, dazu Exporte von PayPal und Stripe</span>
           <button class="btn primary mt8" id="kiWahl" type="button">${icon('plus', 15).__raw} Datei wählen</button>
           <input type="file" id="kiDatei" hidden accept=".csv,.txt,.tsv,.xml,.sta,.mt940,.940,.camt,.stm">
         </div>
@@ -161,6 +162,11 @@ async function dateiLesen(datei, root) {
     const iban = IBAN_KURZ(res.konto?.iban);
     const passend = iban && sel.accounts().find((a) => IBAN_KURZ(a.iban) === iban);
     if (passend) st.kontoId = passend.id;
+    // Export eines Zahlungsdienstes: das Konto dieser Art, am besten mit dem Namen des Dienstes.
+    if (res.dienst) {
+      const k = sel.accounts().find((a) => istDienstKonto(a, res.dienst));
+      if (k) st.kontoId = k.id;
+    }
     st.vorlageName = st.vorlageName || datei.name.replace(/\.[^.]+$/, '').slice(0, 40);
     if (res.format === 'csv') { st.schritt = 'spalten'; zeichnen(root); return; }
     await weiterZuPruefen(root);
@@ -289,6 +295,8 @@ const FILTER = [
   ['schon', 'Schon importiert', (z) => z.schonImportiert],
 ];
 
+const FORMATNAME = { csv: 'CSV', camt: 'CAMT.053', mt940: 'MT940', paypal: 'PayPal', stripe: 'Stripe' };
+
 const kategorieName = (id) => sel.category(id)?.name || 'Ohne Kategorie';
 
 function zielText(z) {
@@ -297,6 +305,7 @@ function zielText(z) {
     return `${r}${z.mahnkosten ? `, dazu Mahnkosten ${money(z.mahnkosten)} €` : ''}${z.hinweis ? `, ${z.hinweis}` : ''}`;
   }
   if (z.art === 'ausgabe') return `Offene Ausgabe: ${sel.transaction(z.txId)?.description || ''}`;
+  if (z.art === 'uebertrag') return 'Übertrag zwischen Ihren Konten, wird nicht gebucht';
   if (z.art === 'wiederkehrend') return `Wiederkehrende Buchung ${sel.recurringRule(z.wiederkehrendId)?.template?.description || ''}`;
   if (z.art === 'regel' || z.art === 'neu') {
     const was = z.u.betrag > 0 ? 'Einnahme' : 'Ausgabe';
@@ -324,7 +333,7 @@ function schrittPruefen(host, root) {
   host.innerHTML = `
     <div class="card mb16"><div class="card-body">
       <div class="row between wrap" style="gap:10px">
-        <div><strong>${esc(st.name)}</strong><div class="small muted">${esc(g.format === 'csv' ? 'CSV' : g.format === 'camt' ? 'CAMT.053' : 'MT940')}, ${int(z.anzahl)} Umsätze vom ${esc(fmtDate(z.von))} bis ${esc(fmtDate(z.bis))}, Konto ${esc(konto?.name || '')}</div></div>
+        <div><strong>${esc(st.name)}</strong><div class="small muted">${esc(FORMATNAME[g.format] || g.format)}, ${int(z.anzahl)} Umsätze vom ${esc(fmtDate(z.von))} bis ${esc(fmtDate(z.bis))}, Konto ${esc(konto?.name || '')}</div></div>
         <button class="btn sm" id="kiAnders">${icon('left', 14).__raw} Andere Datei</button>
       </div>
       <p class="small mb0 mt8">Nichts ist gebucht. Ausgewählt sind nur sichere Treffer und Ihre eigenen Regeln. Kategorie-Vorschläge entstehen auf diesem Gerät aus Ihren früheren Buchungen und bekannten Händlernamen, nichts davon wird übertragen. Prüfen Sie den Rest und haken Sie an, was gebucht werden soll. Wer es eilig hat, bucht den Rest auch ohne Kategorie und ordnet später zu.</p>
@@ -365,11 +374,16 @@ function schrittPruefen(host, root) {
   const summe = () => {
     const gew = st.zeilen.filter((x) => x.gewaehlt);
     const zahlungen = gew.filter((x) => x.art === 'rechnung' || x.art === 'ausgabe').length;
-    const neu = gew.length - zahlungen;
-    const ein = gew.filter((x) => x.u.betrag > 0).reduce((s, x) => s + x.u.betrag, 0);
-    const aus = gew.filter((x) => x.u.betrag < 0).reduce((s, x) => s + x.u.betrag, 0);
+    const uebertraege = gew.filter((x) => x.art === 'uebertrag').length;
+    const neu = gew.length - zahlungen - uebertraege;
+    const gebucht = gew.filter((x) => x.art !== 'uebertrag');
+    const ein = gebucht.filter((x) => x.u.betrag > 0).reduce((s, x) => s + x.u.betrag, 0);
+    const aus = gebucht.filter((x) => x.u.betrag < 0).reduce((s, x) => s + x.u.betrag, 0);
     $('#kiSumme', host).innerHTML = gew.length
-      ? `<strong>${int(gew.length)} ausgewählt:</strong> ${int(zahlungen)} ${zahlungen === 1 ? 'Zahlung' : 'Zahlungen'} zu offenen Posten, ${int(neu)} neue ${neu === 1 ? 'Buchung' : 'Buchungen'}. Eingänge ${esc(money(ein))} €, Ausgänge ${esc(money(Math.abs(aus)))} €.`
+      // Eigene Satzform mit Überträgen: Platzhalter dürfen nicht aneinanderstoßen, sonst findet die Übersetzung den Satz nicht.
+      ? (uebertraege
+        ? `<strong>${int(gew.length)} ausgewählt:</strong> ${int(zahlungen)} ${zahlungen === 1 ? 'Zahlung' : 'Zahlungen'} zu offenen Posten, ${int(neu)} neue ${neu === 1 ? 'Buchung' : 'Buchungen'} und ${int(uebertraege)} ${uebertraege === 1 ? 'Übertrag' : 'Überträge'} ohne Buchung. Eingänge ${esc(money(ein))} €, Ausgänge ${esc(money(Math.abs(aus)))} €.`
+        : `<strong>${int(gew.length)} ausgewählt:</strong> ${int(zahlungen)} ${zahlungen === 1 ? 'Zahlung' : 'Zahlungen'} zu offenen Posten, ${int(neu)} neue ${neu === 1 ? 'Buchung' : 'Buchungen'}. Eingänge ${esc(money(ein))} €, Ausgänge ${esc(money(Math.abs(aus)))} €.`)
       : 'Nichts ausgewählt.';
     $('#kiBuchen', host).disabled = !gew.length;
     $('#kiBuchen', host).textContent = gew.length ? `${int(gew.length)} ${gew.length === 1 ? 'Umsatz' : 'Umsätze'} buchen …` : 'Buchen';
@@ -432,8 +446,9 @@ function zeileDialog(z, fertig) {
   const ein = u.betrag > 0;
   const rechnungen = st.ctx.rechnungen;
   const ausgaben = st.ctx.ausgaben;
-  let modus = z.art === 'rechnung' || z.art === 'ausgabe' ? 'zuordnen' : (z.art === 'neu' || z.art === 'regel' ? 'neu' : (z.art === 'wiederkehrend' ? 'wiederkehrend' : 'neu'));
-  if (z.art === 'keine') modus = 'neu';
+  let modus = z.art === 'rechnung' || z.art === 'ausgabe' ? 'zuordnen' : (z.art === 'uebertrag' ? 'uebertrag' : 'neu');
+  // Übertrag anbieten, wenn Kontovia ihn erkannt hat (Auszahlung eines Zahlungsdienstes).
+  const uebertragMoeglich = z.art === 'uebertrag' || !!z.uebertragMoeglich;
   const kontakte = sel.contacts();
   const m = modal({
     title: 'Umsatz zuordnen',
@@ -444,8 +459,10 @@ function zeileDialog(z, fertig) {
       <div class="seg mb16" role="group" aria-label="Zuordnung">
         <button type="button" data-modus="zuordnen" class="${modus === 'zuordnen' ? 'active' : ''}">${ein ? 'Zu einer offenen Rechnung' : 'Zu einer offenen Ausgabe'}</button>
         <button type="button" data-modus="neu" class="${modus === 'neu' ? 'active' : ''}">Als neue Buchung</button>
+        ${uebertragMoeglich ? `<button type="button" data-modus="uebertrag" class="${modus === 'uebertrag' ? 'active' : ''}">Übertrag</button>` : ''}
         <button type="button" data-modus="aus" class="${modus === 'aus' ? 'active' : ''}">Nicht buchen</button>
       </div>
+      <p class="small" id="zdUebertrag" ${modus === 'uebertrag' ? '' : 'hidden'}>Das Geld wandert zwischen zwei Ihrer Konten, etwa von PayPal auf das Bankkonto. Es ist weder Einnahme noch Ausgabe. Kontovia bucht nichts und merkt sich nur, dass der Umsatz erledigt ist.</p>
       <div id="zdZuordnen" ${modus === 'zuordnen' ? '' : 'hidden'}>
         <div class="field"><label for="zdZiel">${ein ? 'Offene Rechnung' : 'Offene Ausgabe'}</label>
           <select id="zdZiel"><option value="">Bitte wählen</option>${ein
@@ -473,6 +490,7 @@ function zeileDialog(z, fertig) {
   const zeigen = () => {
     g('zdZuordnen').hidden = modus !== 'zuordnen';
     g('zdNeu').hidden = modus !== 'neu';
+    g('zdUebertrag').hidden = modus !== 'uebertrag';
     $$('[data-modus]', m.root).forEach((b) => b.classList.toggle('active', b.dataset.modus === modus));
   };
   const kopie = () => ({ ...z, ziele: z.ziele ? [...z.ziele] : [] });
@@ -490,7 +508,7 @@ function zeileDialog(z, fertig) {
       } else { k.art = 'ausgabe'; k.txId = g('zdZiel').value; k.ziele = []; k.mahnkosten = 0; }
     } else if (modus === 'neu') {
       k.art = 'neu'; k.ziele = []; k.txId = ''; k.mahnkosten = 0; k.kategorieId = g('zdKat').value; k.ohneKategorie = !k.kategorieId; k.kontaktId = g('zdKontakt').value; k.beschreibung = g('zdText').value.trim();
-    } else { k.art = 'keine'; k.ziele = []; k.txId = ''; k.mahnkosten = 0; }
+    } else if (modus === 'uebertrag') { k.art = 'uebertrag'; k.ziele = []; k.txId = ''; k.mahnkosten = 0; } else { k.art = 'keine'; k.ziele = []; k.txId = ''; k.mahnkosten = 0; }
     if (modus !== 'neu') k.ohneKategorie = false;
     return k;
   };
@@ -548,7 +566,7 @@ function zeileDialog(z, fertig) {
 async function buchenFrage(root) {
   const gew = st.zeilen.filter((x) => x.gewaehlt);
   const zahlungen = gew.filter((x) => x.art === 'rechnung' || x.art === 'ausgabe');
-  const neu = gew.filter((x) => !(x.art === 'rechnung' || x.art === 'ausgabe'));
+  const neu = gew.filter((x) => !(x.art === 'rechnung' || x.art === 'ausgabe' || x.art === 'uebertrag'));
   const unsicher = gew.filter((x) => ['unsicher', 'wahrscheinlich'].includes(x.sicherheit)).length;
   const ohneKat = neu.filter((x) => !x.kategorieId && (x.art === 'neu' || x.art === 'regel')).length;
   const ja = await confirmDialog({
@@ -596,7 +614,7 @@ function schrittFertig(host, root) {
     <div class="card"><div class="card-body">
       <h2 class="mt0">${icon('check', 18).__raw} ${e.fehler.length ? 'Fertig, mit Hinweisen' : 'Fertig'}</h2>
       <p>Aus „${esc(e.datei)}“ ${e.ausgewaehlt === 1 ? 'wurde ein Umsatz' : `wurden ${int(e.ausgewaehlt)} Umsätze`} bearbeitet:
-        <strong>${int(e.bezahlt)}</strong> ${e.bezahlt === 1 ? 'Zahlung' : 'Zahlungen'} zu offenen Posten zugeordnet, <strong>${int(e.gebucht)}</strong> neue ${e.gebucht === 1 ? 'Buchung' : 'Buchungen'} angelegt${e.mahnkosten ? `, davon ${int(e.mahnkosten)} für Mahnkosten` : ''}.</p>
+        <strong>${int(e.bezahlt)}</strong> ${e.bezahlt === 1 ? 'Zahlung' : 'Zahlungen'} zu offenen Posten zugeordnet, <strong>${int(e.gebucht)}</strong> neue ${e.gebucht === 1 ? 'Buchung' : 'Buchungen'} angelegt${e.mahnkosten ? `, davon ${int(e.mahnkosten)} für Mahnkosten` : ''}.${e.uebertraege ? ` <span>${int(e.uebertraege)} ${e.uebertraege === 1 ? 'Übertrag zwischen Ihren Konten wurde' : 'Überträge zwischen Ihren Konten wurden'} nur vermerkt.</span>` : ''}</p>
       ${e.fehler.length ? `<div class="notice warn"><strong>${int(e.fehler.length)} ${e.fehler.length === 1 ? 'Umsatz wurde' : 'Umsätze wurden'} nicht gebucht:</strong><ul class="mb0">${e.fehler.map((f) => `<li>${esc(f.text)}: ${esc(f.grund)}</li>`).join('')}</ul></div>` : ''}
       <p class="small muted">Jede Buchung nennt die Datei als Herkunft, auch im Änderungsjournal. Dieselbe Datei noch einmal einzulesen, bucht nichts doppelt.</p>
       <div class="row wrap mt16" style="gap:8px">

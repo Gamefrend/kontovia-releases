@@ -1125,6 +1125,11 @@ html[data-theme="dark"] .re-blatt { border-color: transparent; }
 .re-mini input, .re-mini select { height: 36px; }
 .re-pos-summe { align-items: flex-end; justify-content: flex-end; padding-bottom: 8px; }
 .re-pos-summe strong { font-variant-numeric: tabular-nums; font-weight: 600; white-space: nowrap; }
+/* Schmale Karte (Editor neben der Vorschau): Zahlen in zwei Spalten, die Summe darunter, nichts ragt über den Rand. */
+@container (max-width: 600px) {
+  .re-pos-zahlen { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .re-pos-summe { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; padding-bottom: 0; }
+}
 .re-pos-menue { padding-top: 4px; }
 .re-summen { margin: 14px 0 0 auto; max-width: 340px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 .re-summe { display: flex; justify-content: space-between; gap: 16px; }

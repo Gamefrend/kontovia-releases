@@ -13,6 +13,7 @@ Belegen (Tesseract, seit 2.35, Nutzerentscheid vom 12.10.2026).
 | `tesseract/tesseract.esm.min.js`, `tesseract/worker.min.js` | `tesseract.js` 6.0.1 (npm), `dist/`, unverändert (schon LF) | Apache 2.0 (`tesseract/LICENSE-tesseract.js.md`); im Worker gebündelt: buffer, ieee754, regenerator-runtime, zlib.js (MIT/BSD, `tesseract/LICENSE-worker-bestandteile.txt`) |
 | `tesseract/tesseract-core-simd-lstm.wasm.js` | `tesseract.js-core` 6.0.0 (npm), unverändert: Tesseract 5 und Leptonica als WebAssembly (in der Datei eingebettet), nur LSTM, mit SIMD | Apache 2.0 (`tesseract/LICENSE-tesseract.js-core.txt`; Tesseract und Leptonica: Apache 2.0 bzw. BSD-artig) |
 | `tesseract/deu.traineddata.gz` | `@tesseract.js-data/deu` 1.0.0 (npm), `4.0.0_best_int/deu.traineddata.gz`, unverändert (aus tessdata_best von tesseract-ocr, ganzzahlig) | Paket MIT; Sprachdaten von tesseract-ocr: Apache 2.0 |
+| `tesseract/eng.traineddata.gz` | `@tesseract.js-data/eng` 1.0.0 (npm), `4.0.0_best_int/eng.traineddata.gz`, unverändert (seit 13.10.2026, Nutzerentscheid; geladen mit `npm pack`, dieselbe Quelle wie `deu`: deren Datei aus demselben Weg hat die Prüfsumme unten) | Paket MIT; Sprachdaten von tesseract-ocr: Apache 2.0 |
 
 SHA-256 von `sqlite3.mjs`: `058b526608afdd81c244540f525286275d7bcc6a11676d19fdda7be50502f10e`,
 von `sqlite3.wasm`: `b6aedab9eee5cd5de0f13498e0bf64bb5ee9cc786d1d0303cc365578b64d18ab`
@@ -38,7 +39,8 @@ SHA-256 der Texterkennung (die Prüfung `beleglesen` hält sie fest):
 `tesseract.esm.min.js` `da6267cfe5036ae718a59eece3b5744a4655b0b8faa9f16259362b783d74c9bb`,
 `worker.min.js` `38645599043239c0eb6db08a6504a92dcdc292200535f3e9339cd77c4443b842`,
 `tesseract-core-simd-lstm.wasm.js` `9d7c43fb206dc9f48475228b46bf35f888fa9e6259da2e67d5a75c77049f2dc7`,
-`deu.traineddata.gz` `306c4280d0cbed46fbff727486bd43b92730181bae80f56941a091f363bdf28b`.
+`deu.traineddata.gz` `306c4280d0cbed46fbff727486bd43b92730181bae80f56941a091f363bdf28b`,
+`eng.traineddata.gz` `45b4cb346724ac1774f1c36f42f182b887bcdb28ebe63e6fff90ac41f3fcff91`.
 
 **Tesseract** läuft nur im Rechenwerk der Texterkennung (`../ocr-worker.js`, ein
 eigener klassischer Worker) und nur, wenn jemand ein Foto oder einen Scan als Beleg
@@ -62,8 +64,8 @@ Prüfsummen hier, in `../sqlwerk.js` (`WASM_SHA256`) und in
 verschlüsselten Datenbank darf sich dabei nicht ändern (`cipher=chacha20`,
 `legacy=0`, `kdf_iter=64007` sind in `../sqlkern.js` fest eingestellt).
 
-Aktualisieren, Tesseract: `npm pack tesseract.js@<fassung> tesseract.js-core@<passend> @tesseract.js-data/deu`
-in einen leeren Ordner, die vier Dateien oben unverändert nach `tesseract/`, Prüfsummen hier und in
+Aktualisieren, Tesseract: `npm pack tesseract.js@<fassung> tesseract.js-core@<passend> @tesseract.js-data/deu @tesseract.js-data/eng`
+in einen leeren Ordner, die fünf Dateien oben unverändert nach `tesseract/`, Prüfsummen hier und in
 `scripts/pruefungen/beleglesen.test.js` nachtragen; prüfen, dass `worker.min.js` weiter nur über
 `fetch`/`importScripts` lädt (sonst greift die Sperre in `../ocr-worker.js` nicht) und die Optionen in `../ocr.js` noch gelten.
 

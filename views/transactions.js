@@ -20,6 +20,7 @@ import { neuesAnlagegut, anlageFelder, wireAnlageFelder, anlageAusFeldern } from
 import { eRechnungLesen, eRechnungAusDatei, xmlAusPdf, richtung } from '../lib/erechnung.js';
 import { eRechnungHtml, zeigeERechnung } from './erechnung.js';
 import { belegErkennen, lesbar as belegLesbar } from '../lib/belegerkennung.js';
+import { WAEHRUNGEN, istFremd, kursGueltig, kursLesen, kursEingabe, inEuro } from '../lib/waehrung.js';
 import { regelAusBuchung, TURNUS } from '../lib/wiederkehrend.js';
 import { ratenAnzahl, ratenPlan, ratenBuchungen, MAX_RATEN } from '../lib/raten.js';
 import { faelligeAnbieten } from './wiederkehrend.js';
@@ -674,6 +675,16 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
               </div>
             </div>
           </div>
+          <details class="mt8" id="fremdBox" ${tx.fremd ? 'open' : ''}>
+            <summary class="small muted" style="cursor:pointer;padding:4px 0">In fremder Währung</summary>
+            <div class="form-grid c3 mt8">
+              <div class="field"><label for="i_fremdW">Währung</label>
+                <select id="i_fremdW"><option value="">Keine, nur Euro</option>${Object.entries(WAEHRUNGEN).filter(([k]) => k !== 'EUR').map(([k, n]) => raw(html`<option value="${k}" ${raw(tx.fremd?.waehrung === k ? 'selected' : '')}>${k} · ${n}</option>`))}</select></div>
+              <div class="field"><label for="i_fremdBetrag">Betrag in dieser Währung</label><input class="money-input" id="i_fremdBetrag" inputmode="decimal" value="${tx.fremd ? moneyInput(tx.fremd.betrag) : ''}"></div>
+              <div class="field"><label for="i_fremdKurs">Kurs (1 € = …)</label><input id="i_fremdKurs" inputmode="decimal" value="${tx.fremd ? kursEingabe(tx.fremd.kurs) : ''}" placeholder="z. B. 1,0850"></div>
+            </div>
+            <span class="hint">Kontovia rechnet den Betrag oben in Euro um und bucht in Euro; Währung, Betrag und Kurs bleiben an der Buchung.</span>
+          </details>
           <div class="row" id="amountSummary" style="gap:22px;font-size:13px;padding-top:2px"></div>
         </div>
       </div>
@@ -898,7 +909,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     box.innerHTML = html`
       <div class="notice ok erech-hinweis mb8">
         <strong>E-Rechnung erkannt</strong> (${r.format}): ${partner?.name || 'ohne Namen'}${r.nummer ? ` · Nr. ${r.nummer}` : ''}
-        · ${money(r.brutto ?? r.zahlbetrag ?? 0)} € vom ${fmtDate(r.datum)}
+        · ${money(r.brutto ?? r.zahlbetrag ?? 0)} ${istFremd(r.waehrung) ? r.waehrung : '€'} vom ${fmtDate(r.datum)}
         ${saetze.length > 1 ? raw(`<div class="small mt8">Die Rechnung enthält mehrere Steuersätze (${esc(saetze.map((s) => `${s} %`).join(', '))}). Übernommen werden Datum, Nummer und Kontakt; die Beträge bitte je Steuersatz als eigene Buchung erfassen.</div>`) : ''}
         <div class="row wrap mt8">
           ${locked ? '' : raw('<button type="button" class="btn sm primary" data-erech-take>Werte übernehmen</button>')}
@@ -948,6 +959,15 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     const saetze = [...new Set(r.steuersaetze.map((s) => s.satz))];
     // Ohne Aufschlüsselung nur dann 0 %, wenn die Rechnung auch keine Steuer ausweist.
     const satz = saetze.length === 1 ? saetze[0] : saetze.length === 0 && !r.steuer ? 0 : null;
+    if (istFremd(r.waehrung)) {
+      // Fremdwährung: Der Betrag steht nicht in Euro. Er kommt ins Feld der Währung; mit dem Kurs rechnet Kontovia um.
+      tx.fremd = { waehrung: r.waehrung, betrag: Math.abs(r.brutto ?? r.zahlbetrag ?? 0), kurs: 0 };
+      tx.gross = 0; tx.net = 0; tx.vat = 0;
+      inputMode = 'gross';
+      draw();
+      warn(`Rechnung in ${r.waehrung}`, 'Bitte tragen Sie unter „In fremder Währung“ den Kurs ein, dann rechnet Kontovia den Betrag in Euro um.');
+      return;
+    }
     if (klein) {
       const brutto = Math.abs(r.brutto ?? r.zahlbetrag ?? 0);
       if (brutto) { tx.gross = vz * brutto; tx.net = tx.gross; tx.vat = 0; inputMode = 'gross'; }
@@ -1021,6 +1041,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       v.datum ? `vom ${fmtDate(v.datum)}` : '',
       v.saetze.length > 1 ? `USt ${v.saetze.join(' und ')} %` : v.satz !== null ? `USt ${v.satz} %` : '',
       v.nummer ? `Nr. ${v.nummer}` : '',
+      v.kategorieId && sel.category(v.kategorieId) ? `Kategorie ${sel.category(v.kategorieId).name}` : '',
     ].filter(Boolean);
     const quelle = { pdf: 'aus dem PDF', scan: 'aus dem Scan', foto: 'aus dem Foto' }[gelesen.quelle] || '';
     box.innerHTML = html`
@@ -1054,6 +1075,9 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     if (isNew && v.faellig && v.faellig > todayISO()) tx.paidDate = '';
     if (v.nummer && !tx.invoiceNumber) tx.invoiceNumber = v.nummer.slice(0, 60);
     if (v.kontaktId) tx.contactId = v.kontaktId;
+    // Kategorie nur, wenn noch keine gewählt ist und sie zur Art der Buchung passt.
+    const kat = v.kategorieId && sel.category(v.kategorieId);
+    if (kat && !tx.categoryId && kat.kind === tx.type) tx.categoryId = kat.id;
     if (v.brutto !== null && v.brutto > 0) {
       const vz = tx.gross < 0 ? -1 : 1;
       if (!klein && [19, 7, 0].includes(v.satz)) tx.vatRate = v.satz;
@@ -1123,6 +1147,12 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     tx.gross = split.gross;
     tx.net = split.net;
     tx.vat = split.vat;
+    // Fremdwährung (lib/waehrung.js): nur mit Währung, Betrag und gültigem Kurs; `netto`, wenn der Betrag netto eingegeben wurde.
+    const fw = g('fremdW')?.value || '';
+    const fk = kursLesen(g('fremdKurs')?.value);
+    const fb = parseMoney(g('fremdBetrag')?.value || '');
+    if (istFremd(fw) && kursGueltig(fk) && fb) tx.fremd = { waehrung: fw, betrag: Math.abs(fb), kurs: fk, ...(inputMode === 'net' && !klein ? { netto: true } : {}) };
+    else delete tx.fremd;
     tx.attachments = attachments.map((a) => a.id);
   }
 
@@ -1274,6 +1304,13 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     }));
     const amt = form.querySelector('#i_amount');
     amt.addEventListener('input', updateAmountSummary);
+    // Fremdwährung: Betrag und Kurs ergeben den Euro-Betrag oben.
+    const umrechnen = () => {
+      const k = kursLesen(form.querySelector('#i_fremdKurs').value);
+      const b = parseMoney(form.querySelector('#i_fremdBetrag').value || '');
+      if (istFremd(form.querySelector('#i_fremdW').value) && kursGueltig(k) && b) { amt.value = moneyInput(inEuro(Math.abs(b), k)); updateAmountSummary(); }
+    };
+    for (const id of ['#i_fremdW', '#i_fremdBetrag', '#i_fremdKurs']) form.querySelector(id)?.addEventListener('input', umrechnen);
     amt.addEventListener('focus', () => amt.select());
     amt.addEventListener('blur', () => { if (amt.value.trim()) { amt.value = moneyInput(parseMoney(amt.value)); updateAmountSummary(); } });
     form.querySelector('#i_vatRate')?.addEventListener('change', updateAmountSummary);

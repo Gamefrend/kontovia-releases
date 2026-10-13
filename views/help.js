@@ -213,7 +213,13 @@ function anleitung(root) {
         bei einer Teilzahlung gleich mit.</p>
         <p><strong>Online bezahlen.</strong> Tragen Sie unter Rechnungen → Gestaltung einen Link zum Bezahlen ein, etwa Ihren
         PayPal.me-Link oder einen Zahlungslink Ihrer Bank. Dann steht er mit einem QR-Code auf jeder offenen Rechnung und in der
-        E-Mail; Betrag und Rechnungsnummer setzt Kontovia selbst ein. Kontovia ruft den Link nie selbst auf.</p>
+        E-Mail; Betrag und Rechnungsnummer setzt Kontovia selbst ein. Kontovia ruft den Link nie selbst auf. Was über PayPal oder
+        Stripe bezahlt wurde, ordnet Kontovia den Rechnungen zu, wenn Sie den Export des Dienstes wie einen Kontoauszug einlesen.</p>
+        <p><strong>Andere Währung.</strong> Im Rechnungsfenster wählen Sie neben der Sprache die Währung, etwa US-Dollar, und tragen
+        den Kurs ein (1 € = … USD). Positionen und Summen stehen dann in dieser Währung; die Rechnung nennt den Kurs und, wenn
+        Umsatzsteuer anfällt, die Steuer in Euro. Gebucht wird in Euro. Für die Umsatzsteuer gilt der Monatskurs, den das
+        Bundesfinanzministerium veröffentlicht. Kommt später auf dem Konto ein etwas anderer Euro-Betrag an, übernimmt der
+        Kontoauszug ihn als Kursdifferenz. Erinnerungen und Mahnungen für solche Rechnungen schreiben Sie selbst.</p>
         <p class="small">Der automatische Empfang von E-Rechnungen kommt mit einer der nächsten Versionen. Bis dahin
         lesen Sie eine erhaltene E-Rechnung unter Rechnungen → Eingang ein.</p>
       </div></div>
@@ -236,9 +242,13 @@ function anleitung(root) {
         Absender. Über den Belegen erscheint dann „Beleg gelesen“; mit „Werte übernehmen“ stehen sie im Fenster. Prüfen Sie
         sie, bevor Sie die Buchung anlegen.</p>
         <p><strong>Alles bleibt auf diesem Gerät.</strong> Der Beleg wird nicht hochgeladen, auch nicht zum Lesen. Das erste
-        Foto braucht ein, zwei Sekunden länger, weil die Texterkennung startet.</p>
+        Foto braucht ein, zwei Sekunden länger, weil die Texterkennung startet. Sie liest deutsche und englische Belege.</p>
+        <p><strong>Bekannte Läden und Anbieter.</strong> Supermärkte, Tankstellen, Baumärkte, die Bahn, Post, Telefon- und
+        Softwareanbieter erkennt Kontovia am Namen, auch wenn der Kopf des Bons schlecht lesbar ist. Dazu schlägt es eine
+        Kategorie vor: wie Sie beim selben Lieferanten früher gebucht haben, sonst nach der Art des Ladens, etwa Kfz-Kosten für
+        die Tankstelle. Einen Einkauf im Supermarkt ordnet Kontovia nicht von selbst zu, das entscheiden Sie.</p>
         <p class="small">Am besten gelingt es mit geraden, gut beleuchteten Fotos. Eine E-Rechnung erkennt Kontovia ohnehin genau,
-        aus ihren eigenen Daten.</p>
+        aus ihren eigenen Daten. Eine Rechnung in fremder Währung trägt Kontovia unter „In fremder Währung“ ein; den Kurs geben Sie an.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body" id="hilfe-kontoauszug">
@@ -270,6 +280,12 @@ function anleitung(root) {
         einer offenen Rechnung setzt Zahlungsdatum und Konto, wie beim Markieren als bezahlt. Ein festgeschriebener Zeitraum wird nicht
         verändert: Eine festgeschriebene offene Rechnung lässt sich bezahlen, wenn das Datum nach der Festschreibung liegt. Eine Teilzahlung
         trennt Kontovia nur bei einer offenen Buchung außerhalb der Festschreibung ab.</p>
+        <p><strong>PayPal und Stripe.</strong> Legen Sie unter Stammdaten ein Zahlungskonto der Art „Zahlungsdienst“ an und lesen Sie dort den
+        Export ein: bei PayPal die Aktivitäten als CSV, bei Stripe die Zahlungen oder den Saldoverlauf als CSV. Jede Zahlung steht dann
+        einzeln da, mit dem Namen und der E-Mail-Adresse des Zahlers; passt die Adresse zum Kunden einer offenen Rechnung, schlägt Kontovia
+        die Rechnung vor. Gebühren werden eigene Ausgaben. Auszahlungen auf Ihr Bankkonto sind ein Übertrag zwischen Ihren Konten: Kontovia
+        bucht sie nicht, auch nicht, wenn sie später im Kontoauszug der Bank auftauchen. Kontovia verbindet sich dafür nicht mit PayPal
+        oder Stripe; es liest nur die Datei.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body" id="hilfe-mahnwesen">
@@ -395,7 +411,8 @@ function anleitung(root) {
         <p><strong>Abrechnen.</strong> „Abrechnen“ macht aus den offenen Zeiten einen Rechnungsentwurf, je Tag eine Position, jede
         Zeit einzeln oder alles in einer. Sobald Sie die Rechnung ausstellen, gelten die Zeiten als abgerechnet.</p>
         <p><strong>Kostenstelle.</strong> Im Buchungsfenster unter „Weitere Angaben“ ordnen Sie eine Buchung einem Projekt zu. Das
-        Projekt zeigt dann Einnahmen, Ausgaben und Ergebnis, und die Buchungsliste nennt das Projekt in einer eigenen Spalte.</p>
+        Projekt zeigt dann Einnahmen, Ausgaben und Ergebnis, und die Buchungsliste nennt das Projekt in einer eigenen Spalte.
+        Tragen Sie beim Projekt eine Kostenstelle ein, steht sie auch im DATEV-Stapel für Ihre Kanzlei.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -493,7 +510,8 @@ function anleitung(root) {
           <li><strong>Umsatzsteuer-Voranmeldung:</strong> die Kennzahlen 81, 86, 66, 83 und weitere, auf Wunsch als Datei für
               „Mein ELSTER“. Dort öffnen Sie das Formular, wählen das Jahr und laden die Datei über den Reiter „XML-Import“ hoch.
               Wählen Sie dafür oben einen Monat oder ein Quartal.</li>
-          <li><strong>DATEV-Buchungsstapel:</strong> eine Datei, die Ihre Steuerkanzlei direkt einliest.</li>
+          <li><strong>DATEV-Buchungsstapel:</strong> eine Datei, die Ihre Steuerkanzlei direkt einliest, auf Wunsch mit der
+              Kostenstelle Ihrer Projekte.</li>
           <li><strong>Paket für die Kanzlei:</strong> DATEV-Stapel, Tabellen, Berichte und alle Belege des Zeitraums in einer
               ZIP-Datei, mit einem Verzeichnis und einer kurzen Anleitung. Zum Verschicken oder Hochladen ins Portal Ihrer Kanzlei.</li>
           <li><strong>Excel-Mappe:</strong> Buchungen, Anlage EÜR, Umsatzsteuer, offene Posten und Kontakte in einer Datei,
@@ -941,7 +959,7 @@ function recht(root) {
               für die verschlüsselte Datenbank.</li>
           <li><strong>Tesseract</strong> (Apache 2.0) mit tesseract.js (Apache 2.0), Leptonica (BSD-artig), buffer,
               regenerator-runtime und zlib.js (MIT) sowie ieee754 (BSD) zum Lesen von Fotos und Scans; dazu die
-              deutschen Sprachdaten von tesseract-ocr (Apache 2.0).</li>
+              deutschen und englischen Sprachdaten von tesseract-ocr (Apache 2.0).</li>
           <li><strong>WebLLM</strong> (MLC, Apache 2.0) mit der TVM-Laufzeit und XGrammar (Apache 2.0) sowie loglevel
               (MIT) für den Assistenten. Die Sprachmodelle <strong>Qwen3</strong> (Alibaba Cloud, Apache 2.0) werden
               erst auf Wunsch heruntergeladen.</li>
