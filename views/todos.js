@@ -96,13 +96,14 @@ function apptChip(todo) {
     ${icon('calendar', 12).__raw}<span class="truncate">${esc(fmtDateShort(tag))} · ${esc(appt.title || 'Termin')}</span></button>`;
 }
 
-const LINK_ICON = { buchung: 'book', kontakt: 'users', rechnung: 'invoice' };
+const LINK_ICON = { buchung: 'book', kontakt: 'users', rechnung: 'invoice', projekt: 'folder' };
 
 /** Öffnet das Ziel einer Verknüpfung. Die Ansichten werden erst jetzt geladen: Sie kennen ihrerseits die Aufgaben. */
 export async function verknuepfungOeffnen(typ, id) {
   if (typ === 'buchung') (await import('./transactions.js')).openTransactionDialog(id);
   else if (typ === 'kontakt') (await import('./master.js')).openStammdatum('contacts', id);
   else if (typ === 'rechnung') navigate('rechnungen', { id });
+  else if (typ === 'projekt') navigate('projekte', { id });
 }
 
 function linkChips(todo, max = 3) {

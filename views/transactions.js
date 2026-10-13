@@ -79,6 +79,7 @@ export async function render(root, params = {}, { actions } = {}) {
   if (params.listing && sel.transactions().some((t) => t.unlisted)) st.filters.listing = params.listing;
   if (params.status) st.filters.status = params.status;
   if (params.categoryId) st.filters.categoryId = params.categoryId;
+  if (params.projektId) st.filters.projektId = params.projektId;
   if (params.type) st.filters.type = params.type;
   if (params.datum) st.filters.datum = params.datum;
   if (params.period) Object.assign(period, params.period);
@@ -240,6 +241,13 @@ function listSpec() {
       options: () => [['', 'Alle Kontakte', alle],
         ...sortBy(sel.contacts(), (c) => c.name.toLowerCase()).map((c) => [c.id, c.name, (t) => t.contactId === c.id])],
     },
+    // Projekte (lib/projekte.js) wirken wie Kostenstellen; der Filter steht nur, wenn es welche gibt.
+    ...(sel.projekte().length ? [{
+      key: 'projektId', column: 'description', title: 'Projekt', initial: '', hideEmpty: true, search: sel.projekte().length > 8,
+      chip: (v, label) => `Projekt: ${label}`,
+      options: () => [['', 'Alle Projekte', alle], ['ohne', 'Keinem Projekt zugeordnet', (t) => !t.projektId],
+        ...sortBy(sel.projekte(), (p) => String(p.name).toLowerCase()).map((p) => [p.id, p.name, (t) => t.projektId === p.id])],
+    }] : []),
     {
       key: 'status', column: 'status', title: 'Zahlung', initial: 'alle',
       chip: (v, label) => `Status: ${label.toLowerCase()}`,
@@ -293,7 +301,7 @@ function listSpec() {
       // Der Suchtext enthält Kategorie- und Kontaktnamen; ändert sich der Bestand, wird er neu gebildet.
       version: () => store.revision,
       text: (t) => [t.description, t.invoiceNumber, t.reference, t.notes, t.location,
-        sel.categoryName(t.categoryId), sel.contactName(t.contactId), (t.gross / 100).toFixed(2)].join(' '),
+        sel.categoryName(t.categoryId), sel.contactName(t.contactId), t.projektId ? sel.projekt(t.projektId)?.name : '', (t.gross / 100).toFixed(2)].join(' '),
     },
     summary: summaryHtml,
     rowAttrs: (t) => `data-id="${esc(t.id)}"`,
@@ -356,7 +364,8 @@ function descriptionCell(t) {
     ${t.location ? `<div class="tiny muted truncate">${icon('pin', 11).__raw} ${esc(t.location)}</div>` : ''}
     ${dep ? `<span class="badge info tiny" title="${esc(depositTitle(dep))}">Anzahlung${dep.percent ? ' ' + esc(percentText(dep.percent)) + ' %' : ''}</span>` : ''}
     ${t.isReversal ? '<span class="badge tiny">Storno</span>' : ''}
-    ${t.assetId ? '<span class="badge info tiny">aktiviert</span>' : ''}`;
+    ${t.assetId ? '<span class="badge info tiny">aktiviert</span>' : ''}
+    ${t.projektId && sel.projekt(t.projektId) ? `<span class="badge tiny pj-marke" title="Gehört zum Projekt ${esc(sel.projekt(t.projektId).name)}">${icon('folder', 11).__raw} ${esc(sel.projekt(t.projektId).name)}</span>` : ''}`;
 }
 
 function statusCell(t) {
@@ -494,13 +503,14 @@ export function ausbuchenFragen(tx) {
  * @param {{onSaved?:(tx:object)=>any, wiederholen?:string, dateien?:File[], vorgabe?:object}} opts  onSaved läuft nach dem Speichern,
  *   etwa um die Buchung mit dem Termin zu verknüpfen, aus dem sie angelegt wurde; wiederholen
  *   wählt einen Turnus vor (lib/wiederkehrend.js); dateien hängt Belege gleich beim Öffnen an;
- *   vorgabe füllt Felder einer bestehenden Buchung vor (der Assistent: {paidDate}), gespeichert wird wie sonst erst mit „Speichern“
+ *   vorgabe füllt Felder vor, bei einer bestehenden Buchung (der Assistent: {paidDate}) wie bei einer neuen (das Projekt:
+ *   {projektId, contactId}); gespeichert wird wie sonst erst mit „Speichern“
  */
 export function openTransactionDialog(id, type = 'expense', { onSaved = null, wiederholen: turnusVorgabe = '', dateien = null, vorgabe = null } = {}) {
   const draft = id && typeof id === 'object' ? id : null;
   const existing = draft ? null : (id ? sel.transaction(id) : null);
   if (existing) fokusMerken('buchung', existing.id);
-  const tx = existing ? { ...structuredClone(existing), ...(vorgabe || {}) } : (draft || newTransactionDraft(type));
+  const tx = existing ? { ...structuredClone(existing), ...(vorgabe || {}) } : { ...(draft || newTransactionDraft(type)), ...(vorgabe || {}) };
   const isNew = !existing;
   type = tx.type;
   // Kleinunternehmer oder nicht nach dem Stand am Tag der Buchung (Verlauf in den Einstellungen).

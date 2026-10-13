@@ -404,15 +404,22 @@ function anleitung(root) {
 
       <div class="card mt16"><div class="card-body">
         <h2 class="mt0">Projekte und Zeiterfassung</h2>
-        <p>Unter <a data-go="projekte">Projekte</a> sammeln Sie, was zu einem Auftrag gehört: die Zeiten, die Sie dafür arbeiten,
-        und die Buchungen. Ein Projekt hat einen Kunden, einen Stundensatz und auf Wunsch ein Budget in Euro oder Stunden.</p>
-        <p><strong>Zeiten erfassen.</strong> Starten Sie die Stoppuhr, wenn Sie anfangen, und halten Sie sie am Ende an. Oder tragen
-        Sie eine Zeit von Hand ein, etwa „1:30“ oder „1,5“. Die laufende Stoppuhr sehen Sie oben in jedem Projekt.</p>
+        <p>Unter <a data-go="projekte">Projekte</a> sammeln Sie alles, was zu einem Auftrag gehört: Zeiten, Angebote, Rechnungen,
+        Buchungen und Aufgaben. Ein Projekt hat einen Kunden, einen Stundensatz und auf Wunsch ein Budget in Euro oder Stunden.
+        Die Seite eines Projekts zeigt alles in Reitern, dazu was noch nicht abgerechnet und was noch nicht bezahlt ist.</p>
+        <p><strong>Zeiten erfassen.</strong> Starten Sie die Stoppuhr, wenn Sie anfangen, und halten Sie sie am Ende an. Sie läuft
+        weiter, während Sie anderswo arbeiten, und steht oben auf jeder Seite; ein Klick darauf öffnet das Projekt. Oder tragen Sie
+        eine Zeit von Hand ein, etwa „1:30“ oder „1,5“. Beides geht auch über die Suche (<kbd>${MOD}</kbd>+<kbd>K</kbd>) und die Kachel in der Übersicht.
+        Der Reiter „Zeiten“ zeigt alle Zeiten über alle Projekte.</p>
         <p><strong>Abrechnen.</strong> „Abrechnen“ macht aus den offenen Zeiten einen Rechnungsentwurf, je Tag eine Position, jede
         Zeit einzeln oder alles in einer. Sobald Sie die Rechnung ausstellen, gelten die Zeiten als abgerechnet.</p>
+        <p><strong>Alles an einer Stelle.</strong> „Neu“ im Projekt legt eine Rechnung, ein Angebot, eine Einnahme, eine Ausgabe oder
+        eine Aufgabe an, die gleich zum Projekt gehören. Aus einem Angebot wird mit „Projekt anlegen“ ein Projekt mit Kunde, Name
+        und Budget. Rechnungen und Angebote, die schon da sind, ordnen Sie auf ihrer Seite oder im Projekt zu; was daraus
+        entstanden ist, etwa die Rechnung zum Angebot und ihre Buchungen, kommt mit. Das Kontaktfenster zeigt die Projekte des Kunden.</p>
         <p><strong>Kostenstelle.</strong> Im Buchungsfenster unter „Weitere Angaben“ ordnen Sie eine Buchung einem Projekt zu. Das
-        Projekt zeigt dann Einnahmen, Ausgaben und Ergebnis, und die Buchungsliste nennt das Projekt in einer eigenen Spalte.
-        Tragen Sie beim Projekt eine Kostenstelle ein, steht sie auch im DATEV-Stapel für Ihre Kanzlei.</p>
+        Projekt zeigt dann Einnahmen, Ausgaben und Ergebnis, und die Buchungsliste nennt das Projekt an der Buchung und lässt sich
+        danach filtern. Tragen Sie beim Projekt eine Kostenstelle ein, steht sie auch im DATEV-Stapel für Ihre Kanzlei.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">

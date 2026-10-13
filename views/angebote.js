@@ -17,7 +17,9 @@ import { berechnen, betragText, titel as titelVon } from '../lib/rechnung.js';
 import { BELEGARTEN, BELEG_ZUSTAENDE, belegZustand, rechnungenZu } from '../lib/angebote.js';
 import { ergebnisSetzen, folgebelegAnlegen, rechnungAnlegen, belegVersandVermerken } from '../lib/angebotsaktionen.js';
 import { vorschauSvg, pdfSpeichern, pdfZeigen } from '../lib/rechnungsdateien.js';
-import { sendenDialog } from './rechnungen.js';
+import { sendenDialog, projektMarke } from './rechnungen.js';
+import { projektZeile, projektZeileVerdrahten } from './projekte.js';
+import { projektAusAngebot } from '../lib/projektaktionen.js';
 import { erlaubt } from '../lib/lizenzui.js';
 
 const zustandVon = (b) => belegZustand(b, { rechnungen: sel.invoices() });
@@ -76,7 +78,7 @@ export function angeboteListe(root) {
       { key: 'datum', label: 'Datum', type: 'date', cls: 'num', tdCls: 'nowrap', value: (x) => x.b.datum || '', cell: (x) => esc(fmtDate(x.b.datum)) },
       {
         key: 'kunde', label: 'Kunde', type: 'text', value: (x) => x.b.kaeufer?.name || '',
-        cell: (x) => `${esc(x.b.kaeufer?.name || '–')}${x.b.betreff ? `<div class="tiny muted truncate">${esc(x.b.betreff)}</div>` : ''}`,
+        cell: (x) => `${esc(x.b.kaeufer?.name || '–')}${x.b.betreff ? `<div class="tiny muted truncate">${esc(x.b.betreff)}</div>` : ''}${projektMarke(x.b)}`,
       },
       { key: 'betrag', label: 'Betrag', type: 'num', value: (x) => (x.b.belegart === 'lieferschein' ? 0 : x.s.brutto), cell: (x) => (x.b.belegart === 'lieferschein' ? '' : `${esc(money(x.s.brutto))} €`) },
       {
@@ -162,6 +164,7 @@ export async function belegDetail(root, b, actions) {
             </div>
             ${quelle ? raw(html`<div class="notice mt16">Entstanden aus ${raw(verweis(quelle, quelle.belegart))}.</div>`) : ''}
             ${entstanden.length ? raw(html`<div class="notice mt16">Daraus entstanden: ${raw(entstanden.join(', '))}.</div>`) : ''}
+            ${raw(projektZeile('beleg', b))}
           </div>
         </div>
 
@@ -176,6 +179,7 @@ export async function belegDetail(root, b, actions) {
             <div class="re-aktionen">
               <button class="btn primary" id="anRechnung">${icon('invoice', 15)} Rechnung erstellen</button>
               ${naechste.map(([art, text]) => raw(html`<button class="btn" data-folge="${art}">${icon('plus', 15)} ${text}</button>`))}
+              ${b.belegart !== 'lieferschein' && !b.projektId && z !== 'abgelehnt' ? raw(html`<button class="btn" id="anProjekt" data-krone="projekte" title="Zeiten, Ausgaben und Rechnungen zu diesem Auftrag an einer Stelle sammeln">${icon('folder', 15)} Projekt anlegen</button>`) : ''}
             </div>
             <p class="small muted mb0 mt8">${rechnungen.length
     ? (rechnungen.length === 1 ? 'Zu diesem Beleg gibt es schon eine Rechnung. Eine weitere, etwa eine Teilrechnung, ist möglich.'
@@ -225,6 +229,13 @@ export async function belegDetail(root, b, actions) {
   $$('[data-gehe]', root).forEach((a) => a.addEventListener('click', (e) => {
     e.preventDefault();
     navigate('rechnungen', a.dataset.art === 'rechnung' ? { id: a.dataset.gehe } : { beleg: a.dataset.gehe });
+  }));
+  projektZeileVerdrahten(root, 'beleg', b);
+  $('#anProjekt', root)?.addEventListener('click', sicher(async () => {
+    if (!erlaubt('projekte')) return;
+    const p = await projektAusAngebot(b.id);
+    ok('Projekt angelegt', p.name);
+    navigate('projekte', { id: p.id });
   }));
   $$('[data-ergebnis]', root).forEach((k) => k.addEventListener('click', sicher(async () => {
     await ergebnisSetzen(b.id, k.dataset.ergebnis);

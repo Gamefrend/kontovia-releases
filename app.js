@@ -1313,6 +1313,7 @@ function renderShell() {
           <header class="topbar">
             <h1 id="viewTitle">Übersicht</h1>
             <button class="icon-btn top-hilfe" id="viewHilfe" type="button" hidden aria-label="Hilfe zu diesem Bereich" title="Hilfe zu diesem Bereich">${icon('help', 18)}</button>
+            <div class="top-uhr" id="uhrSlot" hidden></div>
             <button class="icon-btn top-suche" id="topSearch" type="button" aria-label="Suchen" title="Alles durchsuchen">${icon('search', 20)}</button>
             <button class="icon-btn top-as" id="topAs" type="button" data-krone="assistent" data-as-knopf aria-expanded="false" aria-controls="asPanel" aria-label="Assistent" title="Assistent fragen">${icon('sparkle', 20)}</button>
           </header>
@@ -1375,6 +1376,8 @@ function renderShell() {
   adminKnopfAktualisieren();
   entwicklerKlick($('#versionLabel'));
   $('#newTxBtn').addEventListener('click', (e) => neueBuchungMenue(e.currentTarget));
+  // Laufende Stoppuhr eines Projekts oben auf jeder Seite; nachgeladen, damit der Start nicht wartet.
+  import('./lib/stoppuhranzeige.js').then((m) => { if ($('#uhrSlot')) m.stoppuhrAnzeigeStarten($('#uhrSlot')); }).catch(() => {});
   $('#searchBtn').addEventListener('click', () => sucheOeffnen({ sperren: lockNow }));
   $('#topSearch').addEventListener('click', () => { $('.shell')?.classList.remove('nav-offen'); sucheOeffnen({ sperren: lockNow }); });
   app.querySelectorAll('[data-as-knopf]').forEach((b) => b.addEventListener('click', () => { $('.shell')?.classList.remove('nav-offen'); assistentUmschalten(); }));

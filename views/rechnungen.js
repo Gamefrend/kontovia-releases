@@ -92,6 +92,8 @@ export async function render(root, params = {}, { actions } = {}) {
       const { kaeuferAusKontakt } = await import('../lib/rechnung.js');
       b.kaeufer = kaeuferAusKontakt(sel.contact(params.kontaktId));
     }
+    // Aus einem Projekt heraus (views/projekte.js): Der Beleg gehört gleich dazu.
+    if (params.projektId && sel.projekt(params.projektId)) Object.assign(b, { projektId: params.projektId, betreff: b.betreff || sel.projekt(params.projektId).name });
     editorZeigen(root, { rechnung: b }, actions);
     return;
   }
@@ -118,6 +120,7 @@ export async function render(root, params = {}, { actions } = {}) {
       const { kaeuferAusKontakt } = await import('../lib/rechnung.js');
       r.kaeufer = kaeuferAusKontakt(sel.contact(params.kontaktId));
     }
+    if (params.projektId && sel.projekt(params.projektId)) Object.assign(r, { projektId: params.projektId, betreff: r.betreff || sel.projekt(params.projektId).name });
     editorZeigen(root, { rechnung: r }, actions);
     return;
   }
@@ -163,6 +166,12 @@ function neuMenue(anker) {
 /* Ausgehende Rechnungen                                                       */
 /* -------------------------------------------------------------------------- */
 
+/** Kleine Marke mit dem Projekt (views/projekte.js) in Listen von Rechnungen und Angeboten. */
+export function projektMarke(r) {
+  const p = r?.projektId ? sel.projekt(r.projektId) : null;
+  return p ? `<span class="badge tiny pj-marke" title="Gehört zum Projekt ${esc(p.name)}">${icon('folder', 11).__raw} ${esc(p.name)}</span>` : '';
+}
+
 function zustandVon(r) {
   const buchungen = (r.transactionIds || []).map(sel.transaction).filter(Boolean);
   return zustand(r, { buchungen });
@@ -204,7 +213,7 @@ function ausgang(root) {
       { key: 'datum', label: 'Datum', type: 'date', cls: 'num', tdCls: 'nowrap', value: (x) => x.r.datum || '', cell: (x) => esc(fmtDate(x.r.datum)) },
       {
         key: 'kunde', label: 'Kunde', type: 'text', value: (x) => x.r.kaeufer?.name || '',
-        cell: (x) => `${esc(x.r.kaeufer?.name || '–')}${x.r.betreff ? `<div class="tiny muted truncate">${esc(x.r.betreff)}</div>` : ''}`,
+        cell: (x) => `${esc(x.r.kaeufer?.name || '–')}${x.r.betreff ? `<div class="tiny muted truncate">${esc(x.r.betreff)}</div>` : ''}${projektMarke(x.r)}`,
       },
       { key: 'art', label: 'Art', type: 'text', tdCls: 'small muted', value: (x) => titelVon(x.r), cell: (x) => esc(titelVon(x.r)) },
       { key: 'betrag', label: 'Betrag', type: 'num', value: (x) => x.b.brutto, cell: (x) => `${esc(money(x.b.brutto))} €` },
@@ -226,6 +235,11 @@ function ausgang(root) {
         key: 'stand', column: 'zustand', title: 'Stand', initial: 'alle', chip: (v, label) => label,
         options: () => [['alle', 'Alle', () => true], ...Object.entries(ZUSTAENDE).map(([k, z]) => [k, z.name, (x) => x.z === k])],
       },
+      ...(sel.projekte().length ? [{
+        key: 'projekt', column: 'kunde', title: 'Projekt', initial: '', hideEmpty: true, chip: (v, label) => `Projekt: ${label}`,
+        options: () => [['', 'Alle Projekte', () => true],
+          ...[...sel.projekte()].sort((a, b) => String(a.name).localeCompare(String(b.name), 'de')).map((p) => [p.id, p.name, (x) => x.r.projektId === p.id])],
+      }] : []),
     ],
     emptyTitle: 'Noch keine Rechnungen',
     emptyText: 'Mit „Neue Rechnung“ schreiben Sie Ihre erste Rechnung. Sie entsteht als PDF, das zugleich als E-Rechnung gilt.',
@@ -250,6 +264,8 @@ async function detailZeigen(root, r, actions) {
   const storno = r.storniertDurch ? sel.invoice(r.storniertDurch) : null;
   const bezug = r.bezug?.id ? sel.invoice(r.bezug.id) : null;
   const offen = z === 'offen' || z === 'ueberfaellig';
+  // Projekt der Rechnung (views/projekte.js); nachträglich zuordnen ändert nur die Zuordnung, nicht die Rechnung.
+  const pj = await import('./projekte.js');
 
   actions.innerHTML = `<button class="btn" id="reZurueck">${icon('left', 16).__raw} Zur Übersicht</button>`;
   $('#reZurueck', actions).addEventListener('click', () => navigate('rechnungen', { tab: 'ausgang' }));
@@ -277,6 +293,7 @@ async function detailZeigen(root, r, actions) {
             </div>
             ${storno ? `<div class="notice mt16">Storniert durch <a href="#" data-gehe="${esc(storno.id)}">${esc(titelVon(storno))} ${esc(storno.nummer)}</a> vom ${esc(fmtDate(storno.datum))}.</div>` : ''}
             ${bezug ? `<div class="notice mt16">Bezieht sich auf <a href="#" data-gehe="${esc(bezug.id)}">${esc(titelVon(bezug))} ${esc(bezug.nummer)}</a>.</div>` : ''}
+            ${pj.projektZeile('rechnung', r)}
           </div>
         </div>
 
@@ -361,6 +378,7 @@ async function detailZeigen(root, r, actions) {
   };
 
   $$('[data-gehe]', root).forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); navigate('rechnungen', { id: a.dataset.gehe }); }));
+  pj.projektZeileVerdrahten(root, 'rechnung', r);
   $$('[data-tx]', root).forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); openTransactionDialog(a.dataset.tx, 'income', { onSaved: () => refresh() }); }));
   mahnungenKarte($('#reMahnungen', root), r);
   aufgabenAbschnitt($('#reAufgaben', root), 'rechnung', r.id, { titel: 'Zu dieser Rechnung', vorgabe: offen ? `Zahlungseingang prüfen: ${r.nummer}` : '' });

@@ -19,6 +19,7 @@ import {
 } from '../lib/calc.js';
 import { steuertermine } from '../lib/fristen.js';
 import { kann } from '../lib/lizenz.js';
+import { projektAuswertung, dauerText } from '../lib/projekte.js';
 import { sperrHinweis } from '../lib/lizenzui.js';
 import {
   prefs, scope, scopeToggleHtml, wireScopeToggle, verlaufControls, wireVerlauf, verlaufBody,
@@ -373,6 +374,37 @@ const WIDGETS = {
       });
     },
   },
+  projekte: {
+    // Nur mit Projekten (lib/projekte.js); kommt dann sichtbar ans Ende, auch bei eigener Anordnung.
+    title: 'Projekte', size: 4, sichtbarWennNeu: true, available: () => kann('projekte') && sel.projekte().some((p) => p.status !== 'abgeschlossen'),
+    render: () => {
+      const db = store.db;
+      const laeuft = sel.zeiten().find((x) => x.laeuft);
+      const zeilen = sel.projekte().filter((p) => p.status !== 'abgeschlossen')
+        .map((p) => ({ p, a: projektAuswertung(db, p) }))
+        .sort((x, y) => Number(laeuft?.projektId === y.p.id) - Number(laeuft?.projektId === x.p.id) || y.a.offenWert - x.a.offenWert || String(y.a.letzte).localeCompare(String(x.a.letzte)));
+      const offen = sum(zeilen, (x) => x.a.offenWert);
+      const body = `
+        ${zeilen.slice(0, 5).map((x) => `
+          <div class="row between list-row"${z('projekte', { id: x.p.id }, { titel: 'Projekt öffnen' })}>
+            <div style="min-width:0">
+              <div class="truncate">${laeuft?.projektId === x.p.id ? '<span class="pj-uhr-punkt klein" aria-label="Stoppuhr läuft"></span> ' : ''}${esc(x.p.name)}</div>
+              <div class="tiny muted truncate">${esc(sel.contact(x.p.kontaktId)?.name || '')}${x.a.offenMinuten ? `${sel.contact(x.p.kontaktId) ? ' · ' : ''}${esc(dauerText(x.a.offenMinuten))} Std. offen` : ''}</div>
+            </div>
+            <span class="num nowrap small">${x.a.offenWert ? `${esc(money(x.a.offenWert))} €` : ''}</span>
+          </div>`).join('')}
+        ${zeilen.length > 5 ? `<p class="tiny muted mb0 mt8">und ${zeilen.length - 5} weitere</p>` : ''}
+        <div class="re-aktionen mt8">
+          ${laeuft ? '' : `<button type="button" class="btn sm" data-pj-uhr>${icon('play', 13).__raw} Stoppuhr</button>`}
+          <button type="button" class="btn sm ghost" data-pj-zeit>${icon('clock', 13).__raw} Zeit eintragen</button>
+        </div>`;
+      return card('Projekte', body, {
+        sub: offen ? `${money(offen)} € nicht abgerechnet` : '',
+        ziel: z('projekte', {}, { haupt: true, titel: 'Zu allen Projekten' }),
+        head: `<button class="btn sm ghost" data-goto="projekte">Alle ${icon('right', 13).__raw}</button>`,
+      });
+    },
+  },
   ordnung: {
     title: 'Ordnung und Vollständigkeit', size: 4,
     render: (c) => {
@@ -588,6 +620,8 @@ function wireWidgets(scope, redraw, c, root) {
   wireAnteil(scope, 'anteilAusgaben', () => widgetNeu(root, 'ausgabenKat'));
   wireAnteil(scope, 'anteilEinnahmen', () => widgetNeu(root, 'einnahmenKat'));
   $$('[data-goto]', scope).forEach((b) => b.addEventListener('click', () => navigate(b.dataset.goto)));
+  $$('[data-pj-uhr]', scope).forEach((b) => b.addEventListener('click', async () => (await import('./projekte.js')).stoppuhrDialog()));
+  $$('[data-pj-zeit]', scope).forEach((b) => b.addEventListener('click', async () => (await import('./projekte.js')).zeitEintragen()));
   wireZiele(scope);
   const oeffnen = (sel2, fn) => $$(sel2, scope).forEach((n) => {
     n.addEventListener('click', () => fn(n));

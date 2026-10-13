@@ -2067,11 +2067,31 @@ html[data-theme="dark"] { --krone: #f0bf61; }
 @media (prefers-reduced-motion: reduce) { .dreht .ico { animation-duration: 2.4s; } }
 .beleg-text { max-height: 50vh; overflow: auto; white-space: pre-wrap; font: 12px/1.5 var(--mono, ui-monospace, monospace); background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 12px; margin: 0; }
 
-/* Projekte (views/projekte.js): laufende Stoppuhr, Budgetbalken in der Liste */
-.pj-uhr { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-.pj-uhr strong { font-variant-numeric: tabular-nums; font-size: 1.05rem; }
-.pj-uhr-punkt { width: 10px; height: 10px; border-radius: 50%; background: var(--neg); animation: pulse 1.6s ease-in-out infinite; }
+/* Projekte (views/projekte.js): laufende Stoppuhr, Budgetbalken, Marke in Listen anderer Bereiche */
+.pj-uhr-punkt { display: inline-block; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--neg); animation: pulse 1.6s ease-in-out infinite; }
+.pj-uhr-punkt.klein { width: 8px; height: 8px; vertical-align: 1px; }
 .pj-balken { width: 90px; }
+.pj-marke { display: inline-flex; align-items: center; gap: 3px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 2px; }
+.pj-zeile { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; color: var(--muted); }
+.pj-zeile a { color: var(--text); }
+
+/* Laufende Stoppuhr in der Kopfleiste (lib/stoppuhranzeige.js) */
+.top-uhr[hidden] { display: none; }
+/* Der Titel bleibt ganz; schrumpfen muss die Stoppuhr (erst der Projektname, dann die ganze Pille). */
+.top-uhr { flex: 0 1 auto; min-width: 0; display: flex; }
+@media (min-width: 821px) { .topbar:has(.top-uhr:not([hidden])) h1 { flex-shrink: 0; } }
+.uhr-pille { display: inline-flex; align-items: stretch; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); overflow: hidden; max-width: min(320px, 100%); min-width: 0; }
+.uhr-ziel { display: inline-flex; align-items: center; gap: 8px; min-width: 0; min-height: 32px; padding: 0 10px 0 12px; border: 0; background: none; color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
+.uhr-ziel:hover, .uhr-stopp:hover { background: var(--surface-2); }
+.uhr-zeit { font-variant-numeric: tabular-nums; font-weight: 600; }
+.uhr-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); max-width: 160px; }
+.uhr-stopp { display: grid; place-items: center; min-width: 34px; border: 0; border-left: 1px solid var(--border); background: none; color: var(--neg); cursor: pointer; }
+.uhr-ziel:focus-visible, .uhr-stopp:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+@media (max-width: 820px) {
+  .uhr-name { display: none; }
+  .uhr-ziel { gap: 6px; padding: 0 8px 0 10px; }
+  .uhr-stopp { min-width: 30px; }
+}
 
 /* Kassenbuch und Vorschau (views/kassenbuch.js) */
 .kb-tabelle .kb-text { max-width: 320px; }

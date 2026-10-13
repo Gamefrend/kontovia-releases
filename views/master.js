@@ -12,7 +12,9 @@ import { neuesAnlagegut, anlageFelder, wireAnlageFelder, anlageAusFeldern, anlag
 import { regelTabelle, offeneVorkommen, faelligeAnbieten } from './wiederkehrend.js';
 import { anschriftAusText, LAENDER, laenderSortiert } from '../lib/rechnung.js';
 import { openTransactionDialog } from './transactions.js';
-import { refresh } from '../lib/router.js';
+import { refresh, navigate } from '../lib/router.js';
+import { kann } from '../lib/lizenz.js';
+import { PROJEKT_STATUS, projekteVonKontakt, projektAuswertung, dauerText } from '../lib/projekte.js';
 import { fokusMerken } from '../lib/fokus.js';
 import { table, mountTable, mountTables } from '../lib/table.js';
 import { aufgabenAbschnitt } from './todos.js';
@@ -557,6 +559,36 @@ function categoryForm(c) {
   });
 }
 
+/**
+ * Projekte des Kontakts im Kontaktfenster (lib/projekte.js): je Projekt Stand und noch nicht Abgerechnetes, dazu
+ * „Neues Projekt“ mit dem Kontakt als Kunden. Ein Klick schließt das Fenster und öffnet das Projekt.
+ */
+function projekteAbschnitt(el, c) {
+  const liste = projekteVonKontakt(store.db, c.id);
+  const schliessen = () => el.closest('.modal')?.querySelector('[data-close]')?.click();
+  el.innerHTML = html`
+    <div class="row between" style="gap:8px;margin-bottom:${liste.length ? 4 : 0}px">
+      <strong class="small">Projekte${liste.length ? raw(html` <span class="muted">${liste.length}</span>`) : ''}</strong>
+      ${kann('projekte') ? raw(html`<button type="button" class="btn sm ghost" data-pj-neu>${icon('plus', 14)} Projekt</button>`) : ''}
+    </div>
+    ${liste.map((p) => {
+      const a = projektAuswertung(store.db, p);
+      return raw(html`<div class="row between list-row" data-pj="${p.id}" role="link" tabindex="0">
+        <span class="truncate">${icon('folder', 13)} ${p.name}</span>
+        <span class="tiny muted nowrap">${a.offenMinuten ? `${dauerText(a.offenMinuten)} Std. offen · ` : ''}${PROJEKT_STATUS[p.status] || ''}</span>
+      </div>`);
+    })}`;
+  el.querySelectorAll('[data-pj]').forEach((z) => {
+    const oeffnen = () => { schliessen(); navigate('projekte', { id: z.dataset.pj }); };
+    z.addEventListener('click', oeffnen);
+    z.addEventListener('keydown', (e) => { if (e.key === 'Enter') oeffnen(); });
+  });
+  el.querySelector('[data-pj-neu]')?.addEventListener('click', async () => {
+    schliessen();
+    (await import('./projekte.js')).projektNeu({ kontaktId: c.id, name: '' });
+  });
+}
+
 function contactForm(c, vorlage = null) {
   const isNew = !c;
   const vor = vorlage ? Object.fromEntries(Object.entries(vorlage).filter(([k]) => ['name', 'kind', 'email', 'phone', 'notes'].includes(k))) : {};
@@ -594,10 +626,13 @@ function contactForm(c, vorlage = null) {
         <div class="field"><label>Leitweg-ID</label><input id="f_buyerReference" value="${c.buyerReference || ''}" placeholder="nur bei Behörden"></div>
       </div>
       <div class="field"><label>Notiz</label><textarea id="f_notes">${c.notes || ''}</textarea></div>
+      ${isNew || !(projekteVonKontakt(store.db, c.id).length || (kann('projekte') && c.kind !== 'supplier')) ? '' : raw('<div class="field" id="f_projekte" data-ohne-stand></div>')}
       ${isNew ? '' : raw('<div class="field" id="f_aufgaben" data-ohne-stand></div>')}`,
     onOpen: (rootEl) => {
       const box = rootEl.querySelector('#f_aufgaben');
       if (box) aufgabenAbschnitt(box, 'kontakt', c.id, { titel: 'Aufgaben zu diesem Kontakt' });
+      const pj = rootEl.querySelector('#f_projekte');
+      if (pj) projekteAbschnitt(pj, c);
     },
     onSave: async (rootEl) => {
       const g = (k) => rootEl.querySelector('#f_' + k).value.trim();
