@@ -11,34 +11,24 @@
  * Die Regeln (firebase/storage.rules) lassen Auflisten, Schreiben und Löschen nur dem Betreiber zu
  * (`istBetreiber()`); die Anmeldung kommt von der Cloud-Verbindung (`kopf`, bridge.js: betreiberKopf).
  *
- * Signiert wird hier im Browser mit dem privaten Schlüssel aus scripts/lizenz-schluessel.js (privat.jwk).
- * Der Schlüssel kommt je Sitzung entweder aus der Datei oder aus der Cloud (`betreiber/signierschluessel.json`);
- * er wird nicht exportierbar eingelesen, nur im Arbeitsspeicher gehalten und beim Sperren vergessen. Ein
- * Schlüssel, der nicht zum öffentlichen im Programm passt, wird abgelehnt (Scheine damit wären überall ungültig).
+ * Signiert wird nicht im Browser, sondern von Cloud Functions (functions/): Lizenz zuweisen, Geräteschein und
+ * Tarif-Einstellung. Der private Schlüssel (scripts/lizenz-schluessel.js: privat.jwk) liegt einmal auf dem Server
+ * (`server/signierschluessel.json`, hier nur hochladen und löschen, nie lesbar) und verlässt ihn nie; die Funktionen
+ * lassen nur die bestätigte Adresse des Betreibers zu. Im Programm gibt es keinen Schlüssel zu entsperren.
  *
- * Automatische Lizenz (functions/): Eine Cloud Function signiert Scheine für Konten ohne Lizenz (Testbetrieb: Max,
- * danach Standard). Dafür liegt der Schlüssel auf dem Server (`server/signierschluessel.json`, hier nur hochladen
- * und löschen, nie lesbar) und der Modus in `server/modus.json`. Entzogene Konten bekommen einen Vermerk statt
+ * Automatische Lizenz (functions/): Dieselbe Funktionsgruppe signiert Scheine für Konten ohne Lizenz (Testbetrieb: Max,
+ * danach Standard). Der Modus liegt in `server/modus.json`. Entzogene Konten bekommen einen Vermerk statt
  * einer gelöschten Datei, sonst legte die Funktion ihnen wieder eine an.
- *
- * Schlüssel in der Cloud: zwei getrennte Sperren. (1) Die Regeln lassen die Datei nur dem Betreiber-Konto zu
- * (`istBetreiber()`), alle anderen bekommen auch das Chiffrat nicht. (2) Die Datei enthält den Schlüssel nur
- * verschlüsselt, mit einer Passphrase (scrypt wie im Tresor, AES-256-GCM). Wer das Google-Konto oder die
- * Firebase-Konsole in die Hand bekommt, hat damit noch keinen Schlüssel; die Passphrase steht nirgends.
  */
 
 import { request, requestJson } from './netz.js';
 import BUILTIN from './cloudconfig.js';
-import { scheinAusstellen, scheinPruefen, tarifeSignieren, tarifePruefenSigniert, emailNorm, emailVarianten, OEFFENTLICHER_SCHLUESSEL, STUFEN } from './lizenz.js';
-import { DEFAULT_KDF, deriveKey, seal, open, randomBytes, toBase64, fromBase64, utf8, fromUtf8, wipe } from './kern.js';
+import { scheinPruefen, tarifePruefenSigniert, emailNorm, emailVarianten, OEFFENTLICHER_SCHLUESSEL, STUFEN } from './lizenz.js';
+import { utf8 } from './kern.js';
 
 const STORAGE = 'https://firebasestorage.googleapis.com/v0/b';
 const enc = encodeURIComponent;
-const TAG = 86400000;
 const MAX_NOTIZ = 200;
-const SCHLUESSEL_PFAD = 'betreiber/signierschluessel.json';
-const SCHLUESSEL_AAD = utf8('kontovia/lizenz-signierschluessel/v1');
-const MIN_PASSPHRASE = 12;
 
 const fehler = (code, text) => Object.assign(new Error(text), { code });
 
@@ -57,10 +47,29 @@ function deutlich(err) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Signierschlüssel (nur im Arbeitsspeicher)                                   */
+/* Signieren über die Cloud Functions                                          */
 /* -------------------------------------------------------------------------- */
 
-let signierer = null;
+/**
+ * Lizenzen, Gerätescheine und die Tarif-Einstellung signiert eine Cloud Function (functions/): Der Schlüssel liegt
+ * auf dem Server (server/signierschluessel.json, hier nur hochladen) und kommt nie ins Programm. Die Funktion prüft
+ * selbst, ob die Anmeldung die des Betreibers ist. Gerufen wird mit dem Token der Cloud-Anmeldung (`kopf`).
+ */
+async function funktion(name, kopf, daten, cfg = null) {
+  const projekt = cfg?.projectId || BUILTIN.firebase?.projectId || String(bucket(cfg)).split('.')[0];
+  const token = String(kopf?.authorization || '').replace(/^Firebase /, '');
+  try {
+    const res = await requestJson(`https://europe-west3-${projekt}.cloudfunctions.net/${name}`, {
+      method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: utf8(JSON.stringify({ data: daten })), timeoutMs: 30000,
+    });
+    return res?.result;
+  } catch (err) {
+    if (err?.status === 404) throw Object.assign(new Error('Die Cloud-Funktion zum Signieren ist noch nicht veröffentlicht.'), { code: 'LIZENZ_FUNKTION', status: 404 });
+    if (err?.status === 401 || err?.status === 403) throw Object.assign(new Error('Die Cloud-Funktion hat abgelehnt. Angemeldet ist nicht das Konto des Betreibers.'), { code: 'LIZENZ_RECHTE', status: err.status });
+    throw err;
+  }
+}
 
 /** Prüft privat.jwk: privater P-256-Schlüssel, der zum öffentlichen im Programm passt. Gibt nur die nötigen Felder zurück. */
 function jwkPruefen(jwkText, oeffentlich) {
@@ -74,108 +83,6 @@ function jwkPruefen(jwkText, oeffentlich) {
   }
   const { kty, crv, x, y, d } = jwk;
   return { kty, crv, x, y, d };
-}
-
-async function signiererSetzen(jwk) {
-  signierer = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
-}
-
-/** Liest privat.jwk ein. Wirft, wenn es kein privater P-256-Schlüssel ist oder er nicht zum Programm passt. */
-export async function schluesselLaden(jwkText, oeffentlich = OEFFENTLICHER_SCHLUESSEL) {
-  await signiererSetzen(jwkPruefen(jwkText, oeffentlich));
-  return { geladen: true };
-}
-
-export const schluesselDa = () => !!signierer;
-export function schluesselVergessen() { signierer = null; }
-
-/* -------------------------------------------------------------------------- */
-/* Signierschlüssel in der Cloud (verschlüsselt, nur für den Betreiber)         */
-/* -------------------------------------------------------------------------- */
-
-function passphrasePruefen(passphrase) {
-  const pw = String(passphrase || '');
-  if ([...pw].length < MIN_PASSPHRASE) {
-    throw fehler('LIZENZ_PASSPHRASE', `Die Passphrase braucht mindestens ${MIN_PASSPHRASE} Zeichen. Wähle eine lange, die du nirgends sonst benutzt.`);
-  }
-  return pw;
-}
-
-async function schluesselDatei(b, kopf) {
-  const res = await request(`${STORAGE}/${enc(b)}/o/${enc(SCHLUESSEL_PFAD)}?alt=media`, { headers: { ...kopf }, timeoutMs: 30000, maxBytes: 16 * 1024 });
-  if (res.status === 404) return null;
-  if (res.status !== 200) throw deutlich(Object.assign(new Error(`HTTP ${res.status}`), { status: res.status }));
-  try { return JSON.parse(new TextDecoder().decode(res.body)); } catch { return null; }
-}
-
-/** Liegt schon ein Schlüssel in der Cloud? (Nur ja/nein und Zeitpunkt, nichts Geheimes.) */
-export async function schluesselCloudStand(kopf, cfg = null) {
-  try {
-    const d = await schluesselDatei(bucket(cfg), kopf);
-    return { vorhanden: !!(d && d.v === 1 && d.blob), seit: String(d?.ts || '') };
-  } catch (err) {
-    throw deutlich(err);
-  }
-}
-
-/**
- * privat.jwk mit einer Passphrase verschlüsseln und in der Cloud ablegen. Ersetzt einen vorhandenen. Danach ist der
- * Schlüssel auch für diese Sitzung geladen.
- * @param {object} [kdf] nur für Prüfungen (schwächer = schneller); beim Öffnen gilt, was in der Datei steht
- */
-export async function schluesselSichern(kopf, jwkText, passphrase, cfg = null, oeffentlich = OEFFENTLICHER_SCHLUESSEL, kdf = DEFAULT_KDF) {
-  const jwk = jwkPruefen(jwkText, oeffentlich);
-  const pw = passphrasePruefen(passphrase);
-  const b = bucket(cfg);
-  const salt = randomBytes(16);
-  const key = await deriveKey(pw, salt, kdf);
-  const klar = utf8(JSON.stringify(jwk));
-  try {
-    const blob = await seal(key, klar, SCHLUESSEL_AAD);
-    const inhalt = utf8(JSON.stringify({ v: 1, kdf, salt: toBase64(salt), blob: toBase64(blob), ts: new Date().toISOString() }));
-    await requestJson(`${STORAGE}/${enc(b)}/o?uploadType=media&name=${enc(SCHLUESSEL_PFAD)}`, {
-      method: 'POST', headers: { ...kopf, 'content-type': 'application/json' }, body: inhalt, timeoutMs: 30000,
-    });
-  } catch (err) {
-    throw deutlich(err);
-  } finally {
-    wipe(key);
-    wipe(klar);
-  }
-  await signiererSetzen(jwk);
-  return { gesichert: true };
-}
-
-/** Den Schlüssel aus der Cloud holen, mit der Passphrase öffnen und für diese Sitzung laden. */
-export async function schluesselAusCloud(kopf, passphrase, cfg = null, oeffentlich = OEFFENTLICHER_SCHLUESSEL) {
-  let d;
-  try { d = await schluesselDatei(bucket(cfg), kopf); } catch (err) { throw deutlich(err); }
-  if (!d || d.v !== 1 || !d.blob || !d.salt) throw fehler('LIZENZ_KEIN_SCHLUESSEL', 'In der Cloud liegt noch kein Signierschlüssel.');
-  const key = await deriveKey(String(passphrase || ''), fromBase64(d.salt), d.kdf);
-  let klar;
-  try {
-    klar = await open(key, fromBase64(d.blob), SCHLUESSEL_AAD);
-  } catch {
-    throw fehler('LIZENZ_PASSPHRASE', 'Die Passphrase stimmt nicht.');
-  } finally {
-    wipe(key);
-  }
-  try {
-    await signiererSetzen(jwkPruefen(fromUtf8(klar), oeffentlich));
-  } finally {
-    wipe(klar);
-  }
-  return { geladen: true };
-}
-
-/** Den Schlüssel aus der Cloud löschen (die Datei privat.jwk bleibt, wo sie ist). */
-export async function schluesselCloudLoeschen(kopf, cfg = null) {
-  try {
-    await requestJson(`${STORAGE}/${enc(bucket(cfg))}/o/${enc(SCHLUESSEL_PFAD)}`, { method: 'DELETE', headers: { ...kopf }, timeoutMs: 20000 });
-  } catch (err) {
-    if (err.status !== 404) throw deutlich(err);
-  }
-  return true;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -260,70 +167,25 @@ export async function laden(kopf, cfg = null, schluessel = OEFFENTLICHER_SCHLUES
 }
 
 /**
- * Stufe, Ende und Schonfrist einer neuen Lizenz prüfen. Das Ende kommt entweder als Laufzeit in Tagen ab jetzt
- * (`tage`) oder als festes Datum (`bis`, etwa beim Verlängern: altes Ende plus ein Jahr).
- */
-function laufzeitPruefen(angaben, jetzt) {
-  const stufe = String(angaben?.stufe || '');
-  if (!STUFEN.includes(stufe) || stufe === 'kostenlos') throw fehler('LIZENZ_STUFE', 'Bitte einen Tarif wählen.');
-  let bisMs;
-  if (angaben?.bis) {
-    const roh = String(angaben.bis);
-    // Ein reines Datum gilt bis zum Ende dieses Tages (UTC), damit „bis 31.12.“ den 31. noch einschließt.
-    const tagTeile = /^(\d{4})-(\d{2})-(\d{2})$/.exec(roh);
-    bisMs = tagTeile ? Date.UTC(Number(tagTeile[1]), Number(tagTeile[2]) - 1, Number(tagTeile[3]), 23, 59, 59) : Date.parse(roh);
-    if (!(bisMs > jetzt && bisMs <= jetzt + 3660 * TAG)) throw fehler('LIZENZ_TAGE', 'Das Ende muss in der Zukunft liegen, höchstens zehn Jahre ab heute.');
-  } else {
-    const tage = Math.floor(Number(angaben?.tage));
-    if (!(tage >= 1 && tage <= 3660)) throw fehler('LIZENZ_TAGE', 'Die Laufzeit muss zwischen 1 und 3660 Tagen liegen.');
-    bisMs = jetzt + tage * TAG;
-  }
-  const schonfrist = Math.min(60, Math.max(0, Math.floor(Number(angaben?.schonfrist ?? 14)) || 0));
-  const id = `L-${new Date(jetzt).toISOString().slice(0, 10).replace(/-/g, '')}-${crypto.getRandomValues(new Uint32Array(1))[0].toString(36)}`;
-  return { stufe, schonfrist, id, ab: new Date(jetzt).toISOString(), bis: new Date(bisMs).toISOString() };
-}
-
-/**
- * Einer Adresse eine Lizenz zuweisen (oder sie ersetzen): Schein signieren und ablegen.
+ * Einer Adresse eine Lizenz zuweisen (oder sie ersetzen): Die Cloud Function signiert den Schein und legt ihn ab.
+ * Das ist hier nur der Aufruf; Prüfung der Angaben und Signatur liegen auf dem Server (functions/lizenzlogik.js).
  * @param {{email:string, stufe:string, tage?:number, bis?:string, schonfrist?:number, notiz?:string}} angaben
  */
-export async function zuweisen(kopf, angaben, cfg = null, jetzt = Date.now()) {
-  if (!signierer) throw fehler('LIZENZ_SCHLUESSEL', 'Zuerst die Schlüsseldatei (privat.jwk) wählen.');
-  const email = emailNorm(angaben?.email);
-  if (!email) throw fehler('LIZENZ_EMAIL', 'Bitte eine gültige E-Mail-Adresse eingeben.');
-  const { stufe, schonfrist, id, ab, bis } = laufzeitPruefen(angaben, jetzt);
-  const notiz = String(angaben?.notiz || '').trim().slice(0, MAX_NOTIZ);
-  const b = bucket(cfg);
-  try {
-    for (const variante of emailVarianten(email)) {
-      const schein = await scheinAusstellen({ id, stufe, email: variante, ab, bis, schonfrist }, signierer);
-      const inhalt = new TextEncoder().encode(JSON.stringify({ v: 1, schein, email: variante, stufe, ab, bis, notiz, ausgestellt: ab }));
-      await requestJson(`${STORAGE}/${enc(b)}/o?uploadType=media&name=${enc(`lizenzen/${variante}.json`)}`, {
-        method: 'POST', headers: { ...kopf, 'content-type': 'application/json' }, body: inhalt, timeoutMs: 30000,
-      });
-    }
-  } catch (err) {
-    throw deutlich(err);
-  }
-  return { email, id, stufe, ab, bis, schonfristTage: schonfrist, notiz };
+export async function zuweisen(kopf, angaben, cfg = null) {
+  return funktion('lizenzZuweisen', kopf, {
+    email: angaben?.email, stufe: angaben?.stufe, tage: angaben?.tage, bis: angaben?.bis, schonfrist: angaben?.schonfrist, notiz: angaben?.notiz,
+  }, cfg);
 }
-
-/** So sieht die Kennung eines Geräts aus (src/web/lizenz.js: Installationskennung). */
-const GERAET_RE = /^[\w-]{8,80}$/;
 
 /**
  * Einen Geräteschein ausstellen: gilt nur für die Kennung eines Geräts, ohne Google-Konto. Er wird nirgends
  * abgelegt; der Betreiber gibt den Text dem Kunden, der ihn in der Lizenzkarte einlöst.
- * @param {{geraet:string, stufe:string, tage?:number, bis?:string, schonfrist?:number}} angaben
  * @returns {Promise<{schein:string, id:string, stufe:string, ab:string, bis:string, geraet:string}>}
  */
-export async function geraetScheinAusstellen(angaben, jetzt = Date.now()) {
-  if (!signierer) throw fehler('LIZENZ_SCHLUESSEL', 'Zuerst die Schlüsseldatei (privat.jwk) wählen.');
-  const geraet = String(angaben?.geraet || '').trim();
-  if (!GERAET_RE.test(geraet)) throw fehler('LIZENZ_GERAET', 'Bitte die Kennung des Geräts genau so einfügen, wie sie in der Lizenzkarte steht.');
-  const { stufe, schonfrist, id, ab, bis } = laufzeitPruefen(angaben, jetzt);
-  const schein = await scheinAusstellen({ id, stufe, geraet, ab, bis, schonfrist }, signierer);
-  return { schein, id, stufe, ab, bis, geraet };
+export async function geraetScheinAusstellen(kopf, angaben, cfg = null) {
+  return funktion('geraetSchein', kopf, {
+    geraet: angaben?.geraet, stufe: angaben?.stufe, tage: angaben?.tage, bis: angaben?.bis, schonfrist: angaben?.schonfrist,
+  }, cfg);
 }
 
 /**
@@ -472,21 +334,11 @@ export async function tarifeLesen(kopf, cfg = null, schluessel = OEFFENTLICHER_S
 
 /**
  * Die Einstellung signieren und veröffentlichen: gilt für jedes Konto beim nächsten Abgleich mit der Cloud oder bei
- * der nächsten Suche nach Updates. Ohne geladenen Signierschlüssel geht es nicht (sonst nähme kein Konto sie an).
- * Die Datei ist öffentlich lesbar; geheim ist nichts daran, echt macht sie allein die Signatur.
+ * der nächsten Suche nach Updates. Signiert und abgelegt wird auf dem Server (Cloud Function); die Datei ist
+ * öffentlich lesbar, geheim ist nichts daran, echt macht sie allein die Signatur.
  */
 export async function tarifeSetzen(kopf, konfig, cfg = null) {
-  if (!signierer) throw fehler('LIZENZ_SCHLUESSEL', 'Zuerst im Reiter „Lizenzen“ den Signierschlüssel laden.');
-  const inhalt = { ...tarifePruefen(konfig), ts: new Date().toISOString() };
-  const signiert = await tarifeSignieren(inhalt, signierer);
-  try {
-    await requestJson(`${STORAGE}/${enc(bucket(cfg))}/o?uploadType=media&name=${enc(TARIFE_PFAD)}`, {
-      method: 'POST', headers: { ...kopf, 'content-type': 'application/json' }, body: new TextEncoder().encode(JSON.stringify({ v: 2, signiert })), timeoutMs: 30000,
-    });
-  } catch (err) {
-    throw deutlich(err);
-  }
-  return { ...inhalt, signiert };
+  return funktion('tarifeVeroeffentlichen', kopf, { konfig: tarifePruefen(konfig) }, cfg);
 }
 
 /** Die Veröffentlichung entfernen: Es gelten wieder die eingebauten Werte. */

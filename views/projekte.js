@@ -14,7 +14,8 @@
 import { html, raw, esc, $, $$, money, moneyInput, parseMoney, fmtDate, todayISO, int, addDays } from '../lib/util.js';
 import { icon, ok, err, warn, modal, confirmDialog, statCard } from '../lib/ui.js';
 import { store, sel } from '../lib/store.js';
-import { navigate, refresh } from '../lib/router.js';
+import { navigate, refresh, router } from '../lib/router.js';
+import { bereichEin } from '../lib/bewegung.js';
 import { mountTable } from '../lib/table.js';
 import { openMenu } from '../lib/popover.js';
 import { sperrKarteZeigen, erlaubt } from '../lib/lizenzui.js';
@@ -246,8 +247,22 @@ function detail(root, p, actions, reiter) {
     </div>
     <div id="pjReiter"></div>`;
 
-  $$('[data-reiter]', root).forEach((k) => k.addEventListener('click', () => navigate('projekte', { id: p.id, reiter: k.dataset.reiter }, { ersetzen: true })));
-  $$('[data-reiter-sprung]', root).forEach((l) => l.addEventListener('click', (e) => { e.preventDefault(); navigate('projekte', { id: p.id, reiter: l.dataset.reiterSprung }, { ersetzen: true }); }));
+  const host = $('#pjReiter', root);
+  // Reiterwechsel zeichnet nur den Reiter darunter neu; Kopf und Leiste bleiben stehen, die Marke gleitet.
+  let aktuell = reiter;
+  const reiterZeigen = (neu) => {
+    if (neu === aktuell) return;
+    aktuell = neu;
+    router.params = { ...router.params, id: p.id, reiter: neu };
+    $$('[data-reiter]', root).forEach((x) => {
+      x.classList.toggle('active', x.dataset.reiter === neu);
+      x.setAttribute('aria-pressed', String(x.dataset.reiter === neu));
+    });
+    reiterInhalt(host, p, b, neu);
+    bereichEin(host);
+  };
+  $$('[data-reiter]', root).forEach((k) => k.addEventListener('click', () => reiterZeigen(k.dataset.reiter)));
+  $$('[data-reiter-sprung]', root).forEach((l) => l.addEventListener('click', (e) => { e.preventDefault(); reiterZeigen(l.dataset.reiterSprung); }));
   $('#pjKunde', root)?.addEventListener('click', async (e) => { e.preventDefault(); (await import('./master.js')).openStammdatum('contacts', p.kontaktId); });
   $('#pjAngebot', root)?.addEventListener('click', (e) => { e.preventDefault(); navigate('rechnungen', { beleg: angebot.id }); });
   $('#pjStart', root)?.addEventListener('click', () => stoppuhrDialog(p.id));
@@ -256,7 +271,10 @@ function detail(root, p, actions, reiter) {
   $('#pjNeuMenue', root).addEventListener('click', (e) => neuMenue(e.currentTarget, p));
   $('#pjBearbeiten', root).addEventListener('click', () => projektDialog(structuredClone(p)));
 
-  const host = $('#pjReiter', root);
+  reiterInhalt(host, p, b, reiter);
+}
+
+function reiterInhalt(host, p, b, reiter) {
   if (reiter === 'zeiten') zeitenReiter(host, p, b.zeiten);
   else if (reiter === 'belege') belegeReiter(host, p, b);
   else if (reiter === 'buchungen') buchungenReiter(host, p, b.buchungen);

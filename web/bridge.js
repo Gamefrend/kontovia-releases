@@ -225,8 +225,6 @@ function nachSperre(reason) {
   cloud.koppelnVerbindenAbbrechen();
   KP.codeVergessen();
   Z.bildschirmBeenden();
-  // Der Signierschlüssel der Lizenzverwaltung gilt nur für die offene Sitzung.
-  LV.schluesselVergessen();
   // Die Texterkennung hält nichts über das Sperren hinaus.
   OCR.beenden().catch(() => {});
   if (lockTimer) clearTimeout(lockTimer);
@@ -1209,21 +1207,15 @@ const api = {
     /* Lizenzverwaltung (lizenzverwaltung.js), nur im Admin-Bereich: Die Regeln lassen allein den Betreiber zu. */
     verwaltung: {
       tarifeLesen: handle(async () => kopie(await LV.tarifeLesen(await betreiberKopf('lizenzen')))),
-      tarifeSetzen: handle(async (konfig) => kopie(await LV.tarifeSetzen(await betreiberKopf('lizenzen'), kopie(konfig || {})))),      tarifeLoeschen: handle(async () => LV.tarifeLoeschen(await betreiberKopf('lizenzen'))),
-      schluessel: handle(async (jwkText) => LV.schluesselLaden(str(jwkText, 4000))),
-      schluesselDa: handle(async () => LV.schluesselDa()),
-      /* Schlüssel in der Cloud: verschlüsselt mit einer Passphrase, nur das Betreiber-Konto kommt an die Datei. */
-      schluesselCloud: handle(async () => kopie(await LV.schluesselCloudStand(await betreiberKopf('lizenzen')))),
-      schluesselSichern: handle(async (jwkText, passphrase) => LV.schluesselSichern(await betreiberKopf('lizenzen'), str(jwkText, 4000), str(passphrase, 500))),
-      schluesselHolen: handle(async (passphrase) => LV.schluesselAusCloud(await betreiberKopf('lizenzen'), str(passphrase, 500))),
-      schluesselCloudLoeschen: handle(async () => LV.schluesselCloudLoeschen(await betreiberKopf('lizenzen'))),
+      tarifeSetzen: handle(async (konfig) => kopie(await LV.tarifeSetzen(await betreiberKopf('lizenzen'), kopie(konfig || {})))),
+      tarifeLoeschen: handle(async () => LV.tarifeLoeschen(await betreiberKopf('lizenzen'))),
       laden: handle(async () => kopie(await LV.laden(await betreiberKopf('lizenzen')))),
       zuweisen: handle(async (angaben = {}) => kopie(await LV.zuweisen(await betreiberKopf('lizenzen'), {
         email: str(angaben.email, 254), stufe: str(angaben.stufe, 20), tage: Number(angaben.tage), bis: str(angaben.bis || '', 40),
         schonfrist: Number(angaben.schonfrist), notiz: str(angaben.notiz, 200),
       }))),
-      /* Geräteschein: nur signieren, nirgends ablegen (der Betreiber gibt den Text weiter). */
-      geraetSchein: handle(async (angaben = {}) => kopie(await LV.geraetScheinAusstellen({
+      /* Zuweisen, Geräteschein und Tarife signiert eine Cloud Function mit dem Schlüssel auf dem Server. Geräteschein: nirgends abgelegt, der Betreiber gibt den Text weiter. */
+      geraetSchein: handle(async (angaben = {}) => kopie(await LV.geraetScheinAusstellen(await betreiberKopf('lizenzen'), {
         geraet: str(angaben.geraet, 80), stufe: str(angaben.stufe, 20), tage: Number(angaben.tage), bis: str(angaben.bis || '', 40), schonfrist: Number(angaben.schonfrist),
       }))),
       entziehen: handle(async (email, zuruecksetzen = false) => LV.entziehen(await betreiberKopf('lizenzen'), str(email, 254), null, { zuruecksetzen: zuruecksetzen === true })),

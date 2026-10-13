@@ -17,7 +17,7 @@ import { VERSIONEN } from './lib/versionen.js';
 import { mitCodeVerbinden, nachDemVerbinden } from './lib/koppeln.js';
 import { beimEntsperren, hinweisKasten, hinweisVerdrahten } from './lib/zulassung.js';
 import { abmelden, entsperrWege, kontenMenue, kontenAufSperrbildschirm, nachrichtHolen, kontoName, kontoSchluessel } from './lib/zugaenge.js';
-import { feedbackOeffnen, feedbackNachsenden, entwicklerKlick } from './lib/feedback.js';
+import { feedbackOeffnen, feedbackNachsenden } from './lib/feedback.js';
 import { rechtsfuss, rechtslinks, nutzungPruefen, nutzungVermerken, entwicklungsKasten, entwicklungsLeiste, ENTWICKLUNG_TITEL, ENTWICKLUNG_TEXT } from './lib/recht.js';
 import { nutzerWaehlen, nutzerMenue, nutzerAnzeigen, kannSchreiben } from './lib/benutzer.js';
 import { sucheOeffnen, SUCHE_KUERZEL } from './lib/suche.js';
@@ -1374,7 +1374,6 @@ function renderShell() {
   // Der Betreiber hat statt „Feedback“ den Admin-Bereich (Rückmeldungen lesen sich dort).
   $('#adminBtn').addEventListener('click', () => { $('.shell')?.classList.remove('nav-offen'); navigate('admin'); });
   adminKnopfAktualisieren();
-  entwicklerKlick($('#versionLabel'));
   $('#newTxBtn').addEventListener('click', (e) => neueBuchungMenue(e.currentTarget));
   // Laufende Stoppuhr eines Projekts oben auf jeder Seite; nachgeladen, damit der Start nicht wartet.
   import('./lib/stoppuhranzeige.js').then((m) => { if ($('#uhrSlot')) m.stoppuhrAnzeigeStarten($('#uhrSlot')); }).catch(() => {});

@@ -21,7 +21,7 @@
 import { compareVersions } from './updateinfo.js';
 
 /** Wird beim Bauen eingesetzt (scripts/build-web.js). */
-export const VERSION = '2.37.0';
+export const VERSION = '2.37.1';
 
 const META = 'kontovia-meta';
 const PREFIX = 'kontovia-app-';
@@ -106,6 +106,35 @@ async function sha256Hex(buf) {
   return Array.from(d, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+/** So oft wird eine Datei nach einem vorübergehenden Fehler des Servers (5xx, 429, Netz) noch einmal geholt. */
+const WIEDERHOLUNGEN = 4;
+const warten = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Holt eine Datei der neuen Fassung. Der Server (GitHub Pages) antwortet gelegentlich kurz mit 503; dann hilft
+ * nur Warten und Wiederholen, mit wachsendem Abstand (0,5 / 1 / 2 / 4 s). Ein endgültiger Fehler (etwa 404)
+ * wird nicht wiederholt. Jede Wiederholung bekommt eine eigene Adresse, damit kein Zwischenspeicher die
+ * Fehlerantwort noch einmal ausliefert.
+ */
+export async function dateiHolen(url, version, pfad) {
+  let letzter = null;
+  for (let i = 0; i <= WIEDERHOLUNGEN; i++) {
+    try {
+      const adresse = new URL(url.href);
+      adresse.searchParams.set('kv-neu', version);
+      if (i) adresse.searchParams.set('kv-v', String(i));
+      const res = await fetch(adresse.href, { cache: 'no-store', credentials: 'omit' });
+      if (res.ok) return res;
+      letzter = new Error(`${pfad} konnte nicht geladen werden (HTTP ${res.status}).`);
+      if (res.status < 500 && res.status !== 429 && res.status !== 408) break;
+    } catch (err) {
+      letzter = err;
+    }
+    if (i < WIEDERHOLUNGEN) await warten(500 * 2 ** i);
+  }
+  throw letzter;
+}
+
 /**
  * Lädt alle Dateien der neuen Fassung und prüft jede einzeln.
  * `info` kommt aus der Oberfläche zurück und wird deshalb erneut geprüft.
@@ -123,8 +152,7 @@ export async function herunterladen(info, onProgress = () => {}) {
       const url = new URL(f.path, APP);
       // Am Service Worker vorbei (er lieferte die laufende Fassung) und am
       // Zwischenspeicher des Servers vorbei (er könnte noch die alte haben).
-      const res = await fetch(`${url.href}?kv-neu=${encodeURIComponent(neu.version)}`, { cache: 'no-store', credentials: 'omit' });
-      if (!res.ok) throw new Error(`${f.path} konnte nicht geladen werden (HTTP ${res.status}).`);
+      const res = await dateiHolen(url, neu.version, f.path);
       const buf = await res.arrayBuffer();
       if (await sha256Hex(buf) !== f.sha256) {
         throw new Error(`Die Prüfsumme von ${f.path} stimmt nicht. Die neue Fassung wurde verworfen.`);

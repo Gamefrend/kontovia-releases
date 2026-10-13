@@ -1,7 +1,7 @@
 {
-  "version": "2.37.0",
-  "released": "2026-10-13T09:44:41.472Z",
-  "notes": "Projekte mit allem, was dazugehört\n\n- Die Seite eines Projekts zeigt jetzt Zeiten, Rechnungen, Angebote, Buchungen und Aufgaben, dazu offene Forderungen.\n- Die laufende Stoppuhr steht oben auf jeder Seite und lässt sich dort anhalten. Starten geht auch über die Suche und die Übersicht.\n- Aus einem Angebot wird mit einem Klick ein Projekt. Rechnungen und Angebote lassen sich nachträglich einem Projekt zuordnen.\n- Neue Rechnungen, Angebote, Ausgaben und Aufgaben legen Sie direkt im Projekt an, sie gehören dann gleich dazu.\n- Buchungen und Rechnungen zeigen ihr Projekt und lassen sich danach filtern, Kontakte zeigen ihre Projekte.",
+  "version": "2.37.1",
+  "released": "2026-10-13T13:07:57.389Z",
+  "notes": "Sanfterer Wechsel im Projekt, sichereres Aktualisieren\n\n- Wenn Sie in einem Projekt zwischen Zeiten, Rechnungen, Buchungen und Aufgaben wechseln, wird nur der Inhalt darunter ausgetauscht und sanft eingeblendet.\n- Wenn der Server kurz nicht antwortet, versucht Kontovia das Herunterladen eines Updates von selbst noch einmal.",
   "files": [
     {
       "path": "abo/abo.css",
@@ -35,8 +35,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "c3709422260d04f9875fc16131b533c82cc51c22b7932d9e322b8afb1cff50d3",
-      "size": 86612
+      "sha256": "48e39b4f1689f48949f5443c84fb9e77abee58cc3ceb096d14ba67934de4424d",
+      "size": 86556
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -220,8 +220,8 @@
     },
     {
       "path": "lib/feedback.js",
-      "sha256": "5a86e437ec14c1f698a2089ee7c5cbeb1fb1775685394bc0ed5e04ba1b4ba66e",
-      "size": 20931
+      "sha256": "2b67ccbc67c9966aa901a3f0689a7e1c536dbff1a9b4ef7d22892032eb9c2e4a",
+      "size": 20090
     },
     {
       "path": "lib/fokus.js",
@@ -310,8 +310,8 @@
     },
     {
       "path": "lib/lizenzverwaltung.js",
-      "sha256": "578623f97bcdcc2cf7e35a8fbb259d3695930b9ef979711284773bf5d648d873",
-      "size": 34366
+      "sha256": "1e4c1bb3b15b50df86173b47413df381002ff367546b928aa6538322317f77c0",
+      "size": 30427
     },
     {
       "path": "lib/mahnungsaktionen.js",
@@ -580,8 +580,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz.js",
-      "sha256": "c7d942ae5f89004501d1ead5d12192830814a3f29fe9eb8012170ffa420ac32f",
-      "size": 140565
+      "sha256": "f06c99053707ff473a05b785c6f9762aa107466245d0e4847e995560fbeeb490",
+      "size": 144546
     },
     {
       "path": "lib/stoppuhranzeige.js",
@@ -625,8 +625,8 @@
     },
     {
       "path": "lib/tarifverwaltung.js",
-      "sha256": "a1b1e1f5b1eb23988c804579b6080091519fb22f8dde1fec7b70d4dd43bcfcf5",
-      "size": 15939
+      "sha256": "4e110699c396d43646e0a248d13867e0b9fe6f9b6f62a486f9618bb5673f5adf",
+      "size": 15973
     },
     {
       "path": "lib/termine.js",
@@ -655,8 +655,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "199ba85dd26c91affd5fd2b8288aa4c48ec1fe5ba6839ecba49997cd549d4c84",
-      "size": 48740
+      "sha256": "f38cf047aa16dddc38024dde57e0c7120b71ae0de8a962819325ee5bd36d9af4",
+      "size": 49171
     },
     {
       "path": "lib/waehrung.js",
@@ -695,12 +695,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "4e52c4c94608009668a00ad9ce6dff7db6db60a947d8cb8acd54c5424bf855d3",
+      "sha256": "590b69e450cad0d0d7528e480265296b8397ee8573dd0be3e11c1b5a2c4ecacc",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "77f638ef58fab6edb008ff0055de5797905b1ae27f427b1687dbf8dd4a980f2a",
+      "sha256": "9fb07f5e42e429b6f6b24682a0aa2ce217b2d7a9991830b706abb0e11680daa0",
       "size": 34700
     },
     {
@@ -715,7 +715,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "89e1e644e4c57ba9deca2701fec0ca5de4f75146d4aaead5a1fbdcae90ff7eb7",
+      "sha256": "497c4119ba59fcd8f2c2fd94cfdac6e9ff1297cb01ef5fa45a11b178b77ae49b",
       "size": 38431
     },
     {
@@ -835,8 +835,8 @@
     },
     {
       "path": "views/projekte.js",
-      "sha256": "685a326c8102086d27c6f0269d0b3f57612b0575e16e4019181f6edcf1210914",
-      "size": 41305
+      "sha256": "1ccd7ad56b76d06c6fa2b149ca8480df21d84d7ec23f1252cae14e2185a8d435",
+      "size": 41879
     },
     {
       "path": "views/rechnungen.js",
@@ -890,8 +890,8 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "6e411f7e67868d90dd72b527c119920998ad2dcef671f595f2b05b3e63dc00fb",
-      "size": 6906
+      "sha256": "0710c5df8bcba065f8d1bf8eafc0937efdfe1c41ba1f05f1eccf11cbf1504190",
+      "size": 8012
     },
     {
       "path": "web/anmeldung.js",
@@ -900,8 +900,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "25cf605deccce77f76727e51f6583183836b0f50757d882298eafd9742ceee33",
-      "size": 67144
+      "sha256": "bc03d65839f3c6172c522dc400a94002069456a8dff0017cc5f3b27dd4b0bf40",
+      "size": 66372
     },
     {
       "path": "web/cloud.js",
@@ -985,8 +985,8 @@
     },
     {
       "path": "web/lizenzverwaltung.js",
-      "sha256": "2742c768eba3c6b01b26cc35315cc0874263029706a3f7bb8ead537ee20fef46",
-      "size": 25467
+      "sha256": "1e4311a2918720ff0b212b3c5ac4422dba82c77c3ed4628ec223e55160765ce9",
+      "size": 18116
     },
     {
       "path": "web/mailversand.js",
