@@ -88,6 +88,11 @@ export async function render(root, params = {}, { actions } = {}) {
     if (sperrKarteZeigen(root, 'angebote')) return;
     const quelle = params.kopieVonBeleg ? sel.angebot(params.kopieVonBeleg) : null;
     const b = quelle ? { ...belegAusBeleg(quelle, quelle.belegart, store.db.settings), bezug: null } : neuerBeleg(store.db.settings, params.neuBeleg);
+    // `vorgabe` vom Assistenten wie bei der Rechnung: Betreff und Positionen (Preise in Cent, netto).
+    if (!quelle && params.vorgabe) {
+      if (params.vorgabe.betreff) b.betreff = String(params.vorgabe.betreff);
+      if (params.vorgabe.positionen?.length) b.positionen = params.vorgabe.positionen.map((p) => neuePosition(store.db.settings, { name: String(p.name || ''), menge: Number(p.menge) || 1, preis: Math.round(Number(p.preis) || 0) }));
+    }
     if (params.kontaktId) {
       const { kaeuferAusKontakt } = await import('../lib/rechnung.js');
       b.kaeufer = kaeuferAusKontakt(sel.contact(params.kontaktId));

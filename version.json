@@ -1,7 +1,7 @@
 {
-  "version": "2.37.1",
-  "released": "2026-10-13T13:07:57.389Z",
-  "notes": "Sanfterer Wechsel im Projekt, sichereres Aktualisieren\n\n- Wenn Sie in einem Projekt zwischen Zeiten, Rechnungen, Buchungen und Aufgaben wechseln, wird nur der Inhalt darunter ausgetauscht und sanft eingeblendet.\n- Wenn der Server kurz nicht antwortet, versucht Kontovia das Herunterladen eines Updates von selbst noch einmal.",
+  "version": "2.38.0",
+  "released": "2026-10-13T13:48:03.459Z",
+  "notes": "Der Assistent kennt Projekte, Angebote und die Kasse\n\n- Fragen Sie den Assistenten nach Projekten, Arbeitsstunden und Zeiten, die noch nicht abgerechnet sind.\n- Er zeigt offene und abgelaufene Angebote, den Bestand der Kasse und wie sich Ihr Kontostand in den nächsten Wochen entwickelt.\n- Sagen Sie etwa „Trag 2 Stunden für Website ein“ oder „Starte die Stoppuhr“: Das Fenster öffnet sich ausgefüllt.\n- Neue Projekte, Angebote, Auftragsbestätigungen und Lieferscheine bereitet er ebenfalls vor.\n- Kennt er etwas nicht, sucht er in der Hilfe, statt zu raten.",
   "files": [
     {
       "path": "abo/abo.css",
@@ -105,18 +105,18 @@
     },
     {
       "path": "lib/assistentdeutung.js",
-      "sha256": "91a88fe9c8d736ff7e8aff67dcfb841c8024bb37948f48e9acbf0e8227f3ff90",
-      "size": 51452
+      "sha256": "060161c551a68fdf480f94f025c18a22b70897ab1480ee694f3c262f2ca80209",
+      "size": 59849
     },
     {
       "path": "lib/assistentenglisch.js",
-      "sha256": "7feaa6bc2af76634930d23bb23f26ffc7734e810b667647e34e57d1aeb4e3a36",
-      "size": 22539
+      "sha256": "d7a864638816fcbad98d6d00a6ad7b14c42832f5c0a74416161b6fcc34d054dc",
+      "size": 26437
     },
     {
       "path": "lib/assistentfenster.js",
-      "sha256": "c47c21dd492994c947dcef100f55dac94138f66ed611555b402db13f3a2dcb24",
-      "size": 43268
+      "sha256": "a8cf64b859f7e544aad05aa704fd3e6c927d7ad01c8ab727002b62e31aa58199",
+      "size": 44717
     },
     {
       "path": "lib/assistentmodelle.js",
@@ -125,13 +125,13 @@
     },
     {
       "path": "lib/assistentwerkzeuge.js",
-      "sha256": "2da3c88b71b1474cc34833903d8c909a4a13105fa1e4bbc8a87d7f5b3cc07b85",
-      "size": 89575
+      "sha256": "b17e0a3e9167da21956f13e03b96caddc30b5b5ca66551db07536e3eb3c550fa",
+      "size": 116052
     },
     {
       "path": "lib/assistentwissen.js",
-      "sha256": "f94f9ed446f8931ba65df6c3f8c612e134ae0f7cae14aaa14351c7c83e39f9e7",
-      "size": 10321
+      "sha256": "221f20d8c9d30c1e34afe2a0c305d59944383fcf56fe33099e4ddd0a239fe24d",
+      "size": 10155
     },
     {
       "path": "lib/aufgaben.js",
@@ -575,13 +575,13 @@
     },
     {
       "path": "lib/sprache/en/zusatz-assistent.js",
-      "sha256": "815ebbe89f2c91c30a43c247ee5997cd2a8097fe49c2a4d70e445b7d9b67594a",
-      "size": 6126
+      "sha256": "3e56dc37ada6af724d0f5e1e4d486f30b9ec0d569d427af0059c87328a1e5df5",
+      "size": 18703
     },
     {
       "path": "lib/sprache/en/zusatz.js",
-      "sha256": "f06c99053707ff473a05b785c6f9762aa107466245d0e4847e995560fbeeb490",
-      "size": 144546
+      "sha256": "1babeb5fa578867e51bbda5ce8fef1480395a9014ac3812e621ff0eb14c27e4d",
+      "size": 145676
     },
     {
       "path": "lib/stoppuhranzeige.js",
@@ -655,8 +655,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "f38cf047aa16dddc38024dde57e0c7120b71ae0de8a962819325ee5bd36d9af4",
-      "size": 49171
+      "sha256": "1e213da1b9c2e1840733e4f0207bc392ab4e257b4e19ff63a52b8771bf13eb45",
+      "size": 49869
     },
     {
       "path": "lib/waehrung.js",
@@ -695,12 +695,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "590b69e450cad0d0d7528e480265296b8397ee8573dd0be3e11c1b5a2c4ecacc",
+      "sha256": "e97630d142845fe54c76c02b690eab23f22e82982c39cc3c881614a029770258",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "9fb07f5e42e429b6f6b24682a0aa2ce217b2d7a9991830b706abb0e11680daa0",
+      "sha256": "ec98938c1d0639036e960168ae8a1f81fff1457c39cd4d620cd3885486549373",
       "size": 34700
     },
     {
@@ -715,7 +715,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "497c4119ba59fcd8f2c2fd94cfdac6e9ff1297cb01ef5fa45a11b178b77ae49b",
+      "sha256": "4a94a6acc3e97e6327e321ffaf4e562414f4676e105054d20d0ff5b729938c14",
       "size": 38431
     },
     {
@@ -835,13 +835,13 @@
     },
     {
       "path": "views/projekte.js",
-      "sha256": "1ccd7ad56b76d06c6fa2b149ca8480df21d84d7ec23f1252cae14e2185a8d435",
-      "size": 41879
+      "sha256": "42d9f99a536e0abd163af5be987f80ae73d6cd9877df948f78850044ec45f67d",
+      "size": 42045
     },
     {
       "path": "views/rechnungen.js",
-      "sha256": "c3411b201efd3cbd7c47e3f2bd7b2749914ece3513c6f4f6dca1ba1f17c262e3",
-      "size": 63612
+      "sha256": "e4816c8afb1a1bb34fc54a610a69fe36f21b913f55c01a3bbe00fed20fa6eae3",
+      "size": 64069
     },
     {
       "path": "views/rechnungseditor.js",
@@ -890,7 +890,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "0710c5df8bcba065f8d1bf8eafc0937efdfe1c41ba1f05f1eccf11cbf1504190",
+      "sha256": "e45434f9a8995aec61d1661d4013b5e730ded476080a239518fb1a68a3efe103",
       "size": 8012
     },
     {

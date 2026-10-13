@@ -489,15 +489,15 @@ function projektFeld(projektId) {
   return raw(html`<div class="field"><label for="ztProjekt">Projekt</label><select id="ztProjekt">${raw(projektOptionen(''))}</select></div>`);
 }
 
-/** Stoppuhr starten; ohne projektId mit Auswahl des Projekts (Suche, Kopfleiste, Übersicht). */
-export function stoppuhrDialog(projektId = '') {
+/** Stoppuhr starten; ohne projektId mit Auswahl des Projekts (Suche, Kopfleiste, Übersicht). `taetigkeit` füllt der Assistent vor. */
+export function stoppuhrDialog(projektId = '', taetigkeit = '') {
   if (!erlaubt('projekte')) return;
   if (!projektId && !laufende().length) { projektNeu(); return; }
   const p = projektId ? sel.projekt(projektId) : null;
   const m = modal({
     title: p ? `Stoppuhr für ${p.name}` : 'Stoppuhr starten',
     size: 'slim',
-    body: html`${projektFeld(projektId)}<div class="field mb0"><label for="pjTat">Tätigkeit (freiwillig)</label><input id="pjTat" maxlength="200" placeholder="z. B. Entwurf Startseite"></div>
+    body: html`${projektFeld(projektId)}<div class="field mb0"><label for="pjTat">Tätigkeit (freiwillig)</label><input id="pjTat" maxlength="200" value="${taetigkeit}" placeholder="z. B. Entwurf Startseite"></div>
       ${laufendeZeit() ? raw(html`<p class="small muted mb0 mt8">Die laufende Stoppuhr wird dabei angehalten und ihre Zeit gespeichert.</p>`) : ''}`,
     foot: html`<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>${icon('play', 15)} Starten</button>`,
   });
@@ -510,11 +510,11 @@ export function stoppuhrDialog(projektId = '') {
   $m('#pjTat').focus();
 }
 
-/** Zeit von Hand eintragen; ohne projektId mit Auswahl des Projekts. */
-export function zeitEintragen(projektId = '') {
+/** Zeit von Hand eintragen; ohne projektId mit Auswahl des Projekts. `vorgabe` (Minuten, Datum, Tätigkeit) kommt vom Assistenten. */
+export function zeitEintragen(projektId = '', vorgabe = {}) {
   if (!erlaubt('projekte')) return;
   if (!projektId && !laufende().length) { projektNeu(); return; }
-  zeitDialog(neueZeit(projektId, { minuten: 60 }), { neu: true, projektId });
+  zeitDialog(neueZeit(projektId, { minuten: 60, ...vorgabe }), { neu: true, projektId });
 }
 
 function zeitDialog(z, { neu = false, projektId = z.projektId } = {}) {
