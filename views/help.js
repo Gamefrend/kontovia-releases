@@ -935,9 +935,17 @@ function recht(root) {
       <div class="card mt16"><div class="card-body">
         <h2 class="mt0">Lizenzen</h2>
         <p>Kontovia läuft in Ihrem Browser; für ihn gelten dessen Lizenzbedingungen. Fremden
-        Programmcode enthält Kontovia nur für den Assistenten: <strong>WebLLM</strong> (MLC, Apache 2.0)
-        mit der TVM-Laufzeit und XGrammar (Apache 2.0) sowie loglevel (MIT). Die Sprachmodelle
-        <strong>Qwen3</strong> (Alibaba Cloud, Apache 2.0) werden erst auf Wunsch heruntergeladen.</p>
+        Programmcode enthält Kontovia nur an drei Stellen, jeweils unverändert:</p>
+        <ul>
+          <li><strong>SQLite</strong> (gemeinfrei) mit <strong>SQLite3 Multiple Ciphers</strong> (Ulrich Telle, MIT)
+              für die verschlüsselte Datenbank.</li>
+          <li><strong>Tesseract</strong> (Apache 2.0) mit tesseract.js (Apache 2.0), Leptonica (BSD-artig), buffer,
+              regenerator-runtime und zlib.js (MIT) sowie ieee754 (BSD) zum Lesen von Fotos und Scans; dazu die
+              deutschen Sprachdaten von tesseract-ocr (Apache 2.0).</li>
+          <li><strong>WebLLM</strong> (MLC, Apache 2.0) mit der TVM-Laufzeit und XGrammar (Apache 2.0) sowie loglevel
+              (MIT) für den Assistenten. Die Sprachmodelle <strong>Qwen3</strong> (Alibaba Cloud, Apache 2.0) werden
+              erst auf Wunsch heruntergeladen.</li>
+        </ul>
         <p class="mb0"><strong>Schrift Geist.</strong> Copyright 2024 The Geist Project Authors
         (github.com/vercel/geist-font), lizenziert unter der SIL Open Font License 1.1. Sie wird mit
         Kontovia ausgeliefert und in die PDF-Dateien eingebettet; Verkauf der Schrift für sich allein

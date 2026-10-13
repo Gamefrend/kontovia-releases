@@ -1,7 +1,7 @@
 {
-  "version": "2.35.0",
-  "released": "2026-10-13T00:51:10.475Z",
-  "notes": "Angebote, Projekte und Kassenbuch\n\n- Angebote, Auftragsbestätigungen und Lieferscheine schreiben und mit einem Klick in den nächsten Beleg oder die Rechnung verwandeln.\n- Projekte mit Stoppuhr und Zeiterfassung: offene Zeiten werden zum Rechnungsentwurf, und Sie sehen je Projekt, was es einbringt.\n- Beleg lesen: Aus einem PDF oder einem Foto schlägt Kontovia Betrag, Datum und Lieferant vor. Gelesen wird nur auf Ihrem Gerät.\n- Kassenbuch mit Tagesbestand und Kassensturz sowie eine Vorschau, wie sich Ihr Kontostand in den nächsten Wochen entwickelt.\n- Neu außerdem: Paket für die Kanzlei als ZIP mit allen Belegen, ein Link zum Online-Bezahlen auf der Rechnung und eine übersichtlichere Lizenzkarte.",
+  "version": "2.35.1",
+  "released": "2026-10-13T01:32:42.372Z",
+  "notes": "Kleine Korrekturen\n\n- Unter Hilfe › Rechtliches › Lizenzen stehen jetzt alle mitgelieferten Programmteile, auch die Texterkennung und die Datenbank.\n- Zwei Beschriftungen erscheinen jetzt auch auf Englisch.",
   "files": [
     {
       "path": "abo/abo.css",
@@ -580,8 +580,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz.js",
-      "sha256": "01d56e8a2ce1f1bf276c95ced3289f8752b03a55b8f62e110480bbcf477ac4b3",
-      "size": 102272
+      "sha256": "ccd0ed5f26288b32ab0e64dff06d88b98b27a2ca102f97f90718fabf2deb10be",
+      "size": 105439
     },
     {
       "path": "lib/store.js",
@@ -650,8 +650,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "2901c4a4173065d1e4f8ed9f7a20b3f2eadf1eb537ed666951f052d75d57297d",
-      "size": 46991
+      "sha256": "3ce9549537b988661e61a1066c2d8222eec6be9e3fd13fd903ea482f0ce76cc5",
+      "size": 47307
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -680,12 +680,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "66df57fea3dc207c5d1609719326777ac560b8080aca553be88688e3c403a403",
+      "sha256": "dc5dad5778e3eb13c756973a19a6d2877a4a8bf85884b9b111109161467e0dc1",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "d20141db3231dc6edef47c2af65092a5475c1d6fae94c2f6bd038a645385cdfe",
+      "sha256": "92f605e226a9fba11b5a77b9a9578522295ac39dfae772da4002e7f424fc24d4",
       "size": 34700
     },
     {
@@ -700,7 +700,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "99e29198358a0665f5674f046c154417a87b85410e90c66ef03153ac4cff3af9",
+      "sha256": "2a04729aa1c44eb6e54d3bb6bcba71e55b1a16d5bce82e31ebc1219bf2fd2272",
       "size": 38431
     },
     {
@@ -780,8 +780,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "a4c229626dc0202ea7a5af91081ad8434cd6ef0470bf29489da1c6e88d2c6c87",
-      "size": 79123
+      "sha256": "b6fb0fe2b3f5a5925ab4ed8e4a29e4ce02d9701602127d3b88662e7ba768a38a",
+      "size": 79692
     },
     {
       "path": "views/importexport.js",
@@ -875,7 +875,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "1277d38ba09d53d812f3e110290fbfd8ab9309f77b13637edbbf3d6f35e9e41a",
+      "sha256": "111aa035691a2399658c20af5b0f83307b59f923bcc205184083349ae217c445",
       "size": 6906
     },
     {
