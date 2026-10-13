@@ -4,6 +4,7 @@
  *
  * Reiter:
  *   Rechnungen  ausgehende Rechnungen, Entwürfe, Stornos
+ *   Angebote    Angebote, Auftragsbestätigungen, Lieferscheine (views/angebote.js, params.beleg / params.neuBeleg)
  *   Eingang     erhaltene E-Rechnungen ansehen und buchen
  *   Produkte    Leistungen mit Preis, Einheit und Steuersatz
  *   Vorlagen    wiederkehrende Rechnungen als Ausgangspunkt
@@ -30,6 +31,8 @@ import {
   vorschauSvg, pdfSpeichern, pdfZeigen, xmlSpeichern, base64ZuBytes, versandDateien,
 } from '../lib/rechnungsdateien.js';
 import { eRechnungAusDatei } from '../lib/erechnung.js';
+import { istBeleg, neuerBeleg, belegAusBeleg } from '../lib/angebote.js';
+import { angeboteListe, belegDetail, neuBelegMenue } from './angebote.js';
 import {
   WEGE, DIREKT, STANDARD, PLATZHALTER, mailFuer, vorlageAus, adressen, adresseOk, emlBauen, mailtoAdresse, graphNachricht,
 } from '../lib/emailversand.js';
@@ -50,6 +53,7 @@ let tab = 'ausgang';
 /* Vorn, was täglich gebraucht wird; dahinter, was man einmal einrichtet. */
 const TABS = {
   ausgang: 'Ausgang',
+  angebote: 'Angebote',
   eingang: 'Eingang',
   mahnwesen: 'Mahnungen',
   vorlagen: 'Vorlagen',
@@ -57,9 +61,10 @@ const TABS = {
   gestaltung: 'Gestaltung',
 };
 /** Reiter, die zu einer Premium-Funktion gehören (Krone am Reiter, Sperrkarte statt Inhalt). */
-const TAB_FUNKTION = { mahnwesen: 'mahnwesen', vorlagen: 'vorlagen', produkte: 'vorlagen', gestaltung: 'gestaltung' };
+const TAB_FUNKTION = { angebote: 'angebote', mahnwesen: 'mahnwesen', vorlagen: 'vorlagen', produkte: 'vorlagen', gestaltung: 'gestaltung' };
 const TAB_TITEL = {
   ausgang: 'Rechnungen, die Sie schreiben',
+  angebote: 'Angebote, Auftragsbestätigungen und Lieferscheine',
   eingang: 'E-Rechnungen, die Sie erhalten',
   mahnwesen: 'Überfällige Rechnungen und Mahnungen',
   vorlagen: 'Positionen und Texte, aus denen mit einem Klick eine neue Rechnung entsteht',
@@ -70,6 +75,26 @@ const TAB_TITEL = {
 export async function render(root, params = {}, { actions } = {}) {
   router.leaveGuard = null;
   if (params.tab && TABS[params.tab]) tab = params.tab;
+
+  // Ein Angebot, eine Auftragsbestätigung oder ein Lieferschein (views/angebote.js)
+  if (params.beleg) {
+    const b = sel.angebot(params.beleg);
+    if (!b) { root.innerHTML = '<div class="notice">Diesen Beleg gibt es nicht mehr.</div>'; return; }
+    if (b.status === 'ausgestellt') { await belegDetail(root, b, actions); return; }
+    editorZeigen(root, { rechnung: b }, actions);
+    return;
+  }
+  if (params.neuBeleg) {
+    if (sperrKarteZeigen(root, 'angebote')) return;
+    const quelle = params.kopieVonBeleg ? sel.angebot(params.kopieVonBeleg) : null;
+    const b = quelle ? { ...belegAusBeleg(quelle, quelle.belegart, store.db.settings), bezug: null } : neuerBeleg(store.db.settings, params.neuBeleg);
+    if (params.kontaktId) {
+      const { kaeuferAusKontakt } = await import('../lib/rechnung.js');
+      b.kaeufer = kaeuferAusKontakt(sel.contact(params.kontaktId));
+    }
+    editorZeigen(root, { rechnung: b }, actions);
+    return;
+  }
 
   // Eine einzelne Rechnung oder Vorlage
   if (params.id) {
@@ -102,9 +127,10 @@ export async function render(root, params = {}, { actions } = {}) {
     return;
   }
 
-  actions.innerHTML = `
-    <button class="btn primary" id="reNeu" aria-haspopup="menu">${icon('plus', 16).__raw} Neue Rechnung ${icon('down', 14).__raw}</button>`;
-  $('#reNeu', actions).addEventListener('click', (e) => neuMenue(e.currentTarget));
+  actions.innerHTML = tab === 'angebote'
+    ? `<button class="btn primary" id="reNeu" aria-haspopup="menu" data-premium="angebote">${icon('plus', 16).__raw} Neues Angebot ${icon('down', 14).__raw}</button>`
+    : `<button class="btn primary" id="reNeu" aria-haspopup="menu">${icon('plus', 16).__raw} Neue Rechnung ${icon('down', 14).__raw}</button>`;
+  $('#reNeu', actions).addEventListener('click', (e) => (tab === 'angebote' ? neuBelegMenue(e.currentTarget) : neuMenue(e.currentTarget)));
 
   root.innerHTML = `
     <div class="seg tabs mb16" role="group" aria-label="Bereich">
@@ -114,7 +140,7 @@ export async function render(root, params = {}, { actions } = {}) {
   $$('[data-tab]', root).forEach((b) => b.addEventListener('click', () => { navigate('rechnungen', { tab: b.dataset.tab }, { ersetzen: true }); }));
   const body = $('#reBody', root);
   if (TAB_FUNKTION[tab] && sperrKarteZeigen(body, TAB_FUNKTION[tab])) return;
-  ({ ausgang, eingang, produkte, vorlagen, mahnwesen: mahnwesenZeigen, gestaltung }[tab])(body, params);
+  ({ ausgang, angebote: angeboteListe, eingang, produkte, vorlagen, mahnwesen: mahnwesenZeigen, gestaltung }[tab])(body, params);
 }
 
 /** „Neue Rechnung“: leer oder aus einer Vorlage. */
@@ -389,8 +415,13 @@ const MS_ANHANG_MAX = 2.8 * 1024 * 1024;
 
 const mitTouch = () => globalThis.matchMedia?.('(pointer: coarse)').matches;
 
-async function sendenDialog(r, { offen = true } = {}) {
+/**
+ * Eine Rechnung (oder ein Angebot, eine Auftragsbestätigung, einen Lieferschein) per E-Mail senden.
+ * `vermerk(id, art, an)` hält den Versand fest; Belege geben ihren eigenen Weg mit (lib/angebotsaktionen.js).
+ */
+export async function sendenDialog(r, { offen = true, vermerk = versandVermerken } = {}) {
   await dokumentVorbereiten(r);
+  const beleg = istBeleg(r);
   const an = r.kaeufer?.email || (r.kaeufer?.kontaktId && sel.contact(r.kaeufer.kontaktId))?.email || '';
   const mail = mailFuer(r, store.db.settings, { offen });
   const behoerde = !!String(r.kaeufer?.leitwegId || '').trim();
@@ -400,10 +431,10 @@ async function sendenDialog(r, { offen = true } = {}) {
       <div class="field"><label for="reAn">An</label><input id="reAn" type="email" multiple value="${esc(an)}" placeholder="E-Mail-Adresse des Kunden" autocomplete="email"></div>
       <div class="field"><label for="reBetreff">Betreff</label><input id="reBetreff" value="${esc(mail.betreff)}"></div>
       <div class="field"><label for="reText">Nachricht</label><textarea id="reText" rows="9">${esc(mail.text)}</textarea>
-        <span class="hint"><a href="#" id="reVorlageText">Standardtext ändern</a></span></div>
+        ${beleg ? '' : '<span class="hint"><a href="#" id="reVorlageText">Standardtext ändern</a></span>'}</div>
       <div class="field"><label>Anhang</label>
-        <label class="check"><input type="checkbox" id="reMitPdf" checked> PDF mit E-Rechnung (ZUGFeRD)</label>
-        <label class="check"><input type="checkbox" id="reMitXml" ${behoerde ? 'checked' : ''}> XRechnung als eigene Datei${behoerde ? '' : ' (meist nur für Behörden nötig)'}</label></div>
+        <label class="check"><input type="checkbox" id="reMitPdf" checked> ${beleg ? `${esc(titelVon(r))} als PDF` : 'PDF mit E-Rechnung (ZUGFeRD)'}</label>
+        ${beleg ? '' : `<label class="check"><input type="checkbox" id="reMitXml" ${behoerde ? 'checked' : ''}> XRechnung als eigene Datei${behoerde ? '' : ' (meist nur für Behörden nötig)'}</label>`}</div>
       <div class="field mb0"><label>Weg</label><div id="reWege"></div>
         <span class="hint"><span id="reWegText"></span> <a href="#" id="reKontoWechseln" hidden>Anderes Konto</a></span></div>`,
     foot: `<button class="btn left ghost" data-vermerk title="Wenn Sie die Rechnung anders verschickt haben">Als versendet vermerken</button>
@@ -423,9 +454,9 @@ async function sendenDialog(r, { offen = true } = {}) {
   }
   if (!m.root.isConnected) return;
 
-  const gewaehlt = () => [$m('#reMitPdf').checked && dateien.pdf, $m('#reMitXml').checked && dateien.xml].filter(Boolean);
+  const gewaehlt = () => [$m('#reMitPdf').checked && dateien.pdf, $m('#reMitXml')?.checked && dateien.xml].filter(Boolean);
   const teilbar = {};
-  for (const liste of [[dateien.pdf], [dateien.xml], [dateien.pdf, dateien.xml]]) {
+  for (const liste of (dateien.xml ? [[dateien.pdf], [dateien.xml], [dateien.pdf, dateien.xml]] : [[dateien.pdf]])) {
     teilbar[liste.map((d) => d.name).join('|')] = await api.file.canShare(liste.map(({ name, mime }) => ({ name, mime }))).catch(() => false);
   }
   const kannTeilen = (liste) => liste.length > 0 && !!teilbar[liste.map((d) => d.name).join('|')];
@@ -471,9 +502,9 @@ async function sendenDialog(r, { offen = true } = {}) {
     } catch (ex) { err('Das hat nicht geklappt', ex.message); }
   });
   $m('#reMitPdf').addEventListener('change', zeigen);
-  $m('#reMitXml').addEventListener('change', zeigen);
+  $m('#reMitXml')?.addEventListener('change', zeigen);
 
-  $m('#reVorlageText').addEventListener('click', async (e) => {
+  $m('#reVorlageText')?.addEventListener('click', async (e) => {
     e.preventDefault();
     if (!await mailVorlageDialog()) return;
     const neu = mailFuer(r, store.db.settings, { offen });
@@ -487,7 +518,7 @@ async function sendenDialog(r, { offen = true } = {}) {
 
   const vermerken = async (art, empfaenger) => {
     try {
-      await versandVermerken(r.id, art, empfaenger);
+      await vermerk(r.id, art, empfaenger);
       m.close();
       ok('Versand vermerkt');
       refresh();
@@ -527,7 +558,7 @@ async function sendenDialog(r, { offen = true } = {}) {
         m.close();
         ok('E-Mail gesendet', erg.von ? `über ${erg.von}` : '');
         // Hier weiß Kontovia, dass die E-Mail abging: gleich vermerken.
-        try { await versandVermerken(r.id, weg, (erg.an || ziel).join(', ')); } catch (ex) { warn('Gesendet, aber nicht vermerkt', ex.message); }
+        try { await vermerk(r.id, weg, (erg.an || ziel).join(', ')); } catch (ex) { warn('Gesendet, aber nicht vermerkt', ex.message); }
         refresh();
         return;
       }

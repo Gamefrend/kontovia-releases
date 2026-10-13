@@ -346,5 +346,12 @@ export default {
   "Hilfe per E-Mail": "Help by email",
   "5 im Monat": "5 per month",
   "unbegrenzt": "unlimited",
-  "bevorzugt": "priority"
+  "bevorzugt": "priority",
+  "Belege automatisch lesen (PDF und Foto, auf dem Gerät)": "Read receipts automatically (PDF and photo, on the device)",
+  "Angebote, Auftragsbestätigungen und Lieferscheine": "Quotes, order confirmations and delivery notes",
+  "Projekte mit Zeiterfassung und Kostenstellen": "Projects with time tracking and cost centres",
+  "Kassenbuch mit Kassensturz": "Cash book with cash count",
+  "Liquiditätsvorschau für die nächsten Wochen": "Cash flow forecast for the coming weeks",
+  "Link zum Online-Bezahlen (PayPal, Stripe und andere)": "Link for online payment (PayPal, Stripe and others)",
+  "Paket für die Kanzlei als ZIP, mit allen Belegen": "Package for your accountant as ZIP, with all receipts"
 }

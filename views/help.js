@@ -211,8 +211,34 @@ function anleitung(root) {
         <p><strong>Skonto und Ausfall.</strong> Zahlt ein Kunde mit Skonto oder gar nicht mehr, öffnen Sie die offene Buchung und
         wählen „Ausbuchen“. Kontovia berichtigt Einnahme und Umsatzsteuer im Zeitraum des Ausbuchens. Beim Kontoauszug geht das
         bei einer Teilzahlung gleich mit.</p>
+        <p><strong>Online bezahlen.</strong> Tragen Sie unter Rechnungen → Gestaltung einen Link zum Bezahlen ein, etwa Ihren
+        PayPal.me-Link oder einen Zahlungslink Ihrer Bank. Dann steht er mit einem QR-Code auf jeder offenen Rechnung und in der
+        E-Mail; Betrag und Rechnungsnummer setzt Kontovia selbst ein. Kontovia ruft den Link nie selbst auf.</p>
         <p class="small">Der automatische Empfang von E-Rechnungen kommt mit einer der nächsten Versionen. Bis dahin
         lesen Sie eine erhaltene E-Rechnung unter Rechnungen → Eingang ein.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
+        <h2 class="mt0">Angebote und Lieferscheine</h2>
+        <p>Unter <a data-go="rechnungen" data-tab="angebote">Rechnungen → Angebote</a> schreiben Sie Angebote, Auftragsbestätigungen
+        und Lieferscheine, im selben Fenster wie eine Rechnung. Jede Art hat ihre eigene Nummer (etwa AN-2026-0001). Ein Angebot
+        gilt bis zu einem Datum, das Sie wählen; ein Lieferschein zeigt nur Mengen, keine Preise.</p>
+        <p><strong>Vom Angebot zur Rechnung.</strong> Ist ein Angebot angenommen, erstellen Sie daraus mit einem Klick die
+        Auftragsbestätigung, den Lieferschein oder gleich die Rechnung. Kunde und Positionen gehen mit. Die Rechnung entsteht als
+        Entwurf, den Sie prüfen und selbst ausstellen; danach zeigt das Angebot „Berechnet“.</p>
+        <p>Angebote zählen nirgends als Einnahme, auch nicht in der Umsatzsteuer. Erst die Rechnung ist eine Rechnung.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
+        <h2 class="mt0">Belege automatisch lesen</h2>
+        <p>Hängen Sie bei einer neuen Buchung eine Rechnung oder Quittung an, liest Kontovia sie: bei einem PDF den Text, bei
+        einem Foto oder Scan mit einer Texterkennung. Gefunden werden Betrag, Datum, Umsatzsteuer, Rechnungsnummer und der
+        Absender. Über den Belegen erscheint dann „Beleg gelesen“; mit „Werte übernehmen“ stehen sie im Fenster. Prüfen Sie
+        sie, bevor Sie die Buchung anlegen.</p>
+        <p><strong>Alles bleibt auf diesem Gerät.</strong> Der Beleg wird nicht hochgeladen, auch nicht zum Lesen. Das erste
+        Foto braucht ein, zwei Sekunden länger, weil die Texterkennung startet.</p>
+        <p class="small">Am besten gelingt es mit geraden, gut beleuchteten Fotos. Eine E-Rechnung erkennt Kontovia ohnehin genau,
+        aus ihren eigenen Daten.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body" id="hilfe-kontoauszug">
@@ -361,6 +387,18 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
+        <h2 class="mt0">Projekte und Zeiterfassung</h2>
+        <p>Unter <a data-go="projekte">Projekte</a> sammeln Sie, was zu einem Auftrag gehört: die Zeiten, die Sie dafür arbeiten,
+        und die Buchungen. Ein Projekt hat einen Kunden, einen Stundensatz und auf Wunsch ein Budget in Euro oder Stunden.</p>
+        <p><strong>Zeiten erfassen.</strong> Starten Sie die Stoppuhr, wenn Sie anfangen, und halten Sie sie am Ende an. Oder tragen
+        Sie eine Zeit von Hand ein, etwa „1:30“ oder „1,5“. Die laufende Stoppuhr sehen Sie oben in jedem Projekt.</p>
+        <p><strong>Abrechnen.</strong> „Abrechnen“ macht aus den offenen Zeiten einen Rechnungsentwurf, je Tag eine Position, jede
+        Zeit einzeln oder alles in einer. Sobald Sie die Rechnung ausstellen, gelten die Zeiten als abgerechnet.</p>
+        <p><strong>Kostenstelle.</strong> Im Buchungsfenster unter „Weitere Angaben“ ordnen Sie eine Buchung einem Projekt zu. Das
+        Projekt zeigt dann Einnahmen, Ausgaben und Ergebnis, und die Buchungsliste nennt das Projekt in einer eigenen Spalte.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
         <h2 class="mt0">Zeitraum wählen und filtern</h2>
         <p><strong>Zeitraum.</strong> Oben rechts steht der gewählte Zeitraum, etwa „Jahr ${String(new Date().getFullYear())}“.
         Die Pfeile daneben blättern um genau diese Länge weiter, vom März zum April, vom
@@ -420,6 +458,18 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
+        <h2 class="mt0">Kassenbuch und Liquidität</h2>
+        <p><strong>Kassenbuch.</strong> Wer bar kassiert, legt unter Stammdaten ein Konto der Art „Kasse“ an und bucht Bares darauf.
+        Unter <a data-go="reports">Auswertungen</a> → Kassenbuch stehen dann alle Bewegungen nach Tagen, mit laufender Nummer,
+        Tagesabschluss und Bestand. Fällt der Bestand an einem Abend unter null, weist Kontovia darauf hin, denn eine Kasse kann
+        nicht weniger als nichts enthalten. Mit „Kasse zählen“ halten Sie den gezählten Bestand fest, auf Wunsch nach Scheinen und
+        Münzen; weicht er ab, schlägt Kontovia eine Buchung für die Differenz vor.</p>
+        <p><strong>Liquidität.</strong> Der Reiter zeigt, wie sich der Stand Ihrer Konten in den nächsten Wochen entwickelt: aus offenen
+        Einnahmen und Ausgaben zu ihrer Fälligkeit, wiederkehrenden Buchungen und Rechnungen und der Umsatzsteuer, die Sie
+        voraussichtlich zahlen. Droht ein Engpass, sehen Sie wann. Neue Aufträge kennt die Vorschau nicht.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
         <h2 class="mt0">Private Buchungen</h2>
         <p>Im Buchungsdialog können Sie eine Buchung als <strong>privat</strong> kennzeichnen.
         Das ist für Vorgänge gedacht, die Sie für die eigene Übersicht festhalten wollen, die
@@ -444,6 +494,8 @@ function anleitung(root) {
               „Mein ELSTER“. Dort öffnen Sie das Formular, wählen das Jahr und laden die Datei über den Reiter „XML-Import“ hoch.
               Wählen Sie dafür oben einen Monat oder ein Quartal.</li>
           <li><strong>DATEV-Buchungsstapel:</strong> eine Datei, die Ihre Steuerkanzlei direkt einliest.</li>
+          <li><strong>Paket für die Kanzlei:</strong> DATEV-Stapel, Tabellen, Berichte und alle Belege des Zeitraums in einer
+              ZIP-Datei, mit einem Verzeichnis und einer kurzen Anleitung. Zum Verschicken oder Hochladen ins Portal Ihrer Kanzlei.</li>
           <li><strong>Excel-Mappe:</strong> Buchungen, Anlage EÜR, Umsatzsteuer, offene Posten und Kontakte in einer Datei,
               mit Datums- und Eurozellen, mit denen Excel rechnen kann.</li>
           <li><strong>Zusammenfassende Meldung:</strong> Lieferungen und Leistungen an Unternehmen im EU-Ausland als Datei für das
@@ -948,7 +1000,8 @@ function wireLinks(root) {
     a.style.textDecoration = 'underline';
     a.setAttribute('role', 'link');
     a.setAttribute('tabindex', '0');
-    a.addEventListener('click', () => navigate(a.dataset.go));
-    a.addEventListener('keydown', (e) => { if (e.key === 'Enter') navigate(a.dataset.go); });
+    const ziel = () => navigate(a.dataset.go, a.dataset.tab ? { tab: a.dataset.tab } : {});
+    a.addEventListener('click', ziel);
+    a.addEventListener('keydown', (e) => { if (e.key === 'Enter') ziel(); });
   });
 }

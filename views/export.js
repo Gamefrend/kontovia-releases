@@ -74,6 +74,32 @@ function ustvaWahl(period) {
     </div>`;
 }
 
+/**
+ * Die Belege der Buchungen als Dateien (Klartext), benannt nach Datum, Belegnummer und Beschreibung,
+ * dazu ein Verzeichnis mit Prüfsummen. `vorsatz` stellt etwas vor jeden Namen (im Kanzlei-Paket „Beleg_“).
+ * @returns {Promise<{files:Array<{name:string, dataBase64:string}>, verzeichnis:{name:string, text:string}}>}
+ */
+async function belegeSammeln(rows, vorsatz = '') {
+  const files = [];
+  const index = [];
+  const vergeben = new Set();
+  for (const t of rows) {
+    for (const id of t.attachments || []) {
+      const meta = sel.attachment(id);
+      if (!meta) continue;
+      const ext = fileExtension(meta);
+      const base = `${vorsatz}${t.date}_${(t.invoiceNumber || t.id.slice(-6))}_${t.description}`.replace(/[^A-Za-z0-9äöüÄÖÜß _-]/g, '').slice(0, 90).trim();
+      // Mehrere Belege an einer Buchung hießen sonst gleich und überschrieben sich.
+      let name = `${base}.${ext}`;
+      for (let n = 2; vergeben.has(name.toLowerCase()); n++) name = `${base}_${n}.${ext}`;
+      vergeben.add(name.toLowerCase());
+      files.push({ name, dataBase64: await api.attach.read(id) });
+      index.push([t.date, t.invoiceNumber || '', t.description, money(t.gross), name, meta.sha256]);
+    }
+  }
+  return { files, verzeichnis: { name: '_Belegverzeichnis.csv', text: X.toCsv(['Datum', 'Beleg-Nr', 'Beschreibung', 'Betrag', 'Datei', 'SHA-256'], index) } };
+}
+
 function draw(root) {
   // Unterlagen für Finanzamt und Kanzlei enthalten private Buchungen nie.
   const db = listedOnly(store.db);
@@ -136,6 +162,15 @@ function draw(root) {
           ${basisOf(db, period.from) === 'soll' && !klein ? 'Rechnungen über Sammeldebitor und -kreditor, Zahlungen aufs Geldkonto' : 'nach Zahlungsdatum gegen das Geldkonto'}.
           Steuerschlüssel für Konten ohne Automatik lassen sich auf Wunsch mitgeben.`,
         button: `<button class="btn primary" id="btnDatev" data-premium="datev">${icon('file', 16).__raw} Buchungsstapel</button>`,
+      }))}
+
+      ${raw(card({
+        title: 'Paket für die Kanzlei', sub: 'eine ZIP-Datei',
+        body: `Alles, was Ihre Steuerkanzlei für den Zeitraum braucht, in einer Datei zum Verschicken oder Hochladen: DATEV-Stapel, Tabellen, Berichte und ${int(attCount)} Belege.
+          <strong>Achtung:</strong> Die Datei ist nicht verschlüsselt.`,
+        mehr: `Enthalten sind der DATEV-Buchungsstapel, die Tabellen aus dem Finanzamt-Paket, die Berichte als PDF und jeder Beleg
+          des Zeitraums mit einem Verzeichnis samt Prüfsummen, dazu eine kurze Anleitung für die Kanzlei. Private Buchungen fehlen darin.`,
+        button: `<button class="btn primary" id="btnKanzlei" data-premium="kanzleipaket">${icon('archive', 16).__raw} ZIP erstellen</button>`,
       }))}
 
       ${raw(card({
@@ -343,27 +378,40 @@ function wire(root, db, rows) {
       confirmLabel: 'Verstanden, exportieren',
     });
     if (!yes) return;
-    const files = [];
-    const index = [];
-    const vergeben = new Set();
-    for (const t of rows) {
-      for (const id of t.attachments || []) {
-        const meta = sel.attachment(id);
-        if (!meta) continue;
-        const ext = fileExtension(meta);
-        const base = `${t.date}_${(t.invoiceNumber || t.id.slice(-6))}_${t.description}`.replace(/[^A-Za-z0-9äöüÄÖÜß _-]/g, '').slice(0, 90).trim();
-        // Mehrere Belege an einer Buchung hießen sonst gleich und überschrieben sich.
-        let name = `${base}.${ext}`;
-        for (let n = 2; vergeben.has(name.toLowerCase()); n++) name = `${base}_${n}.${ext}`;
-        vergeben.add(name.toLowerCase());
-        files.push({ name, dataBase64: await api.attach.read(id) });
-        index.push([t.date, t.invoiceNumber || '', t.description, money(t.gross), name, meta.sha256]);
-      }
-    }
+    const { files, verzeichnis } = await belegeSammeln(rows);
     if (!files.length) { warn('Keine Belege im Zeitraum'); return; }
-    files.push({ name: '_Belegverzeichnis.csv', text: X.toCsv(['Datum', 'Beleg-Nr', 'Beschreibung', 'Betrag', 'Datei', 'SHA-256'], index) });
+    files.push(verzeichnis);
     const res = await api.file.saveMany({ folderLabel: 'Zielordner für die Belege', files });
     if (res) ok('Belege exportiert', `${res.written.length} Dateien in ${res.dir}`);
+  }));
+
+  // Paket für die Kanzlei: Finanzamt-Unterlagen, Berichte und Belege in einer ZIP-Datei.
+  $('#btnKanzlei', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {
+    if (!await ohneKategorieFragen(db)) return;
+    const datev = await datevOptions(db);
+    if (!datev) return;
+    const yes = await confirmDialog({
+      title: 'Paket unverschlüsselt erstellen?',
+      text: 'Die ZIP-Datei enthält Ihre Buchungen und Belege im Klartext. Schicken Sie sie nur auf einem sicheren Weg an die Kanzlei, etwa über deren Upload-Portal.',
+      confirmLabel: 'Verstanden, erstellen',
+    });
+    if (!yes) return;
+    const files = X.taxOfficePack(await mitGanzemJournal(db), period, appInfo.version, datev).filter((f) => f.name !== 'LIESMICH.txt');
+    const y = period.from.slice(0, 4);
+    const pdfs = [
+      [R.guvReport(db, period), `Gewinn-und-Verlust_${y}.pdf`],
+      [R.euerPdf(db, period), `Anlage-EUER_${y}.pdf`],
+      [R.balancePdf(db, period), `Vermoegensuebersicht_${y}.pdf`],
+      [R.journalPdf(db, period), `Buchungsjournal_${y}.pdf`],
+    ];
+    if (!nurKleinunternehmer(db)) pdfs.splice(2, 0, [R.ustvaPdf(db, period), `UStVA_${y}.pdf`]);
+    for (const [doc, name] of pdfs) files.push(await pdfFuerPaket(doc, name));
+    const belege = await belegeSammeln(rows, 'Beleg_');
+    files.push(...belege.files);
+    if (belege.files.length) files.push(belege.verzeichnis);
+    files.push({ name: 'LIESMICH.txt', text: X.kanzleiLiesmich(db, period, { belege: belege.files.length, version: appInfo.version }) });
+    const res = await api.file.saveZip({ files, zipName: `Kontovia-Kanzlei_${periodLabel(period).replace(/[^\w-]+/g, '_')}` });
+    if (res) ok('Paket erstellt', `${res.written.length} Dateien in ${res.dir}`);
   }));
 
   $('#btnCsvTx', root).addEventListener('click', (e) => busy(e.currentTarget, async () => {

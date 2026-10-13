@@ -1,7 +1,7 @@
 {
-  "version": "2.34.0",
-  "released": "2026-10-11T11:58:50.038Z",
-  "notes": "Tarife und Abmelden\n\n- Welche Bereiche und Funktionen zu welchem Tarif gehören, kann jetzt angepasst werden. Was ein Tarif nicht enthält, zeigt eine klare Erklärung, Ihre Daten bleiben erhalten.\n- Neben „Sperren“ gibt es wieder einen Knopf „Abmelden“ in der Seitenleiste.",
+  "version": "2.35.0",
+  "released": "2026-10-13T00:51:10.475Z",
+  "notes": "Angebote, Projekte und Kassenbuch\n\n- Angebote, Auftragsbestätigungen und Lieferscheine schreiben und mit einem Klick in den nächsten Beleg oder die Rechnung verwandeln.\n- Projekte mit Stoppuhr und Zeiterfassung: offene Zeiten werden zum Rechnungsentwurf, und Sie sehen je Projekt, was es einbringt.\n- Beleg lesen: Aus einem PDF oder einem Foto schlägt Kontovia Betrag, Datum und Lieferant vor. Gelesen wird nur auf Ihrem Gerät.\n- Kassenbuch mit Tagesbestand und Kassensturz sowie eine Vorschau, wie sich Ihr Kontostand in den nächsten Wochen entwickelt.\n- Neu außerdem: Paket für die Kanzlei als ZIP mit allen Belegen, ein Link zum Online-Bezahlen auf der Rechnung und eine übersichtlichere Lizenzkarte.",
   "files": [
     {
       "path": "abo/abo.css",
@@ -15,13 +15,13 @@
     },
     {
       "path": "abo/config.json",
-      "sha256": "38dce1bd73c274b990fa33f988be4211bb4238c1782e9be3f7809b8b6b03a1a4",
-      "size": 9925
+      "sha256": "2adf156c6b7c946b9bb97362ea0e6383b4ccca00d798cfa00d1c438cc1510144",
+      "size": 11556
     },
     {
       "path": "abo/en.js",
-      "sha256": "eb645a0eb2b29e6036dca952ef3c5b641b6cf529abcdbacd8338abbe77339c8b",
-      "size": 25709
+      "sha256": "b9edfb121f64a03526cb9cc73efeb892d2dcf16895be3a75ac58662b94bf9e00",
+      "size": 26417
     },
     {
       "path": "abo/index.html",
@@ -35,8 +35,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "4e80de6e442539deaedc45a4b99e27f8cfeda25da463d281593162907e96ed43",
-      "size": 86016
+      "sha256": "98e5a1783c1d5c42cf45ec619f653c78c955a84a2e75e166b811feab05ac9f58",
+      "size": 86318
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -89,6 +89,16 @@
       "size": 952
     },
     {
+      "path": "lib/angebote.js",
+      "sha256": "72b61b77385e1a364ae4a8ac4fed8be0fa303f5cbaf6916a984b2a78b858de43",
+      "size": 8995
+    },
+    {
+      "path": "lib/angebotsaktionen.js",
+      "sha256": "2b12a085057614f9f5fa9087e61200129c0c9d909d0e086e3e75d6f15c1d643f",
+      "size": 6118
+    },
+    {
       "path": "lib/assistent.js",
       "sha256": "aa6a960b5a650b55973c0bc7b258422a08917de51b56b476068369fbf1b5be26",
       "size": 26203
@@ -129,6 +139,16 @@
       "size": 12765
     },
     {
+      "path": "lib/belegerkennung.js",
+      "sha256": "97e17d2d265eff50a78a67e05b3e30a6286f45ad7a1a4f62feb577b97328899c",
+      "size": 2732
+    },
+    {
+      "path": "lib/beleglesen.js",
+      "sha256": "cca816f92758675bce77762423f6bdb2f05394fd4bc57cd7e5240efbd8850b00",
+      "size": 13440
+    },
+    {
       "path": "lib/benutzer.js",
       "sha256": "781cc6427e8235531c8688d3049765a0c762e0fbedbca12ace689770cb6b0e3c",
       "size": 19214
@@ -165,8 +185,8 @@
     },
     {
       "path": "lib/dokumenttexte.js",
-      "sha256": "696effcdf0457edb9239aeeffcc133e176ac3e89eeb062cf5777f78a7fa8d953",
-      "size": 3790
+      "sha256": "47d4411e928bb585e0253cd6e4ebb3c404dc7ee4d23d6bb9164d327bf2592b3c",
+      "size": 6328
     },
     {
       "path": "lib/elster.js",
@@ -175,8 +195,8 @@
     },
     {
       "path": "lib/emailversand.js",
-      "sha256": "76b4ebef3aa19fa23a874b0a5f2b4548ac36eb7a29bc0952071ae8f5d2ae17de",
-      "size": 11254
+      "sha256": "588fae0cdecdd67021f913bff128230d2980c348c35a08d97e616c357987432e",
+      "size": 12636
     },
     {
       "path": "lib/erechnung-schreiben.js",
@@ -195,8 +215,8 @@
     },
     {
       "path": "lib/exports.js",
-      "sha256": "b6442bdebf315fa403ba6427ca03623e633557c4642afe9854a9377aec0f1898",
-      "size": 50865
+      "sha256": "0ff44fbf7dfc5cc0908c57d832ae7e07489e98164ebbc173b1b2af81ecdfbc8c",
+      "size": 52189
     },
     {
       "path": "lib/feedback.js",
@@ -249,6 +269,11 @@
       "size": 18630
     },
     {
+      "path": "lib/kasse.js",
+      "sha256": "5e6a1a86fbdcd9d192017c57d65af79eea6ded077b66a091387e4863ccec0427",
+      "size": 3534
+    },
+    {
       "path": "lib/kategorisierung.js",
       "sha256": "8df56859ca8788c7f192a53361d73a00f05c5d0133a793ae654db1395b8e640f",
       "size": 14868
@@ -264,14 +289,19 @@
       "size": 25159
     },
     {
+      "path": "lib/liquiditaet.js",
+      "sha256": "07b2fffabaa8b2989de383c5fae68a098bd684e690bbb0ef9bcc32b36362c91b",
+      "size": 5208
+    },
+    {
       "path": "lib/lizenz.js",
       "sha256": "2c164346022df6bd354af7c356f82a18a55439431eb90cc8810a8b04d4406c12",
       "size": 6692
     },
     {
       "path": "lib/lizenzkarte.js",
-      "sha256": "fc6e840cef08bd5b61f0ea42144a0cf645e4395fbcba908fafbc373241fea347",
-      "size": 11088
+      "sha256": "ec1a2abf6d68b10d3a83688ad5ec53564f9580b7585fc60ecea6fbeab18b8565",
+      "size": 12073
     },
     {
       "path": "lib/lizenzui.js",
@@ -280,8 +310,8 @@
     },
     {
       "path": "lib/lizenzverwaltung.js",
-      "sha256": "11a6da29215bac0ce0fa5a87f011a92c89b5afa9d1cf446caf7ddeaf91b98038",
-      "size": 18752
+      "sha256": "578623f97bcdcc2cf7e35a8fbb259d3695930b9ef979711284773bf5d648d873",
+      "size": 34366
     },
     {
       "path": "lib/mahnungsaktionen.js",
@@ -300,8 +330,8 @@
     },
     {
       "path": "lib/merge.js",
-      "sha256": "898efdb47640239021c6a68aea52c6358815faab34107d64971aa99fe5f23cf7",
-      "size": 19837
+      "sha256": "6513b07d81ed8e25dbe4513e560b2c94307995093a9348745e805f2f16a24129",
+      "size": 20228
     },
     {
       "path": "lib/pdf.js",
@@ -317,6 +347,11 @@
       "path": "lib/pdfausgabe.js",
       "sha256": "2d27853bcebc345315e85c004e36f00fe597ce2cd566f00cbd62eeabb3f00806",
       "size": 2044
+    },
+    {
+      "path": "lib/pdftext.js",
+      "sha256": "a5bd5113a21294f1529bca9f83e37ef2c5a76fabd67aace2b58bb074557e30be",
+      "size": 17767
     },
     {
       "path": "lib/pdfvorschau.js",
@@ -339,6 +374,16 @@
       "size": 8915
     },
     {
+      "path": "lib/projektaktionen.js",
+      "sha256": "5ffe86addab87fba7eeecb5ddecb50537f677f372dde860e7ef75f19164d80aa",
+      "size": 5037
+    },
+    {
+      "path": "lib/projekte.js",
+      "sha256": "c09b9080a1ea67a7b7242dca9176ba0406a025e681ba837891108b0f5bdc10b5",
+      "size": 7307
+    },
+    {
       "path": "lib/qr.js",
       "sha256": "f7b8881df478b29928adbcbcda4a3313a3f795c5210027627081b2a229ee1481",
       "size": 14517
@@ -355,23 +400,23 @@
     },
     {
       "path": "lib/rechnung.js",
-      "sha256": "459718948f4a51c4c7a448bb3e40bf6f9e9723a5dcff7e62fad10716cf6e3cf4",
-      "size": 45545
+      "sha256": "2018245dd0d2d5bfd50cc91b5fd8bbb2e7d2be2b2c78280aaf3938494c30643f",
+      "size": 46840
     },
     {
       "path": "lib/rechnungsaktionen.js",
-      "sha256": "9c50ae76e06873a34bfb97539d7bb17549fd6d56e35475bfa5de5c1b425c3ce7",
-      "size": 13812
+      "sha256": "31b0c80e21c68fe0fef1c0882b02fb68cc68d47cc480b6732bcc3b45afeac8b1",
+      "size": 14343
     },
     {
       "path": "lib/rechnungsdateien.js",
-      "sha256": "5d963011be30bffad5cad4b9e2b8f8fc7c1dea5221528afe910477d70e14f2ef",
-      "size": 8690
+      "sha256": "c109b4f759a48dc6cabfee06f294f7ebc202ca4aad16da2cd661f10e5e6220f1",
+      "size": 9055
     },
     {
       "path": "lib/rechnungsdruck.js",
-      "sha256": "331ada73a7f3612789ffaf506bcaed12148f70763944d40921198428ad4f1a3c",
-      "size": 54797
+      "sha256": "793e5fcb4e965d9f69bf68ddcad3f36477c0242927c3bb49b5573471af89c2c0",
+      "size": 57712
     },
     {
       "path": "lib/rechnungswiederholung.js",
@@ -385,8 +430,8 @@
     },
     {
       "path": "lib/reports.js",
-      "sha256": "6944cb0efc772d7e43bcd46281c8c7f789e2093c30b5c86ddcc73cf58625c44b",
-      "size": 34238
+      "sha256": "f6d993fddd78e78a877f2ca0e0267f1d9f6f9d289b98abc45b00f8977049aa32",
+      "size": 38886
     },
     {
       "path": "lib/richeditor.js",
@@ -410,8 +455,8 @@
     },
     {
       "path": "lib/seitenleiste.js",
-      "sha256": "e7e50e7ff24a7e748f96698636640c32abc0d19b3621f334d541d2a207d99ba1",
-      "size": 10188
+      "sha256": "a43926bbded458e9fb0f8f85d5e627333c35d09dda0b5dbb0bb0dfbb2b6f90eb",
+      "size": 10200
     },
     {
       "path": "lib/sprache.js",
@@ -535,23 +580,23 @@
     },
     {
       "path": "lib/sprache/en/zusatz.js",
-      "sha256": "b3ed06e0139530e923babe83b09ad16b16bbaeb742160956b9a25d845f4744b9",
-      "size": 52924
+      "sha256": "01d56e8a2ce1f1bf276c95ced3289f8752b03a55b8f62e110480bbcf477ac4b3",
+      "size": 102272
     },
     {
       "path": "lib/store.js",
-      "sha256": "a9c7a169596b4658132c18b9da5c23cd427c6d19936b9af829c182774ad35802",
-      "size": 45074
+      "sha256": "53d21c56472ffb7eec510cf2033bc6cb464a3e73456a5935e6f41a4947556df6",
+      "size": 45506
     },
     {
       "path": "lib/suche.js",
-      "sha256": "6355377779c1fca16c77030e7270235a6a6df39aaa47e2fbb5a8cff12a247c29",
-      "size": 8402
+      "sha256": "6f178f8e91e8294d0c72aee76da03d6f365ed82f3a3ea95e1fb6b933ea81d478",
+      "size": 8539
     },
     {
       "path": "lib/suchindex.js",
-      "sha256": "73672822cb3864a112e1606cdd88d592230fbf2b282068e4dcc391a4986cc0e0",
-      "size": 8980
+      "sha256": "fce3ddb960e5de3d0453cf4951737bf701e8b095f9c2cc104d227d271ae97212",
+      "size": 10337
     },
     {
       "path": "lib/sync.js",
@@ -565,8 +610,8 @@
     },
     {
       "path": "lib/tarife.js",
-      "sha256": "3dbc86d5b4ac27822c86b68fe998b0e09d312d9726d6a120ad878776ae1892dd",
-      "size": 11867
+      "sha256": "b0eb22dcc5d2b3ec9db939499d6d5081710f1f4786d35327b8d0d32ce7f5ea0f",
+      "size": 12528
     },
     {
       "path": "lib/tarifkonfig.js",
@@ -575,8 +620,8 @@
     },
     {
       "path": "lib/tarifverwaltung.js",
-      "sha256": "b5a298ddc71f498d9de46edf5c9e1cbb556d14d92e167e0d2f81dbe74177bc73",
-      "size": 12235
+      "sha256": "a1b1e1f5b1eb23988c804579b6080091519fb22f8dde1fec7b70d4dd43bcfcf5",
+      "size": 15939
     },
     {
       "path": "lib/termine.js",
@@ -605,8 +650,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "1d966c5b099d4bdaee4f06f840ddf6082c1e79e7aa8207f5ce965b0a1147ed98",
-      "size": 46153
+      "sha256": "2901c4a4173065d1e4f8ed9f7a20b3f2eadf1eb537ed666951f052d75d57297d",
+      "size": 46991
     },
     {
       "path": "lib/wiederkehrend.js",
@@ -635,13 +680,13 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "463531d776645e3fd51ce72045217e8fcb2a7ac9894ceea841f1d0b741fffe12",
+      "sha256": "66df57fea3dc207c5d1609719326777ac560b8080aca553be88688e3c403a403",
       "size": 880
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "6d14f46c72d80e76b0f753936d68e952059a90bf6aa941de3e4b7cfded66c775",
-      "size": 33885
+      "sha256": "d20141db3231dc6edef47c2af65092a5475c1d6fae94c2f6bd038a645385cdfe",
+      "size": 34700
     },
     {
       "path": "recht/IMPRESSUM.md",
@@ -655,8 +700,8 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "1b61c59b38fe5369f6580ba2fb9451c4502aa0b68e77fe336e4c6f75657076c6",
-      "size": 37594
+      "sha256": "99e29198358a0665f5674f046c154417a87b85410e90c66ef03153ac4cff3af9",
+      "size": 38431
     },
     {
       "path": "recht/impressum.html",
@@ -680,13 +725,18 @@
     },
     {
       "path": "styles.css",
-      "sha256": "f4fa8206aa9a57e0c117d215f36fe2fb89673e3a90bd7151f5f81b82bbd84b1f",
-      "size": 134381
+      "sha256": "4e37da4f47b77824cff667dd2c57a223b71c4ed46e52043894d686a5a80f11d9",
+      "size": 138081
     },
     {
       "path": "views/admin.js",
       "sha256": "333e1fb92416ca79e16760de94265d863ccddb880edf48ab73a9b86a165e2365",
       "size": 1410
+    },
+    {
+      "path": "views/angebote.js",
+      "sha256": "06ad22068b384cbf7ea19562d061dfaeb6d9903bf4ec16906ef0e1db82286935",
+      "size": 15246
     },
     {
       "path": "views/anlageform.js",
@@ -725,13 +775,13 @@
     },
     {
       "path": "views/export.js",
-      "sha256": "873f87588096adea18fb4f0d1bfff59fba3940c12cef7270e74cfb5855233927",
-      "size": 32808
+      "sha256": "15f9dfc437f1ea69fd8fdaa466beab8b651f7e6e1b1954773700feda7dd1883e",
+      "size": 35808
     },
     {
       "path": "views/help.js",
-      "sha256": "7fc210596d496ff55f86910028c7dcf59fe83056168ba0aeb930b3812434a75a",
-      "size": 74229
+      "sha256": "a4c229626dc0202ea7a5af91081ad8434cd6ef0470bf29489da1c6e88d2c6c87",
+      "size": 79123
     },
     {
       "path": "views/importexport.js",
@@ -742,6 +792,11 @@
       "path": "views/jahresvergleich.js",
       "sha256": "cbaaf786aefb0db8da2597a86f051a9bfddaaeffa637c26b073e87f243438d21",
       "size": 9296
+    },
+    {
+      "path": "views/kassenbuch.js",
+      "sha256": "47fbbeace5b3b6474802a0a2cab740c8b03d2eab3e543105f3567ad6af31141b",
+      "size": 15814
     },
     {
       "path": "views/kontoimport.js",
@@ -764,24 +819,29 @@
       "size": 37409
     },
     {
+      "path": "views/projekte.js",
+      "sha256": "9a2bab3fe6d8cf7987079b768a291a9007e55e0236c8c653766cb10f878bc6ea",
+      "size": 24228
+    },
+    {
       "path": "views/rechnungen.js",
-      "sha256": "627e5de615e0bd5643b6829665d46ea9b77c405c21c12c0c41c36d2b20a34c3a",
-      "size": 60184
+      "sha256": "1a58e88d27276da44860658d716e39092cec65514f83d9490b523ff2fde6c6aa",
+      "size": 62172
     },
     {
       "path": "views/rechnungseditor.js",
-      "sha256": "84e52a64f49e0dc30760d3556e3b52a8f4fb9b82e03931b44a7b33539982715c",
-      "size": 58483
+      "sha256": "96d605b77a914012ff11a9487e0dcd673cf1e5ddd7988346f75e3f6f39460116",
+      "size": 65986
     },
     {
       "path": "views/rechnungsgestalter.js",
-      "sha256": "af2e458463ce410db0758bd072523598cdf60a5a59c712055751de08286a834b",
-      "size": 73141
+      "sha256": "f7c690f753b65e148fca3fb71856201acfbfac8bd2e2e672bc707c5537598f1b",
+      "size": 74091
     },
     {
       "path": "views/reports.js",
-      "sha256": "f9cdd59392569f7ea6c9590ec5ef3630731faf2b9df61422ebe945d699aaf49f",
-      "size": 47792
+      "sha256": "d63bb78a0fb14e3d6a2162ad09cc99071097c95fd73a2a21861c98fbcb0dadac",
+      "size": 48497
     },
     {
       "path": "views/settings.js",
@@ -800,8 +860,8 @@
     },
     {
       "path": "views/transactions.js",
-      "sha256": "bf10fc50663823d6c20892d7f46cf42a43caf83a130c992ee91743e2d6c808d3",
-      "size": 89461
+      "sha256": "4d06d75c6905b0410d43d4757aa40fa9723033bc88d793595269aab23e7e9307",
+      "size": 95337
     },
     {
       "path": "views/wiederkehrend.js",
@@ -815,7 +875,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "5958c1c540982cc4300dcfa724075fb631c348b2259ff7acfaf130737e8b5ada",
+      "sha256": "1277d38ba09d53d812f3e110290fbfd8ab9309f77b13637edbbf3d6f35e9e41a",
       "size": 6906
     },
     {
@@ -825,8 +885,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "fd2e3787e8058664d561bcabc3c25d27d33e5b8dd6af08de9b65669513166425",
-      "size": 65669
+      "sha256": "25cf605deccce77f76727e51f6583183836b0f50757d882298eafd9742ceee33",
+      "size": 67144
     },
     {
       "path": "web/cloud.js",
@@ -840,8 +900,8 @@
     },
     {
       "path": "web/dateien.js",
-      "sha256": "a9af44b04efdaf9e0b0f0047d8008fc49970a06dfe6e5d639d6e8f2a91dddfe2",
-      "size": 10410
+      "sha256": "475e3cd75ee07c03f13cfb32aede773bcd2cdc0d1629e652ec54902a8ce9c4e2",
+      "size": 10627
     },
     {
       "path": "web/druck.js",
@@ -910,8 +970,8 @@
     },
     {
       "path": "web/lizenzverwaltung.js",
-      "sha256": "e588961c49a3de10173d64c58da36d26be6944f97371ea6934805ad4f9fcbaa1",
-      "size": 23383
+      "sha256": "2742c768eba3c6b01b26cc35315cc0874263029706a3f7bb8ead537ee20fef46",
+      "size": 25467
     },
     {
       "path": "web/mailversand.js",
@@ -927,6 +987,16 @@
       "path": "web/netz.js",
       "sha256": "e8a34056da00a0f7715cc157d89d87fc082fa27f8e6823b0110f201b57915a79",
       "size": 5095
+    },
+    {
+      "path": "web/ocr-worker.js",
+      "sha256": "278b98a88b2d73d43d20e97622a81edd0d2c8aba7500f91b837cce9332951436",
+      "size": 2296
+    },
+    {
+      "path": "web/ocr.js",
+      "sha256": "76d259e177990c4293a0f54e9c45f10ca8ba92df09b3968606f90e42fa450be5",
+      "size": 4821
     },
     {
       "path": "web/rueckmeldung.js",
@@ -945,8 +1015,8 @@
     },
     {
       "path": "web/seed.js",
-      "sha256": "8ada08ba83817f647941cf33b49b50f4983e3551fa1850625f45b357a14d8b5c",
-      "size": 5753
+      "sha256": "b78d3521837b8a38da4cb92898098d50342513df677b1c9609783fb1cb1374c5",
+      "size": 5805
     },
     {
       "path": "web/sperre.js",
@@ -960,13 +1030,13 @@
     },
     {
       "path": "web/sqlkern.js",
-      "sha256": "fa8c00fee214af2cc8b78b34e3df47b6bac4c6ba66501bdc7493e1e12fe12521",
-      "size": 18269
+      "sha256": "1c05366ee5b1c5456221fd47a45fee6e7a0b9b7c6ac1246570ff85cc7bb90a58",
+      "size": 18560
     },
     {
       "path": "web/sqlschema.js",
-      "sha256": "3cdf24952f1e6337a36ef688db8b9c49dd0f1719232212e59b16f19540ce72e1",
-      "size": 12447
+      "sha256": "70b208dcb66249f7b861a5615d8566b18b68dfdf9a9e807013f1ce9590d1983f",
+      "size": 13042
     },
     {
       "path": "web/sqlwerk.js",
@@ -990,8 +1060,8 @@
     },
     {
       "path": "web/vendor/HERKUNFT.md",
-      "sha256": "3182aad4129a185d57a0b0413c76b55a704a8005de9ca2fe157799038ece6476",
-      "size": 3860
+      "sha256": "c4f828af10a59ab07df5f0ea29cd37bc81db5de783af6d93af72da85b96a3353",
+      "size": 6307
     },
     {
       "path": "web/vendor/LICENSE-loglevel.txt",
@@ -1017,6 +1087,41 @@
       "path": "web/vendor/sqlite3.wasm",
       "sha256": "b6aedab9eee5cd5de0f13498e0bf64bb5ee9cc786d1d0303cc365578b64d18ab",
       "size": 1068015
+    },
+    {
+      "path": "web/vendor/tesseract/LICENSE-tesseract.js-core.txt",
+      "sha256": "c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08",
+      "size": 11358
+    },
+    {
+      "path": "web/vendor/tesseract/LICENSE-tesseract.js.md",
+      "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1",
+      "size": 11357
+    },
+    {
+      "path": "web/vendor/tesseract/LICENSE-worker-bestandteile.txt",
+      "sha256": "45f54171aeaa1d10c0c1a66f374b7bba1f02472b1487fbe892eec04f840002ac",
+      "size": 466
+    },
+    {
+      "path": "web/vendor/tesseract/deu.traineddata.gz",
+      "sha256": "306c4280d0cbed46fbff727486bd43b92730181bae80f56941a091f363bdf28b",
+      "size": 1333102
+    },
+    {
+      "path": "web/vendor/tesseract/tesseract-core-simd-lstm.wasm.js",
+      "sha256": "9d7c43fb206dc9f48475228b46bf35f888fa9e6259da2e67d5a75c77049f2dc7",
+      "size": 3954569
+    },
+    {
+      "path": "web/vendor/tesseract/tesseract.esm.min.js",
+      "sha256": "da6267cfe5036ae718a59eece3b5744a4655b0b8faa9f16259362b783d74c9bb",
+      "size": 63220
+    },
+    {
+      "path": "web/vendor/tesseract/worker.min.js",
+      "sha256": "38645599043239c0eb6db08a6504a92dcdc292200535f3e9339cd77c4443b842",
+      "size": 111162
     },
     {
       "path": "web/vendor/web-llm.js",

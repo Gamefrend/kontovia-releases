@@ -260,23 +260,40 @@ export async function laden(kopf, cfg = null, schluessel = OEFFENTLICHER_SCHLUES
 }
 
 /**
+ * Stufe, Ende und Schonfrist einer neuen Lizenz prüfen. Das Ende kommt entweder als Laufzeit in Tagen ab jetzt
+ * (`tage`) oder als festes Datum (`bis`, etwa beim Verlängern: altes Ende plus ein Jahr).
+ */
+function laufzeitPruefen(angaben, jetzt) {
+  const stufe = String(angaben?.stufe || '');
+  if (!STUFEN.includes(stufe) || stufe === 'kostenlos') throw fehler('LIZENZ_STUFE', 'Bitte einen Tarif wählen.');
+  let bisMs;
+  if (angaben?.bis) {
+    const roh = String(angaben.bis);
+    // Ein reines Datum gilt bis zum Ende dieses Tages (UTC), damit „bis 31.12.“ den 31. noch einschließt.
+    const tagTeile = /^(\d{4})-(\d{2})-(\d{2})$/.exec(roh);
+    bisMs = tagTeile ? Date.UTC(Number(tagTeile[1]), Number(tagTeile[2]) - 1, Number(tagTeile[3]), 23, 59, 59) : Date.parse(roh);
+    if (!(bisMs > jetzt && bisMs <= jetzt + 3660 * TAG)) throw fehler('LIZENZ_TAGE', 'Das Ende muss in der Zukunft liegen, höchstens zehn Jahre ab heute.');
+  } else {
+    const tage = Math.floor(Number(angaben?.tage));
+    if (!(tage >= 1 && tage <= 3660)) throw fehler('LIZENZ_TAGE', 'Die Laufzeit muss zwischen 1 und 3660 Tagen liegen.');
+    bisMs = jetzt + tage * TAG;
+  }
+  const schonfrist = Math.min(60, Math.max(0, Math.floor(Number(angaben?.schonfrist ?? 14)) || 0));
+  const id = `L-${new Date(jetzt).toISOString().slice(0, 10).replace(/-/g, '')}-${crypto.getRandomValues(new Uint32Array(1))[0].toString(36)}`;
+  return { stufe, schonfrist, id, ab: new Date(jetzt).toISOString(), bis: new Date(bisMs).toISOString() };
+}
+
+/**
  * Einer Adresse eine Lizenz zuweisen (oder sie ersetzen): Schein signieren und ablegen.
- * @param {{email:string, stufe:string, tage:number, schonfrist?:number, notiz?:string}} angaben
+ * @param {{email:string, stufe:string, tage?:number, bis?:string, schonfrist?:number, notiz?:string}} angaben
  */
 export async function zuweisen(kopf, angaben, cfg = null, jetzt = Date.now()) {
   if (!signierer) throw fehler('LIZENZ_SCHLUESSEL', 'Zuerst die Schlüsseldatei (privat.jwk) wählen.');
   const email = emailNorm(angaben?.email);
   if (!email) throw fehler('LIZENZ_EMAIL', 'Bitte eine gültige E-Mail-Adresse eingeben.');
-  const stufe = String(angaben?.stufe || '');
-  if (!STUFEN.includes(stufe) || stufe === 'kostenlos') throw fehler('LIZENZ_STUFE', 'Bitte einen Tarif wählen.');
-  const tage = Math.floor(Number(angaben?.tage));
-  if (!(tage >= 1 && tage <= 3660)) throw fehler('LIZENZ_TAGE', 'Die Laufzeit muss zwischen 1 und 3660 Tagen liegen.');
-  const schonfrist = Math.min(60, Math.max(0, Math.floor(Number(angaben?.schonfrist ?? 14)) || 0));
+  const { stufe, schonfrist, id, ab, bis } = laufzeitPruefen(angaben, jetzt);
   const notiz = String(angaben?.notiz || '').trim().slice(0, MAX_NOTIZ);
   const b = bucket(cfg);
-  const id = `L-${new Date(jetzt).toISOString().slice(0, 10).replace(/-/g, '')}-${crypto.getRandomValues(new Uint32Array(1))[0].toString(36)}`;
-  const ab = new Date(jetzt).toISOString();
-  const bis = new Date(jetzt + tage * TAG).toISOString();
   try {
     for (const variante of emailVarianten(email)) {
       const schein = await scheinAusstellen({ id, stufe, email: variante, ab, bis, schonfrist }, signierer);
@@ -289,6 +306,24 @@ export async function zuweisen(kopf, angaben, cfg = null, jetzt = Date.now()) {
     throw deutlich(err);
   }
   return { email, id, stufe, ab, bis, schonfristTage: schonfrist, notiz };
+}
+
+/** So sieht die Kennung eines Geräts aus (src/web/lizenz.js: Installationskennung). */
+const GERAET_RE = /^[\w-]{8,80}$/;
+
+/**
+ * Einen Geräteschein ausstellen: gilt nur für die Kennung eines Geräts, ohne Google-Konto. Er wird nirgends
+ * abgelegt; der Betreiber gibt den Text dem Kunden, der ihn in der Lizenzkarte einlöst.
+ * @param {{geraet:string, stufe:string, tage?:number, bis?:string, schonfrist?:number}} angaben
+ * @returns {Promise<{schein:string, id:string, stufe:string, ab:string, bis:string, geraet:string}>}
+ */
+export async function geraetScheinAusstellen(angaben, jetzt = Date.now()) {
+  if (!signierer) throw fehler('LIZENZ_SCHLUESSEL', 'Zuerst die Schlüsseldatei (privat.jwk) wählen.');
+  const geraet = String(angaben?.geraet || '').trim();
+  if (!GERAET_RE.test(geraet)) throw fehler('LIZENZ_GERAET', 'Bitte die Kennung des Geräts genau so einfügen, wie sie in der Lizenzkarte steht.');
+  const { stufe, schonfrist, id, ab, bis } = laufzeitPruefen(angaben, jetzt);
+  const schein = await scheinAusstellen({ id, stufe, geraet, ab, bis, schonfrist }, signierer);
+  return { schein, id, stufe, ab, bis, geraet };
 }
 
 /**

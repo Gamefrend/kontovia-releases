@@ -19,13 +19,13 @@
  * gedruckt wird (Teile, die sich überlappen würden, rücken zur Seite).
  */
 
-import { esc, $, $$, uid, clamp } from '../lib/util.js';
+import { esc, $, $$, uid, clamp, money } from '../lib/util.js';
 import { icon, confirmDialog, ok, err } from '../lib/ui.js';
 import { store, sel, commit, saveNow } from '../lib/store.js';
 import { router, navigate } from '../lib/router.js';
 import {
   LAENDER, laenderSortiert, neueRechnung, neuePosition, verkaeuferAus, designVoll, design as designAus, profil as profilAus, PROFIL_VORGABE,
-  FLUSS_BAUSTEINE, ELEMENT_VORGABE, PLATZHALTER, ibanGueltig,
+  FLUSS_BAUSTEINE, ELEMENT_VORGABE, PLATZHALTER, ibanGueltig, bezahlLinkFuer,
 } from '../lib/rechnung.js';
 import { vorschauDaten, bildAblegen, bildWaehlen, bildHolen } from '../lib/rechnungsdateien.js';
 import { pixelProMm } from '../lib/rechnungsdruck.js';
@@ -282,6 +282,8 @@ export async function gestaltungZeigen(root, params = {}) {
           <div class="field"><label for="gp_register">Handelsregister</label><input id="gp_register" data-p="register" value="${esc(p.register)}" placeholder="z. B. Amtsgericht München HRB 12345"></div>
           <div class="field"><label for="gp_gf">Geschäftsführung</label><input id="gp_gf" data-p="geschaeftsfuehrung" value="${esc(p.geschaeftsfuehrung)}" placeholder="bei GmbH und UG Pflicht"></div>
           <div class="field full"><label for="gp_web">Website</label><input id="gp_web" data-p="web" value="${esc(p.web)}"></div>
+          <div class="field full"><label for="gp_bezahl">Link zum Online-Bezahlen (freiwillig)</label><input id="gp_bezahl" data-p="bezahlLink" value="${esc(p.bezahlLink || '')}" placeholder="https://paypal.me/IhrName/{betrag}EUR" autocomplete="off" spellcheck="false">
+            <span class="hint" id="gp_bezahlHinweis">Etwa Ihr PayPal.me-Link oder ein Zahlungslink von Stripe oder Ihrer Bank. {betrag} und {nummer} setzt Kontovia je Rechnung ein. Der Link steht mit QR-Code auf der Rechnung und in der E-Mail.</span></div>
         </div>
       </div>`;
     $('#gsVorgaben', root).innerHTML = `
@@ -304,6 +306,12 @@ export async function gestaltungZeigen(root, params = {}) {
     if (h) h.textContent = iban && !ibanGueltig(iban) ? 'Diese IBAN ist ungültig. Bitte auf Zahlendreher prüfen.' : '';
     const nr = $('#gp_nummerBeispiel', root);
     if (nr) nr.textContent = `Erste Nummer: ${entwurf.profil.praefix || ''}${new Date().getFullYear()}-0001`;
+    const bl = $('#gp_bezahlHinweis', root);
+    const vorlage = String(entwurf.profil.bezahlLink || '').trim();
+    if (bl && vorlage) {
+      const probe = bezahlLinkFuer(vorlage, { nummer: `${entwurf.profil.praefix || ''}${new Date().getFullYear()}-0001` }, 11900);
+      bl.textContent = probe ? `So sieht er bei ${money(11900)} € aus: ${probe}` : 'Der Link muss mit https:// beginnen.';
+    }
   }
 
   /* ------------------------------------------------------------------------ */

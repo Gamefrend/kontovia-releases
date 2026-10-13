@@ -204,6 +204,11 @@ export async function mehrereAnbieten(files, { zipName = 'Kontovia-Export' } = {
       return { dir: dir.name, written };
     }
   }
+  return alsZipAnbieten(files, { zipName });
+}
+
+/** Mehrere Dateien als eine ZIP-Datei anbieten (Speichern-Dialog oder Download). */
+export async function alsZipAnbieten(files, { zipName = 'Kontovia-Export' } = {}) {
   const name = await anbieten(await zip(files), `${sichererName(zipName)}.zip`, { mime: 'application/zip' });
   return name ? { dir: name, written: files.map((f) => f.name) } : null;
 }

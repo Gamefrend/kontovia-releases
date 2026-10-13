@@ -30,6 +30,8 @@ import { vorschauDaten, pdfZeigen, bildWaehlen, bildAblegen, bildHolen, rahmenVo
 import { DOKUMENT_SPRACHEN } from '../lib/dokumenttexte.js';
 import { textDirektBearbeiten, bilderAusZwischenablage } from '../lib/textbearbeiten.js';
 import { erlaubt, lizenzFehlerZeigen } from '../lib/lizenzui.js';
+import { BELEGARTEN, istBeleg, belegPruefen, naechsteNummer } from '../lib/angebote.js';
+import { belegSpeichern, belegLoeschen, belegAusstellen, vergebeneBelegNummern } from '../lib/angebotsaktionen.js';
 
 const BEREICH_TITEL = { kaeufer: 'Kunde', rechnung: 'Rechnung', positionen: 'Positionen', zahlung: 'Zahlung', verkaeufer: 'Ihre Angaben' };
 
@@ -46,11 +48,15 @@ const optionen = (paare, wert) => paare.map(([v, t]) => `<option value="${esc(v)
 
 /**
  * @param {HTMLElement} root
- * @param {{rechnung?:object, vorlage?:object}} quelle  eine Rechnung (Entwurf) oder eine Vorlage {id, name, daten}
+ * @param {{rechnung?:object, vorlage?:object}} quelle  eine Rechnung (Entwurf) oder eine Vorlage {id, name, daten};
+ *   eine „Rechnung“ mit `belegart` ist ein Angebot, eine Auftragsbestätigung oder ein Lieferschein (lib/angebote.js):
+ *   gleicher Editor, aber ohne Zahlung, Wiederholung und Pflichtangaben der Rechnung, gespeichert in `angebote`.
  * @param {HTMLElement} actions  Platz für Knöpfe in der Kopfzeile
  */
 export function editorZeigen(root, { rechnung = null, vorlage = null }, actions) {
   const istVorlage = !!vorlage;
+  const belegart = !istVorlage && istBeleg(rechnung) ? rechnung.belegart : '';
+  const BA = BELEGARTEN[belegart] || null;
   const s = store.db.settings;
   // Arbeitskopie: Geändert wird erst mit „Speichern“.
   const r = istVorlage
@@ -73,7 +79,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
   };
 
   actions.innerHTML = `<button class="btn" id="reZurueck">${icon('left', 16).__raw} Zur Übersicht</button>`;
-  $('#reZurueck', actions).addEventListener('click', () => navigate('rechnungen', { tab: istVorlage ? 'vorlagen' : 'ausgang' }));
+  $('#reZurueck', actions).addEventListener('click', () => navigate('rechnungen', { tab: istVorlage ? 'vorlagen' : BA ? 'angebote' : 'ausgang' }));
 
   const kontakte = [...sel.contacts()].sort((a, b) => String(a.name).localeCompare(String(b.name), 'de'));
   const steuerfrei = () => !!(STEUERFAELLE[r.steuerfall] || STEUERFAELLE.standard).kategorie;
@@ -93,8 +99,8 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
         <section class="card" id="rePositionen" data-bereich="positionen"></section>
         <section class="card" id="reTexte"></section>
         <section class="card" id="reBilder"></section>
-        <section class="card" id="reZahlung" data-bereich="zahlung"></section>
-        ${istVorlage ? '' : '<section class="card" id="reWiederholung" data-premium="wiederkehrend" data-ohne-krone></section>'}
+        <section class="card" id="reZahlung" data-bereich="zahlung" ${BA ? 'hidden' : ''}></section>
+        ${istVorlage || BA ? '' : '<section class="card" id="reWiederholung" data-premium="wiederkehrend" data-ohne-krone></section>'}
       </div>
       <aside class="re-seitenspalte">
         <div class="card re-check" id="reCheck"></div>
@@ -222,7 +228,60 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
   /* Angaben                                                                  */
   /* ------------------------------------------------------------------------ */
 
+  /** Auswahl des Projekts (lib/projekte.js), nur wenn es Projekte gibt; die Buchungen der Rechnung erben es. */
+  function projektFeld() {
+    const liste = sel.projekte().filter((x) => x.status !== 'abgeschlossen' || x.id === r.projektId);
+    if (!liste.length) return '';
+    return `<div class="field"><label for="ra_projekt">Projekt</label><select id="ra_projekt" data-f="projektId">
+      ${optionen([['', 'Keinem Projekt zugeordnet'], ...liste.map((x) => [x.id, x.name])], r.projektId || '')}</select></div>`;
+  }
+
+  /** Angaben eines Angebots, einer Auftragsbestätigung oder eines Lieferscheins. */
+  function belegAngabenZeichnen() {
+    const ls = belegart === 'lieferschein';
+    const vorschlag = `wird beim Ausstellen vergeben (${naechsteNummer(sel.angebote(), belegart, Number(String(r.datum || todayISO()).slice(0, 4)))})`;
+    const leistung = belegart === 'angebot' ? '' : `
+          <div class="field full">
+            <label>${ls ? 'Geliefert' : 'Leistung'}</label>
+            <div class="row wrap gap8">
+              <div class="seg sm" role="group" aria-label="${ls ? 'Lieferdatum oder Zeitraum' : 'Leistungsdatum oder Zeitraum'}">
+                <button type="button" data-leistung="datum" class="${r.leistungArt !== 'zeitraum' ? 'active' : ''}">am</button>
+                <button type="button" data-leistung="zeitraum" class="${r.leistungArt === 'zeitraum' ? 'active' : ''}">im Zeitraum</button>
+              </div>
+              ${r.leistungArt === 'zeitraum'
+    ? `<input type="date" data-f="leistungVon" value="${esc(r.leistungVon || '')}" aria-label="von" class="re-datum"> <span class="muted">bis</span>
+                   <input type="date" data-f="leistungBis" value="${esc(r.leistungBis || '')}" aria-label="bis" class="re-datum">`
+    : `<input type="date" data-f="leistungsdatum" value="${esc(r.leistungsdatum || '')}" aria-label="${ls ? 'Lieferdatum' : 'Leistungsdatum'}" class="re-datum">`}
+            </div>
+          </div>`;
+    $('#reAngaben', root).innerHTML = `
+      <div class="card-head"><h2>${icon('file', 16).__raw} ${esc(BA.titel)}</h2>
+        ${r.bezug?.nummer ? `<span class="sub">${esc(`aus ${BELEGARTEN[r.bezug.belegart]?.titel || 'Beleg'} ${r.bezug.nummer}`)}</span>` : ''}</div>
+      <div class="card-body">
+        <div class="form-grid">
+          ${ls ? '' : `<div class="field"><label for="ra_steuerfall">Umsatzsteuer</label><select id="ra_steuerfall" data-f="steuerfall">
+            ${optionen(Object.entries(STEUERFAELLE).map(([k, f]) => [k, f.name]), r.steuerfall || 'standard')}</select></div>`}
+          <div class="field"><label for="ra_sprache">Sprache</label><select id="ra_sprache" data-f="sprache">${optionen(DOKUMENT_SPRACHEN.map((l) => [l.code, l.name]), r.sprache === 'en' ? 'en' : 'de')}</select></div>
+          <div class="field"><label for="ra_nummer">Nummer</label><input id="ra_nummer" data-f="nummer" value="${esc(r.nummer || '')}" placeholder="${esc(vorschlag)}"></div>
+          <div class="field"><label for="ra_datum">Datum</label><input id="ra_datum" type="date" data-f="datum" value="${esc(r.datum || '')}"></div>
+          ${belegart === 'angebot' ? `<div class="field"><label for="ra_gueltig">Gültig bis</label><input id="ra_gueltig" type="date" data-f="gueltigBis" value="${esc(r.gueltigBis || '')}">
+            <span class="hint">So lange sind Sie an das Angebot gebunden.</span></div>` : ''}
+          ${leistung}
+          <div class="field full"><label for="ra_betreff">Betreff</label><input id="ra_betreff" data-f="betreff" value="${esc(r.betreff || '')}" placeholder="z. B. Website-Relaunch, Projekt Herbst"></div>
+          <div class="field"><label for="ra_bestellung">${belegart === 'angebot' ? 'Anfrage des Kunden' : 'Bestellnummer des Kunden'}</label><input id="ra_bestellung" data-f="bestellnummer" value="${esc(r.bestellnummer || '')}"></div>
+          ${projektFeld()}
+        </div>
+      </div>`;
+    $$('[data-leistung]', root).forEach((b) => b.addEventListener('click', () => {
+      r.leistungArt = b.dataset.leistung;
+      if (r.leistungArt === 'datum' && !r.leistungsdatum) r.leistungsdatum = r.datum || todayISO();
+      angabenZeichnen();
+      aktualisieren();
+    }));
+  }
+
   function angabenZeichnen() {
+    if (BA) { belegAngabenZeichnen(); return; }
     const bezugNoetig = r.art === '384' || r.art === '381' || r.storno;
     const p = profilAus(s);
     const vorschlag = istVorlage ? '' : `wird beim Ausstellen vergeben${p.praefix ? ` (${p.praefix}…)` : ''}`;
@@ -254,6 +313,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
           </div>
           <div class="field full"><label for="ra_betreff">Betreff</label><input id="ra_betreff" data-f="betreff" value="${esc(r.betreff || '')}" placeholder="z. B. Website-Relaunch, Projekt Herbst"></div>
           <div class="field"><label for="ra_bestellung">Bestellnummer des Kunden</label><input id="ra_bestellung" data-f="bestellnummer" value="${esc(r.bestellnummer || '')}"></div>
+          ${istVorlage ? '' : projektFeld()}
           ${bezugNoetig ? `
           <div class="field"><label for="ra_bezug">Bezieht sich auf Rechnung</label><input id="ra_bezug" data-f="bezug.nummer" value="${esc(r.bezug?.nummer || '')}" placeholder="Nummer der ursprünglichen Rechnung"></div>
           <div class="field"><label for="ra_bezugDatum">vom</label><input id="ra_bezugDatum" type="date" data-f="bezug.datum" value="${esc(r.bezug?.datum || '')}"></div>` : ''}
@@ -686,6 +746,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
   /* ------------------------------------------------------------------------ */
 
   function pruefliste() {
+    if (BA) return belegPruefen(r, { nummern: vergebeneBelegNummern(r.id) });
     const liste = pruefen(r, verkaeuferAus(s), { nummern: istVorlage ? null : vergebeneNummern(r.id) });
     // In einer Vorlage fehlen Daten und Kunde naturgemäß.
     return istVorlage ? liste.filter((x) => x.bereich === 'positionen' || x.bereich === 'verkaeufer') : liste;
@@ -702,9 +763,9 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
     box.innerHTML = `
       <div class="re-check-kopf ${pflicht.length ? 'warn' : 'gut'}">
         ${icon(pflicht.length ? 'alert' : 'check', 16).__raw}
-        <strong>${pflicht.length ? `${pflicht.length === 1 ? 'Eine Pflichtangabe fehlt' : `${pflicht.length} Pflichtangaben fehlen`}` : 'Alle Pflichtangaben sind da'}</strong>
+        <strong>${pflicht.length ? (BA ? (pflicht.length === 1 ? 'Eine Angabe fehlt' : `${pflicht.length} Angaben fehlen`) : `${pflicht.length === 1 ? 'Eine Pflichtangabe fehlt' : `${pflicht.length} Pflichtangaben fehlen`}`) : (BA ? 'Alles Nötige ist da' : 'Alle Pflichtangaben sind da')}</strong>
       </div>
-      ${pflicht.length ? `<ul class="re-check-liste">${pflicht.map(zeile).join('')}</ul>` : `<p class="small muted mt0 mb0">${istVorlage ? 'Positionen und Ihre Angaben sind vollständig. Kunde und Datum kommen beim Erstellen der Rechnung dazu.' : 'Die Rechnung erfüllt § 14 UStG und ergibt eine gültige E-Rechnung.'}</p>`}
+      ${pflicht.length ? `<ul class="re-check-liste">${pflicht.map(zeile).join('')}</ul>` : `<p class="small muted mt0 mb0">${istVorlage ? 'Positionen und Ihre Angaben sind vollständig. Kunde und Datum kommen beim Erstellen der Rechnung dazu.' : BA ? `${esc(BA.titel)} ist bereit zum Ausstellen. Eine Rechnung wird daraus erst, wenn Sie sie erstellen.` : 'Die Rechnung erfüllt § 14 UStG und ergibt eine gültige E-Rechnung.'}</p>`}
       ${hinweise.length ? `<details class="re-check-mehr"><summary>${hinweise.length === 1 ? 'Ein Hinweis' : `${hinweise.length} Hinweise`}</summary><ul class="re-check-liste">${hinweise.map(zeile).join('')}</ul></details>` : ''}
       ${xr.length && (behoerde || !pflicht.length) ? `<details class="re-check-mehr"${behoerde ? ' open' : ''}><summary>Für eine XRechnung an Behörden ${xr.length === 1 ? 'fehlt eine Angabe' : `fehlen ${xr.length} Angaben`}</summary>
         <ul class="re-check-liste">${xr.map(zeile).join('')}</ul></details>` : ''}`;
@@ -745,8 +806,8 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
         <span class="small muted">${istVorlage ? 'Vorlage' : vollstaendig(liste) ? 'vollständig' : 'Pflichtangaben fehlen'}</span>
       </div>
       <div class="spacer"></div>
-      ${!istVorlage && sel.invoice(r.id) ? `<button type="button" class="btn ghost danger-text" id="reLoeschen" title="Entwurf löschen">${icon('trash', 15).__raw}<span class="re-weg-schmal">Löschen</span></button>` : ''}
-      ${istVorlage ? '' : `<button type="button" class="btn" id="reAlsVorlage" data-premium="vorlagen">${icon('copy', 15).__raw}<span class="re-weg-schmal">Als Vorlage</span></button>
+      ${!istVorlage && (BA ? sel.angebot(r.id) : sel.invoice(r.id)) ? `<button type="button" class="btn ghost danger-text" id="reLoeschen" title="Entwurf löschen">${icon('trash', 15).__raw}<span class="re-weg-schmal">Löschen</span></button>` : ''}
+      ${istVorlage ? '' : `${BA ? '' : `<button type="button" class="btn" id="reAlsVorlage" data-premium="vorlagen">${icon('copy', 15).__raw}<span class="re-weg-schmal">Als Vorlage</span></button>`}
       <button type="button" class="btn" id="rePdf">${icon('pdf', 15).__raw}<span class="re-weg-schmal">PDF</span></button>`}
       <button type="button" class="btn" id="reSpeichern">${icon('save', 15).__raw} Speichern</button>
       ${istVorlage ? '' : `<button type="button" class="btn primary" id="reAusstellen">${icon('check', 15).__raw} Ausstellen</button>`}`;
@@ -756,7 +817,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
     $('#rePdf', root)?.addEventListener('click', async () => {
       try { await pdfZeigen(r); } catch (e) { err('PDF nicht erstellt', e.message); }
     });
-    $('#reAusstellen', root)?.addEventListener('click', ausstellenFragen);
+    $('#reAusstellen', root)?.addEventListener('click', BA ? belegAusstellenFragen : ausstellenFragen);
   }
 
   function aktualisieren({ summen = true } = {}) {
@@ -778,6 +839,8 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
       if (!String(daten.kaeufer?.name || '').trim()) delete daten.kaeufer;
       await upsertEntity('invoiceTemplates', { ...structuredClone(vorlage), name: vorlageName.trim() || 'Vorlage', daten }, 'rechnungsvorlage');
       vorlage.name = vorlageName.trim() || 'Vorlage';
+    } else if (BA) {
+      await belegSpeichern(structuredClone(r));
     } else {
       await rechnungSpeichern(structuredClone(r));
     }
@@ -789,10 +852,49 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
   async function loeschen() {
     const yes = await confirmDialog({ title: 'Entwurf löschen?', text: 'Der Entwurf wird entfernt. Eine Nummer wurde noch nicht vergeben.', confirmLabel: 'Löschen', danger: true });
     if (!yes) return;
-    await entwurfLoeschen(r.id);
+    if (BA) await belegLoeschen(r.id); else await entwurfLoeschen(r.id);
     router.leaveGuard = null;
     ok('Entwurf gelöscht');
-    navigate('rechnungen', { tab: 'ausgang' });
+    navigate('rechnungen', { tab: BA ? 'angebote' : 'ausgang' });
+  }
+
+  /** Angebot, Auftragsbestätigung oder Lieferschein ausstellen: Nummer, PDF, keine Buchung. */
+  async function belegAusstellenFragen() {
+    const pflicht = pruefliste().filter((x) => x.stufe === 'pflicht');
+    if (pflicht.length) {
+      warn(pflicht.length === 1 ? 'Eine Angabe fehlt' : `${pflicht.length} Angaben fehlen`, pflicht.map((x) => x.text).join(', '));
+      springen(pflicht[0].bereich);
+      return;
+    }
+    const b = berechnen(r);
+    const nummer = String(r.nummer || '').trim() || naechsteNummer(sel.angebote(), belegart, Number(String(r.datum || todayISO()).slice(0, 4)));
+    const m = modal({
+      title: `${BA.titel} ausstellen`,
+      body: `
+        <div class="kpi-list mb16">
+          <div><div class="k">Nummer</div><div class="v">${esc(nummer)}</div></div>
+          <div><div class="k">Kunde</div><div class="v">${esc(r.kaeufer?.name || '–')}</div></div>
+          ${belegart === 'lieferschein' ? '' : `<div><div class="k">Betrag</div><div class="v">${esc(betragText(b.brutto, r.waehrung))}</div></div>`}
+        </div>
+        <p class="mt0 mb0">Danach steht der Beleg fest: Kontovia legt das PDF unverändert ab. Es entsteht keine Buchung und keine Rechnung.
+          Eine Rechnung erstellen Sie daraus mit einem Klick, wenn es so weit ist.</p>`,
+      foot: `<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>${icon('check', 15).__raw} Ausstellen</button>`,
+    });
+    m.root.querySelector('[data-no]').addEventListener('click', () => m.close());
+    m.root.querySelector('[data-yes]').addEventListener('click', async (e) => {
+      e.currentTarget.disabled = true;
+      try {
+        const fertig = await belegAusstellen(r);
+        m.close();
+        gespeichert = JSON.stringify(r);
+        router.leaveGuard = null;
+        ok(`${BA.titel} ${fertig.nummer} ausgestellt`);
+        navigate('rechnungen', { beleg: fertig.id }, { ersetzen: true });
+      } catch (ex) {
+        e.currentTarget.disabled = false;
+        if (!lizenzFehlerZeigen(ex)) err('Nicht ausgestellt', ex.message);
+      }
+    });
   }
 
   function vorlageAnlegen() {

@@ -93,6 +93,15 @@
           }
         },
         {
+          "name": "Belege automatisch lesen (PDF und Foto, auf dem Gerät)",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
           "name": "Private Buchungen ausblenden",
           "werte": {
             "kostenlos": true,
@@ -124,6 +133,15 @@
           "werte": {
             "kostenlos": false,
             "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Projekte mit Zeiterfassung und Kostenstellen",
+          "werte": {
+            "kostenlos": false,
+            "standard": false,
             "pro": true,
             "max": true
           }
@@ -170,6 +188,15 @@
           }
         },
         {
+          "name": "Link zum Online-Bezahlen (PayPal, Stripe und andere)",
+          "werte": {
+            "kostenlos": true,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
           "name": "Eigenes Logo und freie Gestaltung",
           "werte": {
             "kostenlos": false,
@@ -180,6 +207,15 @@
         },
         {
           "name": "Produkte und Vorlagen",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Angebote, Auftragsbestätigungen und Lieferscheine",
           "werte": {
             "kostenlos": false,
             "standard": true,
@@ -256,6 +292,24 @@
           }
         },
         {
+          "name": "Kassenbuch mit Kassensturz",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Liquiditätsvorschau für die nächsten Wochen",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
           "name": "Zusammenfassende Meldung für EU-Kunden",
           "werte": {
             "kostenlos": false,
@@ -289,6 +343,15 @@
         },
         {
           "name": "DATEV für Ihre Kanzlei",
+          "werte": {
+            "kostenlos": false,
+            "standard": true,
+            "pro": true,
+            "max": true
+          }
+        },
+        {
+          "name": "Paket für die Kanzlei als ZIP, mit allen Belegen",
           "werte": {
             "kostenlos": false,
             "standard": true,

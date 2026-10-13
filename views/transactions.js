@@ -19,6 +19,7 @@ import { vatTreatment, depositInfo, isVoidPart, formLine, formYear, afaMethod, A
 import { neuesAnlagegut, anlageFelder, wireAnlageFelder, anlageAusFeldern } from './anlageform.js';
 import { eRechnungLesen, eRechnungAusDatei, xmlAusPdf, richtung } from '../lib/erechnung.js';
 import { eRechnungHtml, zeigeERechnung } from './erechnung.js';
+import { belegErkennen, lesbar as belegLesbar } from '../lib/belegerkennung.js';
 import { regelAusBuchung, TURNUS } from '../lib/wiederkehrend.js';
 import { ratenAnzahl, ratenPlan, ratenBuchungen, MAX_RATEN } from '../lib/raten.js';
 import { faelligeAnbieten } from './wiederkehrend.js';
@@ -519,6 +520,10 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
   let inputMode = 'gross';
   /** Eine E-Rechnung aus einem in diesem Dialog angehängten Beleg (lib/erechnung.js). */
   let erkannt = null;
+  /** „Beleg lesen“ (lib/belegerkennung.js): Vorschlag aus PDF-Text oder Foto; leseStand '', 'liest', 'fehler', 'gesperrt'. */
+  let gelesen = null;
+  let leseStand = '';
+  let leseFehler = '';
   /** Wiederholung, die mit dem Speichern als Regel entsteht – gehört nicht zur Buchung selbst. */
   const wiederholung = { freq: TURNUS[turnusVorgabe] ? turnusVorgabe : '', until: '', anzahl: 0 };
   /** Aufteilung in Raten: beim Speichern entstehen daraus mehrere Buchungen (lib/raten.js). */
@@ -587,6 +592,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
           <span class="muted tiny">Verschlüsselt gespeichert, höchstens 40 MB je Datei</span>
         </div>
         <div id="eInvoiceBox"></div>
+        <div id="belegLeseBox"></div>
         <div class="attach-list mb8" id="attachList"></div>
         <div class="dropzone" id="dropzone">
           ${icon('paperclip', 16)} Rechnung oder Quittung hierher ziehen oder <u>Datei auswählen</u>
@@ -736,13 +742,14 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         </div>
       </div>
 
-      <details class="mt8" ${(tx.notes || tx.reference || tx.vatTreatment || asset || wiederholung.freq || tx.recurringId || tx.ratenId || ratenAnzahl(ratenWahl.anzahl) > 1) ? 'open' : ''}>
+      <details class="mt8" ${(tx.notes || tx.reference || tx.vatTreatment || tx.projektId || asset || wiederholung.freq || tx.recurringId || tx.ratenId || ratenAnzahl(ratenWahl.anzahl) > 1) ? 'open' : ''}>
         <summary class="small muted" style="cursor:pointer;padding:6px 0">Weitere Angaben</summary>
         <div class="form-grid mt8">
           <div class="field">
             <label>Referenz / Verwendungszweck</label>
             <input id="i_reference" value="${tx.reference || ''}">
           </div>
+          ${projektWahl()}
           ${klein ? '' : raw(`
           <div class="field">
             <label>Umsatzsteuerliche Behandlung</label>
@@ -789,6 +796,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     if (aufgabenBox) aufgabenAbschnitt(aufgabenBox, 'buchung', tx.id, { titel: 'Aufgaben zu dieser Buchung' });
     drawAttachments();
     drawERechnung();
+    drawBelegGelesen();
     updateAmountSummary();
     wireForm();
   }
@@ -805,6 +813,18 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
   }
 
   /** Felder für die Wiederholung – oder der Hinweis auf die Regel, zu der die Buchung gehört. */
+  /** Auswahl des Projekts (Kostenstelle, lib/projekte.js); nur wenn es Projekte gibt. Abgeschlossene nur, wenn gewählt. */
+  function projektWahl() {
+    const liste = sel.projekte().filter((p) => p.status !== 'abgeschlossen' || p.id === tx.projektId);
+    if (!liste.length || (!kann('projekte') && !tx.projektId)) return '';
+    return raw(html`<div class="field">
+      <label for="i_projektId">Projekt</label>
+      <select id="i_projektId"><option value="">Keinem Projekt zugeordnet</option>
+        ${liste.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de')).map((p) => raw(html`<option value="${p.id}" ${raw(p.id === tx.projektId ? 'selected' : '')}>${p.name}</option>`))}</select>
+      <span class="hint">Zählt in der Auswertung des Projekts, wie eine Kostenstelle.</span>
+    </div>`);
+  }
+
   function wiederholungsFelder() {
     if (stornoTeil) return '';
     const regel = tx.recurringId ? sel.recurringRule(tx.recurringId) : null;
@@ -950,9 +970,101 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     for (const { bytes, meta } of dateien) {
       try {
         const r = await eRechnungAusDatei(bytes, meta);
-        if (r) { erkannt = r; drawERechnung(); return; }
+        if (r) { erkannt = r; drawERechnung(); drawBelegGelesen(); return; }
       } catch { /* kein Hinweis – der Beleg bleibt trotzdem angehängt */ }
     }
+  }
+
+  /**
+   * „Beleg lesen“: Ohne E-Rechnung liest Kontovia den Beleg selbst (PDF-Text, sonst Texterkennung des Fotos,
+   * alles auf dem Gerät) und bietet die Werte an. Übernommen wird erst auf Klick.
+   */
+  async function belegLesen(dateien) {
+    if (erkannt || locked) return;
+    const datei = dateien.find((d) => belegLesbar(d.meta));
+    if (!datei) return;
+    if (!kann('beleglesen')) { leseStand = 'gesperrt'; drawBelegGelesen(); return; }
+    leseStand = 'liest';
+    gelesen = null;
+    drawBelegGelesen();
+    try {
+      gelesen = await belegErkennen(datei.bytes, datei.meta);
+      leseStand = gelesen ? '' : 'fehler';
+      leseFehler = gelesen ? '' : 'Auf dem Beleg war kein Betrag und kein Datum zu erkennen. Bitte tragen Sie die Angaben von Hand ein.';
+    } catch (e) {
+      leseStand = 'fehler';
+      leseFehler = e.message;
+    }
+    if (form.isConnected) drawBelegGelesen();
+  }
+
+  function drawBelegGelesen() {
+    const box = form.querySelector('#belegLeseBox');
+    if (!box) return;
+    if (erkannt || stornoTeil || locked || !leseStand && !gelesen) { box.innerHTML = ''; return; }
+    if (leseStand === 'gesperrt') {
+      box.innerHTML = html`<div class="small mb8"><button type="button" class="btn sm ghost" data-premium="beleglesen">${icon('search', 14)} Beleg automatisch lesen</button></div>`;
+      return;
+    }
+    if (leseStand === 'liest') {
+      box.innerHTML = html`<div class="notice mb8 small" role="status"><span class="dreht">${icon('refresh', 14)}</span> Beleg wird gelesen … Das bleibt auf diesem Gerät.</div>`;
+      return;
+    }
+    if (leseStand === 'fehler') {
+      box.innerHTML = html`<div class="notice mb8 small">${leseFehler}</div>`;
+      return;
+    }
+    const v = gelesen.vorschlag;
+    const teile = [
+      v.lieferant,
+      v.brutto !== null ? `${money(v.brutto)} €` : '',
+      v.datum ? `vom ${fmtDate(v.datum)}` : '',
+      v.saetze.length > 1 ? `USt ${v.saetze.join(' und ')} %` : v.satz !== null ? `USt ${v.satz} %` : '',
+      v.nummer ? `Nr. ${v.nummer}` : '',
+    ].filter(Boolean);
+    const quelle = { pdf: 'aus dem PDF', scan: 'aus dem Scan', foto: 'aus dem Foto' }[gelesen.quelle] || '';
+    box.innerHTML = html`
+      <div class="notice ok erech-hinweis mb8">
+        <strong>Beleg gelesen</strong> ${quelle ? `(${quelle})` : ''}: ${teile.join(' · ')}
+        ${v.saetze.length > 1 ? raw(html`<div class="small mt8">Der Beleg nennt mehrere Steuersätze. Übernommen wird der Gesamtbetrag mit ${v.satz} %; teilen Sie ihn bei Bedarf auf.</div>`) : ''}
+        <div class="small muted mt8">Bitte prüfen Sie die Werte, bevor Sie die Buchung anlegen.</div>
+        <div class="row wrap mt8">
+          <button type="button" class="btn sm primary" data-gelesen-take>Werte übernehmen</button>
+          <button type="button" class="btn sm" data-gelesen-text>Gelesenen Text ansehen</button>
+        </div>
+      </div>`;
+    box.querySelector('[data-gelesen-take]').addEventListener('click', () => gelesenUebernehmen(v));
+    box.querySelector('[data-gelesen-text]').addEventListener('click', () => {
+      const m = modal({
+        title: 'Gelesener Text',
+        body: html`<p class="small muted mt0">So hat Kontovia den Beleg gelesen. Fehler beim Lesen sind bei Fotos möglich.</p>
+          <pre class="beleg-text" translate="no">${gelesen.text}</pre>`,
+        foot: html`<button class="btn" data-no>Schließen</button>`,
+      });
+      m.root.querySelector('[data-no]').addEventListener('click', () => m.close());
+    });
+  }
+
+  /** Trägt den Vorschlag ein: nur, was gelesen wurde; Beschreibung nur, wenn sie noch leer ist. */
+  function gelesenUebernehmen(v) {
+    collect();
+    if (!tx.description) tx.description = [v.lieferant, v.nummer ? `Rechnung ${v.nummer}` : ''].filter(Boolean).join(', ').slice(0, 200);
+    if (v.datum) tx.date = v.datum;
+    if (v.faellig) tx.dueDate = v.faellig;
+    if (isNew && v.faellig && v.faellig > todayISO()) tx.paidDate = '';
+    if (v.nummer && !tx.invoiceNumber) tx.invoiceNumber = v.nummer.slice(0, 60);
+    if (v.kontaktId) tx.contactId = v.kontaktId;
+    if (v.brutto !== null && v.brutto > 0) {
+      const vz = tx.gross < 0 ? -1 : 1;
+      if (!klein && [19, 7, 0].includes(v.satz)) tx.vatRate = v.satz;
+      tx.gross = vz * v.brutto;
+      const rate = klein ? 0 : Number(tx.vatRate) || 0;
+      tx.net = Math.round(tx.gross / (1 + rate / 100));
+      tx.vat = tx.gross - tx.net;
+      inputMode = 'gross';
+    }
+    draw();
+    ok('Werte übernommen', 'Bitte prüfen, Kategorie wählen und die Buchung anlegen.');
   }
 
   /* ---------------------------------------------------------------------- */
@@ -968,6 +1080,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     tx.dueDate = g('dueDate').value;
     tx.paidDate = g('isPaid').checked ? (g('paidDate').value || todayISO()) : '';
     tx.reference = g('reference')?.value.trim() || '';
+    if (g('projektId')) tx.projektId = g('projektId').value;
     tx.notes = g('notes')?.value.trim() || '';
     tx.unlisted = !!g('unlisted')?.checked;
     if (g('repeat')) {
@@ -1143,7 +1256,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       }
     }
     drawAttachments();
-    pruefeERechnung(neu);
+    pruefeERechnung(neu).then(() => belegLesen(neu));
   }
 
   function wireForm() {

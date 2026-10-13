@@ -53,6 +53,9 @@ export function werkzeug(sqlite3, dateien) {
       const fassung = d.selectValue("SELECT wert FROM meta WHERE schluessel='schema'");
       if (fassung == null) {
         d.exec({ sql: 'INSERT INTO meta(schluessel, wert) VALUES (?, ?), (?, ?)', bind: ['schema', String(SCHEMA_FASSUNG), 'erstellt', new Date().toISOString()] });
+      } else if (Number(fassung) < SCHEMA_FASSUNG) {
+        // 1 → 2: nur neue Tabellen (angebote, projekte, zeiten), die ddl() oben schon angelegt hat; Daten bleiben unberührt.
+        d.exec({ sql: "UPDATE meta SET wert=? WHERE schluessel='schema'", bind: [String(SCHEMA_FASSUNG)] });
       }
     });
     d.exec(`PRAGMA user_version=${SCHEMA_FASSUNG}`);

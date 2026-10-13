@@ -34,6 +34,7 @@ import './mobil.js';
 import * as I from './installation.js';
 import * as R from './rueckmeldung.js';
 import * as KI from './ki.js';
+import * as OCR from './ocr.js';
 import * as LZ from './lizenz.js';
 import * as LV from './lizenzverwaltung.js';
 import { tarifeHolen } from './firebase.js';
@@ -226,6 +227,8 @@ function nachSperre(reason) {
   Z.bildschirmBeenden();
   // Der Signierschlüssel der Lizenzverwaltung gilt nur für die offene Sitzung.
   LV.schluesselVergessen();
+  // Die Texterkennung hält nichts über das Sperren hinaus.
+  OCR.beenden().catch(() => {});
   if (lockTimer) clearTimeout(lockTimer);
   lockTimer = null;
   restartAutoSync();
@@ -703,6 +706,11 @@ const api = {
       const list = (files || []).map((f) => ({ name: D.sichererName(f.name), data: bytesAus(f) }));
       return D.mehrereAnbieten(list, { zipName: name || zipName(folderLabel, files) });
     }),
+    /** Mehrere Dateien immer als eine ZIP-Datei (zum Weitergeben, etwa an die Kanzlei). */
+    saveZip: handle(async ({ files, zipName: name = 'Kontovia-Export' } = {}) => {
+      const list = (files || []).map((f) => ({ name: D.sichererName(f.name), data: bytesAus(f) }));
+      return D.alsZipAnbieten(list, { zipName: str(name, 120) });
+    }),
     /** Teilen-Menü des Geräts: canShare([{name, mime}]) prüft, share({files, title, text}) gibt weiter. */
     canShare: handle(async (liste) => D.teilenMoeglich(Array.isArray(liste) ? liste.map((f) => ({ name: str(f?.name, 180), mime: str(f?.mime, 80) })) : [])),
     share: handle(async ({ files, title, text } = {}) => D.teilen(
@@ -1153,6 +1161,16 @@ const api = {
     speicher: handle(async () => KI.speicher()),
   },
 
+  /* Texterkennung für Fotos von Belegen (ocr.js, ocr-worker.js mit Tesseract): ganz auf dem Gerät, ohne Netz. */
+  beleg: {
+    moeglich: handle(async () => OCR.texterkennungMoeglich()),
+    texterkennung: handle(async (bytes, mime = 'image/jpeg') => {
+      const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes || []);
+      if (!u8.length || u8.length > 25 * 1024 * 1024) throw Object.assign(new Error('Das Bild ist leer oder zu groß.'), { code: 'OCR_BILD' });
+      return kopie(await OCR.texterkennung(new Blob([u8], { type: str(mime, 80) })));
+    }),
+  },
+
   /* Lizenz (lizenz.js): Die Oberfläche bekommt nur den Stand (Stufe, Laufzeit), nie den Schein. Ohne Schein lizenziert
      sich das Konto in der Testphase beim ersten Abruf selbst. */
   lizenz: {
@@ -1201,7 +1219,12 @@ const api = {
       schluesselCloudLoeschen: handle(async () => LV.schluesselCloudLoeschen(await betreiberKopf('lizenzen'))),
       laden: handle(async () => kopie(await LV.laden(await betreiberKopf('lizenzen')))),
       zuweisen: handle(async (angaben = {}) => kopie(await LV.zuweisen(await betreiberKopf('lizenzen'), {
-        email: str(angaben.email, 254), stufe: str(angaben.stufe, 20), tage: Number(angaben.tage), schonfrist: Number(angaben.schonfrist), notiz: str(angaben.notiz, 200),
+        email: str(angaben.email, 254), stufe: str(angaben.stufe, 20), tage: Number(angaben.tage), bis: str(angaben.bis || '', 40),
+        schonfrist: Number(angaben.schonfrist), notiz: str(angaben.notiz, 200),
+      }))),
+      /* Geräteschein: nur signieren, nirgends ablegen (der Betreiber gibt den Text weiter). */
+      geraetSchein: handle(async (angaben = {}) => kopie(await LV.geraetScheinAusstellen({
+        geraet: str(angaben.geraet, 80), stufe: str(angaben.stufe, 20), tage: Number(angaben.tage), bis: str(angaben.bis || '', 40), schonfrist: Number(angaben.schonfrist),
       }))),
       entziehen: handle(async (email, zuruecksetzen = false) => LV.entziehen(await betreiberKopf('lizenzen'), str(email, 254), null, { zuruecksetzen: zuruecksetzen === true })),
       /* Server (Cloud Function für die automatische Lizenz): Schlüssel hochladen, Testbetrieb umschalten. */

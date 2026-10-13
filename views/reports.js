@@ -23,6 +23,7 @@ import { navigate } from '../lib/router.js';
 import { checkNotice, wireCheckLinks } from './spruenge.js';
 import { vergleich, vergleichEinstellung } from './jahresvergleich.js';
 import { sperrKarteZeigen, erlaubt } from '../lib/lizenzui.js';
+import { kassenbuchZeigen, vorschauZeigen, gewaehlteKasse, vorschauHorizont } from './kassenbuch.js';
 
 const api = window.kontovia;
 const period = defaultPeriod();
@@ -31,7 +32,7 @@ let tab = 'guv';
 let periodCtl = null;
 
 /** Reiter, die zu einer Premium-Funktion gehören (Krone am Reiter, Sperrkarte statt Inhalt). */
-const TAB_FUNKTION = { euer: 'euer', anlagen: 'anlagen', vergleich: 'jahresvergleich' };
+const TAB_FUNKTION = { euer: 'euer', anlagen: 'anlagen', vergleich: 'jahresvergleich', kasse: 'kassenbuch', vorschau: 'liquiditaet' };
 
 const TABS = {
   guv: 'Gewinn & Verlust',
@@ -40,6 +41,8 @@ const TABS = {
   bilanz: 'Vermögen',
   opos: 'Offene Posten',
   konten: 'Konten',
+  kasse: 'Kassenbuch',
+  vorschau: 'Liquidität',
   anlagen: 'Anlagevermögen',
   vergleich: 'Jahresvergleich',
 };
@@ -91,7 +94,13 @@ function draw(root) {
   periodAnzeigen();
   const body = $('#tabBody', root);
   if (TAB_FUNKTION[tab] && sperrKarteZeigen(body, TAB_FUNKTION[tab])) return;
-  ({ guv, euer, ust, bilanz, opos, konten, anlagen, vergleich }[tab] || guv)(body, db);
+  const neu = () => draw(root);
+  ({
+    guv, euer, ust, bilanz, opos, konten, anlagen, vergleich,
+    // Kasse und Vorschau zählen jede Bewegung des Geldes, auch private (sonst stimmte der Bestand nicht).
+    kasse: (b) => kassenbuchZeigen(b, store.db, period, neu),
+    vorschau: (b) => vorschauZeigen(b, store.db, neu),
+  }[tab] || guv)(body, db);
   mountCharts(body);
   mountTables(body);
 }
@@ -99,7 +108,7 @@ function draw(root) {
 /** Der Jahresvergleich hat seine eigene Jahreswahl; die Zeitraumwahl oben gälte dort nicht. */
 function periodAnzeigen() {
   const feld = document.getElementById('rpPeriod');
-  if (feld) feld.style.display = tab === 'vergleich' ? 'none' : '';
+  if (feld) feld.style.display = tab === 'vergleich' || tab === 'vorschau' ? 'none' : '';
 }
 
 /**
@@ -756,6 +765,8 @@ async function exportPdf(wie) {
     opos: () => [R.openItemsPdf(db, todayISO()), `Offene-Posten_${todayISO()}.pdf`],
     konten: () => [R.accountsPdf(db, period), `Kontenblaetter_${period.from}_${period.to}.pdf`],
     anlagen: () => [R.assetsPdf(db, period), `Anlagenverzeichnis_${period.to}.pdf`],
+    kasse: () => [R.kassenbuchPdf(store.db, period, gewaehlteKasse()), `Kassenbuch_${period.from}_${period.to}.pdf`],
+    vorschau: () => [R.liquiditaetPdf(store.db, vorschauHorizont()), `Liquiditaet_${todayISO()}.pdf`],
     vergleich: () => {
       const v = vergleichEinstellung(db);
       return [R.vergleichPdf(db, v), `Jahresvergleich-${v.art === 'income' ? 'Einnahmen' : 'Ausgaben'}_${v.jahre.join('-')}.pdf`];

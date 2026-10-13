@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 11. Oktober 2026, Programmversion 2.34.0
+Stand: 13. Oktober 2026, Programmversion 2.35.0
 
 ---
 
@@ -89,6 +89,16 @@ Gebucht wird nur, was Sie bestätigen. Die Buchungen stehen danach wie alle ande
 mit dem Namen der Datei und dem Zeitpunkt als Herkunft, mit einem Prüfwert je Umsatz, damit derselbe Umsatz nie
 zweimal gebucht wird, und mit der IBAN der Gegenseite. Eigene Regeln und gemerkte Spaltenzuordnungen liegen ebenfalls
 verschlüsselt im Tresor und gehen beim Cloud-Abgleich nur verschlüsselt mit.
+
+## Belege lesen
+
+Hängen Sie einen Beleg an eine Buchung (PDF, Foto oder Scan), kann Kontovia daraus einen Vorschlag für Betrag, Datum,
+Rechnungsnummer und Lieferant machen. Das geschieht ausschließlich auf Ihrem Gerät: Den Text eines PDFs liest ein
+eigener Leser im Programm, den Text eines Fotos die Texterkennung Tesseract (Apache-Lizenz 2.0, unverändert
+mitgeliefert, siehe `src/web/vendor/HERKUNFT.md`). Sie läuft in einem abgeschotteten Rechenwerk, dem der Zugriff auf
+das Netz gesperrt ist; das Bild und der gelesene Text verlassen das Gerät nie und werden nirgends zwischengespeichert.
+Die Auswertung des Textes folgt festen Regeln, nicht einem lernenden Verfahren. Der Vorschlag wird erst gebucht, wenn
+Sie ihn bestätigen; bis dahin liegt er nur im Arbeitsspeicher und wird beim Sperren verworfen.
 
 ## Mahnungen
 

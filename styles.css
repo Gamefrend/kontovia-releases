@@ -2031,3 +2031,60 @@ html[data-theme="dark"] { --krone: #f0bf61; }
   .tv-zahl input { min-height: 44px; }
   .tv-fuss .btn { width: 100%; min-height: 44px; justify-content: center; }
 }
+.tv-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.tv-filter input[type="search"] { flex: 1 1 220px; min-width: 0; }
+.tv-hinweis ul { margin: 6px 0 0; padding-left: 18px; }
+
+/* Lizenzen verwalten (lib/lizenzverwaltung.js) */
+.gap8 { gap: 8px; }
+.lv-stand { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; }
+.lv-stand-teil { display: inline-flex; align-items: center; gap: 6px; }
+.lv-knoepfe { display: flex; flex-wrap: wrap; gap: 8px; }
+.lv-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.lv-filter input[type="search"] { flex: 1 1 220px; min-width: 0; }
+.lv-zahlen { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-bottom: 12px; font-size: 13px; }
+.lv-tabelle td { vertical-align: top; }
+.lv-tabelle .icon-btn { min-width: 32px; min-height: 32px; }
+.lv-einrichtung > summary { cursor: pointer; list-style: none; }
+.lv-einrichtung > summary::-webkit-details-marker { display: none; }
+.lv-einrichtung > summary::after { content: ''; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
+.lv-einrichtung[open] > summary::after { transform: rotate(-135deg); }
+.lv-einrichtung .card-body h3 { font-size: 14px; }
+@media (max-width: 640px) {
+  .lv-knoepfe { width: 100%; }
+  .lv-knoepfe .btn { flex: 1 1 auto; min-height: 44px; justify-content: center; }
+  .lv-filter .seg { overflow-x: auto; max-width: 100%; }
+}
+
+/* Beleg lesen (views/transactions.js): Wartesymbol und gelesener Text */
+@keyframes ico-dreht { to { transform: rotate(360deg); } }
+.dreht .ico { animation: ico-dreht 1s linear infinite; vertical-align: -2px; }
+@media (prefers-reduced-motion: reduce) { .dreht .ico { animation-duration: 2.4s; } }
+.beleg-text { max-height: 50vh; overflow: auto; white-space: pre-wrap; font: 12px/1.5 var(--mono, ui-monospace, monospace); background: var(--surface-2); border-radius: var(--radius-sm); padding: 10px 12px; margin: 0; }
+
+/* Projekte (views/projekte.js): laufende Stoppuhr, Budgetbalken in der Liste */
+.pj-uhr { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.pj-uhr strong { font-variant-numeric: tabular-nums; font-size: 1.05rem; }
+.pj-uhr-punkt { width: 10px; height: 10px; border-radius: 50%; background: var(--neg); animation: pulse 1.6s ease-in-out infinite; }
+.pj-balken { width: 90px; }
+
+/* Kassenbuch und Vorschau (views/kassenbuch.js) */
+.kb-tabelle .kb-text { max-width: 320px; }
+.kb-tag td { background: var(--surface-2); font-weight: 600; font-size: 12.5px; }
+.kb-tag.neg td { color: var(--neg); }
+.kz-stueck { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.kz-feld { display: flex; flex-direction: column; gap: 2px; }
+.kz-feld input { width: 100%; min-height: 36px; }
+.lq-diagramm { width: 100%; height: auto; max-height: 220px; }
+.lq-saeule { fill: var(--accent); }
+.lq-saeule.neg { fill: var(--neg); }
+.lq-null { stroke: var(--border); stroke-width: 1; }
+.lq-achse { fill: var(--muted); font-size: 11px; }
+
+/* Lizenzkarte: Anteil einer Grenze, die belegt ist */
+.lz-balken { display: block; height: 4px; margin-top: 3px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
+.lz-balken > span { display: block; height: 100%; background: var(--accent); width: var(--anteil, 0%); }
+.lz-balken.voll > span { background: var(--neg); }
+.lz-grenzen li { flex-wrap: wrap; }
+.lz-grenzen li .lz-balken { flex: 1 0 100%; }
+.lz-schein > summary { cursor: pointer; color: var(--accent); font-weight: 600; width: max-content; max-width: 100%; list-style-position: inside; }

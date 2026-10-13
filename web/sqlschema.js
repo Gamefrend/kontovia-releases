@@ -28,7 +28,7 @@
  */
 
 /** Fassung des Schemas (PRAGMA user_version und meta.schema). Verlauf in docs/sql-umstellung.md. */
-export const SCHEMA_FASSUNG = 1;
+export const SCHEMA_FASSUNG = 2;
 
 /** Das Journal: Einträge werden nur angefügt, nie geändert oder gelöscht (sqlkern.js). */
 export const JOURNAL = 'auditLog';
@@ -75,6 +75,13 @@ export const TABELLEN = Object.freeze({
   contacts: { spalten: { name: [T, '$.name'], updatedAt: [T, '$.updatedAt'] }, indizes: [['name']] },
   products: { spalten: { name: [T, '$.name'] }, indizes: [] },
   invoiceTemplates: { spalten: {}, indizes: [] },
+  // Seit Fassung 2 (2.35): Angebote, Auftragsbestätigungen, Lieferscheine; Projekte und Zeiteinträge.
+  angebote: {
+    spalten: { belegart: [T, '$.belegart'], status: [T, '$.status'], nummer: [T, '$.nummer'], datum: [T, '$.datum'], updatedAt: [T, '$.updatedAt'] },
+    indizes: [['datum']],
+  },
+  projekte: { spalten: { name: [T, '$.name'], status: [T, '$.status'], updatedAt: [T, '$.updatedAt'] }, indizes: [] },
+  zeiten: { spalten: { projektId: [T, '$.projektId'], datum: [T, '$.datum'], minuten: [I, '$.minuten'], updatedAt: [T, '$.updatedAt'] }, indizes: [['projektId'], ['datum']] },
   appointments: { spalten: { title: [T, '$.title'], start: [T, '$.start'], updatedAt: [T, '$.updatedAt'] }, indizes: [['start']] },
   todos: { spalten: { title: [T, '$.title'], done: [I, '$.done'], due: [T, '$.due'], updatedAt: [T, '$.updatedAt'] }, indizes: [] },
   locks: { spalten: { until: [T, '$.until'] }, indizes: [] },
