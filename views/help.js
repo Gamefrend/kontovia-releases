@@ -904,9 +904,13 @@ function recht(root) {
       <div class="card mt16" id="recht-datenschutz"><div class="card-body">
         <h2 class="mt0">Datenschutz</h2>
         <p>Ohne Cloud-Abgleich, ohne Google Kalender und ohne Ihre Zustimmung zur Update-Suche
-        verlässt nichts dieses Gerät. Es gibt keine Telemetrie, keine
-        Absturzberichte, keine Nutzungsstatistik und kein Benutzerkonto beim Hersteller.</p>
+        und zur Nutzungsmessung verlässt nichts dieses Gerät. Es gibt keine
+        Absturzberichte und kein Benutzerkonto beim Hersteller. Telemetrie und Nutzungsstatistik gibt es nur mit Ihrer Zustimmung.</p>
         <ul>
+          <li><strong>Nutzungsmessung:</strong> nur, wenn Sie zugestimmt haben. Gesendet werden nur grobe Stufen und
+              Codes (zum Beispiel wie lange ein Bereich zum Laden brauchte), nie Beträge, Namen oder Texte. Sie sehen vorher,
+              wie ein Paket aussieht, und können jederzeit unter
+              <a data-go="settings">Einstellungen → Nutzungsmessung</a> widerrufen.</li>
           <li><strong>Update-Suche:</strong> nur, wenn Sie zugestimmt haben. Dabei sieht der Server
               Ihre IP-Adresse, sonst nichts. Abschalten unter
               <a data-go="settings">Einstellungen → Programmaktualisierung</a>.</li>

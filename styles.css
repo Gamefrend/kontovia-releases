@@ -2113,3 +2113,9 @@ html[data-theme="dark"] { --krone: #f0bf61; }
 .lz-grenzen li { flex-wrap: wrap; }
 .lz-grenzen li .lz-balken { flex: 1 0 100%; }
 .lz-schein > summary { cursor: pointer; color: var(--accent); font-weight: 600; width: max-content; max-width: 100%; list-style-position: inside; }
+
+/* Nutzungsmessung: Vorschau des Pakets und Verlauf im Admin-Bereich */
+.messung-paket { margin: 0; padding: 12px 14px; max-height: 320px; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface-2, var(--surface)); font: 12.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; white-space: pre; }
+.nu-verlauf { display: flex; align-items: flex-end; gap: 3px; height: 96px; }
+.nu-balken { flex: 1 1 0; min-width: 3px; height: 100%; display: flex; align-items: flex-end; }
+.nu-balken > span { display: block; width: 100%; min-height: 2px; background: var(--accent); border-radius: 2px 2px 0 0; }

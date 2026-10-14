@@ -26,6 +26,8 @@ import { lizenzOberflaeche, erlaubt, sperrKarteZeigen } from './lib/lizenzui.js'
 import { bereichFunktion } from './lib/tarife.js';
 import { tarifkonfigAusCache } from './lib/tarifkonfig.js';
 import { istBetreiber } from './lib/admin.js';
+import { messungAn, messungStarten, messungBeenden, ansichtWechsel, ansichtGezeichnet, ladezeit } from './lib/messung.js';
+import { einwilligungFragen } from './lib/messungskarte.js';
 import { spracheStarten, spracheGewaehlt, spracheMerken, spracheSetzen, sprache, sprachWahl, sprachWahlVerdrahten, beiSprachwechsel } from './lib/sprache.js';
 
 /* Der Assistent lädt erst, wenn ihn jemand öffnet (lib/assistentfenster.js). */
@@ -438,7 +440,7 @@ function renderSetup(konten = null) {
       <h1>${weiteres ? 'Weiteres Konto hinzufügen' : 'Willkommen bei Kontovia'}</h1>
       ${weiteres ? raw(`<p class="small muted" style="margin:-6px 0 12px">Jedes Konto hat sein eigenes Passwort und seine eigene Buchhaltung. Die bisherigen Konten bleiben, wie sie sind.</p>`) : ''}
       <p class="lead">Ihre Buchhaltung bleibt auf diesem Gerät, verschlüsselt mit
-      Ihrem Passwort. Es gibt kein Benutzerkonto beim Hersteller und keine Telemetrie; Ihre
+      Ihrem Passwort. Es gibt kein Benutzerkonto beim Hersteller und keine Telemetrie ohne Ihre Zustimmung; Ihre
       Buchhaltung verlässt das Gerät nur, wenn Sie den Cloud-Abgleich einschalten. Zuerst ein
       paar Angaben zu Ihrem Betrieb. Sie lassen sich später ändern.</p>
       <div class="form-grid">
@@ -935,9 +937,11 @@ function renderUnlock(message = '') {
     btn.textContent = 'Entschlüssele …';
     errEl.textContent = '';
     try {
+      const t0 = performance.now();
       const db = await api.vault.unlock(pw.value);
       pw.value = '';
       eintreten(db);
+      ladezeit('entsperren', performance.now() - t0);
     } catch (e) {
       errEl.textContent = e.message;
       btn.disabled = false;
@@ -1040,6 +1044,11 @@ async function afterUnlock() {
   // Der Kalenderabgleich läuft nur, wenn auf diesem Gerät ein Google-Konto verbunden ist.
   startCalendarSync().catch((e) => console.error('Kalenderabgleich:', e));
   await setupUpdateWatch();
+  // Nutzungsmessung: einmal fragen (nur wenn auf diesem Gerät noch nicht entschieden), dann nur mit Zustimmung starten.
+  try {
+    await einwilligungFragen({ version: appInfo.version });
+    if (messungAn()) messungStarten({ version: appInfo.version });
+  } catch (e) { console.error('Nutzungsmessung:', e); }
   // Fällige wiederkehrende Buchungen erst nach der Frage zur Update-Prüfung anbieten.
   // Wer heute schon „Später“ gewählt hat, wird nicht bei jedem Entsperren erneut gefragt.
   import('./views/wiederkehrend.js').then((m) => m.faelligeAnbieten({ merker: kontoSchluessel('wiederkehrendSpaeter', appInfo.konto) }))
@@ -1514,6 +1523,7 @@ onNavigate(async (view, params) => {
   seitenwechsel();
   content.innerHTML = '<div class="skeleton" style="height:120px"></div>';
   const lauf = ++ansichtLauf;
+  ansichtWechsel(view);
   // Gehört der ganze Bereich zu einem höheren Tarif, steht hier die Erklärung statt der Ansicht.
   // (Der Kontoauszug zeigt seine Karte selbst, weil er in der Ansicht auch Reiter hat.)
   const bereich = view === 'kontoimport' ? '' : bereichFunktion(view);
@@ -1529,6 +1539,7 @@ onNavigate(async (view, params) => {
     // Inzwischen weitergeklickt: die neuere Ansicht zeichnet.
     if (lauf !== ansichtLauf) return;
     await mod.render(content, params, { actions: $('#topActions') });
+    ansichtGezeichnet(view);
     ansichtenVorladen();
   } catch (e) {
     console.error(e);
@@ -1560,6 +1571,8 @@ api.on.locked(async ({ reason }) => {
   // Nach dem Entsperren gelten wieder die Zahlen ohne private Buchungen.
   scope.includeUnlisted = false;
   stopCalendarSync();
+  // Den Rest der Messung noch senden (sie trägt nichts aus dem Tresor), dann alles vergessen.
+  messungBeenden().catch(() => {});
   clearDb();
   lizenzVergessen();
   const texts = {

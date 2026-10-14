@@ -19,6 +19,7 @@ import { benutzerKarte } from '../lib/benutzer.js';
 import { lizenzKarte } from '../lib/lizenzkarte.js';
 import { renderCloudCard, renderUpdateCard } from './cloudpanel.js';
 import { renderCalendarCard } from './calendarsync.js';
+import { messungKarte } from '../lib/messungskarte.js';
 import { mahnKarte } from './mahneinstellungen.js';
 import { table, mountTables } from '../lib/table.js';
 import { bereichEin, markierung } from '../lib/bewegung.js';
@@ -365,6 +366,7 @@ async function draw(root) {
 
     <div id="cloudCard"></div>
     <div id="calendarCard"></div>
+    <div id="messungCard"></div>
     </section>
 
     <section class="set-panel" id="panel_darstellung" data-panel="darstellung" role="tabpanel" aria-labelledby="tab_darstellung" hidden>
@@ -421,6 +423,7 @@ async function draw(root) {
   mahnKarte($('#mahnCard', root));
   renderCloudCard($('#cloudCard', root));
   renderCalendarCard($('#calendarCard', root));
+  messungKarte($('#messungCard', root), { version: appInfo.version });
   renderUpdateCard($('#updateCard', root));
   leistenKarte($('#leistenCard', root));
 }

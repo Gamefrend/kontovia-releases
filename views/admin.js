@@ -24,5 +24,5 @@ export async function render(root, params) {
   const host = document.createElement('div');
   host.className = 'admin';
   root.replaceChildren(host);
-  entwicklerInhalt(host, { start: params?.reiter === 'lizenzen' || params?.reiter === 'rueck' ? params.reiter : 'tarife' });
+  entwicklerInhalt(host, { start: ['lizenzen', 'nutzung', 'rueck'].includes(params?.reiter) ? params.reiter : 'tarife' });
 }

@@ -33,6 +33,7 @@ import { modal, toast } from '../lib/ui.js';
 import './mobil.js';
 import * as I from './installation.js';
 import * as R from './rueckmeldung.js';
+import * as MS from './messung.js';
 import * as KI from './ki.js';
 import * as OCR from './ocr.js';
 import * as LZ from './lizenz.js';
@@ -401,6 +402,7 @@ async function betreiberKopf(wofuer = 'rueckmeldungen') {
   if (vault.isLocked || !cloud.status().linked) {
     throw Object.assign(new Error(wofuer === 'lizenzen'
       ? 'Zum Verwalten der Lizenzen mit dem Konto des Betreibers bei der Cloud anmelden.'
+      : wofuer === 'messung' ? 'Zum Lesen der Nutzung mit dem Konto des Betreibers bei der Cloud anmelden.'
       : 'Zum Lesen der Rückmeldungen mit dem Konto des Betreibers bei der Cloud anmelden.'), { code: 'NEU_ANMELDEN' });
   }
   return cloud.be().auth();
@@ -1021,6 +1023,15 @@ const api = {
     laden: handle(async () => R.laden(null, await betreiberKopf())),
     foto: handle(async (id) => K.toBase64(await R.foto(String(id), null, await betreiberKopf()))),
     loeschen: handle(async (id) => R.loeschen(String(id), null, await betreiberKopf())),
+  },
+
+  /**
+   * Nutzungsmessung (messung.js): Senden nur nach Zustimmung (die Oberfläche fragt vorher, lib/messung.js), nie bei
+   * gesperrtem Tresor. Lesen der Zähler nur mit der Anmeldung der Cloud, und die Regeln lassen dabei nur den Betreiber zu.
+   */
+  messung: {
+    senden: handle(async (paket) => kopie(await MS.senden(kopie(paket || {}))), { needsUnlock: false }),
+    lesen: handle(async (angaben = {}) => kopie(await MS.lesen({ tage: Number(angaben.tage) || 30 }, null, await betreiberKopf('messung')))),
   },
 
   cloud: {

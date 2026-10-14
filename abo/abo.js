@@ -464,6 +464,7 @@ function vergleichUmschalten() {
   const knopf = $('vergleichKnopf'), text = $('vergleichText'), huelle = $('vergleichHuelle'), innen = $('vergleichInnen');
   knopf.addEventListener('click', () => {
     const auf = knopf.getAttribute('aria-expanded') !== 'true';
+    if (auf) aufrufMelden('vergleich');
     knopf.setAttribute('aria-expanded', String(auf));
     text.textContent = auf ? x('Vergleich schließen', 'Close comparison') : x('Alle Funktionen vergleichen', 'Compare all features');
     innen.inert = !auf;
@@ -598,6 +599,7 @@ async function absenden(e) {
         body: JSON.stringify({ ...daten, tarif: t.id, zyklus: zustand.zyklus, zustimmung: true }),
       });
       if (!r.ok) throw new Error(String(r.status));
+      aufrufMelden('anmeldung', t.id);
       const kasse = kasseLink(t.id);
       meldung('gut', x('Vielen Dank! Wir haben Ihnen eine E-Mail geschickt. Schauen Sie bitte auch im Spam-Ordner nach.', 'Thank you! We have sent you an email. Please check your spam folder too.'),
         kasse ? { text: x('Weiter zur Zahlung', 'Continue to payment'), href: kasse } : null);
@@ -633,11 +635,33 @@ async function absenden(e) {
     { text: x('Kontovia öffnen', 'Open Kontovia'), href: '../' });
 }
 
+/* ---------- Zählen (ohne Cookies, ohne Kennung) ---------- */
+
+/**
+ * Zählt einen Aufruf oder Klick auf eine feste Schaltfläche, sonst nichts: kein Cookie, kein Speicher auf dem Gerät,
+ * keine Kennung, kein Besucher, nur die Sprache der Seite. Meldet der Browser „Do Not Track“ oder „Global Privacy
+ * Control“, wird gar nicht gezählt. Ohne messungEndpunkt in config.json passiert nichts. Der Server nimmt nur
+ * Ereignisse aus einer festen Liste an (functions/messunglogik.js).
+ */
+function aufrufMelden(ereignis, tarifId) {
+  const url = zustand.cfg && zustand.cfg.messungEndpunkt;
+  if (!url || navigator.doNotTrack === '1' || navigator.globalPrivacyControl) return;
+  const ev = { t: 'abo', e: ereignis, l: EN ? 'en' : 'de' };
+  if (tarifId && /^[a-z]{3,12}$/.test(tarifId)) ev.x = tarifId;
+  try {
+    fetch(url, {
+      method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify({ v: 1, q: 'abo', ev: [ev] }),
+      keepalive: true, credentials: 'omit', referrerPolicy: 'no-referrer', cache: 'no-store',
+    }).catch(() => {});
+  } catch { /* Zählen darf nie etwas stören */ }
+}
+
 /* ---------- Anmeldung im Fenster ---------- */
 
 function anmeldungOeffnen() {
   const d = $('anmeldung');
   if (!d || d.open) return;
+  aufrufMelden('anmelden', zustand.tarif);
   if (typeof d.showModal !== 'function') { d.setAttribute('open', ''); return; }
   d.showModal();
 }
@@ -708,6 +732,7 @@ function installierenVorbereiten() {
   for (const knopf of knoepfe) {
     knopf.addEventListener('click', async () => {
       const plattform = knopf.dataset.plattform;
+      aufrufMelden('installieren');
       // Auf der eigenen Plattform mit Angebot des Browsers: direkt installieren.
       if (plattform === hier && installAngebot) {
         installAngebot.prompt();
@@ -751,6 +776,7 @@ async function start() {
     return;
   }
   zustand.cfg = cfg;
+  aufrufMelden('aufruf');
   const bezahlt = bezahlte();
   zustand.tarif = (bezahlt.find((t) => t.empfohlen) || bezahlt[0])?.id || '';
 

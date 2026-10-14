@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 13. Oktober 2026, Programmversion 2.38.0
+Stand: 14. Oktober 2026, Programmversion 2.39.0
 
 ---
 
@@ -23,10 +23,12 @@ keinen Datenschutzbeauftragten bestellt; dazu besteht keine Pflicht.
 
 Kontovia ist eine Web-App, die in Ihrem Browser auf Ihrem eigenen Gerät läuft
 und sich dort wie ein Programm installieren lässt. Ohne Cloud-Abgleich gibt es
-kein Benutzerkonto beim Anbieter, und es gibt in keinem Fall eine Auswertung Ihrer Nutzung. Ohne den ausdrücklich
+kein Benutzerkonto beim Anbieter. Eine Auswertung Ihrer Nutzung gibt es nur, wenn Sie der freiwilligen
+Nutzungsmessung zustimmen; sie sagt, wie das Programm benutzt wird (zum Beispiel in welchem Bereich Sie sich
+aufhalten und wie lange etwas lädt), und nie, was in Ihrer Buchhaltung steht. Ohne den ausdrücklich
 eingerichteten Cloud-Abgleich und ohne verbundenen Google Kalender verlässt
 keine Angabe aus Ihrer Buchhaltung Ihr Gerät; die Suche nach neuen Versionen
-läuft nur mit Ihrer Zustimmung.
+und die Nutzungsmessung laufen nur mit Ihrer Zustimmung.
 
 ## Welche Daten das Programm verarbeitet
 
@@ -49,7 +51,8 @@ Ordner liegt ein ebenso verschlüsseltes Abbild davon.
 
 ## Was das Programm nicht tut
 
-* keine Telemetrie, keine Nutzungsstatistik, keine Absturzberichte
+* keine Telemetrie, keine Nutzungsstatistik und keine Absturzberichte ohne Ihre Zustimmung. Die einzige Ausnahme ist die
+  freiwillige Nutzungsmessung (siehe „Nutzungsmessung“); sie ist erst an, wenn Sie zustimmen, und sendet nie Inhalte
 * keine Werbung, kein Tracking, keine Weitergabe an Dritte
 * keine automatische Übermittlung an Finanzbehörden
 * keine Verarbeitung Ihrer Daten durch Modelle Dritter: Der freiwillige
@@ -59,17 +62,19 @@ Kontovia baut von sich aus keine Verbindung ins Internet auf. Die einzigen
 Verbindungen, die das Programm überhaupt aufbauen kann, sind die unten
 genannten: der Cloud-Abgleich, der Abgleich mit Google Kalender, das Senden von
 Rechnungen per E-Mail, das einmalige Herunterladen eines Sprachmodells für den
-Assistenten und die Suche nach einer neuen Programmversion. Alle laufen erst,
+Assistenten, die Suche nach einer neuen Programmversion und die freiwillige Nutzungsmessung. Alle laufen erst,
 wenn Sie ihnen ausdrücklich zustimmen.
 
 ## Speicher im Browser (Cookies und ähnliche Technologien)
 
 Kontovia setzt **keine Cookies** und bindet kein Tracking, keine Werbung und
-keine Analyse ein. Es speichert in Ihrem Browser (IndexedDB, privates Dateisystem des
+keine Analyse von Drittanbietern ein. Eine eigene, freiwillige Nutzungsmessung gibt es nur mit Ihrer Zustimmung (siehe
+„Nutzungsmessung“). Es speichert in Ihrem Browser (IndexedDB, privates Dateisystem des
 Browsers, lokaler Speicher, Zwischenspeicher und Sitzungsspeicher) nur, was für den Betrieb der App
 unbedingt erforderlich ist und was Sie ausdrücklich verlangen: die verschlüsselte
 Buchhaltung, die Liste Ihrer Konten, Einstellungen wie das Erscheinungsbild und
-die Programmdateien für den Betrieb ohne Netz. Dafür ist nach § 25 Abs. 2 Nr. 2
+die Programmdateien für den Betrieb ohne Netz. Mit Ihrer Zustimmung zur Nutzungsmessung kommen zwei Angaben hinzu: Ihre
+Antwort darauf und je ein Datum, wann dieses Gerät zuletzt als aktiv gezählt wurde (sonst nichts). Dafür ist nach § 25 Abs. 2 Nr. 2
 TDDDG keine Einwilligung nötig. Alles lässt sich in den Einstellungen Ihres
 Browsers löschen; ohne Sicherung ist die Buchhaltung dann weg.
 
@@ -274,6 +279,44 @@ Wenn Sie eine Lizenz erwerben, speichern wir zur Adresse den Tarif, die Laufzeit
 und eine kurze Notiz (etwa die Rechnungsnummer), solange die Lizenz läuft und die
 Aufbewahrungsfristen es verlangen. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO
 (Vertrag) und lit. f (Durchsetzung der Tarife).
+
+## Nutzungsmessung (freiwillig)
+
+Kontovia fragt einmal, ob es anonyme Zahlen darüber senden darf, **wie** das Programm benutzt wird. Die Frage ist
+nicht vorausgewählt, „Teilen“ und „Nicht teilen“ stehen gleichberechtigt nebeneinander, und die Ablehnung hat keine
+Folgen. Ohne Ihre Zustimmung läuft die Messung nicht und es wird nichts gesendet. Sie können sie jederzeit unter
+Einstellungen › Daten & Cloud › Nutzungsmessung ausschalten und sich unter „Was würde gesendet?“ vorher ansehen, wie ein
+Paket aussieht. Rechtsgrundlage ist Ihre Einwilligung (Art. 6 Abs. 1 lit. a DSGVO, § 25 Abs. 1 TDDDG); sie gilt für das
+Gerät, auf dem Sie sie erteilen, und lässt sich mit Wirkung für die Zukunft widerrufen. Der Widerruf ist so einfach wie
+die Zustimmung.
+
+**Was gemessen wird:** in welchem Bereich Sie sich aufhalten und wie lange (in fünf groben Stufen, nur bei sichtbarem
+Fenster); wo Sie schnell mehrfach hintereinander klicken (nur der Bereich und die Art der Stelle, zum Beispiel
+„Knopf“, oder der feste Name einer Schaltfläche aus dem Programm); wie lange das Starten, Entsperren und der Aufbau
+eines Bereichs dauern (in fünf groben Stufen); ein fester Fehlercode, wenn etwas schiefgeht; die Programmversion;
+ob es ein Handy oder ein Computer ist; und ob dieses Gerät heute, in dieser Woche und in diesem Monat schon gezählt
+wurde.
+
+**Was nie gesendet wird:** Beträge, Namen, Rechnungen, Buchungen, Texte, Suchbegriffe, Dateien, Ihre E-Mail-Adresse
+oder eine Kennung, an der man Sie über mehrere Besuche wiedererkennt. Das Programm liest dafür
+keine Eingaben und keine Texte der Seite und keine Adresse aus; die Pakete bestehen nur aus einer festen Liste von Namen
+und Stufen. Der Server verwirft alles, was nicht genau zu dieser Liste passt.
+
+**Wie es gespeichert wird:** Die Pakete gehen an eine Funktion in unserem Google-Cloud-Projekt in Frankfurt
+(europe-west3). Dort werden sie nicht einzeln aufbewahrt, sondern nur in Tageszähler gerechnet („Bereich X, Stufe Y:
+plus 1“). Es gibt keine Nutzerkennung und keine Verbindung zwischen verschiedenen Besuchen; „aktive Geräte“ entstehen
+allein dadurch, dass ein Gerät den Tag, die Woche und den Monat je einmal als gemeldet vermerkt. Beim Empfang sieht die
+Plattform technisch Ihre IP-Adresse, wie bei jeder Verbindung. Wir speichern oder werten sie nicht aus. Die Zähler
+sind so grob, dass sie keiner Person zuzuordnen sind, wir behandeln sie als anonym und bewahren sie ohne Frist auf. Lesen
+können sie nur wir, angemeldet mit unserem Konto. Wir nutzen sie, um langsame oder fehleranfällige Stellen zu finden
+und Kontovia zu verbessern. Die Angaben sind nicht mit Ihrem Passwort verschlüsselt, weil sie nichts Persönliches
+enthalten; sie laufen über eine verschlüsselte Verbindung.
+
+**Auf unserer Werbeseite (Abo-Seite)** zählen wir ohne Cookies und ohne Kennung nur Seitenaufrufe und Klicks auf
+feste Schaltflächen (Installieren, Anmelden, Tarifwahl), dazu die Sprache der Seite. Es wird nichts auf Ihrem Gerät
+gespeichert oder ausgelesen, und meldet Ihr Browser „Do Not Track“ oder „Global Privacy Control“, zählen wir gar nicht. Rechtsgrundlage ist unser berechtigtes Interesse an einer verständlichen Seite (Art. 6
+Abs. 1 lit. f DSGVO). Sie können dem widersprechen (Art. 21 DSGVO); schreiben Sie uns dazu einfach. Auch hier gilt: keine
+Auswertung einzelner Besucher.
 
 ## Rückmeldungen
 

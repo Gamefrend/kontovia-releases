@@ -41,7 +41,7 @@ function dueEntries(from, to) {
       isDue: true,
       txId: t.id,
       occurrence: t.dueDate || t.date,
-      title: `${t.type === 'income' ? 'Zahlungseingang' : 'Zahlung fällig'}: ${t.description}`,
+      title: `${t.type === 'income' ? 'Zahlungseingang erwartet' : 'Zahlung fällig'}: ${t.description}`,
       amount: t.gross,
       type: t.type,
       allDay: true,

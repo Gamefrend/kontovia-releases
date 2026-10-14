@@ -3,6 +3,7 @@
   "testTage": 30,
   "jahresMonateGratis": 2,
   "anmeldeEndpunkt": "",
+  "messungEndpunkt": "https://europe-west3-finanztracker-149f2.cloudfunctions.net/messung",
   "kasse": {
     "standard": {
       "monat": "",
