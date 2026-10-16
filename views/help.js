@@ -115,6 +115,16 @@ function anleitung(root) {
               mit allen Zahlen für ELSTER und für Ihre Steuerkanzlei.</li>
         </ol>
       </div></div>
+      <div class="card"><div class="card-body">
+        <h2 class="mt0">Für wen Kontovia gedacht ist</h2>
+        <p><strong>Gut geeignet:</strong> Freiberufler, Selbstständige und kleine Betriebe, allein oder mit ein, zwei Mitarbeitenden, die ihren
+        Gewinn mit der Einnahmen-Überschuss-Rechnung ermitteln und Dienstleistungen oder Waren in Rechnung stellen.</p>
+        <p><strong>Nicht gedacht ist Kontovia</strong> für Kapitalgesellschaften wie GmbH und UG, die eine Bilanz aufstellen (doppelte Buchführung,
+        Jahresabschluss), und für Betriebe mit mehr als zehn Mitarbeitenden. Lohnabrechnung, Kassensysteme mit TSE-Pflicht, Fahrtenbuch,
+        Gutscheine, Differenzbesteuerung und die One-Stop-Shop-Meldung für Verkäufe an Privatkunden in der EU gibt es nicht.
+        Für Rechnungen und Belege lässt sich Kontovia trotzdem neben einem anderen Programm nutzen; die Buchführung gehört dann dorthin
+        oder zu Ihrer Steuerkanzlei.</p>
+      </div></div>
 
       <div class="card mt16"><div class="card-body">
         <h2 class="mt0">Zwei Einstellungen, auf die es ankommt</h2>
@@ -131,6 +141,10 @@ function anleitung(root) {
         <p><strong>Regelbesteuerung oder Kleinunternehmer.</strong> Als Kleinunternehmer nach § 19 UStG
         rechnen Sie durchgehend brutto, weisen keine Umsatzsteuer aus und ziehen keine Vorsteuer.
         Bei Ihnen ist eingestellt: <strong>${s.taxMode === 'kleinunternehmer' ? 'Kleinunternehmer § 19 UStG' : 'Regelbesteuerung'}</strong>.</p>
+        <p><strong>Nur umsatzsteuerfreie Umsätze.</strong> Wer ausschließlich steuerfrei umsetzt, etwa als Heilberuf nach § 4 Nr. 14 UStG,
+        darf keine Vorsteuer abziehen (§ 15 Abs. 2 UStG). Stellen Sie dann unter Einstellungen den Vorsteuerabzug auf „Nein“: Ausgaben zählen mit
+        dem vollen Betrag, es gibt keine Voranmeldung, und neue Rechnungen sind voreingestellt steuerfrei. Bei Ihnen ist eingestellt:
+        <strong>${s.taxMode === 'kleinunternehmer' || s.vorsteuerAbzug === 'nein' ? 'kein Vorsteuerabzug' : 'Vorsteuerabzug'}</strong>.</p>
         <p><strong>Wechsel.</strong> Ändern Sie eine der beiden Einstellungen, fragt Kontovia, ab wann der Wechsel gilt. Frühere
         Zeiträume bleiben, wie sie waren: Wer etwa ab Januar nicht mehr Kleinunternehmer ist, sieht das alte Jahr weiter als
         Kleinunternehmer. Die Vorsteuer zählt übrigens immer mit dem Datum der Rechnung, auch bei Ist-Versteuerung.</p>

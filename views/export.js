@@ -4,7 +4,7 @@ import { html, raw, esc, $, $$, money, todayISO, int, sum, fmtDate, uid } from '
 import { icon, ok, err, warn, modal, confirmDialog } from '../lib/ui.js';
 import { store, sel, saveNow, commit, lockedUntil } from '../lib/store.js';
 import {
-  euerReport, vatReturn, isKleinunternehmer, nurKleinunternehmer, basisOf, effectiveDate, listedOnly, unlistedStats, isVoidPart,
+  euerReport, vatReturn, ohneUst, nurOhneUst, basisOf, effectiveDate, listedOnly, unlistedStats, isVoidPart,
 } from '../lib/calc.js';
 import { darf } from '../lib/rollen.js';
 import { defaultPeriod, periodControl, periodLabel, setPeriod } from '../lib/period.js';
@@ -104,7 +104,7 @@ function draw(root) {
   // Unterlagen für Finanzamt und Kanzlei enthalten private Buchungen nie.
   const db = listedOnly(store.db);
   const hidden = unlistedStats(store.db, period.from, period.to);
-  const klein = isKleinunternehmer(db, period.from) && isKleinunternehmer(db, period.to);
+  const klein = ohneUst(db, period.from) && ohneUst(db, period.to);
   const e = euerReport(db, period.from, period.to);
   const v = vatReturn(db, period.from, period.to);
   const rows = db.transactions.filter((t) => {
@@ -325,7 +325,7 @@ function wire(root, db, rows) {
       [R.balancePdf(db, period), `Vermoegensuebersicht_${y}.pdf`],
       [R.journalPdf(db, period), `Buchungsjournal_${y}.pdf`],
     ];
-    if (!nurKleinunternehmer(db)) pdfs.splice(2, 0, [R.ustvaPdf(db, period), `UStVA_${y}.pdf`]);
+    if (!nurOhneUst(db)) pdfs.splice(2, 0, [R.ustvaPdf(db, period), `UStVA_${y}.pdf`]);
     for (const [doc, name] of pdfs) files.push(await pdfFuerPaket(doc, name));
     const res = await api.file.saveMany({ folderLabel: 'Zielordner für die Finanzamt-Unterlagen', files });
     if (res) {
@@ -404,7 +404,7 @@ function wire(root, db, rows) {
       [R.balancePdf(db, period), `Vermoegensuebersicht_${y}.pdf`],
       [R.journalPdf(db, period), `Buchungsjournal_${y}.pdf`],
     ];
-    if (!nurKleinunternehmer(db)) pdfs.splice(2, 0, [R.ustvaPdf(db, period), `UStVA_${y}.pdf`]);
+    if (!nurOhneUst(db)) pdfs.splice(2, 0, [R.ustvaPdf(db, period), `UStVA_${y}.pdf`]);
     for (const [doc, name] of pdfs) files.push(await pdfFuerPaket(doc, name));
     const belege = await belegeSammeln(rows, 'Beleg_');
     files.push(...belege.files);
@@ -599,7 +599,7 @@ function steuernummerDialog(db) {
 function datevNumbersDialog(db, einzeln) {
   return new Promise((resolve) => {
     let settled = false;
-    const klein = isKleinunternehmer(db, period.from);
+    const klein = ohneUst(db, period.from);
     const m = modal({
       title: 'Angaben für DATEV',
       size: 'slim',

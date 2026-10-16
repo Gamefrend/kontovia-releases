@@ -1119,7 +1119,8 @@ html[data-theme="dark"] .re-blatt { border-color: transparent; }
 .re-pos-name { display: flex; gap: 6px; }
 .re-pos-name input { font-weight: 520; }
 .re-pos-haupt textarea { min-height: 34px; height: 34px; padding: 7px 12px; resize: none; font-size: 13px; line-height: 1.45; }
-.re-pos-zahlen { display: grid; grid-template-columns: minmax(64px, .8fr) minmax(84px, 1fr) minmax(100px, 1.2fr) minmax(76px, .8fr) minmax(96px, 1fr); gap: 8px; align-items: end; }
+.re-pos-zahlen { display: grid; grid-template-columns: minmax(64px, .8fr) minmax(84px, 1fr) minmax(100px, 1.2fr) minmax(64px, .7fr) minmax(76px, .8fr) minmax(96px, 1fr); gap: 8px; align-items: end; }
+.re-pos-arbeit { grid-column: 1 / -1; min-height: 24px; }
 .re-mini { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .re-mini > span { font-size: 11.5px; color: var(--muted); }
 .re-mini input, .re-mini select { height: 36px; }

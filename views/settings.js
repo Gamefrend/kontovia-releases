@@ -31,7 +31,7 @@ const api = window.kontovia;
 /** Felder, die erst mit „Einstellungen übernehmen“ gelten (das Erscheinungsbild wirkt sofort). */
 const FELDER = [
   'companyName', 'ownerName', 'street', 'zip', 'city', 'taxNumber', 'vatId', 'taxOffice', 'email', 'phone',
-  'taxMode', 'accountingBasis', 'defaultVatRate', 'vatPeriod', 'vatDeadline', 'chartOfAccounts', 'fiscalYear',
+  'taxMode', 'vorsteuerAbzug', 'steuerfreiGrund', 'accountingBasis', 'defaultVatRate', 'vatPeriod', 'vatDeadline', 'chartOfAccounts', 'fiscalYear',
   'taetigSeit', 'svz', 'terminZm', 'autoLockMinutes', 'startView',
 ];
 
@@ -159,6 +159,16 @@ async function draw(root) {
               <option value="kleinunternehmer" ${s.taxMode === 'kleinunternehmer' ? 'selected' : ''}>Kleinunternehmer (§ 19 UStG)</option>
             </select>
             <span class="hint">Bei einem Wechsel fragt Kontovia, ab wann er gilt. Frühere Zeiträume bleiben, wie sie waren.</span>
+          </div>
+          <div class="field" id="f_vorsteuer" ${s.taxMode === 'kleinunternehmer' ? 'hidden' : ''}>
+            <label for="s_vorsteuerAbzug">Vorsteuerabzug</label>
+            <select id="s_vorsteuerAbzug">
+              <option value="ja" ${s.vorsteuerAbzug !== 'nein' ? 'selected' : ''}>Ja, die Umsatzsteuer auf meine Ausgaben ist abziehbar</option>
+              <option value="nein" ${s.vorsteuerAbzug === 'nein' ? 'selected' : ''}>Nein, alle meine Umsätze sind umsatzsteuerfrei</option>
+            </select>
+            <span class="hint">Für Betriebe ohne steuerpflichtige Umsätze, etwa Heilberufe (§ 4 Nr. 14 UStG). Die Umsatzsteuer auf Ihre Ausgaben ist dann nicht abziehbar (§ 15 Abs. 2 UStG), zählt zu den Kosten, und eine Voranmeldung gibt es nicht. Bei steuerpflichtigen und steuerfreien Umsätzen nebeneinander lassen Sie das aus und fragen Ihre Steuerberatung.</span>
+            <label for="s_steuerfreiGrund" class="mt8">Grund der Steuerbefreiung auf Ihren Rechnungen</label>
+            <input id="s_steuerfreiGrund" value="${s.steuerfreiGrund || ''}" maxlength="200" placeholder="z. B. Umsatzsteuerfreie Heilbehandlung nach § 4 Nr. 14 UStG">
           </div>
           ${raw(verlaufText(s))}
           <div class="field">
@@ -589,10 +599,13 @@ function svzJahr(heute = todayISO()) {
 
 const STEUER_NAMEN = {
   taxMode: { regelbesteuerung: 'Regelbesteuerung', kleinunternehmer: 'Kleinunternehmer' },
+  vorsteuerAbzug: { nein: 'ohne Vorsteuerabzug' },
   accountingBasis: { ist: 'nach Zahlungseingang', soll: 'nach Rechnungsdatum' },
 };
-const standText = (e) => [STEUER_NAMEN.taxMode[e.taxMode] || '', e.taxMode !== 'kleinunternehmer' ? STEUER_NAMEN.accountingBasis[e.accountingBasis] || '' : '',
-  e.taxMode !== 'kleinunternehmer' && e.vatPeriod ? `Voranmeldung ${e.vatPeriod}` : ''].filter(Boolean).join(', ');
+const standText = (e) => [STEUER_NAMEN.taxMode[e.taxMode] || '',
+  e.taxMode !== 'kleinunternehmer' && e.vorsteuerAbzug === 'nein' ? STEUER_NAMEN.vorsteuerAbzug.nein : '',
+  e.taxMode !== 'kleinunternehmer' ? STEUER_NAMEN.accountingBasis[e.accountingBasis] || '' : '',
+  e.taxMode !== 'kleinunternehmer' && e.vorsteuerAbzug !== 'nein' && e.vatPeriod ? `Voranmeldung ${e.vatPeriod}` : ''].filter(Boolean).join(', ');
 
 /** Bisherige Stände der steuerlichen Einstellungen (calc.js: steuerStand), neueste zuerst. */
 function verlaufText(s) {
@@ -650,12 +663,14 @@ function verlaufSetzen(settings, bisher, neu, ab) {
 }
 
 async function apply(root, { neuZeichnen = true } = {}) {
-  const val = (id) => $('#s_' + id, root)?.value ?? '';
   const s = store.db.settings;
+  // „Kein Vorsteuerabzug“ gilt nur ohne Kleinunternehmerregelung (die hat ohnehin keinen).
+  const val = (id) => (id === 'vorsteuerAbzug' && $('#s_taxMode', root)?.value === 'kleinunternehmer' ? 'ja' : $('#s_' + id, root)?.value ?? '');
   // Leere Werte wie die Vorgaben behandeln, sonst gälte etwa eine nie gewählte Abgabefrist als Änderung.
   const norm = (k, v) => ({
     taxMode: v || 'regelbesteuerung', accountingBasis: v === 'soll' ? 'soll' : 'ist',
     vatPeriod: v || 'vierteljährlich', vatDeadline: v === 'dauerfrist' ? 'dauerfrist' : 'normal',
+    vorsteuerAbzug: v === 'nein' ? 'nein' : 'ja',
   })[k];
   const bisher = Object.fromEntries(STEUER_FELDER.map((k) => [k, norm(k, s[k])]));
   const neu = Object.fromEntries(STEUER_FELDER.map((k) => [k, norm(k, val(k))]));
@@ -672,6 +687,7 @@ async function apply(root, { neuZeichnen = true } = {}) {
       zip: val('zip'), city: val('city'), taxNumber: val('taxNumber'), vatId: val('vatId'),
       taxOffice: val('taxOffice'), email: val('email'), phone: val('phone'),
       taxMode: val('taxMode'), accountingBasis: val('accountingBasis'),
+      vorsteuerAbzug: val('vorsteuerAbzug'), steuerfreiGrund: val('steuerfreiGrund').trim(),
       defaultVatRate: Number(val('defaultVatRate')), vatPeriod: val('vatPeriod'), vatDeadline: val('vatDeadline'),
       chartOfAccounts: val('chartOfAccounts'), fiscalYear: Number(val('fiscalYear')),
       taetigSeit: val('taetigSeit'),
@@ -792,6 +808,7 @@ function wire(root) {
   // Sondervorauszahlung nur bei monatlicher Voranmeldung mit Dauerfristverlängerung.
   const svzZeigen = () => { $('#svzFeld', root).hidden = !($('#s_vatPeriod', root).value === 'monatlich' && $('#s_vatDeadline', root).value === 'dauerfrist'); };
   $('#s_vatPeriod', root).addEventListener('change', svzZeigen);
+  $('#s_taxMode', root).addEventListener('change', (e) => { $('#f_vorsteuer', root).hidden = e.target.value === 'kleinunternehmer'; });
   $('#s_vatDeadline', root).addEventListener('change', svzZeigen);
   // Weitere Steuertermine wirken sofort, wie das Erscheinungsbild.
   for (const id of ['terminEst', 'terminGewSt']) {

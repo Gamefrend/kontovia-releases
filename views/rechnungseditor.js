@@ -21,7 +21,7 @@ import { openMenu } from '../lib/popover.js';
 import {
   EINHEITEN, ARTEN, STEUERFAELLE, ZAHLUNGSARTEN, LAENDER, laenderSortiert, berechnen, pruefen, vollstaendig, verkaeuferAus, neuePosition,
   einheitAusText, einheitText, positionLeer, anschriftAusText, kaeuferAusKontakt, faelligkeit, zahlungsText, betragText, satzText,
-  titel as titelVon, profil as profilAus, istGutschrift,
+  titel as titelVon, profil as profilAus, istGutschrift, rund, rabatt2,
 } from '../lib/rechnung.js';
 import {
   rechnungSpeichern, entwurfLoeschen, ausstellen, vergebeneNummern, alsVorlage, produktSpeichern,
@@ -340,8 +340,19 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
           <input type="checkbox" id="ra_aufbewahrung" ${r.hinweisAufbewahrung ? 'checked' : ''}>
           <span>Arbeiten an Haus oder Grundstück für einen Privatkunden <span class="muted">(Hinweis auf die Aufbewahrungspflicht)</span></span>
         </label>
+        <label class="check mt8" title="Privatkunden können 20 % der Arbeitskosten von der Steuer absetzen (§ 35a EStG), wenn die Rechnung Arbeit und Material getrennt nennt und sie unbar bezahlen">
+          <input type="checkbox" id="ra_haushalt" ${r.haushaltsnah ? 'checked' : ''}>
+          <span>Arbeitskosten getrennt ausweisen <span class="muted">(Steuerermäßigung für Privatkunden, § 35a EStG)</span></span>
+        </label>
       </div>`;
     $('#ra_aufbewahrung', root).addEventListener('change', (e) => { r.hinweisAufbewahrung = e.target.checked; aktualisieren(); });
+    $('#ra_haushalt', root).addEventListener('change', (e) => {
+      r.haushaltsnah = e.target.checked;
+      // Beim Einschalten gelten Positionen in Stunden als Arbeit, alles andere als Material; die Wahl bleibt änderbar.
+      if (r.haushaltsnah && !r.positionen.some((p) => p.arbeit)) for (const p of r.positionen) p.arbeit = p.einheit === 'HUR';
+      positionenZeichnen();
+      aktualisieren();
+    });
     $$('[data-leistung]', root).forEach((b) => b.addEventListener('click', () => {
       r.leistungArt = b.dataset.leistung;
       if (r.leistungArt === 'datum' && !r.leistungsdatum) r.leistungsdatum = r.datum || todayISO();
@@ -356,10 +367,16 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
 
   const einheitenListe = `<datalist id="reEinheiten">${EINHEITEN.map((e) => `<option value="${esc(e.kurz)}">${esc(e.name)}</option>`).join('')}</datalist>`;
 
+  /** Netto einer Position nach Rabatt, wie `berechnen` sie rechnet (Cent). */
+  const posNetto = (p) => {
+    const vor = rund((Number(p.menge) || 0) * (Number(p.preis) || 0));
+    return vor - (p.rabatt ? rund((vor * rabatt2(p.rabatt)) / 100) : 0);
+  };
+
   function positionenZeichnen() {
     const ohneSteuer = steuerfrei();
     const zeilen = r.positionen.map((p, i) => {
-      const netto = Math.round((Number(p.menge) || 0) * (Number(p.preis) || 0));
+      const netto = posNetto(p);
       return `
       <div class="re-pos" data-pos="${esc(p.id)}">
         <div class="re-pos-nr">${i + 1}</div>
@@ -373,8 +390,10 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
             <label class="re-mini"><span>Menge</span><input data-p="menge" inputmode="decimal" value="${esc(dz(p.menge ?? ''))}"></label>
             <label class="re-mini"><span>Einheit</span><input data-p="einheit" list="reEinheiten" value="${esc(einheitText(p))}" autocomplete="off"></label>
             <label class="re-mini"><span>Preis netto ${esc(zeichen())}</span><input data-p="preis" inputmode="decimal" value="${esc(moneyInput(p.preis))}"></label>
+            <label class="re-mini"><span>Rabatt %</span><input data-p="rabatt" inputmode="decimal" value="${esc(p.rabatt ? dz(p.rabatt) : '')}" placeholder="0" aria-label="Rabatt in Prozent Position ${i + 1}"></label>
             ${ohneSteuer ? '' : `<label class="re-mini"><span>USt</span><select data-p="satz">${optionen([[19, '19 %'], [7, '7 %'], [0, '0 %']].concat([19, 7, 0].includes(Number(p.satz)) ? [] : [[p.satz, satzText(p.satz)]]), Number(p.satz))}</select></label>`}
             <div class="re-mini re-pos-summe"><span>Gesamt${istFremd(r.waehrung) ? ` <span translate="no">${esc(r.waehrung)}</span>` : ''}</span><strong data-summe="${esc(p.id)}">${esc(posSumme(netto))}</strong></div>
+            ${r.haushaltsnah ? `<label class="check re-pos-arbeit" title="Lohn, Fahrt- und Maschinenkosten zählen zu den Arbeitskosten (§ 35a EStG)"><input type="checkbox" data-p="arbeit" ${p.arbeit ? 'checked' : ''} aria-label="Position ${i + 1} ist Arbeitskosten"><span>Arbeitskosten (Lohn, Fahrt, Maschinen)</span></label>` : ''}
           </div>
         </div>
         <div class="re-pos-menue">
@@ -519,7 +538,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
     if (anz) anz.textContent = n === 1 ? '1 Position' : `${n} Positionen`;
     for (const p of r.positionen) {
       const el = root.querySelector(`[data-summe="${CSS.escape(p.id)}"]`);
-      if (el) el.textContent = posSumme(Math.round((Number(p.menge) || 0) * (Number(p.preis) || 0)));
+      if (el) el.textContent = posSumme(posNetto(p));
     }
   }
 
@@ -738,8 +757,10 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
       const k = el.dataset.p;
       if (k === 'menge') p.menge = Number(sprache() === 'en' ? String(el.value).replace(/,/g, '') : String(el.value).replace(/\./g, '').replace(',', '.')) || 0;
       else if (k === 'preis') p.preis = parseMoney(el.value);
+      else if (k === 'rabatt') p.rabatt = rabatt2(Number(sprache() === 'en' ? String(el.value).replace(/,/g, '') : String(el.value).replace(/\./g, '').replace(',', '.')) || 0);
       else if (k === 'satz') p.satz = Number(el.value);
       else if (k === 'einheit') { const e2 = einheitAusText(el.value); p.einheit = e2.code; p.einheitText = e2.text; }
+      else if (k === 'arbeit') p.arbeit = el.checked;
       else p[k] = el.value;
       summenZeichnen();
       aktualisieren({ summen: false });

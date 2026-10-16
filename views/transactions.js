@@ -15,7 +15,7 @@ import { defaultPeriod, periodControl } from '../lib/period.js';
 import { mountTable, tableState } from '../lib/table.js';
 import { router, refresh, navigate } from '../lib/router.js';
 import { fokusMerken } from '../lib/fokus.js';
-import { vatTreatment, depositInfo, isVoidPart, formLine, formYear, afaMethod, AFA_METHODE, isKleinunternehmer } from '../lib/calc.js';
+import { vatTreatment, depositInfo, isVoidPart, formLine, formYear, afaMethod, AFA_METHODE, isKleinunternehmer, ohneUst, ohneUstEinstellung } from '../lib/calc.js';
 import { neuesAnlagegut, anlageFelder, wireAnlageFelder, anlageAusFeldern } from './anlageform.js';
 import { eRechnungLesen, eRechnungAusDatei, xmlAusPdf, richtung } from '../lib/erechnung.js';
 import { eRechnungHtml, zeigeERechnung } from './erechnung.js';
@@ -23,6 +23,7 @@ import { belegErkennen, lesbar as belegLesbar } from '../lib/belegerkennung.js';
 import { WAEHRUNGEN, istFremd, kursGueltig, kursLesen, kursEingabe, inEuro } from '../lib/waehrung.js';
 import { regelAusBuchung, TURNUS } from '../lib/wiederkehrend.js';
 import { ratenAnzahl, ratenPlan, ratenBuchungen, MAX_RATEN } from '../lib/raten.js';
+import { satzBuchungen, satzSumme, weitereTeile, doppelterSatz, SAETZE, MAX_SAETZE } from '../lib/steuersaetze.js';
 import { faelligeAnbieten } from './wiederkehrend.js';
 import { aufgabenAbschnitt } from './todos.js';
 import { journalPdf } from '../lib/reports.js';
@@ -160,7 +161,7 @@ const statusRank = (t) => (isVoidPart(t) ? 3 : overdue(t) ? 0 : !t.paidDate ? 1 
 
 /** Spalten, Filter und Suche der Buchungsliste. */
 function listSpec() {
-  const klein = store.db.settings.taxMode === 'kleinunternehmer';
+  const klein = ohneUstEinstellung(store.db.settings);
   const alle = () => true;
   // Hat keine Buchung einen Kontakt, bliebe die Spalte leer und nähme der Beschreibung den Platz.
   const mitKontakt = sel.transactions().some((t) => t.contactId);
@@ -514,7 +515,8 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
   const isNew = !existing;
   type = tx.type;
   // Kleinunternehmer oder nicht nach dem Stand am Tag der Buchung (Verlauf in den Einstellungen).
-  const klein = isKleinunternehmer(store.db, tx.date || todayISO());
+  const klein = ohneUst(store.db, tx.date || todayISO());
+  const kleinNur = isKleinunternehmer(store.db, tx.date || todayISO());
   // Festgeschrieben ist eine Buchung, deren Datum oder Zahlung im
   // festgeschriebenen Zeitraum liegt – auch eine Vorauszahlung auf eine
   // spätere Rechnung gehört zum Zeitraum, in dem sie floss.
@@ -539,6 +541,8 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
   const wiederholung = { freq: TURNUS[turnusVorgabe] ? turnusVorgabe : '', until: '', anzahl: 0 };
   /** Aufteilung in Raten: beim Speichern entstehen daraus mehrere Buchungen (lib/raten.js). */
   const ratenWahl = { anzahl: 0, freq: 'monthly' };
+  /** Weitere Steuersätze desselben Belegs: beim Speichern wird daraus je Satz eine Buchung (lib/steuersaetze.js). */
+  const satzTeile = [];
   /* Stand nach dem ersten Zeichnen; weicht die Eingabe davon ab, fragt das
      Fenster vor dem Wegklicken nach. */
   let ausgangslage = null;
@@ -561,7 +565,8 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       if (ausgangslage === null || saved) return false;
       collect();
       return JSON.stringify(tx) !== ausgangslage || addedAttachments.length > 0
-        || wiederholung.freq !== (TURNUS[turnusVorgabe] ? turnusVorgabe : '') || ratenAnzahl(ratenWahl.anzahl) > 1;
+        || wiederholung.freq !== (TURNUS[turnusVorgabe] ? turnusVorgabe : '') || ratenAnzahl(ratenWahl.anzahl) > 1
+        || weitereTeile(tx.vatRate, satzExtras()).length > 0;
     },
   });
 
@@ -659,7 +664,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         <div class="card-body">
           <div class="row between mb8">
             <strong style="font-size:13px">Betrag</strong>
-            ${klein ? raw('<span class="badge">Kleinunternehmer, keine Umsatzsteuer</span>') : raw(`
+            ${klein ? raw(kleinNur ? '<span class="badge">Kleinunternehmer, keine Umsatzsteuer</span>' : '<span class="badge">Kein Vorsteuerabzug, Beträge ohne Umsatzsteuer</span>') : raw(`
               <div class="seg">
                 <button data-mode="gross" class="${inputMode === 'gross' ? 'active' : ''}">Brutto eingeben</button>
                 <button data-mode="net" class="${inputMode === 'net' ? 'active' : ''}">Netto eingeben</button>
@@ -696,6 +701,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
             <span class="hint">Kontovia rechnet den Betrag oben in Euro um und bucht in Euro; Währung, Betrag und Kurs bleiben an der Buchung.</span>
           </details>
           <div class="row" id="amountSummary" style="gap:22px;font-size:13px;padding-top:2px"></div>
+          ${raw(satzFelder())}
         </div>
       </div>
 
@@ -872,6 +878,46 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         <input type="number" min="0" max="999" id="i_repeatCount" value="${wiederholung.anzahl || ''}" ${wiederholung.freq ? '' : 'disabled'}>
         <span class="hint">Diese Buchung zählt mit.</span>
       </div>`;
+  }
+
+  /** Mehrere Steuersätze auf einem Beleg: weitere Zeilen mit Satz und Betrag, oder der Hinweis, dass diese Buchung schon ein Teil ist. */
+  function satzFelder() {
+    if (klein) return '';
+    if (tx.splitId) {
+      return `<p class="small muted mt8 mb0">Das ist Teil ${esc(String(tx.splitTeil || ''))} von ${esc(String(tx.splitAnzahl || ''))} eines Belegs mit mehreren Steuersätzen. Jede Buchung hat ihren Satz; Datum, Beleg und Konto gelten für alle.</p>`;
+    }
+    if (!isNew) return '';
+    const betragName = inputMode === 'gross' ? 'Bruttobetrag' : 'Nettobetrag';
+    const zeilen = satzTeile.map((z, i) => `
+      <div class="form-grid c3 mt8" data-satzzeile="${i}">
+        <div class="field"><label for="i_satzBetrag${i}">${betragName}, weiterer Satz</label>
+          <input class="money-input" id="i_satzBetrag${i}" data-satzbetrag="${i}" inputmode="decimal" value="${esc(z.betrag)}" placeholder="0,00"></div>
+        <div class="field"><label for="i_satzSatz${i}">Umsatzsteuersatz</label>
+          <select id="i_satzSatz${i}" data-satzsatz="${i}">${SAETZE.map((s) => `<option value="${s}" ${Number(z.satz) === s ? 'selected' : ''}>${s} %</option>`).join('')}</select></div>
+        <div class="field"><label>&nbsp;</label><button type="button" class="btn sm ghost" data-satzweg="${i}" aria-label="Diesen Steuersatz entfernen">${icon('trash', 14).__raw} Entfernen</button></div>
+      </div>`).join('');
+    return `
+      <details class="mt8" id="satzBox" ${satzTeile.length ? 'open' : ''}>
+        <summary class="small muted" style="cursor:pointer;padding:4px 0">Mehrere Steuersätze auf demselben Beleg</summary>
+        <p class="small muted mt8 mb0">Etwa beim Supermarkt-Bon oder der Rechnung eines Cafés mit 7 % und 19 %. Oben tragen Sie den ersten Satz mit seinem Betrag ein, hier die weiteren. Jeder Satz wird eine eigene Buchung mit demselben Datum, Beleg und Konto.</p>
+        ${zeilen}
+        ${satzTeile.length < MAX_SAETZE - 1 ? `<button type="button" class="btn sm mt8" id="satzNeu">${icon('plus', 14).__raw} Weiteren Steuersatz hinzufügen</button>` : ''}
+        <div class="small mt8" id="satzSumme" aria-live="polite"></div>
+      </details>`;
+  }
+
+  /** Die Zeilen mit Betrag als Teile in Cent (die Eingabe folgt der Wahl Brutto oder Netto). */
+  const satzExtras = () => satzTeile.map((z) => ({ satz: Number(z.satz), betrag: parseMoney(z.betrag) }));
+
+  function satzVorschau() {
+    const box = form.querySelector('#satzSumme');
+    if (!box) return;
+    collect();
+    const teile = weitereTeile(tx.vatRate, satzExtras());
+    if (!teile.length) { box.textContent = ''; return; }
+    const s = satzSumme(tx, satzExtras(), { netto: inputMode === 'net' });
+    const doppelt = doppelterSatz(tx.vatRate, satzExtras());
+    box.innerHTML = html`<span class="muted">${s.anzahl} Buchungen zusammen:</span> Netto <strong class="num">${money(s.net)} €</strong>, Umsatzsteuer <strong class="num">${money(s.vat)} €</strong>, Brutto <strong class="num">${money(s.gross)} €</strong>${doppelt !== null ? raw(`<div class="neg mt8">Der Satz ${doppelt} % kommt zweimal vor. Jeder Satz darf nur einmal vorkommen.</div>`) : ''}`;
   }
 
   /** Ratenzahlung: eine neue Buchung in mehrere aufteilen – oder der Hinweis, dass diese schon eine Rate ist. */
@@ -1323,7 +1369,26 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     for (const id of ['#i_fremdW', '#i_fremdBetrag', '#i_fremdKurs']) form.querySelector(id)?.addEventListener('input', umrechnen);
     amt.addEventListener('focus', () => amt.select());
     amt.addEventListener('blur', () => { if (amt.value.trim()) { amt.value = moneyInput(parseMoney(amt.value)); updateAmountSummary(); } });
-    form.querySelector('#i_vatRate')?.addEventListener('change', updateAmountSummary);
+    form.querySelector('#i_vatRate')?.addEventListener('change', () => { updateAmountSummary(); satzVorschau(); });
+    amt.addEventListener('input', satzVorschau);
+    form.querySelector('#satzNeu')?.addEventListener('click', () => {
+      collect();
+      const belegt = new Set([Number(tx.vatRate), ...satzTeile.map((z) => Number(z.satz))]);
+      satzTeile.push({ satz: SAETZE.find((s) => !belegt.has(s)) ?? 0, betrag: '' });
+      draw();
+      form.querySelector(`#i_satzBetrag${satzTeile.length - 1}`)?.focus();
+    });
+    form.querySelectorAll('[data-satzweg]').forEach((b) => b.addEventListener('click', () => {
+      collect();
+      satzTeile.splice(Number(b.dataset.satzweg), 1);
+      draw();
+    }));
+    form.querySelectorAll('[data-satzbetrag]').forEach((el) => {
+      el.addEventListener('input', () => { satzTeile[Number(el.dataset.satzbetrag)].betrag = el.value; satzVorschau(); });
+      el.addEventListener('blur', () => { if (el.value.trim()) { el.value = moneyInput(parseMoney(el.value)); satzTeile[Number(el.dataset.satzbetrag)].betrag = el.value; satzVorschau(); } });
+    });
+    form.querySelectorAll('[data-satzsatz]').forEach((el) => el.addEventListener('change', () => { satzTeile[Number(el.dataset.satzsatz)].satz = Number(el.value); satzVorschau(); }));
+    satzVorschau();
     form.querySelector('#i_categoryId').addEventListener('change', (e) => {
       const c = sel.category(e.target.value);
       if (c && !klein && c.vatRate !== undefined && c.vatRate !== null) {
@@ -1480,6 +1545,22 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       if (tx.assetId) { fieldError(feld, 'Eine Buchung mit Anlagegut lässt sich nicht in Raten aufteilen.'); return false; }
       if (tx.isDeposit) { fieldError(feld, 'Eine Anzahlung lässt sich nicht in Raten aufteilen.'); return false; }
     }
+    // Mehrere Steuersätze auf einem Beleg: je Satz eine Buchung. Mit Raten, Wiederholung, Anlagegut, Anzahlung
+    // und Fremdwährung lässt sich das nicht verbinden (jede Teilbuchung bräuchte dort ihre eigene Rechnung).
+    const extraTeile = isNew && !klein ? weitereTeile(tx.vatRate, satzExtras()) : [];
+    if (isNew && !klein) {
+      const doppelt = doppelterSatz(tx.vatRate, satzExtras());
+      if (doppelt !== null) { fieldError(form.querySelector('[data-satzsatz]') || form.querySelector('#i_vatRate'), `Der Satz ${doppelt} % kommt zweimal vor. Jeder Satz darf nur einmal vorkommen.`); return false; }
+      if (satzTeile.some((z) => String(z.betrag).trim() !== '' && !parseMoney(z.betrag))) { fieldError(form.querySelector('[data-satzbetrag]'), 'Bitte einen Betrag eintragen oder die Zeile entfernen.'); return false; }
+    }
+    if (extraTeile.length) {
+      const feld = form.querySelector('[data-satzbetrag]');
+      if (inRaten) { fieldError(feld, 'Mehrere Steuersätze und Raten lassen sich nicht verbinden. Wählen Sie eines davon.'); return false; }
+      if (wiederholung.freq) { fieldError(feld, 'Mehrere Steuersätze und Wiederholen lassen sich nicht verbinden. Wählen Sie eines davon.'); return false; }
+      if (tx.assetId) { fieldError(feld, 'Eine Buchung mit Anlagegut lässt sich nicht auf mehrere Steuersätze aufteilen.'); return false; }
+      if (tx.isDeposit) { fieldError(feld, 'Eine Anzahlung lässt sich nicht auf mehrere Steuersätze aufteilen.'); return false; }
+      if (tx.fremd) { fieldError(feld, 'Bei einem Betrag in fremder Währung lassen sich nicht mehrere Steuersätze eintragen.'); return false; }
+    }
     // Eine Betriebseinnahme als „privat“ zu kennzeichnen, hielte sie aus EÜR und Umsatzsteuer heraus. Dann
     // fragt Kontovia einmal nach, bevor es geschieht (§ 146 Abs. 1 AO).
     if (tx.unlisted && !existing?.unlisted && tx.type === 'income' && !sel.category(tx.categoryId)?.private) {
@@ -1499,6 +1580,13 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       const raten = ratenBuchungen(tx, { anzahl: ratenWahl.anzahl, freq: ratenWahl.freq });
       for (const [i, rate] of raten.entries()) await upsertTransaction(rate, i === 0 ? attachments : []);
       if (onSaved) await onSaved(raten[0]);
+      return true;
+    }
+    if (extraTeile.length) {
+      // Jeder Satz eine Buchung; der Beleg hängt an allen, die Metadaten dazu legt die erste an.
+      const teile = satzBuchungen(tx, satzExtras(), { netto: inputMode === 'net' });
+      for (const [i, teil] of teile.entries()) await upsertTransaction(teil, i === 0 ? attachments : []);
+      if (onSaved) await onSaved(teile[0]);
       return true;
     }
     await upsertTransaction(tx, attachments);
@@ -1578,7 +1666,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     m.close();
     const copy = { ...structuredClone(tx), id: uid('tx'), date: todayISO(), paidDate: '', invoiceNumber: '', attachments: [], voided: false, isReversal: false, createdAt: new Date().toISOString() };
     // Die Kopie ist eine neue, eigenständige Buchung – ohne Storno-Verweise und Termine.
-    for (const k of ['reversalOf', 'reversedBy', 'voidedAt', 'voidReason', 'updatedAt', 'assetId', 'recurringId', 'ratenId', 'rate', 'raten']) delete copy[k];
+    for (const k of ['reversalOf', 'reversedBy', 'voidedAt', 'voidReason', 'updatedAt', 'assetId', 'recurringId', 'ratenId', 'rate', 'raten', 'splitId', 'splitTeil', 'splitAnzahl']) delete copy[k];
     copy.appointmentIds = [];
     if (copy.isReversal === false && tx.isReversal) { copy.gross = -copy.gross; copy.net = -copy.net; copy.vat = -copy.vat; copy.description = copy.description.replace(/^Storno: /, ''); }
     setTimeout(() => openTransactionDialog(copy), 60);

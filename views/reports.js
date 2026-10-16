@@ -7,7 +7,7 @@ import { icon, statCard, deltaBadge, compareLabel, rankBars, emptyState, ok, err
 import { store, sel } from '../lib/store.js';
 import {
   compareRanges, trend, euerReport, vatReturn, vatPeriods, balanceSheet,
-  openItems, accountBalances, isKleinunternehmer, nurKleinunternehmer, steuerStand, depreciationInRange, bookValue,
+  openItems, accountBalances, isKleinunternehmer, ohneUst, nurOhneUst, steuerStand, depreciationInRange, bookValue,
   totalDepreciation, healthChecks, scopeDb, unlistedStats, averages, isEffective, accountLedger, restbuchwert,
 } from '../lib/calc.js';
 import {
@@ -70,13 +70,13 @@ function draw(root) {
   // Der Umsatzsteuer-Reiter ist für Kleinunternehmer ausgeblendet – war er
   // vor einem Wechsel der Einstellung aktiv, fällt die Ansicht auf die GuV zurück.
   // Wer früher regelbesteuert war, sieht ihn weiter (für die alten Zeiträume).
-  const ohneUst = nurKleinunternehmer(db);
-  if (tab === 'ust' && ohneUst) tab = 'guv';
+  const keineUst = nurOhneUst(db);
+  if (tab === 'ust' && keineUst) tab = 'guv';
   root.innerHTML = html`
     <div class="row wrap mb16" style="gap:10px 16px">
       <div class="seg tabs" id="tabs" role="group" aria-label="Auswertung">
         ${raw(Object.entries(TABS)
-          .filter(([k]) => !(k === 'ust' && ohneUst))
+          .filter(([k]) => !(k === 'ust' && keineUst))
           .map(([k, v]) => `<button aria-pressed="${tab === k}" data-tab="${k}" ${TAB_FUNKTION[k] ? `data-krone="${TAB_FUNKTION[k]}"` : ''} class="${tab === k ? 'active' : ''}">${esc(v)}</button>`).join(''))}
       </div>
       <div class="spacer"></div>
@@ -129,7 +129,7 @@ function scopeWarning() {
 /* -------------------------------------------------------------------------- */
 
 function guv(root, db) {
-  const klein = isKleinunternehmer(db, period.to);
+  const klein = ohneUst(db, period.to);
   const cmp = compareRanges(db, period.from, period.to);
   const { current, previous } = cmp;
   // Im laufenden Zeitraum bis zum gleichen Stand wie der Vorzeitraum.
@@ -422,7 +422,7 @@ function euer(root, db) {
           </div>
           <div class="right small muted">
             ${periodLabel(period)}<br>
-            ${e.kleinunternehmer ? 'Kleinunternehmer § 19 UStG' : 'Regelbesteuerung'}<br>
+            ${e.kleinunternehmer ? 'Kleinunternehmer § 19 UStG' : e.ohneVorsteuerabzug ? 'Ohne Vorsteuerabzug (umsatzsteuerfrei)' : 'Regelbesteuerung'}<br>
             Zuflussprinzip § 11 EStG
           </div>
         </div>
@@ -451,7 +451,7 @@ function ust(root, db) {
 
   root.innerHTML = html`
     ${raw(scopeWarning())}
-    ${v.kleinunternehmer ? raw('<div class="notice mb16">In diesem Zeitraum waren Sie Kleinunternehmer und geben keine Voranmeldung ab.</div>') : ''}
+    ${v.ohneVorsteuerabzug ? raw('<div class="notice mb16">In diesem Zeitraum hatten Sie keinen Vorsteuerabzug (nur umsatzsteuerfreie Umsätze) und geben keine Voranmeldung ab.</div>') : v.kleinunternehmer ? raw('<div class="notice mb16">In diesem Zeitraum waren Sie Kleinunternehmer und geben keine Voranmeldung ab.</div>') : ''}
     ${v.ohneKategorie.length ? raw(`<div class="notice warn mb16"><strong>${v.ohneKategorie.length === 1 ? 'Eine Buchung' : `${int(v.ohneKategorie.length)} Buchungen`} ohne Kategorie.</strong>
       Ohne Kategorie ist nicht klar, ob Umsatzsteuer anfällt; ohne Steuersatz fehlen sie in den Kennzahlen. Ordnen Sie sie zu, bevor Sie die Voranmeldung abgeben.</div>`) : ''}
     <div class="grid c3 mb16">

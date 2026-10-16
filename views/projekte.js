@@ -22,7 +22,9 @@ import { sperrKarteZeigen, erlaubt } from '../lib/lizenzui.js';
 import { kann } from '../lib/lizenz.js';
 import {
   PROJEKT_STATUS, neuesProjekt, neueZeit, dauerText, dauerLesen, abgerechnet, imEntwurf, projektAuswertung, projektBezuege, minutenImZeitraum,
+  satzFuer, personenVon,
 } from '../lib/projekte.js';
+import { prefs, setPref } from '../lib/prefs.js';
 import {
   projektSpeichern, projektLoeschen, zeitSpeichern, zeitLoeschen, laufendeZeit, stoppuhrStarten, abrechnen, projektZuordnen, projektAusAngebot,
 } from '../lib/projektaktionen.js';
@@ -230,6 +232,7 @@ function detail(root, p, actions, reiter) {
         ${a.budgetAnteil !== null ? raw(html`<div><div class="k">Budget</div><div class="v">${Math.round(a.budgetAnteil * 100)} % von ${money(p.budget)} €</div></div>`) : ''}
         ${a.stundenAnteil !== null ? raw(html`<div><div class="k">Stundenbudget</div><div class="v">${Math.round(a.stundenAnteil * 100)} % von ${p.budgetStunden} Std.</div></div>`) : ''}
       </div>
+      ${a.personen.length ? raw(html`<p class="small muted mb0 mt16">Stunden je Person: ${a.personen.map((x) => `${x.person} ${dauerText(x.minuten)}`).join(' · ')}</p>`) : ''}
       ${(a.budgetAnteil ?? 0) >= 0.8 || (a.stundenAnteil ?? 0) >= 0.8 ? raw(html`<div class="notice warn mt16">${(a.budgetAnteil ?? 0) >= 1 || (a.stundenAnteil ?? 0) >= 1 ? 'Das Budget ist ausgeschöpft.' : 'Das Budget ist zu mehr als 80 % verbraucht.'}</div>`) : ''}
       ${a.entwuerfe ? raw(html`<div class="notice mt16">${a.entwuerfe === 1 ? 'Ein Rechnungsentwurf wartet auf das Ausstellen.' : `${a.entwuerfe} Rechnungsentwürfe warten auf das Ausstellen.`} <a href="#" data-reiter-sprung="belege">Ansehen</a></div>`) : ''}
       ${angebot ? raw(html`<p class="small muted mb0 mt16">Entstanden aus <a href="#" id="pjAngebot">${titelVon(angebot)} ${angebot.nummer || ''}</a>.</p>`) : ''}
@@ -319,6 +322,7 @@ function zeitenReiter(host, p, zeiten) {
     columns: [
       { key: 'datum', label: 'Datum', type: 'date', cls: 'num', tdCls: 'nowrap', value: (z) => z.datum, cell: (z) => esc(fmtDate(z.datum)) },
       { key: 'dauer', label: 'Dauer', type: 'num', value: (z) => z.minuten, cell: (z) => esc(dauerText(z.minuten)) },
+      ...(zeiten.some((z) => z.person) ? [{ key: 'person', label: 'Person', type: 'text', tdCls: 'nowrap', value: (z) => z.person || '', cell: (z) => esc(z.person || '') }] : []),
       { key: 'text', label: 'Tätigkeit', type: 'text', value: (z) => z.beschreibung || '', cell: (z) => esc(z.beschreibung || '') },
       { key: 'stand', label: 'Stand', type: 'text', value: (z) => zeitStand(z, rechnungen), cell: (z) => zeitStandZelle(z, rechnungen) },
       { key: 'actions', label: '', type: 'none', width: '64px', cls: 'right', tdCls: 'nowrap', cell: zeitLoeschKnopf },
@@ -457,10 +461,29 @@ function projektDialog(p, { neu = false } = {}) {
           <span class="hint">Kurzes Kürzel, wie es Ihre Kanzlei verwendet.</span></div>
         <div class="field"><label for="pjStatus">Stand</label><select id="pjStatus">${Object.entries(PROJEKT_STATUS).map(([k, t]) => raw(html`<option value="${k}" ${raw(k === p.status ? 'selected' : '')}>${t}</option>`))}</select></div>
       </div>
+      <div class="field"><label>Personen mit eigenem Stundensatz (freiwillig)</label>
+        <div id="pjPersonen"></div>
+        <button type="button" class="btn sm mt8" id="pjPersonNeu">${icon('plus', 14)} Person hinzufügen</button>
+        <span class="hint">Wer hier fehlt, arbeitet zum Stundensatz des Projekts. Beim Abrechnen bekommt jede Person eine eigene Position mit ihrem Satz.</span></div>
       <div class="field"><label for="pjNotiz">Notiz</label><textarea id="pjNotiz" rows="2" maxlength="2000">${p.notiz || ''}</textarea></div>`,
     foot: html`${neu ? '' : raw('<button class="btn left ghost danger-text" data-weg>Löschen</button>')}<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Speichern</button>`,
   });
   const $m = (s) => m.root.querySelector(s);
+  // Personen als Zeilen mit Name und Satz; der Stand liegt in `personen`, bis gespeichert wird.
+  let personen = (p.personen || []).map((x) => ({ name: x.name, satz: x.stundensatz ? moneyInput(x.stundensatz) : '' }));
+  const personenZeichnen = () => {
+    $m('#pjPersonen').innerHTML = html`${personen.map((x, i) => raw(html`
+      <div class="form-grid c3 mt8" data-pjperson="${i}">
+        <div class="field"><label for="pjPName${i}">Name</label><input id="pjPName${i}" data-pname="${i}" maxlength="80" value="${x.name}" autocomplete="off"></div>
+        <div class="field"><label for="pjPSatz${i}">Stundensatz netto €</label><input id="pjPSatz${i}" data-psatz="${i}" inputmode="decimal" value="${x.satz}" placeholder="wie das Projekt"></div>
+        <div class="field"><label>&nbsp;</label><button type="button" class="btn sm ghost" data-pweg="${i}" aria-label="Diese Person entfernen">${icon('trash', 14)} Entfernen</button></div>
+      </div>`))}`;
+    $$('[data-pname]', m.root).forEach((el) => el.addEventListener('input', () => { personen[Number(el.dataset.pname)].name = el.value; }));
+    $$('[data-psatz]', m.root).forEach((el) => el.addEventListener('input', () => { personen[Number(el.dataset.psatz)].satz = el.value; }));
+    $$('[data-pweg]', m.root).forEach((el) => el.addEventListener('click', () => { personen.splice(Number(el.dataset.pweg), 1); personenZeichnen(); }));
+  };
+  personenZeichnen();
+  $m('#pjPersonNeu').addEventListener('click', () => { personen.push({ name: '', satz: '' }); personenZeichnen(); $m(`#pjPName${personen.length - 1}`)?.focus(); });
   $m('[data-no]').addEventListener('click', () => m.close());
   $m('[data-weg]')?.addEventListener('click', async () => {
     if (!await confirmDialog({ title: 'Projekt löschen?', text: 'Das geht nur, solange nichts dazugehört. Sonst schließen Sie es ab.', confirmLabel: 'Löschen', danger: true })) return;
@@ -471,6 +494,7 @@ function projektDialog(p, { neu = false } = {}) {
     if (!name) { warn('Bitte einen Namen eintragen'); $m('#pjName').focus(); return; }
     Object.assign(p, {
       name, kontaktId: $m('#pjKundeWahl').value, stundensatz: Math.max(0, parseMoney($m('#pjSatz').value) || 0), budget: Math.max(0, parseMoney($m('#pjBudget').value) || 0),
+      personen: personenBereinigt(personen),
       budgetStunden: Math.max(0, Math.round(Number($m('#pjStunden').value) || 0)), kostenstelle: $m('#pjKst').value.trim(), status: $m('#pjStatus').value, notiz: $m('#pjNotiz').value.trim(),
     });
     try {
@@ -481,6 +505,30 @@ function projektDialog(p, { neu = false } = {}) {
     } catch (e) { err('Nicht gespeichert', e.message); }
   });
   $m('#pjName').focus();
+}
+
+/** Zeilen aus dem Projektfenster als Personen: ohne leere Namen, jeder Name einmal, Satz in Cent (0 = wie das Projekt). */
+function personenBereinigt(zeilen) {
+  const gesehen = new Set();
+  const out = [];
+  for (const x of zeilen) {
+    const name = String(x.name || '').trim().slice(0, 80);
+    const k = name.toLowerCase();
+    if (!name || gesehen.has(k)) continue;
+    gesehen.add(k);
+    out.push({ name, stundensatz: Math.max(0, parseMoney(x.satz) || 0) });
+  }
+  return out;
+}
+
+/** Feld „Person“ mit Vorschlägen: die des Projekts und wer dort schon Zeiten gebucht hat (ohne Projekt: alle). */
+function personFeld(projektId, wert = '') {
+  const projekte = projektId ? [sel.projekt(projektId)].filter(Boolean) : sel.projekte();
+  const namen = [...new Set(projekte.flatMap((p) => personenVon(p, sel.zeiten().filter((z) => z.projektId === p.id))))];
+  return raw(html`<div class="field"><label for="ztPerson">Person (freiwillig)</label>
+    <input id="ztPerson" list="ztPersonen" maxlength="80" value="${wert}" autocomplete="off" placeholder="wer gearbeitet hat">
+    <datalist id="ztPersonen">${raw(namen.map((n) => html`<option value="${n}"></option>`).join(''))}</datalist>
+    <span class="hint">Hat die Person im Projekt einen eigenen Stundensatz, gilt er beim Abrechnen.</span></div>`);
 }
 
 /** Ohne Projekt ein Auswahlfeld, sonst nichts. */
@@ -497,7 +545,8 @@ export function stoppuhrDialog(projektId = '', taetigkeit = '') {
   const m = modal({
     title: p ? `Stoppuhr für ${p.name}` : 'Stoppuhr starten',
     size: 'slim',
-    body: html`${projektFeld(projektId)}<div class="field mb0"><label for="pjTat">Tätigkeit (freiwillig)</label><input id="pjTat" maxlength="200" value="${taetigkeit}" placeholder="z. B. Entwurf Startseite"></div>
+    body: html`${projektFeld(projektId)}<div class="field"><label for="pjTat">Tätigkeit (freiwillig)</label><input id="pjTat" maxlength="200" value="${taetigkeit}" placeholder="z. B. Entwurf Startseite"></div>
+      ${personFeld(projektId, prefs.zeitPerson)}
       ${laufendeZeit() ? raw(html`<p class="small muted mb0 mt8">Die laufende Stoppuhr wird dabei angehalten und ihre Zeit gespeichert.</p>`) : ''}`,
     foot: html`<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>${icon('play', 15)} Starten</button>`,
   });
@@ -505,7 +554,9 @@ export function stoppuhrDialog(projektId = '', taetigkeit = '') {
   $m('[data-no]').addEventListener('click', () => m.close());
   $m('[data-yes]').addEventListener('click', async () => {
     const id = projektId || $m('#ztProjekt').value;
-    try { await stoppuhrStarten(id, $m('#pjTat').value.trim()); m.close(); ok('Stoppuhr läuft', sel.projekt(id)?.name || ''); refresh(); } catch (e) { err('Nicht gestartet', e.message); }
+    const person = $m('#ztPerson').value.trim();
+    if (person) setPref('zeitPerson', person);
+    try { await stoppuhrStarten(id, $m('#pjTat').value.trim(), person); m.close(); ok('Stoppuhr läuft', sel.projekt(id)?.name || ''); refresh(); } catch (e) { err('Nicht gestartet', e.message); }
   });
   $m('#pjTat').focus();
 }
@@ -530,6 +581,7 @@ function zeitDialog(z, { neu = false, projektId = z.projektId } = {}) {
           <span class="hint">Stunden:Minuten, Stunden mit Komma oder Minuten („45m“)</span></div>
       </div>
       <div class="field"><label for="ztText">Tätigkeit</label><input id="ztText" value="${z.beschreibung || ''}" maxlength="200" placeholder="z. B. Abstimmung mit dem Kunden"></div>
+      ${personFeld(projektId, z.person || (neu ? prefs.zeitPerson : ''))}
       <label class="check"><input type="checkbox" id="ztAbr" ${raw(z.abrechenbar ? 'checked' : '')} ${raw(fest ? 'disabled' : '')}> Abrechenbar</label>
       <div class="err small" id="ztFehler" role="alert"></div>`,
     foot: html`<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Speichern</button>`,
@@ -539,7 +591,9 @@ function zeitDialog(z, { neu = false, projektId = z.projektId } = {}) {
   $m('[data-yes]').addEventListener('click', async () => {
     const min = fest ? z.minuten : dauerLesen($m('#ztDauer').value);
     if (!fest && !(min > 0 && min <= 24 * 60)) { $m('#ztFehler').textContent = 'Bitte eine Dauer zwischen einer Minute und 24 Stunden eintragen, etwa 1:30.'; $m('#ztDauer').focus(); return; }
-    const neuZ = { ...structuredClone(z), minuten: min, beschreibung: $m('#ztText').value.trim() };
+    const person = $m('#ztPerson').value.trim().slice(0, 80);
+    const neuZ = { ...structuredClone(z), minuten: min, beschreibung: $m('#ztText').value.trim(), person };
+    if (person) setPref('zeitPerson', person);
     if (!projektId) neuZ.projektId = $m('#ztProjekt').value;
     if (!fest) Object.assign(neuZ, { datum: $m('#ztDatum').value || todayISO(), abrechenbar: $m('#ztAbr').checked });
     try {
@@ -566,6 +620,7 @@ function abrechnenDialog(p, a) {
       <div class="field"><label id="abArtName">Positionen auf der Rechnung</label>
         <div class="seg" role="group" aria-labelledby="abArtName" id="abArt">${ARTEN.map(([k, t]) => raw(html`<button type="button" data-art="${k}" class="${k === art ? 'active' : ''}" aria-pressed="${k === art}">${t}</button>`))}</div></div>
       ${p.stundensatz ? '' : raw(html`<div class="notice warn small">Das Projekt hat keinen Stundensatz. Die Positionen entstehen ohne Preis; tragen Sie ihn in der Rechnung ein.</div>`)}
+      ${a.personen.some((x) => x.offenMinuten) ? raw(html`<div class="notice small mb8">Je Person ein eigener Satz: ${a.personen.filter((x) => x.offenMinuten).map((x) => `${x.person} ${money(satzFuer(p, x.person))} €`).join(', ')}.</div>`) : ''}
       ${p.kontaktId ? '' : raw(html`<div class="notice small">Das Projekt hat keinen Kunden. Tragen Sie ihn in der Rechnung ein.</div>`)}
       <p class="small muted mb0">Es entsteht ein Rechnungsentwurf. Die Zeiten gelten als abgerechnet, sobald Sie die Rechnung ausstellen.</p>`,
     foot: html`<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>${icon('invoice', 15)} Rechnungsentwurf anlegen</button>`,

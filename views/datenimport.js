@@ -12,6 +12,7 @@
 
 import { esc, $, $$, money, fmtDate, fmtDateTime, int, sum } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, err } from '../lib/ui.js';
+import { ohneUstEinstellung } from '../lib/calc.js';
 import { store, sel, beimSperren } from '../lib/store.js';
 import { navigate, router } from '../lib/router.js';
 import { mountTable } from '../lib/table.js';
@@ -146,7 +147,7 @@ function meldungenTabelle(root, meldungen) {
         key: 'stand', label: 'Abgleich mit Kontovia', type: 'text', value: (m) => (vergleich.get(m.id).stimmt ? 0 : 1),
         cell: (m) => {
           const v = vergleich.get(m.id);
-          if (v.kleinunternehmer) return '<span class="badge">Kleinunternehmer</span>';
+          if (v.kleinunternehmer) return v.ohneVorsteuerabzug ? '<span class="badge">Kein Vorsteuerabzug</span>' : '<span class="badge">Kleinunternehmer</span>';
           if (v.stimmt) return '<span class="badge pos">stimmt überein</span>';
           const d = v.zeilen.find((z) => z.kz === 'kz83')?.abweichung || 0;
           return `<span class="badge warn">weicht ab</span> <span class="small">${d ? `Kennzahl 83 um ${esc(money(d, { sign: true }))} €` : 'bei einzelnen Kennzahlen'}</span>`;
@@ -170,7 +171,7 @@ function meldungenTabelle(root, meldungen) {
 
 function vergleichHtml(m) {
   const v = meldungVergleichen(store.db, m);
-  if (v.kleinunternehmer) return '<div class="notice">In Kontovia ist die Kleinunternehmerregelung eingestellt; einen Vergleich gibt es deshalb nicht.</div>';
+  if (v.kleinunternehmer) return v.ohneVorsteuerabzug ? '<div class="notice">In Kontovia ist „Kein Vorsteuerabzug“ eingestellt; einen Vergleich gibt es deshalb nicht.</div>' : '<div class="notice">In Kontovia ist die Kleinunternehmerregelung eingestellt; einen Vergleich gibt es deshalb nicht.</div>';
   const zeilen = v.zeilen.map((z) => `<tr><td><span class="muted tiny">Kz ${esc(z.nr)}</span><div class="small">${esc(z.label)}</div></td>
     <td class="right nowrap num">${esc(money(z.gemeldet))} €</td><td class="right nowrap num">${esc(money(z.berechnet))} €</td>
     <td class="right nowrap num ${z.abweichung ? 'neg' : 'muted'}">${z.abweichung ? `${esc(money(z.abweichung, { sign: true }))} €` : '✓'}</td></tr>`).join('');
@@ -265,7 +266,7 @@ async function tabelleOeffnen(text, name, ziel, root, quelle) {
   if (art === 'kontakte') return stammOeffnen('kontakte', I.kontakteCsvLesen(text), name, root, quelle);
   if (art === 'produkte') {
     const s = store.db.settings;
-    return stammOeffnen('produkte', I.produkteCsvLesen(text, { standardSatz: s.taxMode === 'kleinunternehmer' ? 0 : Number(s.defaultVatRate ?? 19) }), name, root, quelle);
+    return stammOeffnen('produkte', I.produkteCsvLesen(text, { standardSatz: ohneUstEinstellung(s) ? 0 : Number(s.defaultVatRate ?? 19) }), name, root, quelle);
   }
   const tabelle = I.buchungenCsvLesen(text);
   st = { ...leer(), schritt: 'pruefen', art: 'buchungen', quelle: 'Tabelle', name, tabelle, hinweise: tabelle.hinweise };

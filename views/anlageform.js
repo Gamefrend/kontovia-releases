@@ -12,7 +12,7 @@
 import { html, raw, esc, moneyInput, parseMoney, todayISO, fmtDate, money, uid, dz } from '../lib/util.js';
 import { confirmDialog, warn } from '../lib/ui.js';
 import { store, isLockedDate, lockedUntil } from '../lib/store.js';
-import { degressivMoeglich, degressivSatz, DEGRESSIV_FENSTER, isKleinunternehmer, restbuchwert } from '../lib/calc.js';
+import { degressivMoeglich, degressivSatz, DEGRESSIV_FENSTER, ohneUst, restbuchwert } from '../lib/calc.js';
 
 /** Arten von Anlagegütern, je mit eigener Zeile der Anlage EÜR (calc.js: afaZeile). */
 const ARTEN = [
@@ -55,7 +55,7 @@ export function anlageGesperrt(a) {
 
 /** HTML der Felder. `bestehend`: ein schon gespeichertes Anlagegut. */
 export function anlageFelder(a, { bestehend = false } = {}) {
-  const klein = isKleinunternehmer(store.db, a.purchaseDate || todayISO());
+  const klein = ohneUst(store.db, a.purchaseDate || todayISO());
   const gesperrt = bestehend && anlageGesperrt(a);
   const zu = gesperrt ? 'disabled' : '';
   const methode = a.method === 'sofort' || a.method === 'degressiv' ? a.method : 'linear';
@@ -184,7 +184,7 @@ export async function anlageAusFeldern(root, a, { bestehend = false } = {}) {
   }
   if (abgang && abgang.datum < purchaseDate) { warn('Abgang vor der Anschaffung', 'Bitte das Datum des Abgangs prüfen.'); return null; }
   // Die Grenze gilt netto, auch für Kleinunternehmer, die brutto erfassen (R 9b Abs. 2 EStR); dort mit 19 % herausgerechnet.
-  const netto = isKleinunternehmer(store.db, purchaseDate) ? Math.round(cost / 1.19) : cost;
+  const netto = ohneUst(store.db, purchaseDate) ? Math.round(cost / 1.19) : cost;
   if (netto <= 80000 && method !== 'sofort') {
     const trotzdem = await confirmDialog({
       title: 'Bis 800 € netto',

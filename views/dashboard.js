@@ -15,7 +15,7 @@ import { icon, statCard, deltaBadge, compareLabel, rankBars, donut, emptyState, 
 import { store, sel } from '../lib/store.js';
 import {
   compareRanges, trend, openItems, accountBalances, balanceSheet,
-  receiptCoverage, healthChecks, topCategories, isKleinunternehmer, scopeDb, averages, vatReturn, listedOnly,
+  receiptCoverage, healthChecks, topCategories, isKleinunternehmer, ohneUst, keinVorsteuerAbzug, scopeDb, averages, vatReturn, listedOnly,
 } from '../lib/calc.js';
 import { steuertermine } from '../lib/fristen.js';
 import { kann } from '../lib/lizenz.js';
@@ -142,7 +142,8 @@ function context() {
   const cmp = once(() => compareRanges(db, period.from, period.to));
   const c = {
     db,
-    klein: isKleinunternehmer(db),
+    klein: ohneUst(db),
+    keinVor: keinVorsteuerAbzug(db),
     current: () => cmp().current,
     previous: () => cmp().previous,
     // Veränderung zum Vorzeitraum, im laufenden Zeitraum bis zum gleichen Stand.
@@ -553,7 +554,7 @@ function draw(root) {
     <div class="page-head">
       <div>
         <h2>${esc(s.companyName || s.ownerName || 'Ihre Buchhaltung')}</h2>
-        <p class="nur-breit" title="Einnahmen, Ausgaben und Gewinn zählen am Tag der Zahlung, wie in der Anlage EÜR. Eine im Zeitraum bezahlte Rechnung zählt also auch dann, wenn ihr Datum außerhalb liegt.">Einnahmen und Ausgaben nach Zahlungsdatum · ${c.klein ? 'Kleinunternehmer § 19 UStG' : c.db.settings.accountingBasis === 'soll' ? 'Umsatzsteuer nach Rechnungsdatum (Soll)' : 'Umsatzsteuer nach Zahlungseingang (Ist)'}</p>
+        <p class="nur-breit" title="Einnahmen, Ausgaben und Gewinn zählen am Tag der Zahlung, wie in der Anlage EÜR. Eine im Zeitraum bezahlte Rechnung zählt also auch dann, wenn ihr Datum außerhalb liegt.">Einnahmen und Ausgaben nach Zahlungsdatum · ${c.klein ? (c.keinVor ? 'Ohne Vorsteuerabzug (umsatzsteuerfrei)' : 'Kleinunternehmer § 19 UStG') : c.db.settings.accountingBasis === 'soll' ? 'Umsatzsteuer nach Rechnungsdatum (Soll)' : 'Umsatzsteuer nach Zahlungseingang (Ist)'}</p>
       </div>
       <div class="spacer"></div>
       ${scopeToggleHtml(store.db, period.from, period.to).__raw}

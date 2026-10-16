@@ -7,6 +7,7 @@
 
 import { html, raw, esc, money, fmtDate, todayISO, parseMoney, moneyInput, int } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn } from '../lib/ui.js';
+import { ohneUstEinstellung } from '../lib/calc.js';
 import { store, sel, lockedUntil, wiederkehrendeAnlegen, upsertEntity, deleteEntity } from '../lib/store.js';
 import { faellige, naechstesDatum, TURNUS } from '../lib/wiederkehrend.js';
 import { table } from '../lib/table.js';
@@ -178,7 +179,7 @@ export function regelDialog(regel) {
   if (!regel) return;
   const r = structuredClone(regel);
   const t = r.template || {};
-  const klein = store.db.settings.taxMode === 'kleinunternehmer';
+  const klein = ohneUstEinstellung(store.db.settings);
   const istRechnung = r.art === 'rechnung';
   const cats = sel.activeCategories(t.type || 'expense');
   const m = modal({

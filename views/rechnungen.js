@@ -20,6 +20,7 @@ import { store, sel, commit, deleteEntity } from '../lib/store.js';
 import { router, navigate, refresh } from '../lib/router.js';
 import { openMenu } from '../lib/popover.js';
 import { mountTable } from '../lib/table.js';
+import { ohneUstEinstellung } from '../lib/calc.js';
 import {
   EINHEITEN, berechnen, zustand, ZUSTAENDE, faelligkeit, neueRechnung, neuePosition, einheitText, einheitAusText, betragText, satzText, titel as titelVon,
   dokumentVorbereiten,
@@ -34,9 +35,11 @@ import { eRechnungAusDatei } from '../lib/erechnung.js';
 import { istBeleg, neuerBeleg, belegAusBeleg } from '../lib/angebote.js';
 import { angeboteListe, belegDetail, neuBelegMenue } from './angebote.js';
 import {
-  WEGE, DIREKT, STANDARD, PLATZHALTER, mailFuer, vorlageAus, adressen, adresseOk, emlBauen, mailtoAdresse, graphNachricht,
+  WEGE, DIREKT, STANDARD, PLATZHALTER, mailFuer, mahnungMail, vorlageAus, adressen, adresseOk, emlBauen, mailtoAdresse, graphNachricht,
 } from '../lib/emailversand.js';
 import { base64 } from '../lib/pdfausgabe.js';
+import { mahnungVersandVermerken, mahnungAnhang } from '../lib/mahnungsaktionen.js';
+import { stufenName } from '../lib/mahnwesen.js';
 import { prefs, setPref } from '../lib/prefs.js';
 import { zeigeERechnung } from './erechnung.js';
 import { editorZeigen } from './rechnungseditor.js';
@@ -45,7 +48,7 @@ import { openTransactionDialog } from './transactions.js';
 import { aufgabenAbschnitt } from './todos.js';
 import { mahnwesenZeigen, mahnungenKarte } from './mahnwesen.js';
 import { sperrKarteZeigen, erlaubt } from '../lib/lizenzui.js';
-import { kann } from '../lib/lizenz.js';
+import { kann, grenze, rechnungenImMonat } from '../lib/lizenz.js';
 
 const api = window.kontovia;
 
@@ -182,6 +185,19 @@ function zustandVon(r) {
   return zustand(r, { buchungen });
 }
 
+/** Im Tarif mit Monatsgrenze: ab der drittletzten Rechnung ein Hinweis, damit die Grenze nicht erst beim Ausstellen überrascht. */
+function kontingentHinweis() {
+  const g = grenze('rechnungenMonat');
+  if (g === null) return '';
+  const n = rechnungenImMonat(store.db);
+  if (g - n > 2) return '';
+  const rest = Math.max(0, g - n);
+  return `<div class="notice ${rest ? '' : 'warn '}mb16">${icon('info', 15).__raw} ${rest
+    ? `In Ihrem Tarif sind ${g} Rechnungen im Monat möglich. Diesen Monat stehen noch ${rest} zur Verfügung.`
+    : `Die ${g} Rechnungen dieses Monats, die Ihr Tarif erlaubt, sind ausgestellt. Entwürfe lassen sich weiter schreiben; ausstellen geht im nächsten Monat oder mit einem größeren Tarif.`}
+    <button class="btn sm ml8" id="reZuTarif">Tarife ansehen</button></div>`;
+}
+
 function ausgang(root) {
   const alle = sel.invoices().filter((r) => r.richtung !== 'eingang');
   const mitZustand = alle.map((r) => ({ r, z: zustandVon(r), b: berechnen(r) }));
@@ -198,10 +214,12 @@ function ausgang(root) {
       ${statCard({ label: `Gestellt ${jahr}`, value: `${money(sum(diesesJahr, (x) => x.b.brutto))} €`, foot: `${int(diesesJahr.length)} ausgestellt`, icon: 'chart' }).__raw}
       ${statCard({ label: 'Entwürfe', value: int(entwuerfe.length), foot: entwuerfe.length ? 'noch nicht ausgestellt' : 'keine offenen Entwürfe', icon: 'edit' }).__raw}
     </div>
+    ${kontingentHinweis()}
     ${ueber.length ? `<div class="notice warn mb16">${icon('alert', 15).__raw} ${int(ueber.length)} ${ueber.length === 1 ? 'Rechnung ist' : 'Rechnungen sind'} überfällig.
       <button class="btn sm ml8" id="reZuMahnwesen">Zum Mahnwesen</button></div>` : ''}
     <div class="card" id="reListe"></div>`;
   $('#reZuMahnwesen', root)?.addEventListener('click', () => navigate('rechnungen', { tab: 'mahnwesen' }));
+  $('#reZuTarif', root)?.addEventListener('click', () => navigate('settings', { abschnitt: 'lizenz' }));
 
   mountTable($('#reListe', root), {
     id: 'rechnungen-ausgang',
@@ -441,26 +459,30 @@ const mitTouch = () => globalThis.matchMedia?.('(pointer: coarse)').matches;
 /**
  * Eine Rechnung (oder ein Angebot, eine Auftragsbestätigung, einen Lieferschein) per E-Mail senden.
  * `vermerk(id, art, an)` hält den Versand fest; Belege geben ihren eigenen Weg mit (lib/angebotsaktionen.js).
+ * Mit `mahnung` (Datensatz aus `reminders`) geht stattdessen das Mahnschreiben dieser Rechnung hinaus: Text und
+ * Anhang kommen von der Mahnung, vermerkt wird bei ihr, eine XRechnung gibt es dazu nicht.
  */
-export async function sendenDialog(r, { offen = true, vermerk = versandVermerken } = {}) {
+export async function sendenDialog(r, { offen = true, vermerk = versandVermerken, mahnung = null } = {}) {
   await dokumentVorbereiten(r);
   const beleg = istBeleg(r);
+  const ohneXml = beleg || !!mahnung;
+  if (mahnung) vermerk = (_id, art, empfaenger) => mahnungVersandVermerken(mahnung.id, art, empfaenger);
   const an = r.kaeufer?.email || (r.kaeufer?.kontaktId && sel.contact(r.kaeufer.kontaktId))?.email || '';
-  const mail = mailFuer(r, store.db.settings, { offen });
+  const mail = mahnung ? mahnungMail(r, mahnung, store.db.settings) : mailFuer(r, store.db.settings, { offen });
   const behoerde = !!String(r.kaeufer?.leitwegId || '').trim();
   const m = modal({
-    title: `${titelVon(r)} ${r.nummer} per E-Mail senden`,
+    title: mahnung ? `${stufenName(mahnung.stufe)} zu ${titelVon(r)} ${r.nummer} per E-Mail senden` : `${titelVon(r)} ${r.nummer} per E-Mail senden`,
     body: `
       <div class="field"><label for="reAn">An</label><input id="reAn" type="email" multiple value="${esc(an)}" placeholder="E-Mail-Adresse des Kunden" autocomplete="email"></div>
       <div class="field"><label for="reBetreff">Betreff</label><input id="reBetreff" value="${esc(mail.betreff)}"></div>
       <div class="field"><label for="reText">Nachricht</label><textarea id="reText" rows="9">${esc(mail.text)}</textarea>
-        ${beleg ? '' : '<span class="hint"><a href="#" id="reVorlageText">Standardtext ändern</a></span>'}</div>
+        ${ohneXml ? '' : '<span class="hint"><a href="#" id="reVorlageText">Standardtext ändern</a></span>'}</div>
       <div class="field"><label>Anhang</label>
-        <label class="check"><input type="checkbox" id="reMitPdf" checked> ${beleg ? `${esc(titelVon(r))} als PDF` : 'PDF mit E-Rechnung (ZUGFeRD)'}</label>
-        ${beleg ? '' : `<label class="check"><input type="checkbox" id="reMitXml" ${behoerde ? 'checked' : ''}> XRechnung als eigene Datei${behoerde ? '' : ' (meist nur für Behörden nötig)'}</label>`}</div>
+        <label class="check"><input type="checkbox" id="reMitPdf" checked> ${mahnung ? `${esc(stufenName(mahnung.stufe))} als PDF` : beleg ? `${esc(titelVon(r))} als PDF` : 'PDF mit E-Rechnung (ZUGFeRD)'}</label>
+        ${ohneXml ? '' : `<label class="check"><input type="checkbox" id="reMitXml" ${behoerde ? 'checked' : ''}> XRechnung als eigene Datei${behoerde ? '' : ' (meist nur für Behörden nötig)'}</label>`}</div>
       <div class="field mb0"><label>Weg</label><div id="reWege"></div>
         <span class="hint"><span id="reWegText"></span> <a href="#" id="reKontoWechseln" hidden>Anderes Konto</a></span></div>`,
-    foot: `<button class="btn left ghost" data-vermerk title="Wenn Sie die Rechnung anders verschickt haben">Als versendet vermerken</button>
+    foot: `<button class="btn left ghost" data-vermerk title="${mahnung ? 'Wenn Sie die Mahnung anders verschickt haben' : 'Wenn Sie die Rechnung anders verschickt haben'}">Als versendet vermerken</button>
       <button class="btn" data-pdf>${icon('pdf', 15).__raw} PDF speichern</button>
       <button class="btn primary" data-senden disabled>${icon('external', 15).__raw} <span>Wird vorbereitet …</span></button>`,
   });
@@ -469,10 +491,14 @@ export async function sendenDialog(r, { offen = true, vermerk = versandVermerken
   // Die Anhänge entstehen gleich beim Öffnen: Teilen verlangt, dass es direkt auf den Klick folgt.
   let dateien = null;
   try {
-    dateien = await versandDateien(r);
+    if (mahnung) {
+      const pdf = await mahnungAnhang(mahnung);
+      if (!pdf) throw new Error('Die PDF-Datei der Mahnung liegt auf diesem Gerät nicht vor.');
+      dateien = { pdf, xml: null };
+    } else dateien = await versandDateien(r);
   } catch (e) {
     m.close();
-    err('Die Rechnung ließ sich nicht vorbereiten', e.message);
+    err(mahnung ? 'Die Mahnung ließ sich nicht vorbereiten' : 'Die Rechnung ließ sich nicht vorbereiten', e.message);
     return;
   }
   if (!m.root.isConnected) return;
@@ -536,7 +562,10 @@ export async function sendenDialog(r, { offen = true, vermerk = versandVermerken
   });
 
   $m('[data-pdf]').addEventListener('click', async () => {
-    try { const p = await pdfSpeichern(r); if (p) ok('PDF gespeichert', p); } catch (e) { err('PDF nicht gespeichert', e.message); }
+    try {
+      const p = mahnung ? await api.file.save({ dataBase64: base64(dateien.pdf.bytes), defaultName: dateien.pdf.name, filters: [{ name: 'PDF-Dokument', extensions: ['pdf'] }] }) : await pdfSpeichern(r);
+      if (p) ok('PDF gespeichert', p);
+    } catch (e) { err('PDF nicht gespeichert', e.message); }
   });
 
   const vermerken = async (art, empfaenger) => {
@@ -552,7 +581,7 @@ export async function sendenDialog(r, { offen = true, vermerk = versandVermerken
   /* Ob die Mail wirklich abging, weiß Kontovia nicht. Deshalb fragt es danach. */
   const nachfragen = (art, empfaenger, hinweis) => {
     m.body.innerHTML = `<div class="notice mb16">${icon('info', 15).__raw} ${esc(hinweis)}</div>
-      <p class="mt0 mb0">Haben Sie die E-Mail abgeschickt? Dann vermerkt Kontovia den Versand bei der Rechnung.</p>`;
+      <p class="mt0 mb0">${mahnung ? 'Haben Sie die E-Mail abgeschickt? Dann vermerkt Kontovia den Versand bei der Mahnung.' : 'Haben Sie die E-Mail abgeschickt? Dann vermerkt Kontovia den Versand bei der Rechnung.'}</p>`;
     m.foot.innerHTML = '<button class="btn" data-no>Noch nicht</button><button class="btn primary" data-yes>Ja, als versendet vermerken</button>';
     $m('[data-no]').addEventListener('click', () => m.close());
     $m('[data-yes]').addEventListener('click', () => vermerken(art, empfaenger));
@@ -593,7 +622,7 @@ export async function sendenDialog(r, { offen = true, vermerk = versandVermerken
         if (geteilt) nachfragen('teilen', empfaenger, empfaenger ? `Die Adresse ${empfaenger} ist kopiert. Fügen Sie sie in der E-Mail als Empfänger ein.` : 'Die Dateien sind übergeben.');
       } else if (weg === 'eml') {
         const eml = emlBauen({ an: ziel, betreff, text, anhaenge: liste });
-        const name = await api.file.download({ dataBase64: base64(eml), defaultName: `E-Mail_${String(r.nummer).replace(/[^\w.-]+/g, '_')}.eml` });
+        const name = await api.file.download({ dataBase64: base64(eml), defaultName: `E-Mail_${String(mahnung ? dateien.pdf.name.replace(/\.pdf$/, '') : r.nummer).replace(/[^\w.-]+/g, '_')}.eml` });
         if (name) nachfragen('eml', empfaenger, `„${name}“ liegt in Ihrem Download-Ordner. Klicken Sie in der Download-Leiste des Browsers darauf, dann öffnet sich die E-Mail in Ihrem E-Mail-Programm. Prüfen Sie sie dort und senden Sie sie ab.`);
       } else {
         const { url, gekuerzt } = mailtoAdresse({ an: ziel, betreff, text });
@@ -847,7 +876,7 @@ async function eingangBuchen(r, gelesen = null) {
   const saetze = [...new Set((daten?.steuersaetze || []).map((s) => s.satz))];
   if (daten && saetze.length <= 1) {
     const satz = saetze[0] ?? 0;
-    tx.vatRate = store.db.settings.taxMode === 'kleinunternehmer' ? 0 : satz;
+    tx.vatRate = ohneUstEinstellung(store.db.settings) ? 0 : satz;
     tx.gross = vz * Math.abs(daten.brutto ?? daten.zahlbetrag ?? 0);
     tx.net = vz * Math.abs(daten.netto ?? tx.gross);
     tx.vat = tx.gross - tx.net;
@@ -945,7 +974,7 @@ function produkte(root) {
 function produktDialog(p) {
   const neu = !p;
   const s = store.db.settings;
-  const x = p ? structuredClone(p) : { id: uid('prod'), name: '', beschreibung: '', kategorie: '', artikelnummer: '', einheit: 'C62', einheitText: '', preis: 0, satz: s.taxMode === 'kleinunternehmer' ? 0 : Number(s.defaultVatRate ?? 19), active: true };
+  const x = p ? structuredClone(p) : { id: uid('prod'), name: '', beschreibung: '', kategorie: '', artikelnummer: '', einheit: 'C62', einheitText: '', preis: 0, satz: ohneUstEinstellung(s) ? 0 : Number(s.defaultVatRate ?? 19), active: true };
   const kategorien = [...new Set(sel.products().map((q) => String(q.kategorie || '').trim()).filter(Boolean))];
   const m = modal({
     title: neu ? 'Neues Produkt' : 'Produkt bearbeiten',

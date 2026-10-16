@@ -200,9 +200,10 @@ export function mahnungenKarte(host, r) {
     </div>` : ''}
     ${[...verlauf, ...verworfene].sort((a, b) => String(a.datum).localeCompare(String(b.datum)) || a.stufe - b.stufe).map((m) => `
       <div class="re-datei" data-mid="${esc(m.id)}">
-        <span>${esc(mahnungKurz(m))}${m.verworfen ? ' <span class="badge plain">verworfen</span>' : ''}<div class="tiny muted">Gefordert ${esc(money(m.gesamt))} € bis ${esc(fmtDate(m.frist))}</div></span>
+        <span>${esc(mahnungKurz(m))}${m.verworfen ? ' <span class="badge plain">verworfen</span>' : ''}<div class="tiny muted">Gefordert ${esc(money(m.gesamt))} € bis ${esc(fmtDate(m.frist))}${versandText(m)}</div></span>
         <span class="row" style="gap:4px">
           <button class="btn sm ghost" data-pdf="${esc(m.id)}" title="PDF ansehen" aria-label="PDF ansehen">${icon('pdf', 14).__raw}</button>
+          ${m.verworfen ? '' : `<button class="btn sm ghost" data-senden="${esc(m.id)}" title="Per E-Mail senden" aria-label="Per E-Mail senden">${icon('external', 14).__raw}</button>`}
           ${m.verworfen ? '' : `<button class="btn sm ghost" data-weg="${esc(m.id)}" title="Mahnung zurücknehmen" aria-label="Mahnung zurücknehmen">${icon('x', 14).__raw}</button>`}
         </span>
       </div>`).join('')}
@@ -216,6 +217,7 @@ export function mahnungenKarte(host, r) {
   $('#mhNeu', host)?.addEventListener('click', () => mahnungDialog(r.id, { onFertig: refresh }));
   $('#mhKosten', host)?.addEventListener('click', () => mahnkostenDialog(r.id, { onFertig: refresh }));
   $$('[data-pdf]', host).forEach((b) => b.addEventListener('click', sicher(() => mahnungAnsehen(mahnungen().find((m) => m.id === b.dataset.pdf)))));
+  $$('[data-senden]', host).forEach((b) => b.addEventListener('click', () => mahnungSenden(mahnungen().find((x) => x.id === b.dataset.senden))));
   $$('[data-weg]', host).forEach((b) => b.addEventListener('click', async () => {
     const m = mahnungen().find((x) => x.id === b.dataset.weg);
     const yes = await confirmDialog({
@@ -226,6 +228,20 @@ export function mahnungenKarte(host, r) {
     if (!yes) return;
     try { await mahnungVerwerfen(m.id); ok('Mahnung zurückgenommen'); refresh(); } catch (ex) { err('Nicht zurückgenommen', ex.message); }
   }));
+}
+
+/** „, gesendet am 12.10.2026“, wenn der Versand der Mahnung vermerkt ist. */
+function versandText(m) {
+  const v = (m.versand || []).at(-1);
+  return v ? `, gesendet am ${esc(fmtDate(String(v.ts).slice(0, 10)))}` : '';
+}
+
+/** Das Mahnschreiben per E-Mail senden (Fenster der Rechnungen, mit Text und Anhang der Mahnung). */
+async function mahnungSenden(mh) {
+  const r = mh && sel.invoice(mh.invoiceId);
+  if (!r) { warn('Diese Rechnung gibt es nicht mehr'); return; }
+  const { sendenDialog } = await import('./rechnungen.js');
+  return sendenDialog(r, { offen: true, mahnung: mh });
 }
 
 /** Das PDF einer Mahnung zeigen. */
@@ -293,7 +309,7 @@ export function mahnungDialog(rechnungId, { onFertig } = {}) {
       </details>
       <p class="tiny muted mt16 mb0">Das Schreiben erscheint mit Ihrer Vorlage, Ihrem Absender und dem GiroCode als PDF. Gebucht wird erst, wenn Gebühr und Verzugsaufschlag eingegangen sind. Die Rechnung selbst bleibt unverändert.
         Gebühr und Verzugsaufschlag verantworten Sie selbst, bei Privatkunden gelten andere Regeln als bei Geschäftskunden.</p>`,
-    foot: `<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>${icon('pdf', 15).__raw} Mahnung erstellen</button>`,
+    foot: `<button class="btn" data-no>Abbrechen</button><button class="btn" data-yes>${icon('pdf', 15).__raw} Mahnung erstellen</button><button class="btn primary" data-mail>${icon('external', 15).__raw} Erstellen und per E-Mail senden</button>`,
   });
   const g = (id) => m.root.querySelector(`#mh_${id}`);
   let fristVonHand = false;
@@ -378,20 +394,22 @@ export function mahnungDialog(rechnungId, { onFertig } = {}) {
   zeichnen();
 
   m.root.querySelector('[data-no]').addEventListener('click', () => m.close());
-  m.root.querySelector('[data-yes]').addEventListener('click', async (e) => {
-    const knopf = e.currentTarget;
-    knopf.disabled = true;
+  const erstellen = (dann) => async () => {
+    const knoepfe = [m.root.querySelector('[data-yes]'), m.root.querySelector('[data-mail]')];
+    knoepfe.forEach((k) => { k.disabled = true; });
     try {
       const mh = await mahnungErstellen(r.id, wahl());
       m.close();
       ok(`${stufenName(mh.stufe)} erstellt`, `${betragText(mh.gesamt)} bis ${fmtDate(mh.frist)}`);
       onFertig?.();
-      await mahnungAnsehen(mh).catch(() => {});
+      await dann(mh);
     } catch (ex) {
-      knopf.disabled = false;
+      knoepfe.forEach((k) => { k.disabled = false; });
       err('Mahnung nicht erstellt', ex.message);
     }
-  });
+  };
+  m.root.querySelector('[data-yes]').addEventListener('click', erstellen((mh) => mahnungAnsehen(mh).catch(() => {})));
+  m.root.querySelector('[data-mail]').addEventListener('click', erstellen((mh) => mahnungSenden(mh)));
 }
 
 /* -------------------------------------------------------------------------- */
