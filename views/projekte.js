@@ -4,8 +4,9 @@
  * Reiter „Projekte“ (alle Projekte mit Stunden, offenem Wert, Forderungen und Budget) und „Zeiten“ (alle Zeiten
  * über alle Projekte, mit Woche und Monat). Ein Projekt öffnet sich als eigene Seite (params.id) mit Kennzahlen,
  * Stoppuhr, „Abrechnen“ (Rechnungsentwurf aus den offenen Zeiten), „Neu“ (Rechnung, Angebot, Einnahme, Ausgabe,
- * Aufgabe, jeweils mit dem Projekt vorbelegt) und den Reitern Zeiten, Rechnungen und Angebote, Buchungen, Aufgaben
- * (params.reiter). Die Fenster sind exportiert: Suche, Übersicht, Kopfleiste, Rechnungen, Angebote und Kontakte
+ * Aufgabe, Termin, jeweils mit dem Projekt vorbelegt), „Als PDF“ (Projektbericht, lib/reports.js: projektPdf) und den
+ * Reitern Zeiten, Rechnungen und Angebote, Buchungen, Aufgaben, Termine (params.reiter). Fenster anderer Bereiche
+ * öffnet sie über lib/oeffnen.js. Die Fenster sind exportiert: Suche, Übersicht, Kopfleiste, Rechnungen, Angebote und Kontakte
  * öffnen sie von dort (projektNeu, stoppuhrDialog, zeitEintragen, zuordnenMenue, ausAngebotAnlegen).
  * Logik: lib/projekte.js, Speicher: lib/projektaktionen.js, Stoppuhr in der Kopfleiste: lib/stoppuhranzeige.js.
  * Ab dem Tarif der Funktion „projekte“ (lib/tarife.js).
@@ -22,7 +23,7 @@ import { sperrKarteZeigen, erlaubt } from '../lib/lizenzui.js';
 import { kann } from '../lib/lizenz.js';
 import {
   PROJEKT_STATUS, neuesProjekt, neueZeit, dauerText, dauerLesen, abgerechnet, imEntwurf, projektAuswertung, projektBezuege, minutenImZeitraum,
-  satzFuer, personenVon,
+  satzFuer, personenVon, projektTermine,
 } from '../lib/projekte.js';
 import { prefs, setPref } from '../lib/prefs.js';
 import {
@@ -32,10 +33,11 @@ import { berechnen, zustand, ZUSTAENDE, titel as titelVon } from '../lib/rechnun
 import { belegZustand, BELEG_ZUSTAENDE } from '../lib/angebote.js';
 import { openTransactionDialog } from './transactions.js';
 import { aufgabenAbschnitt, openTodoDialog } from './todos.js';
+import { eintragOeffnen, neuOeffnen } from '../lib/oeffnen.js';
 
 let filter = 'aktiv';
 let listenReiter = 'projekte';
-const REITER = { zeiten: 'Zeiten', belege: 'Rechnungen und Angebote', buchungen: 'Buchungen', aufgaben: 'Aufgaben' };
+const REITER = { zeiten: 'Zeiten', belege: 'Rechnungen und Angebote', buchungen: 'Buchungen', aufgaben: 'Aufgaben', termine: 'Termine' };
 const ALLES = { preset: 'alles', from: '1900-01-01', to: '2999-12-31' };
 
 export async function render(root, params = {}, { actions } = {}) {
@@ -211,7 +213,7 @@ function detail(root, p, actions, reiter) {
   const kunde = sel.contact(p.kontaktId);
   const laeuft = laufendeZeit();
   const angebot = p.angebotId ? sel.angebot(p.angebotId) : null;
-  const anzahl = { zeiten: b.zeiten.length, belege: b.rechnungen.length + b.belege.length, buchungen: b.buchungen.length, aufgaben: b.aufgaben.filter((t) => !t.done).length };
+  const anzahl = { zeiten: b.zeiten.length, belege: b.rechnungen.length + b.belege.length, buchungen: b.buchungen.length, aufgaben: b.aufgaben.filter((t) => !t.done).length, termine: projektTermine(store.db, p.id).filter((x) => x.kommend).length };
 
   root.innerHTML = html`
     <div class="card mb16"><div class="card-body">
@@ -241,6 +243,7 @@ function detail(root, p, actions, reiter) {
         <button class="btn" id="pjZeitNeu">${icon('clock', 15)} Zeit eintragen</button>
         <button class="btn" id="pjAbrechnen" ${raw(a.offenMinuten ? '' : 'disabled')}>${icon('invoice', 15)} Abrechnen</button>
         <button class="btn" id="pjNeuMenue" aria-haspopup="menu">${icon('plus', 15)} Neu ${icon('down', 13)}</button>
+        <button class="btn ghost" id="pjPdf" aria-haspopup="menu">${icon('pdf', 15)} Als PDF ${icon('down', 13)}</button>
         <button class="btn ghost" id="pjBearbeiten">${icon('edit', 15)} Bearbeiten</button>
       </div>
     </div></div>
@@ -266,12 +269,13 @@ function detail(root, p, actions, reiter) {
   };
   $$('[data-reiter]', root).forEach((k) => k.addEventListener('click', () => reiterZeigen(k.dataset.reiter)));
   $$('[data-reiter-sprung]', root).forEach((l) => l.addEventListener('click', (e) => { e.preventDefault(); reiterZeigen(l.dataset.reiterSprung); }));
-  $('#pjKunde', root)?.addEventListener('click', async (e) => { e.preventDefault(); (await import('./master.js')).openStammdatum('contacts', p.kontaktId); });
-  $('#pjAngebot', root)?.addEventListener('click', (e) => { e.preventDefault(); navigate('rechnungen', { beleg: angebot.id }); });
+  $('#pjKunde', root)?.addEventListener('click', (e) => { e.preventDefault(); eintragOeffnen('kontakt', p.kontaktId); });
+  $('#pjAngebot', root)?.addEventListener('click', (e) => { e.preventDefault(); eintragOeffnen('beleg', angebot.id); });
   $('#pjStart', root)?.addEventListener('click', () => stoppuhrDialog(p.id));
   $('#pjZeitNeu', root).addEventListener('click', () => zeitEintragen(p.id));
   $('#pjAbrechnen', root).addEventListener('click', () => abrechnenDialog(p, a));
   $('#pjNeuMenue', root).addEventListener('click', (e) => neuMenue(e.currentTarget, p));
+  $('#pjPdf', root).addEventListener('click', (e) => pdfMenue(e.currentTarget, p));
   $('#pjBearbeiten', root).addEventListener('click', () => projektDialog(structuredClone(p)));
 
   reiterInhalt(host, p, b, reiter);
@@ -281,6 +285,7 @@ function reiterInhalt(host, p, b, reiter) {
   if (reiter === 'zeiten') zeitenReiter(host, p, b.zeiten);
   else if (reiter === 'belege') belegeReiter(host, p, b);
   else if (reiter === 'buchungen') buchungenReiter(host, p, b.buchungen);
+  else if (reiter === 'termine') termineReiter(host, p);
   else aufgabenReiter(host, p);
 }
 
@@ -297,6 +302,7 @@ function neuMenue(anker, p) {
         { value: 'income', label: 'Einnahme' },
         { value: 'expense', label: 'Ausgabe', sub: 'etwa Material oder Fremdleistung' },
         { value: 'aufgabe', label: 'Aufgabe' },
+        { value: 'termin', label: 'Termin', sub: p.kontaktId ? 'mit Kunde des Projekts' : '' },
       ],
     }],
     onPick: (_k, was) => {
@@ -306,6 +312,7 @@ function neuMenue(anker, p) {
       else if (was === 'income' || was === 'expense') {
         openTransactionDialog(null, was, { vorgabe: { projektId: p.id, ...(was === 'income' && kunde.kontaktId ? { contactId: kunde.kontaktId } : {}) }, onSaved: () => refresh() });
       } else if (was === 'aufgabe') openTodoDialog(null, { links: [{ typ: 'projekt', id: p.id }] }, { nachSpeichern: () => refresh() });
+      else if (was === 'termin') terminNeu(p);
     },
   });
 }
@@ -424,6 +431,62 @@ function buchungenReiter(host, p, buchungen) {
     emptyTitle: 'Noch keine Buchungen',
     emptyText: 'Rechnungen des Projekts buchen von selbst hierher. Ausgaben ordnen Sie über „Neu“ oder im Buchungsfenster unter „Weitere Angaben“ zu.',
     onRowClick: (t) => openTransactionDialog(t.id, t.type, { onSaved: () => refresh() }),
+  });
+}
+
+/** Projektbericht (lib/reports.js: projektPdf) ansehen, speichern oder drucken; Bericht und PDF-Schreiber kommen erst jetzt. */
+function pdfMenue(anker, p) {
+  openMenu(anker, {
+    label: 'Projektbericht',
+    align: 'end',
+    sections: [{
+      key: 'pdf', value: '',
+      options: [
+        { value: 'zeigen', label: 'Ansehen' },
+        { value: 'speichern', label: 'Speichern' },
+        { value: 'drucken', label: 'Drucken' },
+      ],
+    }],
+    onPick: async (_k, wie) => {
+      try {
+        const [{ projektPdf }, aus] = await Promise.all([import('../lib/reports.js'), import('../lib/pdfausgabe.js')]);
+        const doc = projektPdf(store.db, p);
+        const name = `Projekt_${String(p.name || 'Projekt').replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '').slice(0, 60) || 'Projekt'}_${todayISO()}.pdf`;
+        if (wie === 'drucken') await aus.drucken(doc, name);
+        else if (wie === 'zeigen') await aus.pdfZeigen(doc, name);
+        else { const pfad = await aus.pdfSpeichern(doc, name); if (pfad) ok('PDF gespeichert', pfad); }
+      } catch (ex) { err('PDF konnte nicht erstellt werden', ex.message); }
+    },
+  });
+}
+
+/** Neuer Termin im Projekt, mit Name und Kunde des Projekts vorbelegt. */
+function terminNeu(p) {
+  neuOeffnen('termin', { projektId: p.id, title: p.name || '', ...(p.kontaktId && sel.contact(p.kontaktId) ? { contactId: p.kontaktId } : {}) });
+}
+
+/** Termine des Projekts: kommende zuerst, Serien mit dem nächsten Vorkommen (lib/projekte.js: projektTermine). */
+function termineReiter(host, p) {
+  host.innerHTML = html`<div class="card">
+    <div class="card-head"><h2>${icon('calendar', 16)} Termine</h2><div class="spacer"></div>
+      <button class="btn sm" id="pjTerminNeu">${icon('plus', 14)} Termin</button></div>
+    <div id="pjTermine"></div></div>`;
+  $('#pjTerminNeu', host).addEventListener('click', () => terminNeu(p));
+  const serie = (t) => (t.recurrence?.freq || 'none') !== 'none';
+  mountTable($('#pjTermine', host), {
+    id: 'projekt-termine',
+    cls: 'data',
+    rows: projektTermine(store.db, p.id),
+    unit: ['Termin', 'Termine'],
+    columns: [
+      { key: 'datum', label: 'Datum', type: 'date', cls: 'num', tdCls: 'nowrap', value: (x) => x.tag, cell: (x) => esc(fmtDate(x.tag)) },
+      { key: 'zeit', label: 'Zeit', type: 'text', tdCls: 'nowrap', value: (x) => x.termin.startTime || '', cell: (x) => esc(x.termin.allDay ? 'ganztägig' : [x.termin.startTime, x.termin.endTime].filter(Boolean).join(' bis ')) },
+      { key: 'titel', label: 'Termin', type: 'text', value: (x) => x.termin.title || '', cell: (x) => `${esc(x.termin.title || 'Termin')}${serie(x.termin) ? ' <span class="badge tiny">Wiederholung</span>' : ''}${x.termin.location ? `<div class="tiny muted truncate">${esc(x.termin.location)}</div>` : ''}` },
+      { key: 'stand', label: 'Stand', type: 'text', value: (x) => (x.kommend ? 1 : 0), cell: (x) => (x.termin.done ? '<span class="badge pos">erledigt</span>' : x.kommend ? '<span class="badge info">kommend</span>' : '<span class="badge plain">vorbei</span>') },
+    ],
+    emptyTitle: 'Noch keine Termine',
+    emptyText: 'Legen Sie hier einen Termin an oder wählen Sie das Projekt im Fenster eines vorhandenen Termins.',
+    onRowClick: (x) => eintragOeffnen('termin', x.termin.id),
   });
 }
 

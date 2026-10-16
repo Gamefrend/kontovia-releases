@@ -730,6 +730,10 @@ button.todo-title:focus-visible { outline: 2px solid var(--accent); outline-offs
 .todo-note { max-width: 100%; }
 .todo-appt { max-width: 100%; min-width: 0; padding: 1px 8px; font-size: 11.5px; }
 .todo-appt:hover { border-color: var(--accent); color: var(--accent); }
+/* „Gehört zu“ im Buchungsfenster: Sprünge zu Rechnung, Projekt, Kontakt, Terminen */
+.bezuege { display: flex; flex-wrap: wrap; gap: 6px; }
+.bezug-chip { max-width: 100%; min-width: 0; }
+.bezug-chip:hover { border-color: var(--accent); color: var(--accent); }
 .todo-item.done .todo-title { text-decoration: line-through; color: var(--muted); font-weight: 450; }
 .todo-item.compact { align-items: center; padding: 6px 0; }
 .todo-item.compact .todo-check { margin-top: 0; }

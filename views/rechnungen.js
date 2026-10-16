@@ -48,6 +48,7 @@ import { openTransactionDialog } from './transactions.js';
 import { aufgabenAbschnitt } from './todos.js';
 import { mahnwesenZeigen, mahnungenKarte } from './mahnwesen.js';
 import { sperrKarteZeigen, erlaubt } from '../lib/lizenzui.js';
+import { projektMarke } from '../lib/projektwahl.js';
 import { kann, grenze, rechnungenImMonat } from '../lib/lizenz.js';
 
 const api = window.kontovia;
@@ -175,11 +176,6 @@ function neuMenue(anker) {
 /* -------------------------------------------------------------------------- */
 
 /** Kleine Marke mit dem Projekt (views/projekte.js) in Listen von Rechnungen und Angeboten. */
-export function projektMarke(r) {
-  const p = r?.projektId ? sel.projekt(r.projektId) : null;
-  return p ? `<span class="badge tiny pj-marke" title="Gehört zum Projekt ${esc(p.name)}">${icon('folder', 11).__raw} ${esc(p.name)}</span>` : '';
-}
-
 function zustandVon(r) {
   const buchungen = (r.transactionIds || []).map(sel.transaction).filter(Boolean);
   return zustand(r, { buchungen });

@@ -28,8 +28,7 @@ import {
 import { defaultPeriod, periodControl, resolvePreset } from '../lib/period.js';
 import { mountTables } from '../lib/table.js';
 import { navigate } from '../lib/router.js';
-import { openTransactionDialog } from './transactions.js';
-import { openAppointmentDialog } from './calendar.js';
+import { eintragOeffnen, neuOeffnen } from '../lib/oeffnen.js';
 import { openTodosSorted, todoRow, wireTodoRows } from './todos.js';
 import { checkNotice, wireCheckLinks, oeffneFrist } from './spruenge.js';
 import { offeneVorkommen, faelligeAnbieten } from './wiederkehrend.js';
@@ -621,15 +620,15 @@ function wireWidgets(scope, redraw, c, root) {
   wireAnteil(scope, 'anteilAusgaben', () => widgetNeu(root, 'ausgabenKat'));
   wireAnteil(scope, 'anteilEinnahmen', () => widgetNeu(root, 'einnahmenKat'));
   $$('[data-goto]', scope).forEach((b) => b.addEventListener('click', () => navigate(b.dataset.goto)));
-  $$('[data-pj-uhr]', scope).forEach((b) => b.addEventListener('click', async () => (await import('./projekte.js')).stoppuhrDialog()));
-  $$('[data-pj-zeit]', scope).forEach((b) => b.addEventListener('click', async () => (await import('./projekte.js')).zeitEintragen()));
+  $$('[data-pj-uhr]', scope).forEach((b) => b.addEventListener('click', () => neuOeffnen('stoppuhr')));
+  $$('[data-pj-zeit]', scope).forEach((b) => b.addEventListener('click', () => neuOeffnen('zeit')));
   wireZiele(scope);
   const oeffnen = (sel2, fn) => $$(sel2, scope).forEach((n) => {
     n.addEventListener('click', () => fn(n));
     n.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target === n) { e.preventDefault(); fn(n); } });
   });
-  oeffnen('[data-tx]', (n) => openTransactionDialog(n.dataset.tx));
-  oeffnen('[data-appt]', (n) => openAppointmentDialog(n.dataset.appt));
+  oeffnen('[data-tx]', (n) => eintragOeffnen('buchung', n.dataset.tx));
+  oeffnen('[data-appt]', (n) => eintragOeffnen('termin', n.dataset.appt));
   wireTodoRows(scope, redraw);
   // „noch offen …“: dieselbe Auswahl als Buchungsliste.
   $$('[data-tx-list]', scope).forEach((b) => b.addEventListener('click', () => {

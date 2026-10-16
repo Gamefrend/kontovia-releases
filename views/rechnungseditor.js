@@ -32,6 +32,7 @@ import { DOKUMENT_SPRACHEN } from '../lib/dokumenttexte.js';
 import { WAEHRUNGEN, istFremd, kursLesen, kursEingabe, kursGueltig, inEuro } from '../lib/waehrung.js';
 import { textDirektBearbeiten, bilderAusZwischenablage } from '../lib/textbearbeiten.js';
 import { erlaubt, lizenzFehlerZeigen } from '../lib/lizenzui.js';
+import { projektAuswahl } from '../lib/projektwahl.js';
 import { BELEGARTEN, istBeleg, belegPruefen, naechsteNummer } from '../lib/angebote.js';
 import { belegSpeichern, belegLoeschen, belegAusstellen, vergebeneBelegNummern } from '../lib/angebotsaktionen.js';
 
@@ -243,10 +244,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
 
   /** Auswahl des Projekts (lib/projekte.js), nur wenn es Projekte gibt; die Buchungen der Rechnung erben es. */
   function projektFeld() {
-    const liste = sel.projekte().filter((x) => x.status !== 'abgeschlossen' || x.id === r.projektId);
-    if (!liste.length) return '';
-    return `<div class="field"><label for="ra_projekt">Projekt</label><select id="ra_projekt" data-f="projektId">
-      ${optionen([['', 'Keinem Projekt zugeordnet'], ...liste.map((x) => [x.id, x.name])], r.projektId || '')}</select></div>`;
+    return projektAuswahl(r.projektId || '', { praefix: 'ra_', attrs: 'data-f="projektId"' });
   }
 
   /** Angaben eines Angebots, einer Auftragsbestätigung oder eines Lieferscheins. */

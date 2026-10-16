@@ -19,7 +19,7 @@ import { defaultPeriod, periodControl, periodLabel, setPeriod } from '../lib/per
 import * as R from '../lib/reports.js';
 import { pdfSpeichern, pdfZeigen, drucken, druckenMoeglich } from '../lib/pdfausgabe.js';
 import { table, mountTables } from '../lib/table.js';
-import { openTransactionDialog } from './transactions.js';
+import { eintragOeffnen } from '../lib/oeffnen.js';
 import { navigate } from '../lib/router.js';
 import { checkNotice, wireCheckLinks } from './spruenge.js';
 import { vergleich, vergleichEinstellung } from './jahresvergleich.js';
@@ -323,7 +323,7 @@ function openCategory(db, categoryId) {
           { key: 'gross', label: 'Brutto', type: 'num', cell: (t) => esc(money(t.gross)) },
         ],
         filters: contactFilter(rows, 'contact'),
-        onRowClick: (t) => openTransactionDialog(t.id),
+        onRowClick: (t) => eintragOeffnen('buchung', t.id),
         emptyTitle: 'Keine Buchungen',
         foot: (sichtbar) => `<tr><td colspan="3">Summe (${int(sichtbar.length)})</td><td class="num">${esc(money(sum(sichtbar, (t) => t.net)))}</td><td class="num">${esc(money(sum(sichtbar, (t) => t.gross)))}</td></tr>`,
       })}`,
@@ -662,7 +662,7 @@ function opos(root, db) {
             options: () => [['alle', 'Alle offenen', () => true], ['ueber', 'Nur überfällige', (t) => t.overdue], ['ziel', 'Nur im Zahlungsziel', (t) => !t.overdue]],
           },
         ],
-        onRowClick: (t) => openTransactionDialog(t.id),
+        onRowClick: (t) => eintragOeffnen('buchung', t.id),
         emptyTitle: 'Nichts offen',
         foot: (sichtbar) => (sichtbar.length !== items.length
           ? `<tr><td colspan="4">Summe der angezeigten (${int(sichtbar.length)})</td><td class="num">${esc(money(sum(sichtbar, (t) => t.gross)))} €</td></tr>`
@@ -706,7 +706,7 @@ function konten(root, db) {
     </div>
     ${raw(accounts.map((acc) => accountSheet(db, acc)).join('') || emptyState('Keine Konten', 'Legen Sie unter Stammdaten ein Bankkonto an.').__raw)}`;
 
-  $$('[data-tx]', root).forEach((tr) => tr.addEventListener('click', () => openTransactionDialog(tr.dataset.tx)));
+  $$('[data-tx]', root).forEach((tr) => tr.addEventListener('click', () => eintragOeffnen('buchung', tr.dataset.tx)));
 }
 
 function accountSheet(db, acc) {

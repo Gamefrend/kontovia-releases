@@ -17,7 +17,7 @@ import { berechnen, betragText, titel as titelVon } from '../lib/rechnung.js';
 import { BELEGARTEN, BELEG_ZUSTAENDE, belegZustand, rechnungenZu } from '../lib/angebote.js';
 import { ergebnisSetzen, folgebelegAnlegen, rechnungAnlegen, belegVersandVermerken } from '../lib/angebotsaktionen.js';
 import { vorschauSvg, pdfSpeichern, pdfZeigen } from '../lib/rechnungsdateien.js';
-import { sendenDialog, projektMarke } from './rechnungen.js';
+import { projektMarke } from '../lib/projektwahl.js';
 import { projektZeile, projektZeileVerdrahten } from './projekte.js';
 import { projektAusAngebot } from '../lib/projektaktionen.js';
 import { erlaubt } from '../lib/lizenzui.js';
@@ -251,7 +251,8 @@ export async function belegDetail(root, b, actions) {
     ok('Rechnungsentwurf angelegt', 'Bitte prüfen und ausstellen.');
     navigate('rechnungen', { id: r.id });
   }));
-  $('#anSenden', root).addEventListener('click', () => sendenDialog(b, { offen: false, vermerk: belegVersandVermerken }));
+  // Das Sendefenster gehört zu den Rechnungen; geladen wird es erst jetzt (Rechnungen zeigen ihrerseits die Angebote).
+  $('#anSenden', root).addEventListener('click', async () => (await import('./rechnungen.js')).sendenDialog(b, { offen: false, vermerk: belegVersandVermerken }));
   $('#anPdfSpeichern', root).addEventListener('click', sicher(async () => { const p = await pdfSpeichern(b); if (p) ok('PDF gespeichert', p); }));
   $('#anPdfAnsehen', root).addEventListener('click', sicher(() => pdfZeigen(b)));
   $('#anDuplizieren', root).addEventListener('click', () => navigate('rechnungen', { neuBeleg: b.belegart, kopieVonBeleg: b.id }));

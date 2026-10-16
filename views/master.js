@@ -18,6 +18,7 @@ import { PROJEKT_STATUS, projekteVonKontakt, projektAuswertung, dauerText } from
 import { fokusMerken } from '../lib/fokus.js';
 import { table, mountTable, mountTables } from '../lib/table.js';
 import { aufgabenAbschnitt } from './todos.js';
+import { neuOeffnen } from '../lib/oeffnen.js';
 import { markierung } from '../lib/bewegung.js';
 import { sperrKarteZeigen, erlaubt } from '../lib/lizenzui.js';
 
@@ -585,7 +586,7 @@ function projekteAbschnitt(el, c) {
   });
   el.querySelector('[data-pj-neu]')?.addEventListener('click', async () => {
     schliessen();
-    (await import('./projekte.js')).projektNeu({ kontaktId: c.id, name: '' });
+    neuOeffnen('projekt', { kontaktId: c.id, name: '' });
   });
 }
 

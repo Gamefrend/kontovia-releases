@@ -395,6 +395,8 @@ function anleitung(root) {
         <p><strong>Ratenzahlung:</strong> Bei einer Rechnung unter <em>Zahlung → Zahlung in Raten</em>, bei einer Buchung unter
         <em>Weitere Angaben → In Raten aufteilen</em>. Jede Rate wird eine eigene Buchung mit eigener Fälligkeit, die Sie einzeln
         als bezahlt eintragen. Das Mahnwesen und die offenen Posten behandeln jede Rate für sich.</p>
+        <p>Beim Einlesen eines Kontoauszugs erkennt Kontovia eine überwiesene Rate am Betrag und trägt nur diese Rate als bezahlt
+        ein. Die Rechnung gilt erst mit der letzten Rate als bezahlt.</p>
         <p><strong>Steuertermine:</strong> Übersicht und Kalender zeigen, wann die nächste
         Umsatzsteuer-Voranmeldung fällig ist (samt der Zahllast nach heutigem Stand) und bis wann die
         Jahreserklärungen abzugeben sind. Fällt eine Frist auf ein Wochenende oder einen Feiertag,
@@ -470,6 +472,9 @@ function anleitung(root) {
         <p><strong>Kostenstelle.</strong> Im Buchungsfenster unter „Weitere Angaben“ ordnen Sie eine Buchung einem Projekt zu. Das
         Projekt zeigt dann Einnahmen, Ausgaben und Ergebnis, und die Buchungsliste nennt das Projekt an der Buchung und lässt sich
         danach filtern. Tragen Sie beim Projekt eine Kostenstelle ein, steht sie auch im DATEV-Stapel für Ihre Kanzlei.</p>
+        <p><strong>Termine und Bericht.</strong> Im Terminfenster wählen Sie das Projekt; der Termin steht dann im Reiter „Termine“
+        des Projekts, kommende zuerst. „Als PDF“ fasst das Projekt auf einem Blatt zusammen: Stunden, Zeiten, Rechnungen und
+        Angebote, Buchungen und kommende Termine, etwa für den Kunden oder die eigene Nachkalkulation.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">

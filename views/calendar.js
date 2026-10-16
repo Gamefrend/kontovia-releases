@@ -19,6 +19,7 @@ import { steuertermine } from '../lib/fristen.js';
 import { kann } from '../lib/lizenz.js';
 import { oeffneFrist } from './spruenge.js';
 import { openTodoDialog } from './todos.js';
+import { projektAuswahl } from '../lib/projektwahl.js';
 
 const state = {
   cursor: monthStart(todayISO()),
@@ -297,6 +298,7 @@ function agendaRow(e) {
         ${e.isTax ? esc(e.hinweis) : e.isTodo ? 'fällig' : e.allDay ? 'ganztägig' : esc((e.startTime || '') + (e.endTime ? ' – ' + e.endTime : ''))}
         ${e.location ? ' · ' + esc(e.location) : ''}
         ${e.contactId ? ' · ' + esc(sel.contactName(e.contactId)) : ''}
+        ${e.projektId && sel.projekt(e.projektId) ? ' · ' + esc(sel.projekt(e.projektId).name) : ''}
         · KW ${isoWeek(e.occurrence)}
       </div>
     </div>
@@ -389,14 +391,15 @@ export function openAppointmentDialog(id, preset = {}) {
     location: '',
     notes: '',
     contactId: '',
+    projektId: '',
     color: '',
     done: false,
     transactionIds: [],
     recurrence: { freq: 'none', until: '' },
     reminderMinutes: 0,
     createdAt: new Date().toISOString(),
-    // Vorausgefüllt, etwa vom Assistenten: Titel, Zeit, Ort, Notiz.
-    ...Object.fromEntries(Object.entries(preset).filter(([k]) => ['title', 'allDay', 'startTime', 'endTime', 'location', 'notes', 'contactId'].includes(k))),
+    // Vorausgefüllt, etwa vom Assistenten oder von der Projektseite: Titel, Zeit, Ort, Notiz, Kontakt, Projekt.
+    ...Object.fromEntries(Object.entries(preset).filter(([k]) => ['title', 'allDay', 'startTime', 'endTime', 'location', 'notes', 'contactId', 'projektId'].includes(k))),
   };
   const isNew = !existing;
   /* Stand nach dem ersten Zeichnen; weicht die Eingabe davon ab, fragt das
@@ -496,6 +499,11 @@ export function openAppointmentDialog(id, preset = {}) {
       </div>`;
   }
 
+  /** Projekt des Termins (lib/projektwahl.js): Der Termin erscheint dann auf der Projektseite. */
+  function projektFeld() {
+    return projektAuswahl(a.projektId || '', { praefix: 't_', hinweis: 'Der Termin steht dann auch auf der Seite des Projekts.' });
+  }
+
   function draw() {
     const linked = (a.transactionIds || []).map(sel.transaction).filter(Boolean);
     form.innerHTML = html`
@@ -528,6 +536,7 @@ export function openAppointmentDialog(id, preset = {}) {
             ${raw(sel.contacts().map((c) => `<option value="${esc(c.id)}" ${a.contactId === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join(''))}
           </select>
         </div>
+        ${raw(projektFeld())}
         <div class="field">
           <label>Wiederholung</label>
           <select id="t_freq">
@@ -600,6 +609,7 @@ export function openAppointmentDialog(id, preset = {}) {
         ...newTransactionDraft('income'),
         description: a.title,
         contactId: a.contactId || '',
+        ...(a.projektId ? { projektId: a.projektId } : {}),
         location: a.location || '',
         date: a.date <= todayISO() ? a.date : todayISO(),
         paidDate: '',
@@ -667,6 +677,7 @@ export function openAppointmentDialog(id, preset = {}) {
     a.endTime = a.allDay ? '' : g('end').value;
     a.location = g('location').value.trim();
     a.contactId = g('contactId').value;
+    if (g('projektId')) a.projektId = g('projektId').value;
     a.notes = g('notes').value.trim();
     const freq = g('freq').value;
     // Eine Wiederholung aus Google, die Kontovia nicht darstellen kann, bleibt

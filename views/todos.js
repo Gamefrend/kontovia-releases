@@ -15,9 +15,9 @@
 import { html, raw, esc, $, $$, fmtDate, fmtDateShort, todayISO, addDays, relativeDays, norm, int } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, emptyState } from '../lib/ui.js';
 import { sel, store, upsertTodo, setTodoDone, deleteTodo, newTodoDraft, zielFortschritt } from '../lib/store.js';
-import { refresh, navigate } from '../lib/router.js';
+import { refresh } from '../lib/router.js';
 import { fokusMerken } from '../lib/fokus.js';
-import { openAppointmentDialog } from './calendar.js';
+import { eintragOeffnen } from '../lib/oeffnen.js';
 import { expandAppointments } from '../lib/termine.js';
 import { prefs, setPref } from '../lib/prefs.js';
 import { openPopover } from '../lib/popover.js';
@@ -98,13 +98,8 @@ function apptChip(todo) {
 
 const LINK_ICON = { buchung: 'book', kontakt: 'users', rechnung: 'invoice', projekt: 'folder' };
 
-/** Öffnet das Ziel einer Verknüpfung. Die Ansichten werden erst jetzt geladen: Sie kennen ihrerseits die Aufgaben. */
-export async function verknuepfungOeffnen(typ, id) {
-  if (typ === 'buchung') (await import('./transactions.js')).openTransactionDialog(id);
-  else if (typ === 'kontakt') (await import('./master.js')).openStammdatum('contacts', id);
-  else if (typ === 'rechnung') navigate('rechnungen', { id });
-  else if (typ === 'projekt') navigate('projekte', { id });
-}
+/** Öffnet das Ziel einer Verknüpfung (lib/oeffnen.js lädt die Ansicht erst jetzt: Sie kennt ihrerseits die Aufgaben). */
+export const verknuepfungOeffnen = (typ, id) => eintragOeffnen(typ, id);
 
 function linkChips(todo, max = 3) {
   const liste = verknuepfungen(store.db, todo);
@@ -307,7 +302,7 @@ export function wireTodoRows(root, redraw) {
   });
   $$('[data-open-appt]', root).forEach((b) => b.addEventListener('click', (e) => {
     e.stopPropagation();
-    openAppointmentDialog(b.dataset.openAppt);
+    eintragOeffnen('termin', b.dataset.openAppt);
   }));
   $$('[data-open-link]', root).forEach((b) => b.addEventListener('click', (e) => {
     e.stopPropagation();

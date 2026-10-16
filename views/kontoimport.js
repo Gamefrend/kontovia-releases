@@ -18,7 +18,7 @@ import { navigate, router } from '../lib/router.js';
 import { mountTable } from '../lib/table.js';
 import { kontoauszugLesen, SPALTENROLLEN, zusammenfassung } from '../lib/kontoauszug.js';
 import {
-  fingerabdruecke, zuordnungsKontext, zuordnen, vorausgewaehlt, zaehlen, SICHERHEIT,
+  fingerabdruecke, zuordnungsKontext, zuordnen, vorausgewaehlt, zaehlen, SICHERHEIT, rateFuer, rechnungsZiel,
 } from '../lib/zuordnung.js';
 import { sperrKarteZeigen } from '../lib/lizenzui.js';
 import {
@@ -301,7 +301,7 @@ const kategorieName = (id) => sel.category(id)?.name || 'Ohne Kategorie';
 
 function zielText(z) {
   if (z.art === 'rechnung') {
-    const r = z.ziele.map((t) => `Rechnung ${t.nummer}${t.kunde ? ` (${t.kunde})` : ''}`).join(', ');
+    const r = z.ziele.map((t) => `${t.rate ? `Rate ${t.rate} von ${t.raten}, ` : ''}Rechnung ${t.nummer}${t.kunde ? ` (${t.kunde})` : ''}`).join(', ');
     return `${r}${z.mahnkosten ? `, dazu Mahnkosten ${money(z.mahnkosten)} €` : ''}${z.hinweis ? `, ${z.hinweis}` : ''}`;
   }
   if (z.art === 'ausgabe') return `Offene Ausgabe: ${sel.transaction(z.txId)?.description || ''}`;
@@ -503,8 +503,10 @@ function zeileDialog(z, fertig) {
       if (ein) {
         const r = rechnungen.find((x) => x.id === g('zdZiel').value);
         k.art = 'rechnung'; k.txId = '';
-        k.ziele = r ? [{ rechnungId: r.id, nummer: r.nummer, kunde: r.kunde, rest: r.rest, nebenOffen: r.nebenOffen, txIds: r.offeneTxIds }] : [];
-        k.mahnkosten = r && g('zdKosten').checked ? r.nebenOffen : 0;
+        // Passt der Betrag zu einer offenen Rate, wird nur diese bezahlt (lib/zuordnung.js: rateFuer).
+        const rate = r && !g('zdKosten').checked ? rateFuer(r, u.betrag) : null;
+        k.ziele = r ? [rechnungsZiel(r, rate)] : [];
+        k.mahnkosten = r && !rate && g('zdKosten').checked ? r.nebenOffen : 0;
       } else { k.art = 'ausgabe'; k.txId = g('zdZiel').value; k.ziele = []; k.mahnkosten = 0; }
     } else if (modus === 'neu') {
       k.art = 'neu'; k.ziele = []; k.txId = ''; k.mahnkosten = 0; k.kategorieId = g('zdKat').value; k.ohneKategorie = !k.kategorieId; k.kontaktId = g('zdKontakt').value; k.beschreibung = g('zdText').value.trim();

@@ -31,6 +31,8 @@ import {
 import { LAENDER } from '../lib/rechnung.js';
 import { faelligeAnbieten } from './wiederkehrend.js';
 import { aufgabenAbschnitt } from './todos.js';
+import { projektAuswahl, projektMarke } from '../lib/projektwahl.js';
+import { eintragOeffnen } from '../lib/oeffnen.js';
 import { journalPdf } from '../lib/reports.js';
 import { pdfSpeichern, pdfZeigen, drucken, druckenMoeglich } from '../lib/pdfausgabe.js';
 
@@ -379,7 +381,7 @@ function descriptionCell(t) {
     ${dep ? `<span class="badge info tiny" title="${esc(depositTitle(dep))}">Anzahlung${dep.percent ? ' ' + esc(percentText(dep.percent)) + ' %' : ''}</span>` : ''}
     ${t.isReversal ? '<span class="badge tiny">Storno</span>' : ''}
     ${t.assetId ? '<span class="badge info tiny">aktiviert</span>' : ''}
-    ${t.projektId && sel.projekt(t.projektId) ? `<span class="badge tiny pj-marke" title="Gehört zum Projekt ${esc(sel.projekt(t.projektId).name)}">${icon('folder', 11).__raw} ${esc(sel.projekt(t.projektId).name)}</span>` : ''}`;
+    ${projektMarke(t)}`;
 }
 
 function statusCell(t) {
@@ -827,11 +829,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         </div>`) : ''}
       </details>
 
-      ${linkedAppts.length ? raw(`
-        <hr class="sep">
-        <div class="row between mb8"><strong style="font-size:13px">Verknüpfte Termine</strong></div>
-        ${linkedAppts.map((a) => `<div class="attach"><span>${icon('calendar', 14).__raw}</span><span class="name">${esc(a.title)} · ${esc(fmtDate(a.date))}</span></div>`).join('')}
-      `) : ''}
+      ${raw(bezuegeHtml(linkedAppts))}
 
       ${isNew ? '' : raw('<hr class="sep"><div id="txAufgaben" data-ohne-stand></div>')}`;
 
@@ -858,14 +856,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
   /** Felder für die Wiederholung – oder der Hinweis auf die Regel, zu der die Buchung gehört. */
   /** Auswahl des Projekts (Kostenstelle, lib/projekte.js); nur wenn es Projekte gibt. Abgeschlossene nur, wenn gewählt. */
   function projektWahl() {
-    const liste = sel.projekte().filter((p) => p.status !== 'abgeschlossen' || p.id === tx.projektId);
-    if (!liste.length || (!kann('projekte') && !tx.projektId)) return '';
-    return raw(html`<div class="field">
-      <label for="i_projektId">Projekt</label>
-      <select id="i_projektId"><option value="">Keinem Projekt zugeordnet</option>
-        ${liste.sort((a, b) => String(a.name).localeCompare(String(b.name), 'de')).map((p) => raw(html`<option value="${p.id}" ${raw(p.id === tx.projektId ? 'selected' : '')}>${p.name}</option>`))}</select>
-      <span class="hint">Zählt in der Auswertung des Projekts, wie eine Kostenstelle.</span>
-    </div>`);
+    return raw(projektAuswahl(tx.projektId || '', { praefix: 'i_', hinweis: 'Zählt in der Auswertung des Projekts, wie eine Kostenstelle.' }));
   }
 
   /* ---------------------------------------------------------------------- */
@@ -1533,7 +1524,38 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     pruefeERechnung(neu).then(() => belegLesen(neu));
   }
 
+  /**
+   * „Gehört zu“: Rechnung (auch die gemahnte bei Mahnkosten), Projekt, Kontakt und verknüpfte Termine einer
+   * gespeicherten Buchung, je ein Sprung dorthin (lib/oeffnen.js). Vorher schließt das Fenster, mit Rückfrage bei
+   * ungespeicherten Änderungen.
+   */
+  function bezuegeHtml(termine) {
+    if (isNew) return '';
+    const rechnung = sel.invoices().find((r) => (r.transactionIds || []).includes(tx.id)) || (tx.mahnRechnungId ? sel.invoice(tx.mahnRechnungId) : null);
+    const mahnungen = rechnung ? (store.db.reminders || []).filter((x) => x.invoiceId === rechnung.id).length : 0;
+    const projekt = tx.projektId ? sel.projekt(tx.projektId) : null;
+    const kontakt = tx.contactId ? sel.contact(tx.contactId) : null;
+    // Namen und Nummern stehen in eigenen Elementen: Sie bleiben, wie sie sind, die Beschriftung drumherum wird übersetzt.
+    const name = (x) => `<span translate="no">${esc(x)}</span>`;
+    const ziele = [
+      ...(rechnung ? [['rechnung', rechnung.id, 'invoice', rechnung.richtung === 'eingang' ? `Eingangsrechnung ${name(rechnung.nummer || '')}`
+        : `${rechnung.nummer ? `Rechnung ${name(rechnung.nummer)}` : 'Rechnungsentwurf'}${mahnungen ? `, ${mahnungen === 1 ? '1 Mahnung' : `${mahnungen} Mahnungen`}` : ''}`]] : []),
+      ...(projekt ? [['projekt', projekt.id, 'folder', `Projekt ${name(projekt.name)}`]] : []),
+      ...(kontakt ? [['kontakt', kontakt.id, 'users', name(kontakt.name)]] : []),
+      ...termine.map((a) => ['termin', a.id, 'calendar', `${name(a.title)} · ${esc(fmtDate(a.date))}`]),
+    ];
+    if (!ziele.length) return '';
+    return `<hr class="sep">
+      <div class="row between mb8"><strong style="font-size:13px">Gehört zu</strong></div>
+      <div class="bezuege">${ziele.map(([art, id, sym, inhalt]) => `<button type="button" class="chip bezug-chip" data-bezug="${esc(art)}:${esc(id)}">${icon(sym, 13).__raw}<span class="truncate">${inhalt}</span></button>`).join('')}</div>`;
+  }
+
   function wireForm() {
+    form.querySelectorAll('[data-bezug]').forEach((b) => b.addEventListener('click', async () => {
+      const [art, id] = b.dataset.bezug.split(':');
+      await m.dismiss();
+      if (!m.root.isConnected) eintragOeffnen(art, id);
+    }));
     form.querySelectorAll('[data-type]').forEach((b) => b.addEventListener('click', () => {
       collect();
       tx.type = b.dataset.type;
