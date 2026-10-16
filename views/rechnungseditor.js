@@ -23,6 +23,7 @@ import {
   einheitAusText, einheitText, positionLeer, anschriftAusText, kaeuferAusKontakt, faelligkeit, zahlungsText, betragText, satzText,
   titel as titelVon, profil as profilAus, istGutschrift, rund, rabatt2,
 } from '../lib/rechnung.js';
+import { ossSaetze, ossRegelsatz } from '../lib/sonderfaelle.js';
 import {
   rechnungSpeichern, entwurfLoeschen, ausstellen, vergebeneNummern, alsVorlage, produktSpeichern,
 } from '../lib/rechnungsaktionen.js';
@@ -84,6 +85,17 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
 
   const kontakte = [...sel.contacts()].sort((a, b) => String(a.name).localeCompare(String(b.name), 'de'));
   const steuerfrei = () => !!(STEUERFAELLE[r.steuerfall] || STEUERFAELLE.standard).kategorie;
+  /** Steuersätze einer Position: beim OSS die des Landes beim Kunden (lib/sonderfaelle.js), sonst 19, 7 und 0 %. */
+  const satzWahl = (p) => {
+    const liste = r.steuerfall === 'oss' && ossSaetze(r.kaeufer?.land).length ? ossSaetze(r.kaeufer.land) : [19, 7, 0];
+    return liste.concat(liste.includes(Number(p.satz)) ? [] : [Number(p.satz)]).map((x) => [x, satzText(x)]);
+  };
+  /** OSS: Sätze, die es im Land des Kunden nicht gibt, auf dessen Regelsatz setzen. */
+  const ossSaetzeAnpassen = () => {
+    const liste = ossSaetze(r.kaeufer?.land);
+    if (r.steuerfall === 'oss' && liste.length) for (const p of r.positionen) if (!liste.includes(Number(p.satz))) p.satz = ossRegelsatz(r.kaeufer.land);
+    if (r.steuerfall !== 'oss') for (const p of r.positionen) if (![19, 7, 0].includes(Number(p.satz))) p.satz = Number(s.defaultVatRate ?? 19);
+  };
 
   /* ------------------------------------------------------------------------ */
   /* Gerüst                                                                   */
@@ -313,6 +325,10 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
           ${waehrungFelder()}
           ${r.steuerfall === 'steuerfrei' ? `<div class="field full"><label for="ra_grund">Grund der Steuerbefreiung <span class="re-pflicht">Pflicht</span></label>
             <input id="ra_grund" data-f="befreiungsgrund" value="${esc(r.befreiungsgrund || '')}" placeholder="z. B. Steuerfreie Heilbehandlung nach § 4 Nr. 14 UStG"></div>` : ''}
+          ${r.steuerfall === 'differenz' ? `<div class="field"><label for="ra_einkauf">Einkaufspreis der Ware</label>
+            <input id="ra_einkauf" inputmode="decimal" data-f="einkauf" data-geld value="${esc(r.einkauf ? moneyInput(r.einkauf) : '')}" placeholder="0,00">
+            <span class="hint">Steht nicht auf der Rechnung. Umsatzsteuer fällt nur auf den Gewinn an; Kontovia bucht sie beim Ausstellen.</span></div>` : ''}
+          ${r.steuerfall === 'oss' ? `<div class="field full"><span class="hint">Die Positionen rechnen mit den Sätzen des Landes beim Kunden (Stand Oktober 2026, bitte prüfen). Der Umsatz steht in der OSS-Meldung, nicht in der deutschen Voranmeldung.</span></div>` : ''}
           ${istVorlage ? '' : `
           <div class="field"><label for="ra_nummer">Rechnungsnummer</label><input id="ra_nummer" data-f="nummer" value="${esc(r.nummer || '')}" placeholder="${esc(vorschlag)}"></div>
           <div class="field"><label for="ra_datum">Rechnungsdatum <span class="re-pflicht">Pflicht</span></label><input id="ra_datum" type="date" data-f="datum" value="${esc(r.datum || '')}"></div>`}
@@ -391,7 +407,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
             <label class="re-mini"><span>Einheit</span><input data-p="einheit" list="reEinheiten" value="${esc(einheitText(p))}" autocomplete="off"></label>
             <label class="re-mini"><span>Preis netto ${esc(zeichen())}</span><input data-p="preis" inputmode="decimal" value="${esc(moneyInput(p.preis))}"></label>
             <label class="re-mini"><span>Rabatt %</span><input data-p="rabatt" inputmode="decimal" value="${esc(p.rabatt ? dz(p.rabatt) : '')}" placeholder="0" aria-label="Rabatt in Prozent Position ${i + 1}"></label>
-            ${ohneSteuer ? '' : `<label class="re-mini"><span>USt</span><select data-p="satz">${optionen([[19, '19 %'], [7, '7 %'], [0, '0 %']].concat([19, 7, 0].includes(Number(p.satz)) ? [] : [[p.satz, satzText(p.satz)]]), Number(p.satz))}</select></label>`}
+            ${ohneSteuer ? '' : `<label class="re-mini"><span>USt</span><select data-p="satz">${optionen(satzWahl(p), Number(p.satz))}</select></label>`}
             <div class="re-mini re-pos-summe"><span>Gesamt${istFremd(r.waehrung) ? ` <span translate="no">${esc(r.waehrung)}</span>` : ''}</span><strong data-summe="${esc(p.id)}">${esc(posSumme(netto))}</strong></div>
             ${r.haushaltsnah ? `<label class="check re-pos-arbeit" title="Lohn, Fahrt- und Maschinenkosten zählen zu den Arbeitskosten (§ 35a EStG)"><input type="checkbox" data-p="arbeit" ${p.arbeit ? 'checked' : ''} aria-label="Position ${i + 1} ist Arbeitskosten"><span>Arbeitskosten (Lohn, Fahrt, Maschinen)</span></label>` : ''}
           </div>
@@ -771,11 +787,17 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
     if (el.dataset.f === 'steuerfall' || el.dataset.f === 'art') {
       if (el.dataset.f === 'steuerfall' && steuerfrei()) for (const p of r.positionen) p.satz = 0;
       if (el.dataset.f === 'steuerfall' && !steuerfrei()) for (const p of r.positionen) if (!p.satz) p.satz = Number(s.defaultVatRate ?? 19);
+      if (el.dataset.f === 'steuerfall' && !steuerfrei()) ossSaetzeAnpassen();
       angabenZeichnen();
       positionenZeichnen();
       aktualisieren();
     }
     if (el.dataset.f === 'zahlungsart' || el.dataset.f === 'art') zahlungZeichnen();
+    if (el.dataset.f === 'kaeufer.land' && r.steuerfall === 'oss') {
+      ossSaetzeAnpassen();
+      positionenZeichnen();
+      aktualisieren();
+    }
     if (el.dataset.f === 'waehrung') {
       if (!istFremd(r.waehrung)) r.kurs = 0;
       angabenZeichnen();

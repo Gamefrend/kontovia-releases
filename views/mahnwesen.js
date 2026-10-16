@@ -157,13 +157,14 @@ export function mahnwesenZeigen(root) {
       { key: 'datum', label: 'Datum', type: 'date', tdCls: 'nowrap', value: (m) => m.datum, cell: (m) => esc(fmtDate(m.datum)) },
       { key: 'nummer', label: 'Rechnung', type: 'text', tdCls: 'strong nowrap', value: (m) => m.nummer, cell: (m) => esc(m.nummer) },
       { key: 'kunde', label: 'Kunde', type: 'text', cls: 'col-mh-opt', tdCls: 'col-mh-opt', value: (m) => m.kunde, cell: (m) => esc(m.kunde || '–') },
-      { key: 'stufe', label: 'Stufe', type: 'num', value: (m) => m.stufe, cell: (m) => `${esc(stufenName(m.stufe))}${m.verworfen ? ' <span class="badge plain">verworfen</span>' : ''}` },
+      { key: 'stufe', label: 'Stufe', type: 'num', value: (m) => m.stufe, cell: (m) => `${esc(stufenName(m.stufe))}${m.verworfen ? ' <span class="badge plain">verworfen</span>' : (m.versand || []).length ? ' <span class="badge plain">gesendet</span>' : ''}` },
       { key: 'gebuehr', label: 'Gebühr', type: 'num', cls: 'col-mh-opt', tdCls: 'num col-mh-opt', value: (m) => m.gebuehr, cell: (m) => (m.gebuehr ? `${esc(money(m.gebuehr))} €` : '') },
       { key: 'aufschlag', label: 'Verzugsaufschlag', type: 'num', cls: 'col-mh-opt', tdCls: 'num col-mh-opt', value: (m) => aufschlagSumme(m), cell: (m) => (aufschlagSumme(m) ? `${esc(money(aufschlagSumme(m)))} €` : '') },
       { key: 'gesamt', label: 'Gefordert', type: 'num', value: (m) => m.gesamt, cell: (m) => `${esc(money(m.gesamt))} €` },
       {
         key: 'aktion', label: '', type: 'none', width: '96px', cls: 'right', tdCls: 'nowrap',
-        cell: (m) => `<button class="btn sm ghost" data-pdf="${esc(m.id)}" title="PDF ansehen" aria-label="PDF ansehen">${icon('pdf', 14).__raw}</button>`,
+        cell: (m) => `<button class="btn sm ghost" data-pdf="${esc(m.id)}" title="PDF ansehen" aria-label="PDF ansehen">${icon('pdf', 14).__raw}</button>${m.verworfen ? ''
+          : `<button class="btn sm ghost" data-senden="${esc(m.id)}" title="${(m.versand || []).length ? 'Erneut per E-Mail senden' : 'Per E-Mail senden'}" aria-label="${(m.versand || []).length ? 'Erneut per E-Mail senden' : 'Per E-Mail senden'}">${icon('external', 14).__raw}</button>`}`,
       },
     ],
     emptyTitle: 'Noch keine Mahnungen',
@@ -172,6 +173,7 @@ export function mahnwesenZeigen(root) {
     onRender: (el) => {
       $$('tbody tr[data-row]', el).forEach((tr) => [...tr.children].forEach((td, i) => { const k = ['mh-datum', 'mh-nr', 'mh-kunde', 'mh-stufe', 'mh-gebuehr', 'mh-aufschlag', 'mh-gesamt', 'mh-akt'][i]; if (k) td.classList.add(k); }));
       $$('[data-pdf]', el).forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); mahnungAnsehen(mahnungen().find((m) => m.id === b.dataset.pdf)); }));
+      $$('[data-senden]', el).forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); mahnungSenden(mahnungen().find((m) => m.id === b.dataset.senden)); }));
     },
   });
 }

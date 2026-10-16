@@ -1147,6 +1147,10 @@ html[data-theme="dark"] .re-blatt { border-color: transparent; }
 .btn.danger-text { color: var(--neg); }
 
 .re-aktionen { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Serienrechnung: Kundenliste mit Häkchen, scrollt bei vielen Kunden. */
+.se-liste { display: flex; flex-direction: column; gap: 2px; max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; }
+.se-liste .check { min-height: 28px; }
+.se-liste .check[hidden] { display: none; }
 .re-buchungen { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
 .re-buchungen li { display: flex; align-items: center; gap: 10px; }
 .re-buchungen li a { flex: 1; min-width: 0; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

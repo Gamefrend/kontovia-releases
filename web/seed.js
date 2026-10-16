@@ -60,6 +60,8 @@ const EXPENSE = [
   ['An Finanzamt gezahlte Umsatzsteuer', 58, '1780', '3820', 0, { vatNeutral: true }],
   ['Sonstige Betriebsausgaben', 60, '4900', '6300', 19, {}],
   ['Privatentnahme', null, '1800', '2100', 0, { private: true }],
+  // Seit 2.41 (Kilometerpauschale im Buchungsfenster); hinten angefügt, damit die Kennungen davor bleiben.
+  ['Fahrten mit eigenem Auto (Kilometerpauschale)', 71, '4673', '6673', 0, {}],
 ];
 
 function build(list, kind) {

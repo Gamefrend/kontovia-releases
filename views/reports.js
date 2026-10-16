@@ -8,8 +8,9 @@ import { store, sel } from '../lib/store.js';
 import {
   compareRanges, trend, euerReport, vatReturn, vatPeriods, balanceSheet,
   openItems, accountBalances, isKleinunternehmer, ohneUst, nurOhneUst, steuerStand, depreciationInRange, bookValue,
-  totalDepreciation, healthChecks, scopeDb, unlistedStats, averages, isEffective, accountLedger, restbuchwert,
+  totalDepreciation, healthChecks, scopeDb, unlistedStats, averages, isEffective, accountLedger, restbuchwert, ossMeldung, ossQuartale,
 } from '../lib/calc.js';
+import { LAENDER } from '../lib/rechnung.js';
 import {
   prefs, setPref, scope, scopeToggleHtml, wireScopeToggle, verlaufControls, wireVerlauf, verlaufBody,
   anteilControls, wireAnteil,
@@ -520,13 +521,40 @@ function ust(root, db) {
             ? ', mit Dauerfristverlängerung einen Monat später' : ''}; die Termine stehen auch in Übersicht und Kalender.</p>
         </div>
       </div>
-    </div>`;
+    </div>
+    ${raw(ossKarte(db, year))}`;
 
   $$('[data-from]', root).forEach((tr) => tr.addEventListener('click', () => {
     setPeriod(period, tr.dataset.from, tr.dataset.to);
     periodCtl?.update();
     draw(root.closest('#content') || root.parentElement);
   }));
+}
+
+/**
+ * OSS-Meldung (calc.js: ossMeldung): nur, wenn es im Jahr Verkäufe über den One-Stop-Shop gibt. Je Land und Satz für
+ * den gewählten Zeitraum, dazu die Quartale mit Frist. Abgegeben wird im Online-Portal des Bundeszentralamts für Steuern.
+ */
+function ossKarte(db, year) {
+  const quartale = ossQuartale(db, year);
+  if (!quartale.some((q) => q.result.zeilen.length || q.result.ohneLand.length)) return '';
+  const m = ossMeldung(db, period.from, period.to);
+  const land = (k) => esc(LAENDER[k]?.name || k);
+  return `<div class="card mt16">
+    <div class="card-head"><h2>OSS-Meldung (Verkäufe an Privatkunden in der EU)</h2><span class="sub">${esc(periodLabel(period))}</span></div>
+    ${m.ohneLand.length ? `<div class="card-body"><div class="notice warn mb0">${m.ohneLand.length === 1 ? 'Eine Buchung' : `${int(m.ohneLand.length)} Buchungen`} ohne Land des Kunden. Bitte im Buchungsfenster unter „Weitere Angaben“ nachtragen.</div></div>` : ''}
+    <div class="table-wrap"><table class="data">
+      <thead><tr><th>Land</th><th class="num">Satz</th><th class="num">Netto</th><th class="num">Umsatzsteuer</th><th class="num">Buchungen</th></tr></thead>
+      <tbody>${m.zeilen.length ? m.zeilen.map((z) => `<tr><td>${land(z.land)}</td><td class="num">${esc(dz(z.satz))} %</td><td class="num">${esc(money(z.netto))} €</td><td class="num">${esc(money(z.steuer))} €</td><td class="num">${int(z.anzahl)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="muted">Keine OSS-Verkäufe in diesem Zeitraum.</td></tr>'}</tbody>
+      <tfoot><tr><td colspan="2">Zusammen</td><td class="num">${esc(money(m.netto))} €</td><td class="num">${esc(money(m.steuer))} €</td><td></td></tr></tfoot>
+    </table></div>
+    <div class="table-wrap"><table class="data">
+      <thead><tr><th>Quartal ${year}</th><th class="num">Netto</th><th class="num">Umsatzsteuer</th><th>Abgabe bis</th></tr></thead>
+      <tbody>${quartale.map((q) => `<tr class="clickable" data-from="${q.from}" data-to="${q.to}"><td>${esc(q.label)}</td><td class="num">${esc(money(q.result.netto))} €</td><td class="num">${esc(money(q.result.steuer))} €</td><td>${esc(fmtDate(q.frist))}</td></tr>`).join('')}</tbody>
+    </table></div>
+    <div class="card-body"><p class="small muted mb0">Die OSS-Meldung geben Sie vierteljährlich im Online-Portal des Bundeszentralamts für Steuern ab, auch wenn nichts verkauft wurde, und überweisen die Steuer dorthin. Gezählt wird nach Rechnungsdatum. Diese Umsätze stehen nicht in der deutschen Voranmeldung.</p></div>
+  </div>`;
 }
 
 /* -------------------------------------------------------------------------- */

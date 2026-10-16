@@ -368,6 +368,7 @@ async function detailZeigen(root, r, actions) {
               ${!r.storno && !r.storniertDurch ? `<button class="btn" id="reKorrigieren">${icon('refresh', 15).__raw} Korrigieren</button>
               <button class="btn danger" id="reStornieren">${icon('x', 15).__raw} Stornieren</button>` : ''}
               <button class="btn" id="reDuplizieren">${icon('copy', 15).__raw} Duplizieren</button>
+              ${r.storno || istGutschriftArt(r) ? '' : `<button class="btn" id="reSerie">${icon('users', 15).__raw} An mehrere Kunden …</button>`}
               <button class="btn ghost" id="reVorlage" data-premium="vorlagen">${icon('save', 15).__raw} Als Vorlage</button>
             </div>
           </div>
@@ -427,7 +428,73 @@ async function detailZeigen(root, r, actions) {
   $('#reStornieren', root)?.addEventListener('click', () => stornoDialog(r, false));
   $('#reKorrigieren', root)?.addEventListener('click', () => stornoDialog(r, true));
   $('#reDuplizieren', root).addEventListener('click', () => navigate('rechnungen', { neu: true, kopieVon: r.id }));
+  $('#reSerie', root)?.addEventListener('click', () => serienDialog(r));
   $('#reVorlage', root).addEventListener('click', () => vorlageDialog(r));
+}
+
+const istGutschriftArt = (r) => r.art === '381';
+
+/**
+ * Serienrechnung: dieselbe Rechnung an mehrere Kunden (lib/rechnungsaktionen.js: serienRechnungen).
+ * Kunden mit Häkchen wählen, Leistungsdatum angeben; auf Wunsch gleich ausstellen.
+ */
+function serienDialog(r) {
+  const kunden = sel.contacts().filter((c) => c.kind !== 'supplier').sort((a, b) => String(a.name).localeCompare(String(b.name), 'de'));
+  if (!kunden.length) { warn('Noch keine Kunden', 'Legen Sie unter Stammdaten Kontakte an, dann können Sie ihnen die Rechnung schreiben.'); return; }
+  const zeitraum = r.leistungArt === 'zeitraum';
+  const m = modal({
+    title: 'Rechnung an mehrere Kunden',
+    size: 'wide',
+    body: `<p class="small muted mt0">Für jeden gewählten Kunden entsteht eine eigene Rechnung mit denselben Positionen, etwa der Kursbeitrag für alle Teilnehmer.
+        Jede bekommt beim Ausstellen ihre eigene Nummer.</p>
+      <div class="form-grid">
+        ${zeitraum ? `<div class="field"><label for="seVon">Leistung vom</label><input type="date" id="seVon" value="${esc(r.leistungVon || '')}"></div>
+        <div class="field"><label for="seBis">bis</label><input type="date" id="seBis" value="${esc(r.leistungBis || '')}"></div>`
+    : `<div class="field"><label for="seDatum">Leistung erbracht am</label><input type="date" id="seDatum" value="${todayISO()}"></div>`}
+        <div class="field"><label for="seSuche">Kunden suchen</label><input id="seSuche" type="search" placeholder="Name"></div>
+      </div>
+      <div class="row wrap mt8" style="gap:8px"><button type="button" class="btn sm" id="seAlle">Alle wählen</button><button type="button" class="btn sm" id="seKeine">Keine</button><span class="small muted" id="seZahl" aria-live="polite"></span></div>
+      <div class="se-liste mt8" id="seListe">${kunden.map((c) => `<label class="check" data-name="${esc(String(c.name || '').toLowerCase())}"><input type="checkbox" value="${esc(c.id)}"> ${esc(c.name || '')}${c.email ? ` <span class="muted small">${esc(c.email)}</span>` : ''}</label>`).join('')}</div>
+      <label class="check mt16"><input type="checkbox" id="seAusstellen"> Gleich ausstellen (sonst als Entwürfe zum Prüfen)</label>`,
+    foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Rechnungen anlegen</button>',
+  });
+  const liste = m.root.querySelector('#seListe');
+  const gewaehlt = () => [...liste.querySelectorAll('input:checked')].map((i) => i.value);
+  const zahl = () => { m.root.querySelector('#seZahl').textContent = `${gewaehlt().length} gewählt`; };
+  liste.addEventListener('change', zahl);
+  zahl();
+  m.root.querySelector('#seSuche').addEventListener('input', (e) => {
+    const q = e.target.value.trim().toLowerCase();
+    liste.querySelectorAll('[data-name]').forEach((l) => { l.hidden = !!q && !l.dataset.name.includes(q); });
+  });
+  const alle = (an) => { [...liste.querySelectorAll('[data-name]')].filter((l) => !l.hidden).forEach((l) => { l.querySelector('input').checked = an; }); zahl(); };
+  m.root.querySelector('#seAlle').addEventListener('click', () => alle(true));
+  m.root.querySelector('#seKeine').addEventListener('click', () => alle(false));
+  m.root.querySelector('[data-no]').addEventListener('click', () => m.close());
+  m.root.querySelector('[data-yes]').addEventListener('click', async (e) => {
+    const ids = gewaehlt();
+    if (!ids.length) { warn('Bitte mindestens einen Kunden wählen'); return; }
+    const opts = {
+      leistungsdatum: m.root.querySelector('#seDatum')?.value || '',
+      leistungVon: m.root.querySelector('#seVon')?.value || '',
+      leistungBis: m.root.querySelector('#seBis')?.value || '',
+      ausstellen: m.root.querySelector('#seAusstellen').checked,
+    };
+    const knopf = e.currentTarget;
+    knopf.disabled = true;
+    try {
+      const { serienRechnungen } = await import('../lib/rechnungsaktionen.js');
+      const erg = await serienRechnungen(r, ids.map((id) => sel.contact(id)).filter(Boolean), opts);
+      m.close();
+      if (!opts.ausstellen) ok(erg.entwuerfe.length === 1 ? 'Entwurf angelegt' : `${erg.entwuerfe.length} Entwürfe angelegt`, 'Sie stehen in der Liste der Rechnungen und lassen sich einzeln prüfen und ausstellen.');
+      else if (!erg.offen.length) ok(erg.ausgestellt.length === 1 ? 'Rechnung ausgestellt' : `${erg.ausgestellt.length} Rechnungen ausgestellt`);
+      else warn(`${erg.ausgestellt.length} ausgestellt, ${erg.offen.length} als Entwurf`, `Nicht ausgestellt: ${erg.offen.slice(0, 3).map((x) => `${x.r.kaeufer?.name || ''} (${x.grund})`).join('; ')}${erg.offen.length > 3 ? ' …' : ''}`);
+      navigate('rechnungen', {});
+    } catch (ex) {
+      err('Nicht alle Rechnungen angelegt', ex.message);
+      if (knopf.isConnected) knopf.disabled = false;
+    }
+  });
 }
 
 /* Verschicken: direkt über Gmail oder Outlook, sonst über das E-Mail-Programm des Nutzers (lib/emailversand.js). */

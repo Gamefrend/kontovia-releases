@@ -314,7 +314,7 @@ function renderSetup(konten = null) {
   const data = {
     companyName: '', ownerName: '', street: '', zip: '', city: '',
     taxNumber: '', vatId: '', taxOffice: '',
-    taxMode: 'regelbesteuerung', accountingBasis: 'ist', defaultVatRate: 19,
+    taxMode: 'regelbesteuerung', vorsteuerAbzug: 'ja', steuerfreiGrund: '', accountingBasis: 'ist', defaultVatRate: 19,
     vatPeriod: 'vierteljährlich', chartOfAccounts: 'SKR03',
     // Bewusst ohne Vorgabe: eine vorausgewählte Zustimmung wäre keine.
     updateCheckOnStart: undefined,
@@ -467,6 +467,18 @@ function renderSetup(konten = null) {
         </select>
         <span class="hint">Als Kleinunternehmer rechnet Kontovia durchgehend mit Bruttobeträgen und blendet alle Umsatzsteuerfelder aus.</span>
       </div>
+      <div class="field" ${data.taxMode === 'kleinunternehmer' ? 'hidden' : ''} data-vat-block>
+        <label for="f_vorsteuerAbzug">Vorsteuerabzug</label>
+        <select id="f_vorsteuerAbzug">
+          <option value="ja" ${data.vorsteuerAbzug !== 'nein' ? 'selected' : ''}>Ja, die Umsatzsteuer auf meine Ausgaben ist abziehbar</option>
+          <option value="nein" ${data.vorsteuerAbzug === 'nein' ? 'selected' : ''}>Nein, alle meine Umsätze sind umsatzsteuerfrei</option>
+        </select>
+        <span class="hint">„Nein“ nur für Betriebe ohne steuerpflichtige Umsätze, etwa Heilberufe (§ 4 Nr. 14 UStG). Dann gibt es keine Voranmeldung.</span>
+        <div ${data.vorsteuerAbzug === 'nein' ? '' : 'hidden'} id="f_grundBlock" class="mt8">
+          <label for="f_steuerfreiGrund">Grund der Steuerbefreiung auf Ihren Rechnungen</label>
+          <input id="f_steuerfreiGrund" value="${data.steuerfreiGrund || ''}" maxlength="200" placeholder="z. B. Umsatzsteuerfreie Heilbehandlung nach § 4 Nr. 14 UStG">
+        </div>
+      </div>
       <div class="field" id="f_vatBlock" ${data.taxMode === 'kleinunternehmer' ? 'hidden' : ''}>
         <label>Umsatzsteuer berechnen nach</label>
         <select id="f_accountingBasis">
@@ -569,8 +581,9 @@ function renderSetup(konten = null) {
     feldHinweis($('#f_vatId'), ustIdHinweis);
     $('#f_taxMode')?.addEventListener('change', (e) => {
       const klein = e.target.value === 'kleinunternehmer';
-      app.querySelectorAll('#f_vatBlock, [data-vat-only]').forEach((n) => { n.hidden = klein; });
+      app.querySelectorAll('#f_vatBlock, [data-vat-only], [data-vat-block]').forEach((n) => { n.hidden = klein; });
     });
+    $('#f_vorsteuerAbzug')?.addEventListener('change', (e) => { $('#f_grundBlock').hidden = e.target.value !== 'nein'; });
 
     if (step === 2) {
       wirePasswordToggles(app);
@@ -600,7 +613,14 @@ function renderSetup(konten = null) {
       btn.textContent = 'Verschlüssele …';
       try {
         const { nutzungOk, ...einstellungen } = data;
-        const db = await api.vault.create(pw1, { ...einstellungen, defaultVatRate: Number(data.defaultVatRate) });
+        // „Kein Vorsteuerabzug“ gibt es nur ohne Kleinunternehmerregelung; Rechnungen sind dann steuerfrei (calc.js: keinVorsteuerAbzug).
+        const ohneVorsteuer = data.taxMode !== 'kleinunternehmer' && data.vorsteuerAbzug === 'nein';
+        const db = await api.vault.create(pw1, {
+          ...einstellungen,
+          vorsteuerAbzug: ohneVorsteuer ? 'nein' : 'ja',
+          steuerfreiGrund: ohneVorsteuer ? String(data.steuerfreiGrund || '').trim() : '',
+          defaultVatRate: ohneVorsteuer ? 0 : Number(data.defaultVatRate),
+        });
         setDb(db);
         await nutzungVermerken(appInfo.version).catch(() => {});
         applyTheme();

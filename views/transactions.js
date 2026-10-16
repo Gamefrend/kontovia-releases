@@ -24,6 +24,11 @@ import { WAEHRUNGEN, istFremd, kursGueltig, kursLesen, kursEingabe, inEuro } fro
 import { regelAusBuchung, TURNUS } from '../lib/wiederkehrend.js';
 import { ratenAnzahl, ratenPlan, ratenBuchungen, MAX_RATEN } from '../lib/raten.js';
 import { satzBuchungen, satzSumme, weitereTeile, doppelterSatz, SAETZE, MAX_SAETZE } from '../lib/steuersaetze.js';
+import {
+  EU_SAETZE, ossSaetze, ossRegelsatz, ossLand, differenzSteuer, DIFFERENZ_SATZ, gutscheinEinloesung, privatnutzung, KFZ_ANTRIEB,
+  fahrtBetrag, KM_SATZ, FAHRT_ZEILE,
+} from '../lib/sonderfaelle.js';
+import { LAENDER } from '../lib/rechnung.js';
 import { faelligeAnbieten } from './wiederkehrend.js';
 import { aufgabenAbschnitt } from './todos.js';
 import { journalPdf } from '../lib/reports.js';
@@ -58,8 +63,16 @@ const VAT_TREATMENTS = {
   'ig-erwerb': 'Innergemeinschaftlicher Erwerb',
   'reverse-charge-in': 'Leistung aus dem EU-Ausland (§ 13b, Sie schulden die Steuer)',
   'rc-in-sonstige': 'Andere Leistung nach § 13b (aus dem Nicht-EU-Ausland oder Inland)',
+  // Seit 2.41, nur bei Einnahmen (lib/sonderfaelle.js).
+  oss: 'Verkauf an Privatkunden in der EU (OSS, Steuer des Ziellandes)',
+  differenz: 'Gebrauchtware mit Differenzbesteuerung (§ 25a UStG)',
+  'gutschein-mehrzweck': 'Verkauf eines Mehrzweckgutscheins (Steuer erst bei Einlösung)',
+  'gutschein-einloesung': 'Einlösung eines Mehrzweckgutscheins (nur die Umsatzsteuer)',
   'ohne-kategorie': 'Noch offen (ohne Kategorie)',
 };
+
+/** Behandlungen, die es nur bei Einnahmen gibt. */
+const NUR_EINNAHME = new Set(['oss', 'differenz', 'gutschein-mehrzweck', 'gutschein-einloesung']);
 
 /* -------------------------------------------------------------------------- */
 /* Ansicht                                                                     */
@@ -672,14 +685,14 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
           </div>
           <div class="form-grid c3">
             <div class="field">
-              <label>${klein ? 'Betrag' : inputMode === 'gross' ? 'Bruttobetrag' : 'Nettobetrag'} *</label>
-              <input class="money-input" id="i_amount" value="${moneyInput(inputMode === 'gross' || klein ? tx.gross : tx.net)}" placeholder="0,00" inputmode="decimal">
+              <label>${treat === 'gutschein-einloesung' ? 'Wert des Gutscheins' : klein ? 'Betrag' : inputMode === 'gross' || bruttoPflicht(treat) ? 'Bruttobetrag' : 'Nettobetrag'} *</label>
+              <input class="money-input" id="i_amount" value="${moneyInput(treat === 'gutschein-einloesung' ? (tx.gutscheinWert || 0) : inputMode === 'gross' || klein || bruttoPflicht(treat) ? tx.gross : tx.net)}" placeholder="0,00" inputmode="decimal" ${tx.fahrt?.km || tx.privatnutzung?.listenpreis ? 'readonly' : ''}>
             </div>
             ${klein ? '' : raw(`
             <div class="field">
               <label>Umsatzsteuersatz</label>
               <select id="i_vatRate">
-                ${[19, 7, 0].map((r) => `<option value="${r}" ${Number(tx.vatRate) === r ? 'selected' : ''}>${r} %</option>`).join('')}
+                ${satzListe(treat).map((r) => `<option value="${r}" ${Number(tx.vatRate) === r ? 'selected' : ''}>${esc(dz(r))} %</option>`).join('')}
               </select>
             </div>`)}
             <div class="field">
@@ -700,6 +713,8 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
             </div>
             <span class="hint">Kontovia rechnet den Betrag oben in Euro um und bucht in Euro; Währung, Betrag und Kurs bleiben an der Buchung.</span>
           </details>
+          ${raw(fahrtFelder())}
+          ${raw(privatFelder())}
           <div class="row" id="amountSummary" style="gap:22px;font-size:13px;padding-top:2px"></div>
           ${raw(satzFelder())}
         </div>
@@ -781,10 +796,11 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
           <div class="field">
             <label>Umsatzsteuerliche Behandlung</label>
             <select id="i_vatTreatment">
-              ${Object.entries(VAT_TREATMENTS).map(([k, v]) => `<option value="${k}" ${treat === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}
+              ${Object.entries(VAT_TREATMENTS).filter(([k]) => tx.type === 'income' || !NUR_EINNAHME.has(k)).map(([k, v]) => `<option value="${k}" ${treat === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}
             </select>
             <span class="hint">Bestimmt, in welche Kennzahl der Umsatzsteuer-Voranmeldung der Betrag fließt.</span>
           </div>
+          ${sonderFelder(treat)}
           ${tx.type === 'expense' ? `<div class="field full">
             <label class="check"><input type="checkbox" id="i_lieferantIst" ${tx.lieferantIst ? 'checked' : ''}> Auf der Rechnung steht „Versteuerung nach vereinnahmten Entgelten“</label>
             <span class="hint">Ab 2028 zählt die Vorsteuer aus solchen Rechnungen erst, wenn Sie bezahlt haben.</span>
@@ -851,6 +867,145 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       <span class="hint">Zählt in der Auswertung des Projekts, wie eine Kostenstelle.</span>
     </div>`);
   }
+
+  /* ---------------------------------------------------------------------- */
+  /* Besondere Steuerfälle (lib/sonderfaelle.js)                             */
+  /* ---------------------------------------------------------------------- */
+
+  /** Bei Differenzbesteuerung und Gutscheineinlösung ist der Betrag immer brutto. */
+  const bruttoPflicht = (t) => t === 'differenz' || t === 'gutschein-einloesung';
+
+  /** Sätze für die Auswahl: beim OSS die des Ziellandes, bei der Differenzbesteuerung nur 19 %, beim Mehrzweckgutschein 0 %. */
+  function satzListe(treat) {
+    if (treat === 'oss') {
+      const s = ossSaetze(tx.oss?.land);
+      return s.length ? s : [Number(tx.vatRate) || 19];
+    }
+    if (treat === 'differenz') return [DIFFERENZ_SATZ];
+    if (treat === 'gutschein-mehrzweck') return [0];
+    const s = [19, 7, 0];
+    return s.includes(Number(tx.vatRate)) ? s : [...s, Number(tx.vatRate)];
+  }
+
+  const landName = (k) => LAENDER[k]?.name || k;
+
+  /** Zusätzliche Angaben unter der umsatzsteuerlichen Behandlung. */
+  function sonderFelder(treat) {
+    if (treat === 'oss') {
+      const land = String(tx.oss?.land || '').toUpperCase();
+      const laender = Object.keys(EU_SAETZE).sort((a, b) => landName(a).localeCompare(landName(b), 'de'));
+      return `<div class="field">
+        <label for="i_ossLand">Land des Kunden</label>
+        <select id="i_ossLand"><option value="">Bitte wählen</option>${laender.map((k) => `<option value="${k}" ${k === land ? 'selected' : ''}>${esc(landName(k))}</option>`).join('')}</select>
+        <span class="hint">Es gilt der Steuersatz dieses Landes (Stand Oktober 2026, bitte prüfen). Der Betrag fehlt in der deutschen Voranmeldung und steht in der OSS-Meldung unter Auswertungen.</span>
+      </div>`;
+    }
+    if (treat === 'differenz') {
+      return `<div class="field">
+        <label for="i_einkauf">Einkaufspreis der Ware</label>
+        <input class="money-input" id="i_einkauf" inputmode="decimal" value="${tx.einkauf ? moneyInput(tx.einkauf) : ''}" placeholder="0,00">
+        <span class="hint">Was Sie für das Stück bezahlt haben. Umsatzsteuer fällt nur auf den Gewinn an, mit 19 % im Preis enthalten. Auf der Rechnung steht keine Umsatzsteuer, sondern „Gebrauchtgegenstände/Sonderregelung“.</span>
+      </div>`;
+    }
+    if (treat === 'gutschein-mehrzweck') {
+      return `<div class="field full"><span class="hint">Ein Gutschein, der für verschiedene Waren oder Leistungen gilt (Mehrzweckgutschein). Der Verkauf ist eine Einnahme ohne Umsatzsteuer. Wird er eingelöst, buchen Sie die Einlösung als eigene Einnahme mit „Einlösung eines Mehrzweckgutscheins“. Gilt der Gutschein nur für eine Sache mit festem Steuersatz (Einzweckgutschein), buchen Sie ihn wie einen gewöhnlichen Verkauf mit Umsatzsteuer.</span></div>`;
+    }
+    if (treat === 'gutschein-einloesung') {
+      return `<div class="field full"><span class="hint">Tragen Sie oben den Wert des eingelösten Gutscheins und den Steuersatz der Ware ein. Gebucht wird nur die Umsatzsteuer: Das Geld kam schon beim Verkauf des Gutscheins, der Gewinn ändert sich nicht.</span></div>`;
+    }
+    return '';
+  }
+
+  /** Kategorie für Fahrten mit einem Auto, das nicht zum Betrieb gehört (EÜR-Zeile 71). */
+  const fahrtKategorie = () => sel.activeCategories('expense').find((c) => Number(c.euerLine) === FAHRT_ZEILE) || null;
+
+  /** Kategorie für die private Nutzung des Firmenwagens (EÜR-Zeile 20). */
+  const privatKategorie = () => sel.activeCategories('income').find((c) => Number(c.euerLine) === 20) || null;
+
+  /** Ausgabe: Kilometer einer Fahrt mit dem eigenen Auto ergeben den Betrag. */
+  function fahrtFelder() {
+    if (tx.type !== 'expense' || stornoTeil || tx.splitId) return '';
+    const f = tx.fahrt || {};
+    const kat = fahrtKategorie();
+    return `<details class="mt8" id="fahrtBox" ${f.km ? 'open' : ''}>
+      <summary class="small muted" style="cursor:pointer;padding:4px 0">Fahrt mit dem eigenen Auto (Kilometerpauschale)</summary>
+      <div class="form-grid mt8">
+        <div class="field"><label for="i_fahrtKm">Gefahrene Kilometer</label><input id="i_fahrtKm" inputmode="decimal" value="${f.km ? esc(dz(f.km)) : ''}" placeholder="z. B. 84"></div>
+        <div class="field"><label for="i_fahrtStrecke">Strecke und Anlass</label><input id="i_fahrtStrecke" maxlength="200" value="${esc(f.strecke || '')}" placeholder="z. B. Büro bis Kunde Weber, Montage"></div>
+      </div>
+      <span class="hint">Für Fahrten mit einem Auto, das nicht zum Betrieb gehört: ${esc(dz((KM_SATZ / 100).toFixed(2)))} € je Kilometer, ohne Umsatzsteuer.${kat ? ` Gebucht in „${esc(kat.name)}“.` : ''}</span>
+      ${kat ? '' : `<button type="button" class="btn sm mt8" id="fahrtKat">${icon('plus', 14).__raw} Kategorie „Fahrten mit eigenem Auto“ anlegen</button>`}
+    </details>`;
+  }
+
+  /** Einnahme: private Nutzung des Firmenwagens nach der 1-%-Regel. */
+  function privatFelder() {
+    if (tx.type !== 'income' || stornoTeil || tx.splitId) return '';
+    const p = tx.privatnutzung || {};
+    return `<details class="mt8" id="privatBox" ${p.listenpreis ? 'open' : ''}>
+      <summary class="small muted" style="cursor:pointer;padding:4px 0">Private Nutzung des Firmenwagens (1-%-Regel)</summary>
+      <div class="form-grid mt8">
+        <div class="field"><label for="i_listenpreis">Bruttolistenpreis</label><input class="money-input" id="i_listenpreis" inputmode="decimal" value="${p.listenpreis ? moneyInput(p.listenpreis) : ''}" placeholder="z. B. 45.000,00"></div>
+        <div class="field"><label for="i_antrieb">Antrieb</label><select id="i_antrieb">${Object.entries(KFZ_ANTRIEB).map(([k, [, name]]) => `<option value="${k}" ${p.antrieb === k ? 'selected' : ''}>${esc(name)}</option>`).join('')}</select></div>
+      </div>
+      <span class="hint">Listenpreis des Neuwagens samt Sonderausstattung, auf volle 100 € abgerundet. Ergibt den Wert für einen Monat; wählen Sie unten „monatlich“ wiederholen. Die Umsatzsteuer rechnet immer mit 80 % von 1 %, auch beim Elektroauto. Preisgrenze für 0,25 %: 60.000 € bei Kauf bis 2023, 70.000 € ab 2024, 100.000 € ab Juli 2025.</span>
+    </details>`;
+  }
+
+  /**
+   * Wendet Behandlung und Helfer auf die Beträge an (nach der gewöhnlichen Aufteilung in collect).
+   * Die Felder `oss`, `einkauf`, `gutscheinWert`, `fahrt`, `privatnutzung` stehen nur, solange sie gelten.
+   */
+  function sonderAnwenden(g, amount) {
+    const treat = tx.vatTreatment || '';
+    if (treat === 'oss' && tx.type === 'income') {
+      const land = g('ossLand')?.value ?? tx.oss?.land ?? '';
+      tx.oss = { land };
+      // Ein Satz, den es im Zielland nicht gibt, wird dessen Regelsatz.
+      if (ossLand(land) && !ossSaetze(land).includes(Number(tx.vatRate))) {
+        tx.vatRate = ossRegelsatz(land);
+        Object.assign(tx, pick(inputMode === 'net' ? splitFromNet(amount, tx.vatRate) : splitFromGross(amount, tx.vatRate)));
+      }
+    } else delete tx.oss;
+    if (treat === 'differenz' && tx.type === 'income') {
+      tx.einkauf = Math.max(0, parseMoney(g('einkauf')?.value || ''));
+      tx.vatRate = DIFFERENZ_SATZ;
+      Object.assign(tx, pick(differenzSteuer(amount, tx.einkauf)));
+    } else delete tx.einkauf;
+    if (treat === 'gutschein-einloesung' && tx.type === 'income') {
+      const e = gutscheinEinloesung(amount, tx.vatRate);
+      tx.gutscheinWert = e.wert;
+      Object.assign(tx, pick(e));
+      // Kein Geldfluss: ohne Konto, eingelöst am Tag der Buchung.
+      tx.accountId = '';
+      tx.paidDate = tx.paidDate || tx.date;
+    } else delete tx.gutscheinWert;
+    if (treat === 'gutschein-mehrzweck') { tx.vatRate = 0; Object.assign(tx, { net: tx.gross, vat: 0 }); }
+    const km = Number(String(g('fahrtKm')?.value || '').replace(',', '.'));
+    if (tx.type === 'expense' && g('fahrtKm') && km > 0) {
+      const f = fahrtBetrag(km);
+      tx.fahrt = { km: f.km, satz: f.satz, strecke: g('fahrtStrecke')?.value.trim() || '' };
+      tx.vatRate = 0;
+      Object.assign(tx, pick(f));
+    } else if (g('fahrtKm') || tx.type !== 'expense') delete tx.fahrt;
+    const lp = parseMoney(g('listenpreis')?.value || '');
+    if (tx.type === 'income' && g('listenpreis') && lp > 0) {
+      const antrieb = g('antrieb')?.value || 'verbrenner';
+      const p = privatnutzung(lp, antrieb);
+      tx.privatnutzung = { listenpreis: p.listenpreis, antrieb, prozent: p.prozent, ustBasis: klein ? 0 : p.ustBasis };
+      tx.vatRate = klein ? 0 : 19;
+      Object.assign(tx, klein ? { gross: p.net, net: p.net, vat: 0 } : pick(p));
+    } else if (g('listenpreis') || tx.type !== 'income') delete tx.privatnutzung;
+    // Entnahme und Nutzungseinlage bewegen kein Geld: ohne Konto, am Tag der Buchung (lib/sonderfaelle.js: ohneGeldfluss).
+    // Sie sind gewöhnlich besteuert; eine besondere Behandlung daneben gilt nicht.
+    if (tx.fahrt || tx.privatnutzung) {
+      for (const k of ['vatTreatment', 'oss', 'einkauf', 'gutscheinWert']) delete tx[k];
+      tx.accountId = '';
+      tx.paidDate = tx.paidDate || tx.date;
+    }
+  }
+
+  const pick = ({ gross, net, vat }) => ({ gross, net, vat });
 
   function wiederholungsFelder() {
     if (stornoTeil) return '';
@@ -1203,6 +1358,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     tx.gross = split.gross;
     tx.net = split.net;
     tx.vat = split.vat;
+    sonderAnwenden(g, amount);
     // Fremdwährung (lib/waehrung.js): nur mit Währung, Betrag und gültigem Kurs; `netto`, wenn der Betrag netto eingegeben wurde.
     const fw = g('fremdW')?.value || '';
     const fk = kursLesen(g('fremdKurs')?.value);
@@ -1216,6 +1372,38 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     collect();
     const box = form.querySelector('#amountSummary');
     if (!box) return;
+    // Kilometer und Listenpreis bestimmen den Betrag; das Betragsfeld zeigt das Ergebnis.
+    const amt = form.querySelector('#i_amount');
+    if (amt && (tx.fahrt || tx.privatnutzung)) {
+      amt.value = moneyInput(inputMode === 'net' && !klein ? tx.net : tx.gross);
+      amt.readOnly = true;
+    } else if (amt) amt.readOnly = false;
+    const t = tx.vatTreatment || '';
+    if (!klein && t === 'differenz') {
+      const d = differenzSteuer(tx.gross, tx.einkauf);
+      box.innerHTML = html`
+        <span><span class="muted">Verkauf</span> <strong class="num">${money(tx.gross)} €</strong></span>
+        <span><span class="muted">Gewinn</span> <strong class="num">${money(d.marge)} €</strong></span>
+        <span><span class="muted">darin Umsatzsteuer 19 %</span> <strong class="num">${money(tx.vat)} €</strong></span>`;
+      updateDepositSummary();
+      return;
+    }
+    if (!klein && t === 'gutschein-einloesung') {
+      box.innerHTML = html`
+        <span><span class="muted">Gutschein</span> <strong class="num">${money(tx.gutscheinWert || 0)} €</strong></span>
+        <span><span class="muted">darin Umsatzsteuer ${dz(tx.vatRate)} %</span> <strong class="num">${money(tx.vat)} €</strong></span>
+        <span class="badge">Kein Geldfluss</span>`;
+      updateDepositSummary();
+      return;
+    }
+    if (tx.privatnutzung) {
+      box.innerHTML = html`
+        <span><span class="muted">Wert im Monat</span> <strong class="num">${money(tx.net)} €</strong></span>
+        ${klein ? '' : raw(html`<span><span class="muted">Umsatzsteuer auf ${money(tx.privatnutzung.ustBasis)} €</span> <strong class="num">${money(tx.vat)} €</strong></span>`)}
+        <span class="badge">Kein Geldfluss</span>`;
+      updateDepositSummary();
+      return;
+    }
     box.innerHTML = klein
       ? html`<span class="muted">Betrag:</span> <strong class="num">${money(tx.gross)} €</strong>`
       : html`
@@ -1370,6 +1558,47 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     amt.addEventListener('focus', () => amt.select());
     amt.addEventListener('blur', () => { if (amt.value.trim()) { amt.value = moneyInput(parseMoney(amt.value)); updateAmountSummary(); } });
     form.querySelector('#i_vatRate')?.addEventListener('change', () => { updateAmountSummary(); satzVorschau(); });
+    // Besondere Steuerfälle: Behandlung und Zielland bestimmen die Sätze, darum neu zeichnen.
+    const sonderNeu = () => {
+      collect();
+      const t = tx.vatTreatment || '';
+      if (t === 'oss') {
+        // Vorgabe: das Land des Kunden, wenn es eines aus der EU ist.
+        const kunde = tx.contactId ? sel.contacts().find((c) => c.id === tx.contactId) : null;
+        if (!tx.oss?.land && ossLand(kunde?.country)) tx.oss = { land: String(kunde.country).toUpperCase() };
+        if (!ossSaetze(tx.oss?.land).includes(Number(tx.vatRate))) tx.vatRate = ossRegelsatz(tx.oss?.land) ?? tx.vatRate;
+      } else if (t === 'differenz') tx.vatRate = DIFFERENZ_SATZ;
+      else if (t === 'gutschein-mehrzweck') tx.vatRate = 0;
+      else if (![19, 7, 0].includes(Number(tx.vatRate))) tx.vatRate = 19;
+      if (bruttoPflicht(t)) inputMode = 'gross';
+      draw();
+    };
+    form.querySelector('#i_vatTreatment')?.addEventListener('change', sonderNeu);
+    form.querySelector('#i_ossLand')?.addEventListener('change', sonderNeu);
+    form.querySelector('#i_einkauf')?.addEventListener('input', updateAmountSummary);
+    for (const id of ['#i_fahrtKm', '#i_fahrtStrecke', '#i_listenpreis']) form.querySelector(id)?.addEventListener('input', updateAmountSummary);
+    form.querySelector('#i_antrieb')?.addEventListener('change', updateAmountSummary);
+    // Mit Kilometern oder Listenpreis passt die Kategorie gleich mit (EÜR-Zeile 71 bzw. 20).
+    form.querySelector('#i_fahrtKm')?.addEventListener('change', () => {
+      const k = fahrtKategorie();
+      if (k && tx.fahrt) { form.querySelector('#i_categoryId').value = k.id; kategorieHinweis(); }
+    });
+    form.querySelector('#i_listenpreis')?.addEventListener('change', () => {
+      const k = privatKategorie();
+      if (k && tx.privatnutzung) { form.querySelector('#i_categoryId').value = k.id; kategorieHinweis(); }
+      if (tx.privatnutzung && !wiederholung.freq && isNew) { wiederholung.freq = 'monthly'; const r = form.querySelector('#i_repeat'); if (r) { r.value = 'monthly'; r.dispatchEvent(new Event('change')); } }
+    });
+    form.querySelector('#fahrtKat')?.addEventListener('click', async () => {
+      collect();
+      const kat = {
+        id: uid('cat'), kind: 'expense', name: 'Fahrten mit eigenem Auto (Kilometerpauschale)', euerLine: FAHRT_ZEILE,
+        skr03: '4673', skr04: '6673', vatRate: 0, active: true,
+      };
+      try { await upsertEntity('categories', kat, 'kategorie'); } catch (e) { err('Kategorie nicht angelegt', e.message); return; }
+      tx.categoryId = kat.id;
+      ok('Kategorie angelegt', kat.name);
+      draw();
+    });
     amt.addEventListener('input', satzVorschau);
     form.querySelector('#satzNeu')?.addEventListener('click', () => {
       collect();
@@ -1393,7 +1622,8 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       const c = sel.category(e.target.value);
       if (c && !klein && c.vatRate !== undefined && c.vatRate !== null) {
         const rateSel = form.querySelector('#i_vatRate');
-        if (rateSel) { rateSel.value = String(c.vatRate); updateAmountSummary(); }
+        // Nur einen Satz, den die Auswahl kennt: Beim OSS stehen dort die Sätze des Ziellandes (lib/sonderfaelle.js).
+        if (rateSel && [...rateSel.options].some((o) => Number(o.value) === Number(c.vatRate))) { rateSel.value = String(c.vatRate); updateAmountSummary(); }
       }
       kategorieHinweis();
     });
@@ -1510,7 +1740,14 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     collect();
     if (!tx.description) { fieldError(form.querySelector('#i_description'), 'Bitte eine Beschreibung eintragen.'); return false; }
     if (!tx.categoryId) { fieldError(form.querySelector('#i_categoryId'), 'Bitte eine Kategorie wählen.'); return false; }
-    if (!tx.gross) { fieldError(form.querySelector('#i_amount'), 'Der Betrag darf nicht 0 sein.'); return false; }
+    if (!tx.gross && !(tx.vatTreatment === 'gutschein-einloesung' && tx.gutscheinWert)) { fieldError(form.querySelector('#i_amount'), 'Der Betrag darf nicht 0 sein.'); return false; }
+    if (tx.vatTreatment === 'oss' && !ossLand(tx.oss?.land)) { fieldError(form.querySelector('#i_ossLand'), 'Bitte das Land des Kunden wählen.'); return false; }
+    // Besondere Fälle sind je eine Buchung: nicht mit weiteren Steuersätzen, Raten oder Fremdwährung.
+    const sonder = ['oss', 'differenz', 'gutschein-mehrzweck', 'gutschein-einloesung'].includes(tx.vatTreatment) || tx.fahrt || tx.privatnutzung;
+    if (sonder && isNew && (weitereTeile(tx.vatRate, satzExtras()).length || ratenAnzahl(ratenWahl.anzahl) > 1 || tx.fremd)) {
+      err('Nicht kombinierbar', 'Dieser Steuerfall lässt sich nicht mit mehreren Steuersätzen, Raten oder fremder Währung verbinden. Bitte erfassen Sie ihn als eigene Buchung.');
+      return false;
+    }
     if (tx.isDeposit && (tx.depositPercent <= 0 || tx.depositPercent > 100)) {
       fieldError(form.querySelector('#i_depositPercent'), 'Bitte einen Wert zwischen 1 und 100 Prozent eintragen.');
       return false;

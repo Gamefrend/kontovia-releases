@@ -120,10 +120,14 @@ function anleitung(root) {
         <p><strong>Gut geeignet:</strong> Freiberufler, Selbstständige und kleine Betriebe, allein oder mit ein, zwei Mitarbeitenden, die ihren
         Gewinn mit der Einnahmen-Überschuss-Rechnung ermitteln und Dienstleistungen oder Waren in Rechnung stellen.</p>
         <p><strong>Nicht gedacht ist Kontovia</strong> für Kapitalgesellschaften wie GmbH und UG, die eine Bilanz aufstellen (doppelte Buchführung,
-        Jahresabschluss), und für Betriebe mit mehr als zehn Mitarbeitenden. Lohnabrechnung, Kassensysteme mit TSE-Pflicht, Fahrtenbuch,
-        Gutscheine, Differenzbesteuerung und die One-Stop-Shop-Meldung für Verkäufe an Privatkunden in der EU gibt es nicht.
+        Jahresabschluss), und für Betriebe mit mehr als zehn Mitarbeitenden. Lohnabrechnung, Kassensysteme mit TSE-Pflicht, ein
+        Fahrtenbuch für den Firmenwagen und eine Warenwirtschaft mit Lager gibt es nicht.
         Für Rechnungen und Belege lässt sich Kontovia trotzdem neben einem anderen Programm nutzen; die Buchführung gehört dann dorthin
         oder zu Ihrer Steuerkanzlei.</p>
+        <p><strong>Seit 2.41 dabei:</strong> Verkäufe an Privatkunden in anderen EU-Ländern mit deren Steuersatz und der OSS-Meldung,
+        Gebrauchtwaren mit Differenzbesteuerung, Mehrzweckgutscheine, die private Nutzung des Firmenwagens nach der 1-%-Regel,
+        Fahrten mit dem eigenen Auto nach Kilometern und Rechnungen an viele Kunden auf einmal. Mehr dazu unter
+        „Besondere Steuerfälle“.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -188,6 +192,34 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
+        <h2 class="mt0">Besondere Steuerfälle</h2>
+        <p>Die meisten Buchungen brauchen nur Betrag und Steuersatz. Für die folgenden Fälle wählen Sie im Buchungsfenster unter
+        „Weitere Angaben“ die umsatzsteuerliche Behandlung, auf Rechnungen das Feld „Umsatzsteuer“.</p>
+        <ul>
+          <li><strong>Verkauf an Privatkunden in der EU (OSS).</strong> Verkaufen Sie mehr als 10.000 € im Jahr an Privatleute in
+              anderen EU-Ländern, gilt deren Umsatzsteuer. Wählen Sie das Land des Kunden, Kontovia bietet dessen Steuersätze an.
+              Diese Umsätze fehlen in der deutschen Voranmeldung; unter Auswertungen › Umsatzsteuer steht die OSS-Meldung je Land
+              und Quartal. Sie geben sie im Online-Portal des Bundeszentralamts für Steuern ab. Die Übersicht warnt, sobald die
+              Grenze überschritten ist.</li>
+          <li><strong>Gebrauchtwaren (Differenzbesteuerung, § 25a UStG).</strong> Wer Gebrauchtes von Privatleuten kauft und
+              weiterverkauft, zahlt Umsatzsteuer nur auf den Gewinn. Tragen Sie Verkaufspreis und Einkaufspreis ein. Auf der Rechnung
+              steht keine Umsatzsteuer, sondern der Vermerk „Gebrauchtgegenstände/Sonderregelung“.</li>
+          <li><strong>Gutscheine.</strong> Ein Gutschein für eine bestimmte Sache (Einzweckgutschein) ist ein gewöhnlicher Verkauf.
+              Ein Gutschein für das ganze Sortiment (Mehrzweckgutschein) bleibt beim Verkauf ohne Umsatzsteuer; erst beim Einlösen
+              buchen Sie „Einlösung eines Mehrzweckgutscheins“ mit dem Wert und dem Steuersatz der Ware. Dabei fließt kein Geld,
+              gebucht wird nur die Umsatzsteuer.</li>
+          <li><strong>Private Nutzung des Firmenwagens.</strong> Bei einer neuen Einnahme öffnen Sie „Private Nutzung des
+              Firmenwagens (1-%-Regel)“ und tragen den Bruttolistenpreis ein. Kontovia rechnet den Monatswert und die Umsatzsteuer
+              darauf und schlägt eine monatliche Wiederholung vor. Ein Fahrtenbuch statt der 1-%-Regel führt Kontovia nicht.</li>
+          <li><strong>Fahrten mit dem eigenen Auto.</strong> Bei einer Ausgabe öffnen Sie „Fahrt mit dem eigenen Auto“ und
+              tragen die Kilometer ein. Kontovia rechnet 0,30 € je Kilometer und bucht in Zeile ${formLine(71, new Date().getFullYear())}
+              der Anlage EÜR.</li>
+        </ul>
+        <p class="small muted">Die Steuersätze anderer EU-Länder sind auf dem Stand von Oktober 2026 hinterlegt. Bitte prüfen Sie sie
+        bei Ihrer Steuerberatung oder auf der Seite der EU-Kommission.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
         <h2 class="mt0">Rechnungen schreiben</h2>
         <p>Unter <a data-go="rechnungen">Rechnungen</a> entsteht jede Rechnung als Entwurf. Kunden und Positionen
         wählen Sie aus Kontakten und Produkten oder tragen sie frei ein, auch Einheiten wie Stunden, Tage oder
@@ -200,6 +232,9 @@ function anleitung(root) {
         <p><strong>Gestalten</strong> lassen sich Stil, Farbe, Logo, ein Zusatzbild (etwa Ihre Unterschrift) und die
         Texte. Das ändert nur die Ansicht; die Rechnungsdaten bleiben immer eine gültige E-Rechnung.
         Häufige Rechnungen speichern Sie als <strong>Vorlage</strong>.</p>
+        <p><strong>An mehrere Kunden.</strong> Bei einer ausgestellten Rechnung legt „An mehrere Kunden …“ dieselbe Rechnung für
+        jeden gewählten Kunden an, etwa den Kursbeitrag für alle Teilnehmer. Wahlweise entstehen Entwürfe zum Prüfen, oder Kontovia
+        stellt alle gleich aus, die vollständig sind.</p>
         <p><strong>Bedienung auf der Vorschau.</strong> Teil anklicken zeigt ein Fenster mit allen Einstellungen. Ein
         Klick neben das Fenster schließt nur dieses. Ein Rechtsklick öffnet das Menü, in dem Sie auch Farben wählen.
         Mit einem <strong>Doppelklick</strong> ändern Sie einen Text direkt auf dem Blatt (Strg+Enter beendet, Esc
@@ -307,7 +342,8 @@ function anleitung(root) {
         <p>Unter <a data-go="rechnungen">Rechnungen → Mahnungen</a> stehen alle überfälligen Rechnungen mit dem Vorschlag für die
         nächste Stufe: Zahlungserinnerung, 1. Mahnung, 2. Mahnung mit letzter Frist. Ein Klick auf „Mahnen“ öffnet das
         Fenster mit Frist, Gebühr und Verzugsaufschlag. Danach liegt das Schreiben als PDF vor, mit Ihrer Vorlage, Ihrem
-        Absender und einem GiroCode über den ganzen Betrag. Jede Mahnung steht auch in der Rechnung.
+        Absender und einem GiroCode über den ganzen Betrag. Jede Mahnung steht auch in der Rechnung. Per E-Mail senden Sie sie
+        direkt aus dem Fenster, aus der Rechnung oder aus der Liste „Alle Mahnungen“.
         Gutschriften, bezahlte und stornierte Rechnungen werden nicht gemahnt; bei einer Teilzahlung ist der offene Rest dran.</p>
         <p><strong>Mahngebühr.</strong> Frist und Gebühr je Stufe stellen Sie unter
         <a data-go="settings">Einstellungen → Mahnwesen</a> ein. Beim Erstellen können Sie die Gebühr für das einzelne Schreiben
