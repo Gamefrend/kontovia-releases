@@ -7,7 +7,9 @@
  *
  * Speicher: das private Dateisystem des Browsers (OPFS) über den Weg
  * „opfs-sahpool“, je Konto ein eigener Ordner, darüber die Verschlüsselung von
- * SQLite3 Multiple Ciphers. Ohne OPFS (privater Modus, ältere Browser) hält
+ * SQLite3 Multiple Ciphers. Eingehängt wird über sqlpool.js: erst wenn das
+ * vorige Rechenwerk alle Dateien freigegeben hat, und das Aufräumen der
+ * Bibliothek nach einem Fehler darf den Ordner nie löschen. Ohne OPFS (privater Modus, ältere Browser) hält
  * das Rechenwerk die Datenbank nur im Arbeitsspeicher; gesichert wird dann ein
  * verschlüsseltes Abbild (tresor.js).
  *
@@ -25,6 +27,7 @@
 
 import init from './vendor/sqlite3.mjs';
 import { werkzeug } from './sqlkern.js';
+import { poolEinhaengen, mitLoeschen } from './sqlpool.js';
 
 /** SHA-256 von vendor/sqlite3.wasm (vendor/HERKUNFT.md). */
 const WASM_SHA256 = 'b6aedab9eee5cd5de0f13498e0bf64bb5ee9cc786d1d0303cc365578b64d18ab';
@@ -64,30 +67,6 @@ async function laden() {
   return sqlite3;
 }
 
-const pause = (ms) => new Promise((r) => setTimeout(r, ms));
-
-/**
- * Den Pool des Kontos einhängen. Direkt nach dem Neuladen hält das alte
- * Rechenwerk die Dateien womöglich noch einen Augenblick: dann kurz warten.
- */
-async function poolEinhaengen(konto, ordner) {
-  const name = `kv-${konto}`;
-  let letzter = null;
-  for (let versuch = 0; versuch < 30; versuch++) {
-    try {
-      const p = await sqlite3.installOpfsSAHPoolVfs({ name, directory: ordner, initialCapacity: 8, forceReinitIfPreviouslyFailed: true });
-      await p.reserveMinimumCapacity(8);
-      const rc = sqlite3.capi.sqlite3mc_vfs_create(name, 0);
-      if (rc) throw new Error(`Die Verschlüsselung der Datenbank ließ sich nicht einrichten (${rc}).`);
-      return { pool: p, vfs: `multipleciphers-${name}` };
-    } catch (err) {
-      letzter = err;
-      await pause(Math.min(100 * (versuch + 1), 500));
-    }
-  }
-  throw letzter || new Error('Der Speicher für die Datenbank ist nicht verfügbar.');
-}
-
 function opfsMoeglich() {
   return typeof navigator !== 'undefined' && !!navigator.storage?.getDirectory
     && !!globalThis.FileSystemFileHandle?.prototype?.createSyncAccessHandle;
@@ -102,7 +81,7 @@ const auftraege = {
     let dateien = null;
     if (opfs && opfsMoeglich()) {
       try {
-        const e = await poolEinhaengen(konto, ordner);
+        const e = await poolEinhaengen(sqlite3, { konto, ordner });
         pool = e.pool;
         poolName = `kv-${konto}`;
         dateien = { vfs: e.vfs, pfad: (n) => `/${n}` };
@@ -128,8 +107,9 @@ const auftraege = {
     w?.schliessen();
     if (pool) {
       // Erst die Verschlüsselungsschicht, dann den Pool darunter (samt Ordner).
+      // Nur hier darf der Ordner rekursiv weg (sqlpool.js: loeschSperre).
       sqlite3.capi.sqlite3mc_vfs_destroy(`multipleciphers-${poolName}`);
-      await pool.removeVfs();
+      await mitLoeschen(() => pool.removeVfs());
     }
     pool = null;
     return true;

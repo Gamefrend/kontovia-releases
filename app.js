@@ -28,6 +28,7 @@ import { tarifkonfigAusCache } from './lib/tarifkonfig.js';
 import { istBetreiber } from './lib/admin.js';
 import { messungAn, messungStarten, messungBeenden, ansichtWechsel, ansichtGezeichnet, ladezeit } from './lib/messung.js';
 import { einwilligungFragen } from './lib/messungskarte.js';
+import { eingangBeobachten, eingangFreigeben } from './lib/dateieingang.js';
 import { spracheStarten, spracheGewaehlt, spracheMerken, spracheSetzen, sprache, sprachWahl, sprachWahlVerdrahten, beiSprachwechsel } from './lib/sprache.js';
 
 /* Der Assistent lädt erst, wenn ihn jemand öffnet (lib/assistentfenster.js). */
@@ -171,6 +172,8 @@ async function boot() {
     if (sprache() !== 'de') await spracheSetzen('de');
   }
   await spracheStarten();
+  // Dateien über „Öffnen mit“ oder „Teilen“: warten bis zum Entsperren (lib/dateieingang.js).
+  eingangBeobachten();
   // Was der Vorgang vor dem Neuladen sagen wollte (Abmelden, Konto gewechselt).
   nachricht = nachrichtHolen();
   // Web-Fassung: zurück von einer Anmeldung per Weiterleitung zu Google?
@@ -952,7 +955,8 @@ function renderUnlock(message = '') {
   pw.focus();
 
   const submit = async () => {
-    if (!pw.value) return;
+    // Enter während des Entschlüsselns zählt nicht ein zweites Mal.
+    if (!pw.value || btn.disabled) return;
     btn.disabled = true;
     btn.textContent = 'Entschlüssele …';
     errEl.textContent = '';
@@ -1069,6 +1073,8 @@ async function afterUnlock() {
     await einwilligungFragen({ version: appInfo.version });
     if (messungAn()) messungStarten({ version: appInfo.version });
   } catch (e) { console.error('Nutzungsmessung:', e); }
+  // Eine Datei, die per „Öffnen mit“ oder „Teilen“ kam, geht vor: dann warten die wiederkehrenden Buchungen bis zum nächsten Mal.
+  if (await eingangFreigeben().catch((e) => { console.error('Dateien von außen:', e); return false; })) return;
   // Fällige wiederkehrende Buchungen erst nach der Frage zur Update-Prüfung anbieten.
   // Wer heute schon „Später“ gewählt hat, wird nicht bei jedem Entsperren erneut gefragt.
   import('./views/wiederkehrend.js').then((m) => m.faelligeAnbieten({ merker: kontoSchluessel('wiederkehrendSpaeter', appInfo.konto) }))

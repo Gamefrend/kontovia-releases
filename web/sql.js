@@ -80,6 +80,9 @@ const nodeOrdner = new Map();
 /** Für die Prüfungen: OPFS fehlt (wie im privaten Modus). */
 let nodeOhneOpfs = false;
 export function nodeOpfsAbschalten(aus = true) { nodeOhneOpfs = aus; }
+/** Für die Prüfungen: Motoren, die gestartet und nicht beendet sind (im Browser: laufende Rechenwerke). */
+let nodeOffen = 0;
+export function nodeOffeneMotoren() { return nodeOffen; }
 
 /** Löscht eine Datei im Arbeitsspeicher von SQLite (Nachbildung von OPFS unter Node). */
 function nodeUnlink(sqlite3, p) {
@@ -127,6 +130,7 @@ async function imProzess() {
   let aus = false;
   const pfad = (n) => `/${ordner.replace(/^\./, '')}--${n}`;
   const unlink = (p) => nodeUnlink(sqlite3, p);
+  nodeOffen++;
   const auftraege = {
     start({ konto, ordner: o, opfs = true }) {
       if (!/^[\w-]{1,60}$/.test(String(konto)) || !/^\.[\w-]{1,80}$/.test(String(o))) throw new Error('Ungültige Angaben zum Konto.');
@@ -176,6 +180,7 @@ async function imProzess() {
     beenden() {
       if (aus) return;
       aus = true;
+      nodeOffen--;
       try { w?.schliessen(); } catch { /* schon zu */ }
     },
     beendet: () => aus,

@@ -5,6 +5,7 @@ import {
   addDays, moneyInput, parseMoney,
 } from '../lib/util.js';
 import { STEUER_FELDER } from '../lib/calc.js';
+import { ruecklageEinstellung } from '../lib/steuerruecklage.js';
 import { icon, modal, confirmDialog, askPassword, ok, err, warn, toast, feldHinweis } from '../lib/ui.js';
 import { store, sel, commit, saveNow, setDb, verifyAudit, lockedUntil } from '../lib/store.js';
 import { refresh, navigate, router } from '../lib/router.js';
@@ -47,7 +48,7 @@ const BEREICHE = [
   { id: 'darstellung', icon: 'settings', titel: 'Darstellung & Update', sub: 'Erscheinungsbild, Start, Programmfassung' },
 ];
 /** Wohin ein Sprung aus anderen Ansichten (`abschnitt`) führt. */
-const ABSCHNITT_BEREICH = { cloud: 'daten', speicher: 'daten', mahnwesen: 'firma', benutzer: 'sicherheit', konten: 'sicherheit', lizenz: 'sicherheit' };
+const ABSCHNITT_BEREICH = { cloud: 'daten', speicher: 'daten', mahnwesen: 'firma', ruecklage: 'firma', benutzer: 'sicherheit', konten: 'sicherheit', lizenz: 'sicherheit' };
 const HINWEIS = 'Firmendaten, Steuer, Sicherheit und Darstellung gelten erst nach dem Übernehmen.';
 let bereich = BEREICHE[0].id;
 
@@ -110,12 +111,13 @@ export async function render(root, params, { actions } = {}) {
   if (ABSCHNITT_BEREICH[params?.abschnitt]) bereich = ABSCHNITT_BEREICH[params.abschnitt];
   await draw(root);
   // Aus der Statusleiste („Cloud-Sicherung einrichten“) direkt zur Cloud-Karte.
-  const ZIEL = { cloud: '#cloudCard', speicher: '#speicherCard', mahnwesen: '#mahnCard', benutzer: '#benutzerCard', konten: '#kontenCard', lizenz: '#lizenzCard' };
+  const ZIEL = { cloud: '#cloudCard', speicher: '#speicherCard', mahnwesen: '#mahnCard', ruecklage: '#ruecklageFeld', benutzer: '#benutzerCard', konten: '#kontenCard', lizenz: '#lizenzCard' };
   if (ZIEL[params?.abschnitt]) $(ZIEL[params.abschnitt], root)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 
 async function draw(root) {
   const s = store.db.settings;
+  const rl = ruecklageEinstellung(s);
   const storage = await api.vault.storage().catch(() => null);
   const backups = await api.vault.backups().catch(() => []);
   const until = lockedUntil();
@@ -240,6 +242,48 @@ async function draw(root) {
                 <option value="monatlich" ${s.terminZm === 'monatlich' ? 'selected' : ''}>monatlich</option>
               </select>
               <span class="hint">Für Lieferungen und Leistungen an Unternehmen in anderen EU-Ländern, fällig am 25. nach dem Zeitraum.</span>
+            </div>
+          </fieldset>
+          <fieldset class="mt8" id="ruecklageFeld">
+            <legend class="small strong">Steuerrücklage (Kachel in der Übersicht)</legend>
+            <p class="small muted mt0">Kontovia schätzt aus Ihrem Gewinn, wie viel Steuer Sie für das Jahr zurücklegen sollten. Diese Angaben machen die Schätzung genauer.</p>
+            <div class="form-grid">
+              <div class="field">
+                <label for="s_rlGewerbe">Gewerbesteuer</label>
+                <select id="s_rlGewerbe">
+                  <option value="nein" ${rl.gewerbe ? '' : 'selected'}>nein (freier Beruf)</option>
+                  <option value="ja" ${rl.gewerbe ? 'selected' : ''}>ja (Gewerbebetrieb)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="s_rlHebesatz">Hebesatz der Gemeinde in %</label>
+                <input id="s_rlHebesatz" type="number" min="200" max="900" step="1" value="${rl.hebesatz}">
+              </div>
+              <div class="field">
+                <label for="s_rlSplitting">Veranlagung</label>
+                <select id="s_rlSplitting">
+                  <option value="einzeln" ${rl.splitting ? '' : 'selected'}>einzeln</option>
+                  <option value="zusammen" ${rl.splitting ? 'selected' : ''}>zusammen mit Ehe- oder Lebenspartner</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="s_rlKirche">Kirchensteuer</label>
+                <select id="s_rlKirche">
+                  <option value="0" ${rl.kirche ? '' : 'selected'}>keine</option>
+                  <option value="8" ${rl.kirche === 8 ? 'selected' : ''}>8 % (Bayern, Baden-Württemberg)</option>
+                  <option value="9" ${rl.kirche === 9 ? 'selected' : ''}>9 % (übrige Länder)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="s_rlWeitere">Weitere Einkünfte im Jahr</label>
+                <input id="s_rlWeitere" class="money-input" inputmode="decimal" value="${moneyInput(rl.weitere)}">
+                <span class="hint">Etwa Lohn oder Miete; Abzüge wie Vorsorge mit Minus.</span>
+              </div>
+              <div class="field">
+                <label for="s_rlVoraus">Vorauszahlungen ${new Date().getFullYear()}</label>
+                <input id="s_rlVoraus" class="money-input" inputmode="decimal" value="${moneyInput(rl.vorauszahlungen[new Date().getFullYear()] || 0)}">
+                <span class="hint">Schon gezahlte Einkommen- und Gewerbesteuer für dieses Jahr.</span>
+              </div>
             </div>
           </fieldset>
         </div>
@@ -680,6 +724,16 @@ async function apply(root, { neuZeichnen = true } = {}) {
     if (ab === null) return;
   }
   const svz = parseMoney(val('svz'));
+  const jahrJetzt = new Date().getFullYear();
+  const rlAlt = ruecklageEinstellung(s);
+  const ruecklage = {
+    gewerbe: val('rlGewerbe') === 'ja',
+    hebesatz: Math.min(900, Math.max(200, Math.round(Number(val('rlHebesatz')) || 400))),
+    splitting: val('rlSplitting') === 'zusammen',
+    kirche: Number(val('rlKirche')) || 0,
+    weitere: parseMoney(val('rlWeitere')),
+    vorauszahlungen: { ...rlAlt.vorauszahlungen, [jahrJetzt]: Math.max(0, parseMoney(val('rlVoraus'))) },
+  };
   await commit('einstellungen.aendern', (db) => {
     if (ab !== null) verlaufSetzen(db.settings, bisher, neu, ab);
     Object.assign(db.settings, {
@@ -693,6 +747,7 @@ async function apply(root, { neuZeichnen = true } = {}) {
       taetigSeit: val('taetigSeit'),
       sondervorauszahlungen: { ...(db.settings.sondervorauszahlungen || {}), [svzJahr()]: Math.max(0, svz) },
       terminEst: !!$('#s_terminEst', root)?.checked, terminGewSt: !!$('#s_terminGewSt', root)?.checked, terminZm: val('terminZm'),
+      ruecklage,
       autoLockMinutes: Number(val('autoLockMinutes')),
       theme: val('theme'), startView: val('startView'),
       // Zeitstempel entscheidet beim Cloud-Abgleich, welche Fassung gilt.

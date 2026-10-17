@@ -25,7 +25,7 @@ import { regelAusBuchung, TURNUS } from '../lib/wiederkehrend.js';
 import { ratenAnzahl, ratenPlan, ratenBuchungen, MAX_RATEN } from '../lib/raten.js';
 import { satzBuchungen, satzSumme, weitereTeile, doppelterSatz, SAETZE, MAX_SAETZE } from '../lib/steuersaetze.js';
 import {
-  EU_SAETZE, ossSaetze, ossRegelsatz, ossLand, differenzSteuer, DIFFERENZ_SATZ, gutscheinEinloesung, privatnutzung, KFZ_ANTRIEB,
+  EU_SAETZE, ossSaetze, ossRegelsatz, ossLand, ossArt, OSS_ARTEN, differenzSteuer, DIFFERENZ_SATZ, gutscheinEinloesung, privatnutzung, KFZ_ANTRIEB,
   fahrtBetrag, KM_SATZ, FAHRT_ZEILE,
 } from '../lib/sonderfaelle.js';
 import { LAENDER } from '../lib/rechnung.js';
@@ -116,10 +116,12 @@ export async function render(root, params = {}, { actions } = {}) {
   // Drucken und PDF braucht man am Telefon selten; dort bleiben sie weg (nur-breit, web.css).
   actions.innerHTML = html`<div id="txPeriod"></div>
     <button class="btn" id="txKonto" data-premium="kontoauszug" title="Umsätze aus einer Datei Ihrer Bank übernehmen">${icon('bank', 16)} Kontoauszug einlesen</button>
+    <button class="btn nur-breit" id="txUeberweisen" title="Offene Ausgaben als Datei für Ihr Online-Banking">${icon('euro', 16)} Überweisen</button>
     ${druckenMoeglich() ? raw(`<button class="btn nur-breit" id="txDruck">${icon('print', 16).__raw} Drucken</button>`) : ''}
     <button class="btn nur-breit" id="txPdf">${icon('pdf', 16)} Als PDF</button>`;
   periodCtl = periodControl($('#txPeriod', actions), period, () => list?.render());
   $('#txKonto', actions).addEventListener('click', () => navigate('kontoimport'));
+  $('#txUeberweisen', actions).addEventListener('click', async () => (await import('../lib/ueberweisungen.js')).ueberweisungenDialog());
   $('#txDruck', actions)?.addEventListener('click', () => listeAusgeben('drucken'));
   $('#txPdf', actions).addEventListener('click', () => listeAusgeben('speichern'));
 
@@ -889,6 +891,11 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
         <label for="i_ossLand">Land des Kunden</label>
         <select id="i_ossLand"><option value="">Bitte wählen</option>${laender.map((k) => `<option value="${k}" ${k === land ? 'selected' : ''}>${esc(landName(k))}</option>`).join('')}</select>
         <span class="hint">Es gilt der Steuersatz dieses Landes (Stand Oktober 2026, bitte prüfen). Der Betrag fehlt in der deutschen Voranmeldung und steht in der OSS-Meldung unter Auswertungen.</span>
+      </div>
+      <div class="field">
+        <label for="i_ossArt">Verkauft wurde</label>
+        <select id="i_ossArt">${Object.entries(OSS_ARTEN).map(([k, name]) => `<option value="${k}" ${k === ossArt(tx.oss?.art) ? 'selected' : ''}>${esc(name)}</option>`).join('')}</select>
+        <span class="hint">Die OSS-Meldung führt Warenlieferungen und Dienstleistungen (auch digitale) getrennt.</span>
       </div>`;
     }
     if (treat === 'differenz') {
@@ -951,7 +958,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     const treat = tx.vatTreatment || '';
     if (treat === 'oss' && tx.type === 'income') {
       const land = g('ossLand')?.value ?? tx.oss?.land ?? '';
-      tx.oss = { land };
+      tx.oss = { land, art: ossArt(g('ossArt')?.value ?? tx.oss?.art) };
       // Ein Satz, den es im Zielland nicht gibt, wird dessen Regelsatz.
       if (ossLand(land) && !ossSaetze(land).includes(Number(tx.vatRate))) {
         tx.vatRate = ossRegelsatz(land);

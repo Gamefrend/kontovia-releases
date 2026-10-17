@@ -9,7 +9,7 @@
  */
 
 import {
-  html, raw, esc, $, $$, money, todayISO, int, ymLabel, addDays, relativeDays, sum, fmtDate, MONTHS_SHORT, dz,
+  html, raw, esc, $, $$, money, todayISO, int, ymLabel, addDays, relativeDays, sum, fmtDate, MONTHS, MONTHS_SHORT, dz,
 } from '../lib/util.js';
 import { icon, statCard, deltaBadge, compareLabel, rankBars, donut, emptyState, chart, mountCharts, amountCell, ok } from '../lib/ui.js';
 import { store, sel } from '../lib/store.js';
@@ -20,6 +20,7 @@ import {
 import { steuertermine } from '../lib/fristen.js';
 import { kann } from '../lib/lizenz.js';
 import { projektAuswertung, dauerText } from '../lib/projekte.js';
+import { steuerRuecklage } from '../lib/steuerruecklage.js';
 import { sperrHinweis } from '../lib/lizenzui.js';
 import {
   prefs, scope, scopeToggleHtml, wireScopeToggle, verlaufControls, wireVerlauf, verlaufBody,
@@ -357,6 +358,31 @@ const WIDGETS = {
         <p class="tiny muted mt8 mb0">Fällt eine Frist auf ein Wochenende oder einen Feiertag, gilt der nächste Werktag. ${store.db.settings.vatDeadline === 'dauerfrist' ? 'Mit Dauerfristverlängerung.' : 'Eine Dauerfristverlängerung stellen Sie in den Einstellungen ein.'}</p>`
         : emptyState('Keine Termine', 'In den nächsten Monaten steht keine Steuerfrist an.').__raw;
       return card('Steuertermine', body, { sub: 'nächste Fristen', tight: false, krone: 'steuertermine', ziel: z('calendar', {}, { haupt: true, titel: 'Im Kalender ansehen' }) });
+    },
+  },
+  ruecklage: {
+    // Schätzung der Einkommen-, Gewerbe- und Kirchensteuer auf den Gewinn (lib/steuerruecklage.js); neu, deshalb sichtbar.
+    title: 'Steuerrücklage', size: 4, sichtbarWennNeu: true,
+    render: () => {
+      const r = steuerRuecklage(store.db);
+      const e = r.einstellung;
+      const zeile = (label, wert, titel = '') => (wert ? `<div class="row between"${titel ? ` title="${esc(titel)}"` : ''}><span class="muted">${esc(label)}</span><span class="num">${esc(money(wert))} €</span></div>` : '');
+      const body = r.gewinnJahr <= 0 && !e.weitere
+        ? `<p class="small muted mt0 mb0">Bisher kein Gewinn in ${r.jahr}, also keine Einkommensteuer darauf.</p>`
+        : `
+        <div class="row between"><span>Jetzt zurücklegen</span><strong class="num amount neg" style="font-size:20px">${esc(money(r.zuruecklegen))} €</strong></div>
+        <p class="tiny muted mb8" style="margin-top:4px">${esc(r.monate === 12 ? 'Anteil bis Jahresende' : `Anteil bis Ende ${MONTHS[r.monate - 1]}`)}${r.vorausgezahlt ? esc(`, abzüglich ${money(r.vorausgezahlt)} € Vorauszahlungen`) : ''}</p>
+        ${zeile('Einkommensteuer', r.est, r.anrechnung ? `nach Anrechnung der Gewerbesteuer (${money(r.anrechnung)} €)` : '')}
+        ${zeile('Solidaritätszuschlag', r.soli)}
+        ${zeile('Kirchensteuer', r.kirche)}
+        ${zeile('Gewerbesteuer', r.gewst, `Hebesatz ${e.hebesatz} %`)}
+        <div class="row between" style="border-top:1px solid var(--border);padding-top:6px;margin-top:4px"><span class="muted">Fürs ganze Jahr geschätzt</span><span class="num">${esc(money(r.summe))} €</span></div>
+        <p class="tiny muted mt8 mb0">${r.monate < 12 ? `Hochgerechnet aus ${money(r.gewinnBisher)} € Gewinn bis heute auf ${money(r.gewinnJahr)} € im Jahr.` : `Gewinn ${money(r.gewinnJahr)} €.`}
+          Ohne Sonderausgaben und Freibeträge, eine grobe Schätzung.${e.gesetzt ? '' : ' Gewerbe, Hebesatz und Kirchensteuer stellen Sie in den Einstellungen ein.'}</p>`;
+      return card('Steuerrücklage', body, {
+        sub: String(r.jahr),
+        ziel: z('settings', { abschnitt: 'ruecklage' }, { haupt: true, titel: 'Angaben zur Steuerrücklage in den Einstellungen' }),
+      });
     },
   },
   aufgaben: {

@@ -160,7 +160,7 @@ export function mahnwesenZeigen(root) {
       { key: 'stufe', label: 'Stufe', type: 'num', value: (m) => m.stufe, cell: (m) => `${esc(stufenName(m.stufe))}${m.verworfen ? ' <span class="badge plain">verworfen</span>' : (m.versand || []).length ? ' <span class="badge plain">gesendet</span>' : ''}` },
       { key: 'gebuehr', label: 'Gebühr', type: 'num', cls: 'col-mh-opt', tdCls: 'num col-mh-opt', value: (m) => m.gebuehr, cell: (m) => (m.gebuehr ? `${esc(money(m.gebuehr))} €` : '') },
       { key: 'aufschlag', label: 'Verzugsaufschlag', type: 'num', cls: 'col-mh-opt', tdCls: 'num col-mh-opt', value: (m) => aufschlagSumme(m), cell: (m) => (aufschlagSumme(m) ? `${esc(money(aufschlagSumme(m)))} €` : '') },
-      { key: 'gesamt', label: 'Gefordert', type: 'num', value: (m) => m.gesamt, cell: (m) => `${esc(money(m.gesamt))} €` },
+      { key: 'gesamt', label: 'Gefordert', type: 'num', value: (m) => m.gesamt, cell: (m) => esc(betragText(m.gesamt, m.waehrung || 'EUR')) },
       {
         key: 'aktion', label: '', type: 'none', width: '96px', cls: 'right', tdCls: 'nowrap',
         cell: (m) => `<button class="btn sm ghost" data-pdf="${esc(m.id)}" title="PDF ansehen" aria-label="PDF ansehen">${icon('pdf', 14).__raw}</button>${m.verworfen ? ''
@@ -202,7 +202,7 @@ export function mahnungenKarte(host, r) {
     </div>` : ''}
     ${[...verlauf, ...verworfene].sort((a, b) => String(a.datum).localeCompare(String(b.datum)) || a.stufe - b.stufe).map((m) => `
       <div class="re-datei" data-mid="${esc(m.id)}">
-        <span>${esc(mahnungKurz(m))}${m.verworfen ? ' <span class="badge plain">verworfen</span>' : ''}<div class="tiny muted">Gefordert ${esc(money(m.gesamt))} € bis ${esc(fmtDate(m.frist))}${versandText(m)}</div></span>
+        <span>${esc(mahnungKurz(m))}${m.verworfen ? ' <span class="badge plain">verworfen</span>' : ''}<div class="tiny muted">Gefordert ${esc(betragText(m.gesamt, m.waehrung || 'EUR'))} bis ${esc(fmtDate(m.frist))}${versandText(m)}</div></span>
         <span class="row" style="gap:4px">
           <button class="btn sm ghost" data-pdf="${esc(m.id)}" title="PDF ansehen" aria-label="PDF ansehen">${icon('pdf', 14).__raw}</button>
           ${m.verworfen ? '' : `<button class="btn sm ghost" data-senden="${esc(m.id)}" title="Per E-Mail senden" aria-label="Per E-Mail senden">${icon('external', 14).__raw}</button>`}
@@ -371,15 +371,17 @@ export function mahnungDialog(rechnungId, { onFertig } = {}) {
     g('aufschlagHinweis').textContent = einst.aufschlag.art === 'aus' && !g('prozent').checked && !g('pauschale').checked
       ? 'In den Einstellungen ist der Verzugsaufschlag ausgeschaltet. Hier lässt er sich für dieses eine Schreiben einschalten.' : '';
     const zeile = (l, wert, fett = false) => `<div class="row between" style="gap:12px;${fett ? 'font-weight:600;border-top:1px solid var(--border);padding-top:6px;margin-top:4px' : ''}"><span>${l}</span><span class="num">${wert}</span></div>`;
+    // In der Währung der Rechnung (bei fremder Währung ohne Gebühr und Pauschale, lib/mahnwesen.js).
+    const bt = (v) => esc(betragText(v, b.waehrung));
     g('summe').innerHTML = `
-      ${zeile('Offener Rechnungsbetrag', `${esc(money(b.rest))} €`)}
-      ${b.gebuehrFrueher ? zeile('Mahngebühren früherer Schreiben', `${esc(money(b.gebuehrFrueher))} €`) : ''}
-      ${b.gebuehr ? zeile(`Mahngebühr (${esc(MAHNSTUFEN[b.stufe].kurz)})`, `${esc(money(b.gebuehr))} €`) : ''}
-      ${b.aufschlag.zins ? zeile(`Verzugsaufschlag ${esc(dz(b.aufschlag.satz))} % für ${int(b.aufschlag.tage)} Tage`, `${esc(money(b.aufschlag.zins))} €`) : ''}
-      ${b.aufschlag.pauschale ? zeile('Verzugsaufschlag (Pauschale)', `${esc(money(b.aufschlag.pauschale))} €`) : ''}
-      ${b.aufschlag.anrechnung ? zeile('abzüglich Mahngebühren, auf die Pauschale angerechnet', `−${esc(money(b.aufschlag.anrechnung))} €`) : ''}
-      ${b.nebenBezahlt ? zeile('abzüglich bereits gezahlter Mahnkosten', `−${esc(money(b.nebenBezahlt))} €`) : ''}
-      ${zeile(`Zu zahlen bis ${esc(fmtDate(b.frist))}`, `${esc(money(b.gesamt))} €`, true)}
+      ${zeile('Offener Rechnungsbetrag', bt(b.rest))}
+      ${b.gebuehrFrueher ? zeile('Mahngebühren früherer Schreiben', bt(b.gebuehrFrueher)) : ''}
+      ${b.gebuehr ? zeile(`Mahngebühr (${esc(MAHNSTUFEN[b.stufe].kurz)})`, bt(b.gebuehr)) : ''}
+      ${b.aufschlag.zins ? zeile(`Verzugsaufschlag ${esc(dz(b.aufschlag.satz))} % für ${int(b.aufschlag.tage)} Tage`, bt(b.aufschlag.zins)) : ''}
+      ${b.aufschlag.pauschale ? zeile('Verzugsaufschlag (Pauschale)', bt(b.aufschlag.pauschale)) : ''}
+      ${b.aufschlag.anrechnung ? zeile('abzüglich Mahngebühren, auf die Pauschale angerechnet', bt(-b.aufschlag.anrechnung)) : ''}
+      ${b.nebenBezahlt ? zeile('abzüglich bereits gezahlter Mahnkosten', bt(-b.nebenBezahlt)) : ''}
+      ${zeile(`Zu zahlen bis ${esc(fmtDate(b.frist))}`, bt(b.gesamt), true)}
       ${b.warnungen.map((x) => `<div class="small neg mt8">${esc(x)}</div>`).join('')}`;
   }
 
@@ -402,7 +404,7 @@ export function mahnungDialog(rechnungId, { onFertig } = {}) {
     try {
       const mh = await mahnungErstellen(r.id, wahl());
       m.close();
-      ok(`${stufenName(mh.stufe)} erstellt`, `${betragText(mh.gesamt)} bis ${fmtDate(mh.frist)}`);
+      ok(`${stufenName(mh.stufe)} erstellt`, `${betragText(mh.gesamt, mh.waehrung || 'EUR')} bis ${fmtDate(mh.frist)}`);
       onFertig?.();
       await dann(mh);
     } catch (ex) {

@@ -1136,6 +1136,10 @@ html[data-theme="dark"] .re-blatt { border-color: transparent; }
   .re-pos-summe { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; padding-bottom: 0; }
 }
 .re-pos-menue { padding-top: 4px; }
+/* Rabatt auf die ganze Rechnung, rechts über den Summen */
+.re-gesamtrabatt { display: flex; gap: 8px; margin: 14px 0 0 auto; max-width: 340px; }
+.re-gesamtrabatt .re-mini:first-child { flex: 1 1 auto; }
+.re-gesamtrabatt .re-mini:last-child { flex: 0 0 132px; }
 .re-summen { margin: 14px 0 0 auto; max-width: 340px; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
 .re-summe { display: flex; justify-content: space-between; gap: 16px; }
 .re-summe.muted { color: var(--muted); }

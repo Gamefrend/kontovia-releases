@@ -24,7 +24,7 @@ import { erlaubt } from '../lib/lizenzui.js';
 
 const zustandVon = (b) => belegZustand(b, { rechnungen: sel.invoices() });
 
-/** „Neues Angebot“: eine der drei Belegarten. */
+/** „Neues Angebot“: eine der Belegarten (lib/angebote.js: BELEGARTEN). */
 export function neuBelegMenue(anker) {
   if (!erlaubt('angebote')) return;
   openMenu(anker, {
@@ -140,6 +140,7 @@ export async function belegDetail(root, b, actions) {
   const verweis = (x, art) => html`<a href="#" data-gehe="${x.id}" data-art="${art}">${art === 'rechnung' ? titelVon(x) : BELEGARTEN[art]?.titel || ''} ${x.nummer || 'Entwurf'}</a>`;
   const naechste = [];
   if (b.belegart === 'angebot') naechste.push(['auftrag', 'Auftragsbestätigung erstellen']);
+  if (b.belegart === 'angebot' || b.belegart === 'auftrag') naechste.push(['proforma', 'Proformarechnung erstellen']);
   if (b.belegart !== 'lieferschein') naechste.push(['lieferschein', 'Lieferschein erstellen']);
   const entstanden = [...folge.map((f) => verweis(f.x, f.belegart)), ...rechnungsEntwuerfe.map((r) => verweis(r, 'rechnung'))];
   const versandZeile = (v) => html`${`Versendet am ${fmtDate(String(v.ts).slice(0, 10))}${v.an ? ` an ${v.an}` : ''}${VERSANDART[v.art] ? ` (${VERSANDART[v.art]})` : ''}`}`;

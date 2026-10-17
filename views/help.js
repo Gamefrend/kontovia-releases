@@ -199,8 +199,9 @@ function anleitung(root) {
           <li><strong>Verkauf an Privatkunden in der EU (OSS).</strong> Verkaufen Sie mehr als 10.000 € im Jahr an Privatleute in
               anderen EU-Ländern, gilt deren Umsatzsteuer. Wählen Sie das Land des Kunden, Kontovia bietet dessen Steuersätze an.
               Diese Umsätze fehlen in der deutschen Voranmeldung; unter Auswertungen › Umsatzsteuer steht die OSS-Meldung je Land
-              und Quartal. Sie geben sie im Online-Portal des Bundeszentralamts für Steuern ab. Die Übersicht warnt, sobald die
-              Grenze überschritten ist.</li>
+              und Quartal. Sie geben sie im Online-Portal des Bundeszentralamts für Steuern ab; den Knopf „Datei“ beim Quartal
+              laden Sie dort hoch. Geben Sie beim Verkauf an, ob es eine Ware oder eine Dienstleistung war, die Meldung trennt
+              beides. Die Übersicht warnt, sobald die Grenze überschritten ist.</li>
           <li><strong>Gebrauchtwaren (Differenzbesteuerung, § 25a UStG).</strong> Wer Gebrauchtes von Privatleuten kauft und
               weiterverkauft, zahlt Umsatzsteuer nur auf den Gewinn. Tragen Sie Verkaufspreis und Einkaufspreis ein. Auf der Rechnung
               steht keine Umsatzsteuer, sondern der Vermerk „Gebrauchtgegenstände/Sonderregelung“.</li>
@@ -257,6 +258,9 @@ function anleitung(root) {
         Unternehmen in der EU“ (der Kunde schuldet die Steuer, die Rechnung gehört in die Zusammenfassende Meldung). Für Kunden
         außerhalb der EU, etwa in der Schweiz, in Großbritannien oder den USA, wählen Sie „Leistung an Unternehmen außerhalb der
         EU“. Bauleistungen und ähnliche Fälle an deutsche Unternehmen laufen über „Steuerschuld beim Kunden im Inland“.</p>
+        <p><strong>Rabatt.</strong> Einen Rabatt geben Sie je Position in Prozent an oder unter den Positionen für die ganze
+        Rechnung, in Prozent oder als Betrag. Bei mehreren Steuersätzen verteilt Kontovia ihn auf die Sätze; die Umsatzsteuer
+        rechnet danach vom ermäßigten Betrag.</p>
         <p><strong>Skonto und Ausfall.</strong> Zahlt ein Kunde mit Skonto oder gar nicht mehr, öffnen Sie die offene Buchung und
         wählen „Ausbuchen“. Kontovia berichtigt Einnahme und Umsatzsteuer im Zeitraum des Ausbuchens. Beim Kontoauszug geht das
         bei einer Teilzahlung gleich mit.</p>
@@ -268,7 +272,7 @@ function anleitung(root) {
         den Kurs ein (1 € = … USD). Positionen und Summen stehen dann in dieser Währung; die Rechnung nennt den Kurs und, wenn
         Umsatzsteuer anfällt, die Steuer in Euro. Gebucht wird in Euro. Für die Umsatzsteuer gilt der Monatskurs, den das
         Bundesfinanzministerium veröffentlicht. Kommt später auf dem Konto ein etwas anderer Euro-Betrag an, übernimmt der
-        Kontoauszug ihn als Kursdifferenz. Erinnerungen und Mahnungen für solche Rechnungen schreiben Sie selbst.</p>
+        Kontoauszug ihn als Kursdifferenz. Erinnerungen und Mahnungen schreibt Kontovia in der Währung der Rechnung, ohne Mahngebühr und Pauschale.</p>
         <p class="small">Der automatische Empfang von E-Rechnungen kommt mit einer der nächsten Versionen. Bis dahin
         lesen Sie eine erhaltene E-Rechnung unter Rechnungen → Eingang ein.</p>
       </div></div>
@@ -282,6 +286,11 @@ function anleitung(root) {
         Auftragsbestätigung, den Lieferschein oder gleich die Rechnung. Kunde und Positionen gehen mit. Die Rechnung entsteht als
         Entwurf, den Sie prüfen und selbst ausstellen; danach zeigt das Angebot „Berechnet“.</p>
         <p>Angebote zählen nirgends als Einnahme, auch nicht in der Umsatzsteuer. Erst die Rechnung ist eine Rechnung.</p>
+        <p><strong>Proformarechnung.</strong> Für Vorkasse oder den Zoll schreiben Sie eine Proformarechnung (Nummer etwa
+        PF-2026-0001). Sie sieht aus wie eine Rechnung, mit Bankverbindung und GiroCode, trägt aber den Vermerk, dass sie keine
+        Rechnung ist. Gebucht wird nichts. Zahlt der Kunde vorab, buchen Sie den Eingang als Einnahme mit Umsatzsteuer, denn für
+        eine Anzahlung entsteht die Steuer schon mit der Zahlung. In der Rechnung tragen Sie den Betrag dann unter „Bereits
+        gezahlt“ ein.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -292,6 +301,11 @@ function anleitung(root) {
         sie, bevor Sie die Buchung anlegen.</p>
         <p><strong>Alles bleibt auf diesem Gerät.</strong> Der Beleg wird nicht hochgeladen, auch nicht zum Lesen. Das erste
         Foto braucht ein, zwei Sekunden länger, weil die Texterkennung startet. Sie liest deutsche und englische Belege.</p>
+        <p><strong>Aus anderen Apps.</strong> Ist Kontovia als App installiert, schicken Sie einen Beleg am Android-Handy über
+        „Teilen“ an Kontovia, etwa aus dem Mailprogramm oder der Galerie. Am Computer öffnen Sie eine Datei mit der rechten
+        Maustaste über „Öffnen mit“ in Kontovia (Chrome und Edge). Belege landen in einer neuen Buchung, Kontoauszüge im
+        Kontoauszug, andere Dateien wie DATEV oder Excel unter Import. Ist Kontovia gesperrt, wartet die Datei bis zum
+        Entsperren. Auf iPhone und iPad geht das noch nicht; dort wählen Sie den Beleg unter „Neue Buchung“ › „Aus Beleg“.</p>
         <p><strong>Bekannte Läden und Anbieter.</strong> Supermärkte, Tankstellen, Baumärkte, die Bahn, Post, Telefon- und
         Softwareanbieter erkennt Kontovia am Namen, auch wenn der Kopf des Bons schlecht lesbar ist. Dazu schlägt es eine
         Kategorie vor: wie Sie beim selben Lieferanten früher gebucht haben, sonst nach der Art des Ladens, etwa Kfz-Kosten für
@@ -335,6 +349,11 @@ function anleitung(root) {
         die Rechnung vor. Gebühren werden eigene Ausgaben. Auszahlungen auf Ihr Bankkonto sind ein Übertrag zwischen Ihren Konten: Kontovia
         bucht sie nicht, auch nicht, wenn sie später im Kontoauszug der Bank auftauchen. Kontovia verbindet sich dafür nicht mit PayPal
         oder Stripe; es liest nur die Datei.</p>
+        <p><strong>Rechnungen von Lieferanten bezahlen.</strong> Unter Buchungen › „Überweisen“ (oder Rechnungen › Eingang) wählen Sie offene
+        Ausgaben, und Kontovia erstellt daraus eine Datei für Ihr Online-Banking. Die IBAN des Empfängers nimmt Kontovia aus dem Kontakt, aus
+        der E-Rechnung oder von einer früheren Zahlung; fehlt sie, tragen Sie sie im Fenster ein. Die Datei laden Sie im Online-Banking hoch
+        (meist „Sammelüberweisung“ oder „SEPA-Datei“) und geben sie dort mit Ihrer TAN frei. Kontovia verbindet sich nicht mit Ihrer Bank.
+        Bezahlt ist die Ausgabe, sobald Sie danach den Kontoauszug einlesen.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body" id="hilfe-mahnwesen">
@@ -518,6 +537,11 @@ function anleitung(root) {
         <p>Jede Zahl der Übersicht lässt sich anklicken: Die Einnahmen führen zu den Zahlungseingängen des Zeitraums,
         der Gewinn zur Gewinn- und Verlustrechnung, eine Kategorie oder ein Monat zu den dazu passenden Buchungen.
         Ein Klick auf die Überschrift eines Moduls oder auf eine freie Stelle in seiner Karte öffnet die zugehörige Ansicht.</p>
+        <p><strong>Steuerrücklage.</strong> Das Modul schätzt, wie viel Einkommensteuer, Solidaritätszuschlag, Kirchensteuer und
+        Gewerbesteuer auf Ihren Gewinn des Jahres zukommen, und wie viel davon Sie bis heute zurücklegen sollten. Der Gewinn bis heute
+        wird dafür aufs Jahr hochgerechnet. Ob Gewerbesteuer anfällt, den Hebesatz Ihrer Gemeinde, Kirchensteuer, weitere Einkünfte
+        und schon gezahlte Vorauszahlungen tragen Sie unter Einstellungen › Firma &amp; Steuern ein. Sonderausgaben und Freibeträge
+        kennt die Schätzung nicht; den genauen Betrag nennt erst der Steuerbescheid.</p>
         <p class="small">Die Anordnung gilt nur für dieses Gerät. Am Telefon passt oft eine andere als
         am großen Bildschirm. In den Tresor und den Cloud-Abgleich geht sie nicht.</p>
       </div></div>
@@ -534,6 +558,19 @@ function anleitung(root) {
         Verlauf und in der Karte <em>Durchschnittswerte</em> der Gewinn- und Verlustrechnung. Dort
         finden Sie auch den Wert je Buchung sowie den besten und schwächsten Monat. Gemittelt wird
         über die Monate, die schon begonnen haben, im laufenden Jahr also nicht über zwölf.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
+        <h2 class="mt0">BWA, Summen und Salden, Umsatzsteuer im Jahr</h2>
+        <p><strong>BWA.</strong> Unter Auswertungen › BWA stehen Ihre Zahlen so, wie eine Steuerkanzlei sie zeigt: Umsatz, Material,
+        Rohertrag, die Kosten nach Art (Personal, Räume, Fahrzeug, Werbung und Reisen, Abschreibungen …) und das Ergebnis, jeweils mit
+        dem Anteil am Umsatz. Wählen Sie einen Monat oder ein Quartal, steht das Jahr bis dahin daneben.</p>
+        <p><strong>Summen und Salden.</strong> Die Liste zeigt je Sachkonto (SKR03 oder SKR04, wie unter Einstellungen gewählt), was im
+        Zeitraum im Soll und im Haben gebucht wurde. Die Konten kommen aus Ihren Kategorien und Konten. Ihre Kanzlei kann damit Ihre
+        Zahlen mit ihren vergleichen.</p>
+        <p><strong>Umsatzsteuer im Jahr.</strong> Im Reiter Umsatzsteuer steht unten die Jahresübersicht: die Werte des Jahres, die
+        Voranmeldungen und was danach noch zu zahlen ist oder erstattet wird. Haben Sie Voranmeldungen unter Import eingelesen, zählen
+        deren gemeldete Werte.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">

@@ -33,6 +33,8 @@ let st = leer();
 const neuStart = () => ({ ...leer(), kontoId: st.kontoId, paramsRef: st.paramsRef });
 // Beim Sperren bleibt vom eingelesenen Kontoauszug nichts im Speicher.
 beimSperren(() => { st = leer(); });
+/** Dateien von außen (`params.datei`) liest die Ansicht nur einmal, nicht nach „Zurück“. */
+const angenommen = new WeakSet();
 
 const atmen = () => new Promise((r) => setTimeout(r, 0));
 /** Gibt den Zellen jeder Zeile eine Klasse nach ihrer Spalte (für die Kartenansicht am Telefon, web.css). */
@@ -53,6 +55,12 @@ export async function render(root, params = {}, { actions } = {}) {
   actions.innerHTML = `<button class="btn" id="kiRegeln">${icon('settings', 15).__raw} Regeln und Vorlagen</button>`;
   $('#kiRegeln', actions).addEventListener('click', () => regelnDialog());
   zeichnen(root);
+  // Per „Öffnen mit“ oder „Teilen“ gekommen (lib/dateieingang.js): gleich einlesen, aber nur einmal.
+  const datei = params.datei;
+  if (datei && typeof datei === 'object' && !angenommen.has(datei)) {
+    angenommen.add(datei);
+    await dateiLesen(datei, root);
+  }
 }
 
 function zeichnen(root) {

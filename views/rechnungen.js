@@ -829,12 +829,14 @@ function eingang(root) {
             E-Rechnung aus Ihrem Postfach und fügen Sie sie hier hinzu. Kontovia zeigt sie lesbar an und bereitet die Buchung vor.</p>
           <div class="row wrap">
             <button class="btn primary" id="reHinzu">${icon('plus', 15).__raw} E-Rechnung hinzufügen</button>
+            <button class="btn" id="reUeberweisen" title="Offene Ausgaben als Datei für Ihr Online-Banking">${icon('euro', 15).__raw} Überweisungen vorbereiten</button>
           </div>
         </div>
       </div>
     </div>
     <div class="card" id="reEingangListe"></div>`;
   $('#reHinzu', root).addEventListener('click', eingangHinzufuegen);
+  $('#reUeberweisen', root).addEventListener('click', async () => (await import('../lib/ueberweisungen.js')).ueberweisungenDialog());
 
   mountTable($('#reEingangListe', root), {
     id: 'rechnungen-eingang',
@@ -888,6 +890,8 @@ export async function eingangHinzufuegen(gewaehlt = null) {
     gelesen: {
       format: gelesen.format, nummer: gelesen.nummer, datum: gelesen.datum, faellig: gelesen.faellig, waehrung: gelesen.waehrung,
       verkaeufer: gelesen.verkaeufer?.name || '', brutto: gelesen.brutto ?? gelesen.zahlbetrag ?? 0, gutschrift: !!gelesen.gutschrift,
+      // Für „Überweisungen vorbereiten“ (lib/sepa.js): Konto und gewünschter Verwendungszweck des Lieferanten.
+      iban: String(gelesen.iban || '').replace(/\s/g, '').toUpperCase(), zweck: String(gelesen.verwendungszweck || '').slice(0, 140),
     },
     transactionId: '',
     createdAt: new Date().toISOString(),

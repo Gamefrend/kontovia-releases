@@ -3,7 +3,8 @@
 import {
   html, raw, esc, $, $$, money, fmtDate, todayISO, int, sum, ymLabel, dz,
 } from '../lib/util.js';
-import { icon, statCard, deltaBadge, compareLabel, rankBars, emptyState, ok, err, modal, chart, mountCharts, segToggle, wireSeg } from '../lib/ui.js';
+import { icon, statCard, deltaBadge, compareLabel, rankBars, emptyState, ok, err, warn, modal, chart, mountCharts, segToggle, wireSeg } from '../lib/ui.js';
+import { ossDatei, OSS_ARTEN } from '../lib/sonderfaelle.js';
 import { store, sel } from '../lib/store.js';
 import {
   compareRanges, trend, euerReport, vatReturn, vatPeriods, balanceSheet,
@@ -17,7 +18,7 @@ import {
 } from '../lib/prefs.js';
 import { defaultPeriod, periodControl, periodLabel, setPeriod } from '../lib/period.js';
 import * as R from '../lib/reports.js';
-import { pdfSpeichern, pdfZeigen, drucken, druckenMoeglich } from '../lib/pdfausgabe.js';
+import { pdfSpeichern, pdfZeigen, drucken, druckenMoeglich, base64 } from '../lib/pdfausgabe.js';
 import { table, mountTables } from '../lib/table.js';
 import { eintragOeffnen } from '../lib/oeffnen.js';
 import { navigate } from '../lib/router.js';
@@ -25,6 +26,7 @@ import { checkNotice, wireCheckLinks } from './spruenge.js';
 import { vergleich, vergleichEinstellung } from './jahresvergleich.js';
 import { sperrKarteZeigen, erlaubt } from '../lib/lizenzui.js';
 import { kassenbuchZeigen, vorschauZeigen, gewaehlteKasse, vorschauHorizont } from './kassenbuch.js';
+import { bwa, summenSalden, ustJahr } from '../lib/bwa.js';
 
 const api = window.kontovia;
 const period = defaultPeriod();
@@ -33,11 +35,13 @@ let tab = 'guv';
 let periodCtl = null;
 
 /** Reiter, die zu einer Premium-Funktion gehören (Krone am Reiter, Sperrkarte statt Inhalt). */
-const TAB_FUNKTION = { euer: 'euer', anlagen: 'anlagen', vergleich: 'jahresvergleich', kasse: 'kassenbuch', vorschau: 'liquiditaet' };
+const TAB_FUNKTION = { euer: 'euer', bwa: 'euer', susa: 'euer', anlagen: 'anlagen', vergleich: 'jahresvergleich', kasse: 'kassenbuch', vorschau: 'liquiditaet' };
 
 const TABS = {
   guv: 'Gewinn & Verlust',
   euer: 'Anlage EÜR',
+  bwa: 'BWA',
+  susa: 'Summen und Salden',
   ust: 'Umsatzsteuer',
   bilanz: 'Vermögen',
   opos: 'Offene Posten',
@@ -97,7 +101,7 @@ function draw(root) {
   if (TAB_FUNKTION[tab] && sperrKarteZeigen(body, TAB_FUNKTION[tab])) return;
   const neu = () => draw(root);
   ({
-    guv, euer, ust, bilanz, opos, konten, anlagen, vergleich,
+    guv, euer, ust, bilanz, opos, konten, anlagen, vergleich, bwa: bwaTab, susa: susaTab,
     // Kasse und Vorschau zählen jede Bewegung des Geldes, auch private (sonst stimmte der Bestand nicht).
     kasse: (b) => kassenbuchZeigen(b, store.db, period, neu),
     vorschau: (b) => vorschauZeigen(b, store.db, neu),
@@ -522,8 +526,21 @@ function ust(root, db) {
         </div>
       </div>
     </div>
+    ${raw(ustJahrKarte(db, year))}
     ${raw(ossKarte(db, year))}`;
 
+  $$('[data-oss-datei]', root).forEach((b) => b.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const q = ossQuartale(db, year)[Number(b.dataset.ossDatei)];
+    const d = ossDatei(q.result);
+    if (d.fehler.length) warn('Nicht alles in der Datei', `${d.fehler.join('; ')}. Tragen Sie diese Werte im Portal von Hand ein.`);
+    try {
+      await api.file.download({ dataBase64: base64(new TextEncoder().encode(d.text)), defaultName: `OSS_${year}_Q${Number(b.dataset.ossDatei) + 1}.csv` });
+    } catch (ex) { err('Datei nicht erstellt', ex.message); }
+  }));
+  $('#ustJahrPdf', root)?.addEventListener('click', async () => {
+    try { const pfad = await pdfSpeichern(R.ustJahrPdf(db, year), `Umsatzsteuer-Jahr_${year}.pdf`); if (pfad) ok('PDF gespeichert', pfad); } catch (e) { err('PDF konnte nicht erstellt werden', e.message); }
+  });
   $$('[data-from]', root).forEach((tr) => tr.addEventListener('click', () => {
     setPeriod(period, tr.dataset.from, tr.dataset.to);
     periodCtl?.update();
@@ -543,17 +560,20 @@ function ossKarte(db, year) {
   return `<div class="card mt16">
     <div class="card-head"><h2>OSS-Meldung (Verkäufe an Privatkunden in der EU)</h2><span class="sub">${esc(periodLabel(period))}</span></div>
     ${m.ohneLand.length ? `<div class="card-body"><div class="notice warn mb0">${m.ohneLand.length === 1 ? 'Eine Buchung' : `${int(m.ohneLand.length)} Buchungen`} ohne Land des Kunden. Bitte im Buchungsfenster unter „Weitere Angaben“ nachtragen.</div></div>` : ''}
+    ${m.ohneArt.length ? `<div class="card-body"><div class="notice mb0">${m.ohneArt.length === 1 ? 'Eine Buchung' : `${int(m.ohneArt.length)} Buchungen`} ohne Angabe, ob Ware oder Dienstleistung; sie zählen als Warenlieferung. Ändern lässt es sich im Buchungsfenster unter „Weitere Angaben“.</div></div>` : ''}
     <div class="table-wrap"><table class="data">
-      <thead><tr><th>Land</th><th class="num">Satz</th><th class="num">Netto</th><th class="num">Umsatzsteuer</th><th class="num">Buchungen</th></tr></thead>
-      <tbody>${m.zeilen.length ? m.zeilen.map((z) => `<tr><td>${land(z.land)}</td><td class="num">${esc(dz(z.satz))} %</td><td class="num">${esc(money(z.netto))} €</td><td class="num">${esc(money(z.steuer))} €</td><td class="num">${int(z.anzahl)}</td></tr>`).join('')
-    : '<tr><td colspan="5" class="muted">Keine OSS-Verkäufe in diesem Zeitraum.</td></tr>'}</tbody>
-      <tfoot><tr><td colspan="2">Zusammen</td><td class="num">${esc(money(m.netto))} €</td><td class="num">${esc(money(m.steuer))} €</td><td></td></tr></tfoot>
+      <thead><tr><th>Land</th><th>Art</th><th class="num">Satz</th><th class="num">Netto</th><th class="num">Umsatzsteuer</th><th class="num">Buchungen</th></tr></thead>
+      <tbody>${m.zeilen.length ? m.zeilen.map((z) => `<tr><td>${land(z.land)}</td><td>${esc(OSS_ARTEN[z.art] || '')}</td><td class="num">${esc(dz(z.satz))} %</td><td class="num">${esc(money(z.netto))} €</td><td class="num">${esc(money(z.steuer))} €</td><td class="num">${int(z.anzahl)}</td></tr>`).join('')
+    : '<tr><td colspan="6" class="muted">Keine OSS-Verkäufe in diesem Zeitraum.</td></tr>'}</tbody>
+      <tfoot><tr><td colspan="3">Zusammen</td><td class="num">${esc(money(m.netto))} €</td><td class="num">${esc(money(m.steuer))} €</td><td></td></tr></tfoot>
     </table></div>
     <div class="table-wrap"><table class="data">
-      <thead><tr><th>Quartal ${year}</th><th class="num">Netto</th><th class="num">Umsatzsteuer</th><th>Abgabe bis</th></tr></thead>
-      <tbody>${quartale.map((q) => `<tr class="clickable" data-from="${q.from}" data-to="${q.to}"><td>${esc(q.label)}</td><td class="num">${esc(money(q.result.netto))} €</td><td class="num">${esc(money(q.result.steuer))} €</td><td>${esc(fmtDate(q.frist))}</td></tr>`).join('')}</tbody>
+      <thead><tr><th>Quartal ${year}</th><th class="num">Netto</th><th class="num">Umsatzsteuer</th><th>Abgabe bis</th><th></th></tr></thead>
+      <tbody>${quartale.map((q, i) => `<tr class="clickable" data-from="${q.from}" data-to="${q.to}"><td>${esc(q.label)}</td><td class="num">${esc(money(q.result.netto))} €</td><td class="num">${esc(money(q.result.steuer))} €</td><td>${esc(fmtDate(q.frist))}</td>
+        <td class="right">${q.result.zeilen.length ? `<button type="button" class="btn sm" data-oss-datei="${i}" title="Datei zum Hochladen im Online-Portal des Bundeszentralamts für Steuern">${icon('export', 13).__raw} Datei</button>` : ''}</td></tr>`).join('')}</tbody>
     </table></div>
-    <div class="card-body"><p class="small muted mb0">Die OSS-Meldung geben Sie vierteljährlich im Online-Portal des Bundeszentralamts für Steuern ab, auch wenn nichts verkauft wurde, und überweisen die Steuer dorthin. Gezählt wird nach Rechnungsdatum. Diese Umsätze stehen nicht in der deutschen Voranmeldung.</p></div>
+    <div class="card-body"><p class="small muted mb0">Die OSS-Meldung geben Sie vierteljährlich im Online-Portal des Bundeszentralamts für Steuern ab, auch wenn nichts verkauft wurde, und überweisen die Steuer dorthin.
+      Mit „Datei“ erstellt Kontovia die Meldung des Quartals zum Hochladen dort (Steuererklärung OSS, „Datei importieren“). Gezählt wird nach Rechnungsdatum. Diese Umsätze stehen nicht in der deutschen Voranmeldung.</p></div>
   </div>`;
 }
 
@@ -773,6 +793,96 @@ function anlagen(root, db) {
 }
 
 /* -------------------------------------------------------------------------- */
+/* BWA, Summen und Salden (lib/bwa.js)                                         */
+/* -------------------------------------------------------------------------- */
+
+const prozentText = (x) => (x === null ? '' : `${dz((x * 100).toFixed(1))} %`);
+
+function bwaTab(root, db) {
+  const b = bwa(db, period.from, period.to);
+  const jahrBeginn = `${period.to.slice(0, 4)}-01-01`;
+  const kum = period.from > jahrBeginn ? bwa(db, jahrBeginn, period.to) : null;
+  const zeile = (z, i) => {
+    const stark = z.art !== 'posten';
+    const ton = z.art === 'ergebnis' ? (z.betrag >= 0 ? 'amount pos' : 'amount neg') : '';
+    return `<tr${stark ? ' class="strong"' : ''}${z.art === 'ergebnis' ? ' style="border-top:2px solid var(--border-strong)"' : ''}>
+      <td>${esc(z.label)}</td>
+      <td class="num ${ton}">${esc(money(z.betrag))} €</td><td class="num muted">${esc(prozentText(z.anteil))}</td>
+      ${kum ? `<td class="num">${esc(money(kum.zeilen[i].betrag))} €</td><td class="num muted">${esc(prozentText(kum.zeilen[i].anteil))}</td>` : ''}
+    </tr>`;
+  };
+  root.innerHTML = html`
+    ${raw(scopeWarning())}
+    <div class="grid c3 mb16">
+      ${statCard({ label: 'Umsatz', value: `${esc(money(b.umsatz))} €`, tone: 'pos' })}
+      ${statCard({ label: 'Gesamtkosten', value: `${esc(money(b.gesamtkosten))} €`, tone: 'neg' })}
+      ${statCard({ label: 'Ergebnis vor Steuern', value: `${esc(money(b.ergebnis))} €`, tone: b.ergebnis >= 0 ? 'pos' : 'neg' })}
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Betriebswirtschaftliche Auswertung</h2><span class="sub">${periodLabel(period)}</span></div>
+      <div class="table-wrap"><table class="data">
+        <thead><tr><th>Bezeichnung</th><th class="num">Zeitraum</th><th class="num">% Umsatz</th>${kum ? raw('<th class="num">Seit Jahresbeginn</th><th class="num">% Umsatz</th>') : ''}</tr></thead>
+        <tbody>${raw(b.zeilen.map(zeile).join(''))}</tbody>
+      </table></div>
+      <div class="card-body">
+        <p class="small muted mb0">Die BWA ordnet Ihre Einnahmen und Ausgaben wie eine Kanzlei: Umsatz, Material, Kostenarten, Ergebnis.
+        Grundlage sind die Zeilen der Anlage EÜR, nach Zahlungstag und ohne Umsatzsteuer. Kosten stehen in voller Höhe,
+        auch wo die EÜR sie kürzt${b.gekuerzt ? ` (steuerlich nicht abziehbar: ${esc(money(b.gekuerzt))} €)` : ''}.</p>
+      </div>
+    </div>`;
+}
+
+function susaTab(root, db) {
+  const s = summenSalden(db, period.from, period.to);
+  const saldo = (k) => (k.saldo ? `${money(Math.abs(k.saldo))} ${k.saldo > 0 ? 'S' : 'H'}` : '0,00');
+  root.innerHTML = html`
+    ${raw(scopeWarning())}
+    <div class="card">
+      <div class="card-head"><h2>Summen- und Saldenliste</h2><span class="sub">${periodLabel(period)} · ${s.rahmen}</span></div>
+      ${s.konten.length ? raw(html`<div class="table-wrap"><table class="data">
+        <thead><tr><th>Konto</th><th>Bezeichnung</th><th class="num">Soll</th><th class="num">Haben</th><th class="num">Saldo</th></tr></thead>
+        <tbody>${raw(s.konten.map((k) => `<tr><td class="num strong">${esc(k.nr)}</td><td>${esc(k.name)}</td><td class="num">${esc(money(k.soll))}</td><td class="num">${esc(money(k.haben))}</td><td class="num">${esc(saldo(k))}</td></tr>`).join(''))}</tbody>
+        <tfoot><tr><td></td><td>Summe</td><td class="num">${money(s.soll)}</td><td class="num">${money(s.haben)}</td><td></td></tr></tfoot>
+      </table></div>`) : emptyState('Keine Zahlungen im Zeitraum', 'Die Liste zählt, was im Zeitraum bezahlt wurde.')}
+      <div class="card-body">
+        <p class="small muted mb0">Gebucht nach Zahlungstag aus Ihren Kategorien und Konten mit deren Sachkonten (${s.rahmen}, einstellbar unter Einstellungen),
+        dazu die Abschreibung. Eine vereinfachte Liste aus Kontovia; die Buchführung Ihrer Kanzlei kann abweichen.</p>
+      </div>
+    </div>`;
+}
+
+/** Jahresübersicht für die Umsatzsteuererklärung (lib/bwa.js: ustJahr), im Reiter Umsatzsteuer. */
+function ustJahrKarte(db, year) {
+  const u = ustJahr(db, year);
+  if (u.ohneUst) return '';
+  const quelle = (p) => (p.quelle === 'meldung' ? 'eingelesen' : p.laeuft ? 'läuft noch' : 'berechnet');
+  return html`
+    <div class="card mt16">
+      <div class="card-head"><h2>Jahresübersicht ${year} für die Umsatzsteuererklärung</h2><div class="spacer"></div>
+        <button class="btn sm" id="ustJahrPdf">${icon('pdf', 14)} Als PDF</button></div>
+      <div class="grid c2">
+        <div class="table-wrap"><table class="data">
+          <thead><tr><th class="num">Kz</th><th>Werte des Jahres</th><th class="num">Betrag</th></tr></thead>
+          <tbody>${raw(u.kennzahlen.map((k) => `<tr><td class="num strong">${esc(k.nr)}</td><td>${esc(k.label)}</td><td class="num">${esc(money(k.wert))} €</td></tr>`).join(''))}</tbody>
+          <tfoot><tr><td></td><td>Umsatzsteuer des Jahres</td><td class="num">${money(u.jahressteuer)} €</td></tr></tfoot>
+        </table></div>
+        <div class="table-wrap"><table class="data">
+          <thead><tr><th>Voranmeldung</th><th></th><th class="num">Vorauszahlung</th></tr></thead>
+          <tbody>${raw(u.perioden.map((p) => `<tr><td>${esc(p.label)}</td><td class="small muted">${esc(quelle(p))}</td><td class="num">${esc(money(p.angemeldet))} €</td></tr>`).join(''))}</tbody>
+          <tfoot>
+            <tr><td>Summe der Vorauszahlungen</td><td></td><td class="num">${money(u.vorauszahlungen)} €</td></tr>
+            <tr><td><strong>${u.rest >= 0 ? 'Noch zu zahlen' : 'Zu erstatten'}</strong></td><td></td><td class="num"><strong class="amount ${u.rest > 0 ? 'neg' : u.rest < 0 ? 'pos' : ''}">${money(Math.abs(u.rest))} €</strong></td></tr>
+          </tfoot>
+        </table></div>
+      </div>
+      <div class="card-body">
+        <p class="small muted mb0">Die Werte tragen Sie in die Umsatzsteuererklärung in ELSTER ein. Die Nummern sind die der Voranmeldung;
+        im Formular der Erklärung haben die Felder eigene Nummern. Eingelesene Voranmeldungen (Import) zählen mit ihren gemeldeten Werten.</p>
+      </div>
+    </div>`;
+}
+
+/* -------------------------------------------------------------------------- */
 /* PDF                                                                         */
 /* -------------------------------------------------------------------------- */
 
@@ -788,6 +898,8 @@ async function exportPdf(wie) {
   const makers = {
     guv: () => [R.guvReport(db, period), `GuV_${period.from}_${period.to}.pdf`],
     euer: () => [R.euerPdf(db, period), `Anlage-EUER_${period.from.slice(0, 4)}.pdf`],
+    bwa: () => [R.bwaPdf(db, period), `BWA_${period.from}_${period.to}.pdf`],
+    susa: () => [R.susaPdf(db, period), `Summen-und-Salden_${period.from}_${period.to}.pdf`],
     ust: () => [R.ustvaPdf(db, period), `UStVA_${period.from}_${period.to}.pdf`],
     bilanz: () => [R.balancePdf(db, period), `Vermoegensuebersicht_${period.to}.pdf`],
     opos: () => [R.openItemsPdf(db, todayISO()), `Offene-Posten_${todayISO()}.pdf`],

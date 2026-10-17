@@ -10,7 +10,7 @@ import {
 } from '../lib/calc.js';
 import { neuesAnlagegut, anlageFelder, wireAnlageFelder, anlageAusFeldern, anlageGesperrt } from './anlageform.js';
 import { regelTabelle, offeneVorkommen, faelligeAnbieten } from './wiederkehrend.js';
-import { anschriftAusText, LAENDER, laenderSortiert } from '../lib/rechnung.js';
+import { anschriftAusText, LAENDER, laenderSortiert, ibanGueltig } from '../lib/rechnung.js';
 import { openTransactionDialog } from './transactions.js';
 import { refresh, navigate } from '../lib/router.js';
 import { kann } from '../lib/lizenz.js';
@@ -626,6 +626,10 @@ function contactForm(c, vorlage = null) {
         <div class="field"><label>Kundennummer</label><input id="f_customerNumber" value="${c.customerNumber || ''}"></div>
         <div class="field"><label>Leitweg-ID</label><input id="f_buyerReference" value="${c.buyerReference || ''}" placeholder="nur bei Behörden"></div>
       </div>
+      <div class="form-grid">
+        <div class="field"><label>IBAN</label><input id="f_iban" value="${c.iban || ''}" placeholder="für Überweisungen an diesen Kontakt" spellcheck="false" autocomplete="off"></div>
+        <div class="field"><label>BIC</label><input id="f_bic" value="${c.bic || ''}" placeholder="kann leer bleiben" spellcheck="false" autocomplete="off"></div>
+      </div>
       <div class="field"><label>Notiz</label><textarea id="f_notes">${c.notes || ''}</textarea></div>
       ${isNew || !(projekteVonKontakt(store.db, c.id).length || (kann('projekte') && c.kind !== 'supplier')) ? '' : raw('<div class="field" id="f_projekte" data-ohne-stand></div>')}
       ${isNew ? '' : raw('<div class="field" id="f_aufgaben" data-ohne-stand></div>')}`,
@@ -640,11 +644,15 @@ function contactForm(c, vorlage = null) {
       if (!g('name')) { warn('Bitte einen Namen eintragen'); return false; }
       const land = rootEl.querySelector('#f_country').value;
       const tax = g('taxId').replace(/\s/g, '').toUpperCase();
+      const iban = g('iban').replace(/\s/g, '').toUpperCase();
+      const bic = g('bic').replace(/\s/g, '').toUpperCase();
+      if (iban && !ibanGueltig(iban)) { warn('IBAN ungültig', 'Bitte prüfen Sie die IBAN oder lassen Sie das Feld leer.'); return false; }
+      if (bic && !/^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(bic)) { warn('BIC ungültig', 'Bitte prüfen Sie die BIC oder lassen Sie das Feld leer.'); return false; }
       await upsertEntity('contacts', {
         ...c, name: g('name'), kind: rootEl.querySelector('#f_kind').value,
         email: g('email'), phone: g('phone'), taxId: g('taxId'), notes: g('notes'),
         addressExtra: g('zusatz'), street: g('street'), zip: g('zip'), city: g('city'), country: land,
-        vatId: /^[A-Z]{2}\d/.test(tax) ? tax : '', customerNumber: g('customerNumber'), buyerReference: g('buyerReference'),
+        vatId: /^[A-Z]{2}\d/.test(tax) ? tax : '', customerNumber: g('customerNumber'), buyerReference: g('buyerReference'), iban, bic,
         // Die Anschrift als Text bleibt für Exporte und ältere Fassungen erhalten.
         address: [g('zusatz'), g('street'), [g('zip'), g('city')].filter(Boolean).join(' '), land !== 'DE' ? LAENDER[land]?.name || land : ''].filter(Boolean).join('\n'),
       }, 'kontakt');

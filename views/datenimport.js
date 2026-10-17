@@ -34,11 +34,21 @@ const leer = () => ({
 });
 let st = leer();
 beimSperren(() => { st = leer(); });
+/** Dateien, die per „Öffnen mit“ oder „Teilen“ kamen (`params.datei`), werden nur einmal gelesen, nicht bei „Zurück“. */
+const angenommen = new WeakSet();
 
 export async function render(root, params = {}, { actions } = {}) {
   if (actions) actions.innerHTML = '';
   // Wer die Seite erneut aufruft, will die nächste Datei übernehmen, nicht das alte Ergebnis sehen.
   if (st.schritt === 'fertig') st = leer();
+  const datei = params.datei;
+  if (datei && typeof datei === 'object' && !angenommen.has(datei)) {
+    angenommen.add(datei);
+    st = leer();
+    zeichnen(root);
+    await dateiLesen(datei, root, '');
+    return;
+  }
   zeichnen(root);
 }
 

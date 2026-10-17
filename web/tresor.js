@@ -65,6 +65,8 @@ export class Vault {
     this.melder = null;
     /** Das Rechenwerk der Datenbank (sql.js), solange offen. */
     this.motor = null;
+    /** Läuft gerade der Start des Rechenwerks (_motorHolen), dessen Versprechen. */
+    this.motorStart = null;
     /** 'opfs' (Datei im Dateispeicher des Browsers) | 'speicher' (Abbild in kontovia.tresor) */
     this.modus = null;
     this.verweis = null;
@@ -92,12 +94,21 @@ export class Vault {
     return !!(await A.lesen('dateien', TRESOR));
   }
 
-  async _motorHolen() {
-    if (this.motor) return this.motor;
-    await this.beendet;
-    const ort = A.sqlOrt();
-    this.motor = await S.motorStarten(ort);
-    return this.motor;
+  /**
+   * Das Rechenwerk, höchstens eins: Zwei Entsperrversuche zugleich (Klick und Enter)
+   * starteten sonst zwei Worker auf denselben Dateien; das war einer der Wege zum
+   * Datenbankverlust (sqlpool.js).
+   */
+  _motorHolen() {
+    if (this.motor) return Promise.resolve(this.motor);
+    if (!this.motorStart) {
+      this.motorStart = (async () => {
+        await this.beendet;
+        this.motor = await S.motorStarten(A.sqlOrt());
+        return this.motor;
+      })().finally(() => { this.motorStart = null; });
+    }
+    return this.motorStart;
   }
 
   /** Rechenwerk anhalten, sobald laufendes Speichern fertig ist; vorher die Datenbank sauber schließen. */

@@ -16,7 +16,103 @@
     "business",
     "productivity"
   ],
-  "version": "2.42.0",
+  "version": "2.43.0",
+  "launch_handler": {
+    "client_mode": [
+      "focus-existing",
+      "auto"
+    ]
+  },
+  "file_handlers": [
+    {
+      "action": "./",
+      "accept": {
+        "application/pdf": [
+          ".pdf"
+        ],
+        "image/jpeg": [
+          ".jpg",
+          ".jpeg"
+        ],
+        "image/png": [
+          ".png"
+        ],
+        "image/webp": [
+          ".webp"
+        ],
+        "image/heic": [
+          ".heic",
+          ".heif"
+        ],
+        "application/xml": [
+          ".xml"
+        ],
+        "text/xml": [
+          ".xml"
+        ],
+        "text/csv": [
+          ".csv"
+        ],
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [
+          ".xlsx"
+        ],
+        "text/vcard": [
+          ".vcf"
+        ],
+        "text/calendar": [
+          ".ics"
+        ],
+        "text/plain": [
+          ".sta",
+          ".940",
+          ".mt940"
+        ]
+      }
+    }
+  ],
+  "share_target": {
+    "action": "./teilen",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "dateien",
+          "accept": [
+            "application/pdf",
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/heic",
+            "application/xml",
+            "text/xml",
+            "text/csv",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "text/vcard",
+            "text/calendar",
+            "text/plain",
+            "image/*",
+            "text/comma-separated-values",
+            ".pdf",
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp",
+            ".heic",
+            ".heif",
+            ".xml",
+            ".csv",
+            ".xlsx",
+            ".vcf",
+            ".ics",
+            ".sta",
+            ".940",
+            ".mt940"
+          ]
+        }
+      ]
+    }
+  },
   "icons": [
     {
       "src": "icons/icon-192.png",

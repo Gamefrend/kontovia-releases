@@ -25,6 +25,7 @@ import * as KP from './koppeln.js';
 import * as KO from './konten.js';
 import BUILTIN from './cloudconfig.js';
 import * as D from './dateien.js';
+import * as E from './eingang.js';
 import { drucken } from './druck.js';
 import * as U from './aktualisierung.js';
 import { makeSeed } from './seed.js';
@@ -115,7 +116,7 @@ const str = (v, max = 500) => String(v ?? '').slice(0, max);
 /* Ereignisse                                                                  */
 /* -------------------------------------------------------------------------- */
 
-const hoerer = { locked: new Set(), updateProgress: new Set(), cloudProgress: new Set(), cloudTick: new Set(), menu: new Set(), speicher: new Set(), umstellung: new Set(), lizenz: new Set() };
+const hoerer = { locked: new Set(), updateProgress: new Set(), cloudProgress: new Set(), cloudTick: new Set(), menu: new Set(), speicher: new Set(), umstellung: new Set(), lizenz: new Set(), dateien: new Set() };
 
 function send(kanal, payload) {
   for (const fn of hoerer[kanal]) {
@@ -716,6 +717,10 @@ const api = {
     share: handle(async ({ files, title, text } = {}) => D.teilen(
       (Array.isArray(files) ? files : []).map((f) => ({ name: D.sichererName(f.name), mime: str(f.mime, 80), data: bytesAus(f) })),
       { title: str(title, 300), text: String(text ?? '').slice(0, 20000) })),
+    /** Dateien von außen („Öffnen mit“, „Teilen“): erst nach dem Entsperren, jede nur einmal (eingang.js). */
+    eingang: handle(async () => E.abholen()),
+    /** Wie viele Dateien auf das Entsperren warten (nur die Zahl). */
+    eingangWartet: handle(async () => E.anzahl(), { needsUnlock: false }),
     // Im Browser gibt es keinen Ordner, der sich zeigen ließe.
     reveal: handle(async () => true),
     /** Eine erzeugte Datei anzeigen, etwa einen Bericht als PDF: im Browser ein neuer Tab. */
@@ -1249,6 +1254,8 @@ const api = {
     speicher: anmelden('speicher'),
     /** Beim ersten Öffnen mit dieser Fassung: die Daten werden in die Datenbank übernommen (tresor.js). */
     umstellung: anmelden('umstellung'),
+    /** Dateien kamen über „Öffnen mit“ an (Anzahl); abholen mit file.eingang. */
+    dateien: anmelden('dateien'),
   },
 };
 
@@ -1306,6 +1313,7 @@ if (nurGoogleFenster) {
   await ortBeschreiben().catch(() => {});
   einzigesFenster();
   ruhezustandBeobachten();
+  E.beobachten((anzahl) => send('dateien', { anzahl }));
   // Bis in jeden Bereich eingefroren: Sonst ließe sich etwa `kontovia.lizenz.status` aus der Konsole ersetzen.
   window.kontovia = tiefFrieren(api);
 

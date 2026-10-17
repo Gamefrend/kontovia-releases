@@ -23,7 +23,7 @@ import {
   einheitAusText, einheitText, positionLeer, anschriftAusText, kaeuferAusKontakt, faelligkeit, zahlungsText, betragText, satzText,
   titel as titelVon, profil as profilAus, istGutschrift, rund, rabatt2,
 } from '../lib/rechnung.js';
-import { ossSaetze, ossRegelsatz } from '../lib/sonderfaelle.js';
+import { ossSaetze, ossRegelsatz, ossArt, OSS_ARTEN } from '../lib/sonderfaelle.js';
 import {
   rechnungSpeichern, entwurfLoeschen, ausstellen, vergebeneNummern, alsVorlage, produktSpeichern,
 } from '../lib/rechnungsaktionen.js';
@@ -326,7 +326,8 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
           ${r.steuerfall === 'differenz' ? `<div class="field"><label for="ra_einkauf">Einkaufspreis der Ware</label>
             <input id="ra_einkauf" inputmode="decimal" data-f="einkauf" data-geld value="${esc(r.einkauf ? moneyInput(r.einkauf) : '')}" placeholder="0,00">
             <span class="hint">Steht nicht auf der Rechnung. Umsatzsteuer fällt nur auf den Gewinn an; Kontovia bucht sie beim Ausstellen.</span></div>` : ''}
-          ${r.steuerfall === 'oss' ? `<div class="field full"><span class="hint">Die Positionen rechnen mit den Sätzen des Landes beim Kunden (Stand Oktober 2026, bitte prüfen). Der Umsatz steht in der OSS-Meldung, nicht in der deutschen Voranmeldung.</span></div>` : ''}
+          ${r.steuerfall === 'oss' ? `<div class="field"><label for="ra_ossArt">Verkauft wird</label><select id="ra_ossArt" data-f="ossArt">${optionen(Object.entries(OSS_ARTEN), ossArt(r.ossArt))}</select></div>
+            <div class="field full"><span class="hint">Die Positionen rechnen mit den Sätzen des Landes beim Kunden (Stand Oktober 2026, bitte prüfen). Der Umsatz steht in der OSS-Meldung, nicht in der deutschen Voranmeldung.</span></div>` : ''}
           ${istVorlage ? '' : `
           <div class="field"><label for="ra_nummer">Rechnungsnummer</label><input id="ra_nummer" data-f="nummer" value="${esc(r.nummer || '')}" placeholder="${esc(vorschlag)}"></div>
           <div class="field"><label for="ra_datum">Rechnungsdatum <span class="re-pflicht">Pflicht</span></label><input id="ra_datum" type="date" data-f="datum" value="${esc(r.datum || '')}"></div>`}
@@ -425,6 +426,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
           <button type="button" class="btn sm" id="rePosNeu">${icon('plus', 14).__raw} Position</button>
           <button type="button" class="btn sm" id="rePosProdukt" data-premium="vorlagen">${icon('tag', 14).__raw} Aus Produkten</button>
         </div>
+        ${belegart === 'lieferschein' ? '' : gesamtrabattHtml()}
         <div class="re-summen" id="reSummen"></div>
       </div>`;
     $$('#rePositionen textarea', root).forEach(hoeheAnpassen);
@@ -535,10 +537,38 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
     ok(alt ? 'Produkt aktualisiert' : 'Als Produkt gespeichert', prod.name);
   }
 
+  /** Rabatt auf die ganze Rechnung (rechnung.js: gesamtrabattVon): in Prozent oder als Betrag netto. */
+  function gesamtrabattHtml() {
+    const g = r.gesamtrabatt || {};
+    const betrag = g.art === 'betrag';
+    const wert = !g.wert ? '' : betrag ? moneyInput(g.wert) : dz(g.wert);
+    return `
+      <div class="re-gesamtrabatt">
+        <label class="re-mini"><span>Rabatt auf die ganze Rechnung</span><input id="reGrWert" inputmode="decimal" value="${esc(wert)}" placeholder="0"></label>
+        <label class="re-mini"><span>Art</span><select id="reGrArt" aria-label="Rabatt in Prozent oder als Betrag">
+          <option value="prozent"${betrag ? '' : ' selected'}>Prozent</option>
+          <option value="betrag"${betrag ? ' selected' : ''}>${esc(steuerfrei() ? 'Betrag' : 'Betrag netto')}</option>
+        </select></label>
+      </div>`;
+  }
+
+  function gesamtrabattLesen() {
+    const art = $('#reGrArt', root)?.value === 'betrag' ? 'betrag' : 'prozent';
+    const roh = String($('#reGrWert', root)?.value || '');
+    const wert = art === 'betrag'
+      ? Math.max(0, parseMoney(roh))
+      : rabatt2(Number(sprache() === 'en' ? roh.replace(/,/g, '') : roh.replace(/\./g, '').replace(',', '.')) || 0);
+    r.gesamtrabatt = wert ? { art, wert } : null;
+  }
+
   function summenZeichnen() {
     const b = berechnen(r);
     const w = r.waehrung || 'EUR';
     const zeilen = [];
+    if (b.nachlass) {
+      zeilen.push(['Summe Positionen', betragText(b.positionen, w)]);
+      zeilen.push([b.gesamtrabatt?.art === 'prozent' ? `abzüglich ${satzText(b.gesamtrabatt.wert)} Rabatt` : 'abzüglich Rabatt', betragText(-b.nachlass, w), 'muted']);
+    }
     if (!steuerfrei()) {
       zeilen.push(['Summe netto', betragText(b.netto, w)]);
       for (const g of b.steuern) if (g.satz) zeilen.push([`USt ${satzText(g.satz)} auf ${betragText(g.basis, w)}`, betragText(g.steuer, w), 'muted']);
@@ -762,6 +792,12 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
       if (el.dataset.f === 'zahlungszielTage' || el.dataset.f === 'datum') { faelligZeigen(); zahlungsPlatzhalter(); }
       if (el.dataset.f.startsWith('raten.')) zahlungsPlatzhalter();
       aktualisieren();
+      return;
+    }
+    if (el.id === 'reGrWert' || el.id === 'reGrArt') {
+      gesamtrabattLesen();
+      summenZeichnen();
+      aktualisieren({ summen: false });
       return;
     }
     const zeile = el.closest('[data-pos]');

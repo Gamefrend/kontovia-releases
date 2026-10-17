@@ -13,6 +13,7 @@
  * Fassung: installiert wird nur nach ausdrücklicher Zustimmung.
  *
  * Ausnahme: Die Abo-Seite unter abo/ ist eine normale Webseite und kommt immer frisch vom Server.
+ * Dazu nimmt er Dateien an, die jemand über „Teilen“ an Kontovia schickt (seit 2.43, siehe teilenAnnehmen).
  *
  * Diese Datei ändert sich deshalb von Fassung zu Fassung nicht. Der Browser
  * sieht keinen Grund, sie zu ersetzen, und nichts wird im Hintergrund
@@ -65,15 +66,48 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+/*
+ * Teilen an Kontovia (share_target im Manifest): Das Gerät schickt die Dateien
+ * als Formular an „teilen“. Einen Server dafür gibt es nicht; der Worker legt sie
+ * in einen eigenen Zwischenspeicher und öffnet die App. Die App holt sie nach
+ * dem Entsperren ab und löscht den Speicher (web/eingang.js, gleicher Name).
+ * Bis dahin liegen sie dort unverschlüsselt, wie in der App, aus der sie kommen;
+ * jedes neue Teilen ersetzt das vorige.
+ */
+const GETEILT = 'kontovia-geteilt';
+const GETEILT_HOECHSTENS = 20;
+const GETEILT_GROESSE = 40 * 1024 * 1024;
+
+async function teilenAnnehmen(req) {
+  try {
+    const form = await req.formData();
+    const dateien = form.getAll('dateien')
+      .filter((f) => f && typeof f === 'object' && f.size > 0 && f.size <= GETEILT_GROESSE)
+      .slice(0, GETEILT_HOECHSTENS);
+    await caches.delete(GETEILT);
+    const cache = await caches.open(GETEILT);
+    for (const [i, f] of dateien.entries()) {
+      await cache.put(new URL(`__kontovia/geteilt/${i}`, scope()).href, new Response(f, {
+        headers: { 'content-type': f.type || 'application/octet-stream', 'x-kontovia-name': encodeURIComponent(f.name || 'Datei') },
+      }));
+    }
+  } catch { /* Ohne lesbare Dateien öffnet Kontovia einfach. */ }
+  return Response.redirect(new URL('./?geteilt=1', scope()).href, 303);
+}
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET') return;
   const url = new URL(req.url);
   const s = scope();
   if (url.origin !== s.origin || !url.pathname.startsWith(s.pathname)) return;
+  const rel = url.pathname.slice(s.pathname.length);
+  if (req.method === 'POST' && rel === 'teilen') {
+    event.respondWith(teilenAnnehmen(req));
+    return;
+  }
+  if (req.method !== 'GET') return;
   // Versionsdatei und Worker kommen immer frisch vom Server – ebenso die
   // Dateien einer neuen Fassung, die gerade geladen und geprüft wird.
-  const rel = url.pathname.slice(s.pathname.length);
   if (rel === 'version.json' || rel === 'sw.js' || url.searchParams.has('kv-neu')) return;
 
   // Die Abo-Seite ist eine gewöhnliche Webseite und gehört nicht zum installierten Programm:
