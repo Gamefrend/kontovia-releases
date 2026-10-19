@@ -524,6 +524,17 @@ export class Vault {
     return (await this.motor.journalAlle()).map((t) => JSON.parse(t));
   }
 
+  /**
+   * Eine Lese-Abfrage (nur SELECT) an die Datenbank, abgesichert in
+   * sqlabfrage.js; ohne `privat` bleiben private Buchungen außen vor. Wartet,
+   * bis ein laufendes Speichern durch ist (die Oberfläche speichert vorher).
+   */
+  async abfrage(sql, parameter = [], { privat = false } = {}) {
+    this.assertUnlocked();
+    await this.saving?.catch(() => {});
+    return this.motor.abfrage({ sql: String(sql || ''), parameter, privat: !!privat });
+  }
+
   /* ---------------------------------------------------------------------- */
   /* Belege                                                                  */
   /* ---------------------------------------------------------------------- */

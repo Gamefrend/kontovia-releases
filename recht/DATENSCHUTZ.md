@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 18. Oktober 2026, Programmversion 2.43.0
+Stand: 19. Oktober 2026, Programmversion 2.44.0
 
 ---
 
@@ -569,6 +569,17 @@ steuerlichen Aufbewahrungspflichten nach § 147 AO: Buchungsbelege acht Jahre,
 Bücher und Abschlüsse zehn Jahre. Ein Löschverlangen nach Art. 17 DSGVO tritt
 für diese Zeit hinter die Aufbewahrungspflicht zurück (Art. 17 Abs. 3 lit. b
 DSGVO). Praktisch: Kontaktdaten dürfen Sie bereinigen, die Buchung selbst nicht.
+
+Damit Sie beides einhalten, rechnet Kontovia die Fristen je Jahr (Import &
+Export, Reiter „Archiv“): Nach Ablauf erstellen Sie ein Jahresarchiv (eine
+ZIP-Datei mit allen Daten, Belegen und einer Prüfsummenliste, die Prüfsumme
+der Datei bleibt im Programm) und löschen das Jahr danach aus dem Programm,
+auf Wunsch samt Kontakten, auf die nichts mehr verweist. Belegdateien lassen
+sich schon nach acht Jahren entfernen. Jede Löschung steht mit Umfang und
+Archiv-Prüfsumme im Änderungsjournal, das nie gelöscht wird. Für eine
+Auskunft nach Art. 15 DSGVO stellt „Auskunft zu einer Person“ alles zusammen,
+was zu einem Kontakt gespeichert ist. Das Archiv ist nicht verschlüsselt;
+bewahren Sie es an einem geschützten Ort auf.
 
 ## Ihre Rechte
 

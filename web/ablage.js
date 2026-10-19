@@ -48,9 +48,11 @@ export const STORES = ['dateien', 'belege', 'sicherungen'];
 
 /**
  * Einträge, die immer im Browser bleiben: Sie gehören zu diesem Gerät, nicht zur
- * Buchhaltung. Je Konto: Speicherort, Übergabe, Biometrie, Merker für Google.
+ * Buchhaltung. Je Konto: Speicherort, Übergabe, Biometrie, Merker für Google, Merkbuch der
+ * befristeten Zulassung (zulassung.js: Im Ordner, der mit auf ein anderes Gerät wandert, ließe
+ * es die 30 Tage und eine Fernsperre dort umgehen).
  */
-const NUR_IM_BROWSER = new Set(['geraet', 'konten', 'speicherort', 'uebergabe', 'biometrie', 'entsperrung-google', 'entsperrung-google-anzeige', 'lizenz', 'lizenz-konto', 'lizenz-gemeldet']);
+const NUR_IM_BROWSER = new Set(['geraet', 'konten', 'speicherort', 'uebergabe', 'biometrie', 'entsperrung-google', 'entsperrung-google-anzeige', 'lizenz', 'lizenz-konto', 'lizenz-gemeldet', 'zulassung']);
 /** Gehören zum Gerät, nicht zu einem Konto: Gerätekennung und die Liste der Konten. */
 const GERAET_GLOBAL = new Set(['geraet', 'konten']);
 /** Was aus dem Bereich „dateien“ in den Ordner gehört. */

@@ -19,6 +19,7 @@
  */
 
 import { ddl, tabelleDdl, SCHEMA_FASSUNG, TABELLEN, JOURNAL, NAME_RE, journalSchluessel } from './sqlschema.js';
+import { abfrageAusfuehren } from './sqlabfrage.js';
 
 /**
  * Fest eingestellt, damit eine neue Fassung von SQLite3 Multiple Ciphers das
@@ -44,21 +45,64 @@ export function werkzeug(sqlite3, dateien) {
   let art = null;
 
   function grundeinstellung(d) {
-    d.exec('PRAGMA temp_store=MEMORY; PRAGMA foreign_keys=OFF;');
+    // 8 MB Seitenspeicher: Abfragen über abgeleitete Spalten lesen ganze Tabellen, das soll aus dem Speicher gehen.
+    d.exec('PRAGMA temp_store=MEMORY; PRAGMA foreign_keys=OFF; PRAGMA cache_size=-8192;');
+    funktionenAnlegen(d);
   }
 
+  /** Eigene SQL-Funktionen für Abfragen (auch für den Assistenten): Geld und Quartale lesbar. */
+  function funktionenAnlegen(d) {
+    const euro = new Intl.NumberFormat('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    d.createFunction('euro', {
+      arity: 1, deterministic: true,
+      xFunc: (ctx, cent) => (cent == null || !Number.isFinite(Number(cent)) ? null : `${euro.format(Number(cent) / 100)} €`),
+    });
+    d.createFunction('quartal', {
+      arity: 1, deterministic: true,
+      xFunc: (ctx, datum) => {
+        const m = /^(\d{4})-(\d{2})/.exec(String(datum ?? ''));
+        return m ? `${m[1]}-Q${Math.floor((Number(m[2]) - 1) / 3) + 1}` : null;
+      },
+    });
+  }
+
+  /**
+   * Legt das Schema an und gleicht eine Datenbank einer früheren Fassung an:
+   * fehlende Tabellen, abgeleitete Spalten und Indizes kommen hinzu (nur
+   * ALTER TABLE … ADD COLUMN … GENERATED und CREATE INDEX IF NOT EXISTS, die
+   * Daten in `daten` bleiben unberührt). Spalten, die eine frühere Fassung
+   * anders nannte (`start`, `due`), bleiben stehen und stören nicht.
+   * Wiederholbar; der Schritt gilt für jede künftige Fassung mit.
+   */
   function schemaAnlegen(d, { indizes = true } = {}) {
     d.transaction(() => {
-      for (const s of ddl('main', { indizes })) d.exec(s);
+      // Erst die Tabellen, dann fehlende Spalten, erst danach die Indizes (sie brauchen die Spalten).
+      const alle = ddl('main', { indizes });
+      for (const s of alle) if (!/^CREATE INDEX/.test(s)) d.exec(s);
+      spaltenAngleichen(d, 'main');
+      for (const s of alle) if (/^CREATE INDEX/.test(s)) d.exec(s);
       const fassung = d.selectValue("SELECT wert FROM meta WHERE schluessel='schema'");
       if (fassung == null) {
         d.exec({ sql: 'INSERT INTO meta(schluessel, wert) VALUES (?, ?), (?, ?)', bind: ['schema', String(SCHEMA_FASSUNG), 'erstellt', new Date().toISOString()] });
       } else if (Number(fassung) < SCHEMA_FASSUNG) {
-        // 1 → 2: nur neue Tabellen (angebote, projekte, zeiten), die ddl() oben schon angelegt hat; Daten bleiben unberührt.
-        d.exec({ sql: "UPDATE meta SET wert=? WHERE schluessel='schema'", bind: [String(SCHEMA_FASSUNG)] });
+        // 1 → 2 (angebote, projekte, zeiten) und 2 → 3 (archive, Spalten date/dueDate): nur neue Tabellen und
+        // abgeleitete Spalten, die ddl() und spaltenAngleichen() oben schon angelegt haben; Daten bleiben unberührt.
+        metaSetzen(d, 'schema', String(SCHEMA_FASSUNG));
       }
     });
     d.exec(`PRAGMA user_version=${SCHEMA_FASSUNG}`);
+  }
+
+  /** Abgeleitete Spalten aus TABELLEN, die einer bestehenden Tabelle noch fehlen (Datei einer früheren Fassung). */
+  function spaltenAngleichen(d, schema) {
+    for (const [name, t] of Object.entries(TABELLEN)) {
+      const da = new Set(d.selectValues(`SELECT name FROM "${schema}".pragma_table_xinfo(?)`, [name]));
+      if (!da.size) continue;
+      for (const [sp, [typ, pfad]] of Object.entries(t.spalten)) {
+        if (da.has(sp)) continue;
+        d.exec(`ALTER TABLE "${schema}"."${name}" ADD COLUMN "${sp}" ${typ} GENERATED ALWAYS AS (json_extract(daten, '${pfad}')) VIRTUAL`);
+      }
+    }
   }
 
   function offen() {
@@ -131,8 +175,12 @@ export function werkzeug(sqlite3, dateien) {
 
   function schliessen() {
     if (db) {
-      // Alles aus der WAL-Datei in die Datenbank übertragen: Das nächste Öffnen geht dann schnell.
-      if (art === 'datei') { try { db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch { /* beim nächsten Öffnen */ } }
+      // Statistik für den Abfrageplaner auffrischen (empfohlen vor dem Schließen), dann alles aus der
+      // WAL-Datei in die Datenbank übertragen: Das nächste Öffnen geht dann schnell.
+      if (art === 'datei') {
+        try { db.exec('PRAGMA optimize'); } catch { /* nur Statistik */ }
+        try { db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); } catch { /* beim nächsten Öffnen */ }
+      }
       try { db.close(); } catch { /* schon zu */ }
     }
     db = null;
@@ -374,6 +422,14 @@ export function werkzeug(sqlite3, dateien) {
     return out;
   }
 
+  /**
+   * Eine Lese-Abfrage (nur SELECT), etwa vom Assistenten: siehe sqlabfrage.js.
+   * @param {{sql:string, parameter?:Array|object, privat?:boolean, maxZeilen?:number, zeitMs?:number}} a
+   */
+  function abfrage(a) {
+    return abfrageAusfuehren(sqlite3, offen(), a);
+  }
+
   function pruefen() {
     const d = offen();
     return {
@@ -404,6 +460,7 @@ export function werkzeug(sqlite3, dateien) {
     journalAlle,
     zaehlen,
     pruefen,
+    abfrage,
     meta: (k) => offen().selectValue('SELECT wert FROM meta WHERE schluessel = ?', [k]) ?? null,
   };
 }

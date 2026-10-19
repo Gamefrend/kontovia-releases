@@ -28,7 +28,7 @@
  */
 
 /** Fassung des Schemas (PRAGMA user_version und meta.schema). Verlauf in docs/sql-umstellung.md. */
-export const SCHEMA_FASSUNG = 2;
+export const SCHEMA_FASSUNG = 3;
 
 /** Das Journal: Einträge werden nur angefügt, nie geändert oder gelöscht (sqlkern.js). */
 export const JOURNAL = 'auditLog';
@@ -82,8 +82,9 @@ export const TABELLEN = Object.freeze({
   },
   projekte: { spalten: { name: [T, '$.name'], status: [T, '$.status'], updatedAt: [T, '$.updatedAt'] }, indizes: [] },
   zeiten: { spalten: { projektId: [T, '$.projektId'], datum: [T, '$.datum'], minuten: [I, '$.minuten'], updatedAt: [T, '$.updatedAt'] }, indizes: [['projektId'], ['datum']] },
-  appointments: { spalten: { title: [T, '$.title'], start: [T, '$.start'], updatedAt: [T, '$.updatedAt'] }, indizes: [['start']] },
-  todos: { spalten: { title: [T, '$.title'], done: [I, '$.done'], due: [T, '$.due'], updatedAt: [T, '$.updatedAt'] }, indizes: [] },
+  // Seit Fassung 3: Termine liegen in `date` (nicht `start`), Aufgaben werden in `dueDate` fällig (nicht `due`).
+  appointments: { spalten: { title: [T, '$.title'], date: [T, '$.date'], updatedAt: [T, '$.updatedAt'] }, indizes: [['date']] },
+  todos: { spalten: { title: [T, '$.title'], done: [I, '$.done'], dueDate: [T, '$.dueDate'], updatedAt: [T, '$.updatedAt'] }, indizes: [] },
   locks: { spalten: { until: [T, '$.until'] }, indizes: [] },
   users: { spalten: { name: [T, '$.name'] }, indizes: [] },
   feedback: { spalten: {}, indizes: [] },
@@ -95,6 +96,8 @@ export const TABELLEN = Object.freeze({
     indizes: [['schluessel'], ['ts', 'device', 'seq']],
   },
   tombstones: { spalten: { collection: [T, '$.collection'], deletedAt: [T, '$.deletedAt'] }, indizes: [] },
+  /** Fassung 3: Archivvermerke je Jahr (lib/archiv.js): wann das Jahresarchiv entstand, Prüfsumme, wann gelöscht. */
+  archive: { spalten: { jahr: [I, '$.jahr'], erstelltAm: [T, '$.erstelltAm'], geloeschtAm: [T, '$.geloeschtAm'] }, indizes: [['jahr']] },
 });
 
 /** Tabellennamen müssen schlichte Bezeichner sein (sie kommen auch aus fremden Abbildern). */
@@ -209,8 +212,17 @@ export function unterschiede(alt, neu) {
   for (const k of Object.keys(alt.werte)) if (!Object.hasOwn(neu.werte, k)) ops.werte.push([k, null]);
   for (const [name, zeilen] of Object.entries(neu.tabellen)) {
     if (name === JOURNAL) {
-      const bekannt = new Set(alt.tabellen[JOURNAL] || []);
-      for (const z of zeilen) if (!bekannt.has(z)) ops.journal.push(z);
+      // Die Oberfläche hängt Einträge nur an: Stimmt der Anfang überein, sind nur die hinteren neu.
+      // Erst wenn das nicht passt (Abgleich, Einspielen), wird Eintrag für Eintrag verglichen.
+      const vorher = alt.tabellen[JOURNAL] || [];
+      let gleich = 0;
+      while (gleich < vorher.length && gleich < zeilen.length && vorher[gleich] === zeilen[gleich]) gleich++;
+      if (gleich === vorher.length) {
+        for (let i = gleich; i < zeilen.length; i++) ops.journal.push(zeilen[i]);
+      } else {
+        const bekannt = new Set(vorher);
+        for (const z of zeilen) if (!bekannt.has(z)) ops.journal.push(z);
+      }
       continue;
     }
     const vorher = alt.tabellen[name] || [];

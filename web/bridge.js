@@ -675,6 +675,8 @@ const api = {
     }),
     /** Alle Journaleinträge, auch die im Archiv der Datenbank (Exporte, Journal ansehen). */
     journal: handle(async () => kopie(await vault.journalAlle())),
+    /** Eine Lese-Abfrage (nur SELECT, abgesichert in sqlabfrage.js), etwa vom Assistenten. */
+    abfrage: handle(async (sql, parameter = [], opts = {}) => kopie(await vault.abfrage(str(sql, 4000), Array.isArray(parameter) ? kopie(parameter) : [], { privat: !!opts?.privat }))),
   },
 
   attach: {
@@ -734,6 +736,27 @@ const api = {
       const bytes = new Uint8Array(await f.arrayBuffer());
       return { name: f.name, dataBase64: K.toBase64(bytes), size: bytes.length };
     }, { needsUnlock: false }),
+    /**
+     * Ein Jahresarchiv (lib/archivaktionen.js): die Dateien als ein ZIP packen, die Prüfsumme
+     * der fertigen Datei rechnen und sie zum Speichern anbieten. Die Prüfsumme gilt für genau
+     * die Bytes, die der Nutzer bekommt.
+     */
+    archiv: handle(async ({ name, files } = {}) => {
+      const liste = (files || []).map((f) => ({ name: D.sichererName(f.name), data: bytesAus(f) }));
+      if (!liste.length) throw new Error('Das Archiv ist leer.');
+      const bytes = await D.zipBytes(liste);
+      const sha256 = await K.sha256Hex(bytes);
+      const dateiName = D.sichererName(name || 'Kontovia-Archiv.zip');
+      const r = await D.anbieten(bytes, dateiName, { mime: 'application/zip', filters: [{ name: 'Archiv', extensions: ['zip'] }] });
+      return { gespeichert: !!r, name: typeof r === 'string' ? r.split(/[\\/]/).pop() : dateiName, sha256, groesse: bytes.length };
+    }),
+    /** Eine Datei wählen und nur ihre Prüfsumme und Größe liefern (Archiv prüfen); der Inhalt bleibt draußen. */
+    pruefsumme: handle(async (filters) => {
+      const [f] = await D.waehlen({ multiple: false, filters: Array.isArray(filters) ? filters : [] });
+      if (!f) return null;
+      const bytes = new Uint8Array(await f.arrayBuffer());
+      return { name: f.name, size: bytes.length, sha256: await K.sha256Hex(bytes) };
+    }),
   },
 
   backup: {

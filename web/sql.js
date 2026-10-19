@@ -12,7 +12,7 @@
  */
 
 const AUFTRAEGE = ['oeffnenDatei', 'oeffnenSpeicher', 'schliessen', 'einlesen', 'auslesen', 'anwenden', 'abbild', 'abbildAusZeilen',
-  'abbildLesen', 'abbildEinlesen', 'journalAlle', 'zaehlen', 'pruefen', 'meta', 'dateien', 'dateiLoeschen', 'allesLoeschen'];
+  'abbildLesen', 'abbildEinlesen', 'journalAlle', 'zaehlen', 'pruefen', 'abfrage', 'meta', 'dateien', 'dateiLoeschen', 'allesLoeschen'];
 
 const imBrowser = () => typeof Worker !== 'undefined' && typeof document !== 'undefined';
 
@@ -83,6 +83,14 @@ export function nodeOpfsAbschalten(aus = true) { nodeOhneOpfs = aus; }
 /** Für die Prüfungen: Motoren, die gestartet und nicht beendet sind (im Browser: laufende Rechenwerke). */
 let nodeOffen = 0;
 export function nodeOffeneMotoren() { return nodeOffen; }
+/**
+ * Für die Prüfungen unter Node: die geladene SQLite und der Dateipfad einer
+ * Datei des Kontos, um eine Datei früherer Fassung nachzustellen. Im Browser
+ * gibt es das nicht (die SQLite lebt dort nur im Worker).
+ */
+export function nodeSqlite3() {
+  return imBrowser() ? null : { sqlite3: nodeSqlite, pfad: (ordner, name) => `/${String(ordner).replace(/^\./, '')}--${name}` };
+}
 
 /** Löscht eine Datei im Arbeitsspeicher von SQLite (Nachbildung von OPFS unter Node). */
 function nodeUnlink(sqlite3, p) {

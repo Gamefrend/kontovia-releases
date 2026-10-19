@@ -644,6 +644,29 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
+        <h2 class="mt0">Archiv und Aufbewahrung</h2>
+        <p>Buchungen und Rechnungen müssen Sie zehn Jahre aufheben, Belege acht (§ 147 AO, § 14b UStG). Die Frist beginnt
+        mit dem Ende des Jahres. Danach dürfen Sie Daten über Kunden und Lieferanten nicht endlos behalten (Datenschutz).
+        Unter <a data-go="export" data-reiter="archiv">Import & Export</a>, Reiter „Archiv“, geht beides in drei Schritten:</p>
+        <ol>
+          <li><strong>Jahresarchiv erstellen.</strong> Alles aus dem Jahr in einer ZIP-Datei: jeder Datensatz, die Buchungen als Tabelle,
+              die Unterlagen fürs Finanzamt, der Prüfungsordner, die Berichte als PDF, alle Belege und Rechnungen und die
+              Einträge des Änderungsjournals. Eine Prüfsummenliste belegt, dass nichts verändert wurde; die Prüfsumme der
+              Datei merkt sich Kontovia. Das Archiv hat kein Passwort, damit es in vielen Jahren noch lesbar ist: Legen Sie es
+              an einem geschützten Ort ab, etwa auf einem verschlüsselten Datenträger oder bei Ihrer Steuerkanzlei.</li>
+          <li><strong>Prüfen.</strong> „Prüfen“ vergleicht eine Archivdatei jederzeit mit der gespeicherten Prüfsumme.</li>
+          <li><strong>Löschen nach Ablauf der Frist.</strong> Ist die Frist um und ein Archiv vorhanden, entfernt „Jahr löschen“ die
+              Buchungen, Rechnungen, Mahnungen, Belege und Kontoauszug-Importe des Jahres, auf Wunsch auch Kontakte, auf die
+              danach nichts mehr verweist. Belegdateien lassen sich schon nach ihrer kürzeren Frist löschen. Der Löschlauf
+              fragt zweimal nach und hinterlässt einen Eintrag im Änderungsjournal mit Umfang und Archiv-Prüfsumme. Auf Ihren
+              anderen Geräten wirkt er beim nächsten Abgleich.</li>
+        </ol>
+        <p class="small">Das Änderungsjournal selbst wird nie gelöscht. Die Fristen lassen sich verlängern, etwa bei einer laufenden
+        Betriebsprüfung, nie verkürzen. „Auskunft zu einer Person“ stellt alles zusammen, was zu einem Kontakt gespeichert ist,
+        für eine Anfrage nach Art. 15 DSGVO.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
         <h2 class="mt0">Der Assistent</h2>
         <p>Öffnen Sie ihn mit <strong>Assistent</strong> in der Seitenleiste oder <kbd>${MOD}</kbd>+<kbd>J</kbd>
         und fragen Sie in Ihren Worten: „Was steht heute an?“, „Was ist noch offen?“, „Wie viel Umsatzsteuer zahle ich dieses Quartal?“,
@@ -665,6 +688,10 @@ function anleitung(root) {
           Antwort, Gründlich denkt vorher nach. Automatisch wählt je Frage.</li>
           <li><strong>Zahlen rechnet immer Kontovia.</strong> Das Modell wählt nur aus, was gesucht oder gerechnet
           wird. Unter jeder Antwort sehen Sie die Schritte und das Ergebnis als Karte.</li>
+          <li><strong>Freie Fragen an die Datenbank.</strong> Ab Stufe Groß beantwortet der Assistent auch Fragen, für die es kein
+          festes Werkzeug gibt („Welche Kunden hatten 2025 mehr als drei Rechnungen?“), mit einer Abfrage an die Datenbank. Sie
+          sehen die Abfrage unter dem Ergebnis. Sie liest nur, kann nichts ändern, und private Buchungen bleiben draußen. Wer
+          SQL kennt, tippt eine Abfrage (beginnend mit SELECT) auch selbst ein, in jeder Stufe.</li>
           <li><strong>Nichts wird ohne Sie gespeichert.</strong> Neue Buchungen, Aufgaben, Termine, Kontakte und
           Rechnungen öffnet der Assistent ausgefüllt im gewohnten Fenster. Speichern tun Sie.</li>
         </ul>
@@ -1129,7 +1156,7 @@ function wireLinks(root) {
     a.style.textDecoration = 'underline';
     a.setAttribute('role', 'link');
     a.setAttribute('tabindex', '0');
-    const ziel = () => navigate(a.dataset.go, a.dataset.tab ? { tab: a.dataset.tab } : {});
+    const ziel = () => navigate(a.dataset.go, a.dataset.tab ? { tab: a.dataset.tab } : a.dataset.reiter ? { reiter: a.dataset.reiter } : {});
     a.addEventListener('click', ziel);
     a.addEventListener('keydown', (e) => { if (e.key === 'Enter') ziel(); });
   });

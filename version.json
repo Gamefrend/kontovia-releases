@@ -1,7 +1,7 @@
 {
-  "version": "2.43.0",
-  "released": "2026-10-17T23:31:17.939Z",
-  "notes": "Belege teilen, Überweisungen, BWA und Steuerrücklage\n\n- Belege und Dateien lassen sich am Handy über „Teilen“ und am Computer über „Öffnen mit“ an Kontovia schicken.\n- Aus offenen Ausgaben entsteht eine Überweisungsdatei für Ihr Online-Banking.\n- Neu: Proformarechnung und Rabatt auf die ganze Rechnung.\n- Unter Auswertungen gibt es BWA, Summen und Salden und eine Jahresübersicht zur Umsatzsteuer; die Übersicht schätzt Ihre Steuerrücklage.\n- OSS-Meldung als Datei für das Bundeszentralamt, Mahnungen in fremder Währung, und die Buchhaltung geht beim Neuladen nicht mehr verloren.",
+  "version": "2.44.0",
+  "released": "2026-10-19T08:08:25.015Z",
+  "notes": "Archiv, Aufbewahrung und Fragen an die Datenbank\n\n- Neu unter Import & Export: der Reiter „Archiv“. Kontovia rechnet die Aufbewahrungsfristen je Jahr und packt auf Wunsch ein Jahresarchiv mit Prüfsummen.\n- Nach Ablauf der Frist löscht „Jahr löschen“ das Jahr aus Kontovia, zweifach bestätigt und mit Eintrag im Änderungsjournal. „Auskunft zu einer Person“ stellt alles zu einem Kontakt zusammen.\n- Der Assistent (ab Stufe Groß) beantwortet jetzt auch Fragen ohne festes Werkzeug, etwa „Welche Kunden hatten 2025 mehr als drei Rechnungen?“. Er liest dafür nur aus der Datenbank; Privates bleibt außen vor.\n- Eine offene Buchung lässt sich nachträglich in Raten aufteilen, und der Kontoauszug erkennt auch die Raten einer Rechnung in fremder Währung.\n- Die Datenbank wurde durchgesehen: Suchen nach Terminen und Aufgaben finden jetzt, was sie sollen, und das Speichern ist bei großem Bestand schneller.",
   "files": [
     {
       "path": "abo/abo.css",
@@ -35,8 +35,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "2eb3fcfc47fa7d9f734b668cf0cace711c8cf3e6167ad9d4b0f4b21d1c364880",
-      "size": 89571
+      "sha256": "0172acf0badc0876d1f21521d1d31fbaebdde02dc7c838851b8c0fd71ec0ba6f",
+      "size": 89623
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -99,14 +99,24 @@
       "size": 6118
     },
     {
+      "path": "lib/archiv.js",
+      "sha256": "06cc9b839c749462971c74fa9b1c016b33780e0a91e59781d6ba70d2caab88d5",
+      "size": 16233
+    },
+    {
+      "path": "lib/archivaktionen.js",
+      "sha256": "b358558695da1025190258f048cad1a492f57c1347222adf098d76c86ce588e6",
+      "size": 19182
+    },
+    {
       "path": "lib/assistent.js",
-      "sha256": "ecfeb2908e5d3cfef04d6ab80d70f8eebd7fdc38f5d316cbd7100ae830613cef",
-      "size": 26379
+      "sha256": "2919ca81b15179916ea90aa3489fca1742b27c53ca6b6677938903651935b11c",
+      "size": 26795
     },
     {
       "path": "lib/assistentdeutung.js",
-      "sha256": "0f5acd4e08f3b5a22b35ceee4a58f2d54db87a9dbbb3b0295e164c527cea0866",
-      "size": 61118
+      "sha256": "71302f389185d7eb19c87a6a7f2902b5838b15d1eccba1e8d2083a3740660b01",
+      "size": 61765
     },
     {
       "path": "lib/assistentenglisch.js",
@@ -115,23 +125,23 @@
     },
     {
       "path": "lib/assistentfenster.js",
-      "sha256": "b09cdfbfbdd017e793763a3a10f4d068a73fb2b6a0e8802415ad19bf343b5567",
-      "size": 44652
+      "sha256": "e9b0925c50df59fc04c26480203f0748c4a11406ce8a704212566acd0543946b",
+      "size": 45776
     },
     {
       "path": "lib/assistentmodelle.js",
-      "sha256": "6fade6ca213f16a4ccbe94fefb9a66bb775d4d8fc55e61a38f6d3bfc56088180",
-      "size": 7663
+      "sha256": "c0a503b43f75e19d2c5a96f0d81ea445ffe44b4f221e3d5a166ae27f99fea5ce",
+      "size": 9138
     },
     {
       "path": "lib/assistentwerkzeuge.js",
-      "sha256": "9444ec15c875199be2b21ef439afc8ec77475fc8cdbdd7237bfd53bb56cd3dd6",
-      "size": 119370
+      "sha256": "de4087d1516dd74ee1eb155483381c5402da493494a77cc55fcaf40da56df143",
+      "size": 125093
     },
     {
       "path": "lib/assistentwissen.js",
-      "sha256": "221f20d8c9d30c1e34afe2a0c305d59944383fcf56fe33099e4ddd0a239fe24d",
-      "size": 10155
+      "sha256": "ad12a471ee9338e426b4867f45420d5b9ec45742cc45764bd5c8bb124ef56586",
+      "size": 13189
     },
     {
       "path": "lib/aufgaben.js",
@@ -340,8 +350,8 @@
     },
     {
       "path": "lib/merge.js",
-      "sha256": "6513b07d81ed8e25dbe4513e560b2c94307995093a9348745e805f2f16a24129",
-      "size": 20228
+      "sha256": "db9048d88e585636d0f30795a8d9611829408c76f3dc30edf3e477b1ebeaf1eb",
+      "size": 20384
     },
     {
       "path": "lib/messung.js",
@@ -485,8 +495,8 @@
     },
     {
       "path": "lib/rollen.js",
-      "sha256": "4b41ff5a427899ece250fd5101c2b14a5a274b93bf13007c2bccb55c1e0d7a48",
-      "size": 6671
+      "sha256": "e4708a5915029fda90e38cbc8df5b43f9823ac74ef0c557db25a9bf373436652",
+      "size": 6775
     },
     {
       "path": "lib/router.js",
@@ -515,8 +525,8 @@
     },
     {
       "path": "lib/sprache/en.js",
-      "sha256": "c8248815e3126a58d778a2f316550d40a4192c520276437981cf4952bb831ec8",
-      "size": 1393
+      "sha256": "745822ff17b0b9c106069c2afbb39068c8e752a86bbaf8af801b6319a02e9da2",
+      "size": 1439
     },
     {
       "path": "lib/sprache/en/t01.js",
@@ -624,6 +634,11 @@
       "size": 5793
     },
     {
+      "path": "lib/sprache/en/zusatz-archiv.js",
+      "sha256": "695a8f5484c909663b7343a3f8c82a166cf426d000572cd80e431d458802cb71",
+      "size": 21707
+    },
+    {
       "path": "lib/sprache/en/zusatz-assistent.js",
       "sha256": "a5cc5326b5e0cb47dead3dbbf001eb3195ea595567b7abd1d8e8eae1bf8cd5aa",
       "size": 19101
@@ -635,8 +650,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz.js",
-      "sha256": "be364b8f7f823fc3cf2f96849d69b781b346548191ac8e39360611628bcf562d",
-      "size": 229353
+      "sha256": "cf6c77dfc31c1908f1be4500e45f592dd2724bdc041bf682e0fa2b8ebfb56566",
+      "size": 229518
     },
     {
       "path": "lib/steuerruecklage.js",
@@ -655,8 +670,8 @@
     },
     {
       "path": "lib/store.js",
-      "sha256": "500a3e4596ace73c3baeb6877a3529be3bbc79681fa2b53684dc00516de8d6a5",
-      "size": 45752
+      "sha256": "24113fddbe2fe67792e1535d6a7de03cf61c1dee99d9e00585e781d65a06fdd5",
+      "size": 45763
     },
     {
       "path": "lib/suche.js",
@@ -725,8 +740,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "e21cb7fe27d0fb136078493d9992137693abcd6d1d4e7d67005839911c97373e",
-      "size": 53674
+      "sha256": "610e79c14bed846276315785f595396121df3a29705e99233c9becc8b7495087",
+      "size": 54729
     },
     {
       "path": "lib/waehrung.js",
@@ -760,18 +775,18 @@
     },
     {
       "path": "lib/zuordnung.js",
-      "sha256": "ffba6e5522854549401d32f000f4ab1ae20bd5e512e85cd4af9ce0e466b5d470",
-      "size": 27319
+      "sha256": "193b2ac749f16852504aad1b0da4d6d2b2c62dbd864001b707062bbff77ad217",
+      "size": 27975
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "ad7f86943201aaf5d66d05db4752470f0cfe4b19ee528bb68d75512a8c453162",
+      "sha256": "34fd1a7d458da220a893ed7ee0fa525419f21b3b523fd1ca331d5dfcdb1d13e3",
       "size": 2810
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "b785fe51c20c7329e5517c83832c5b39faece1ba4c474cc917ae3f54440f9311",
-      "size": 38828
+      "sha256": "69fe2adb32438b74ac4face41504180fcc4eaa572560b8bffb298395344fc8bd",
+      "size": 39568
     },
     {
       "path": "recht/IMPRESSUM.md",
@@ -785,8 +800,8 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "692de03cc40d5297178d41661c4f7945b1eb63cf5c5212f186720e52808d8d8a",
-      "size": 42661
+      "sha256": "2cc48676f270677aa9524dd0d3ded49b780229372a363b704e391afc86b7c251",
+      "size": 43411
     },
     {
       "path": "recht/impressum.html",
@@ -810,8 +825,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "3f110efcfd55408180ce577e2e1465c55929328a6264f213e481f6b6743473f4",
-      "size": 141764
+      "sha256": "8d1ba938dc2cc0cdbe7b754c73f05e35cbe370ebc70667313ffd87f9c7f6702e",
+      "size": 142091
     },
     {
       "path": "views/admin.js",
@@ -827,6 +842,11 @@
       "path": "views/anlageform.js",
       "sha256": "33e6a0c16add64370483a07d03ddfcdd7a20a3e0ff808f25df4ca1f8d8f77cbb",
       "size": 11628
+    },
+    {
+      "path": "views/archiv.js",
+      "sha256": "3e8fbf38b0f8219ff2a50859b090f5b0e67a0f7cb99de0bbd044c8fb4eefbbfe",
+      "size": 14041
     },
     {
       "path": "views/calendar.js",
@@ -865,13 +885,13 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "ea6a7138009ce024a25423d430fb40a56c75e5c0bac4cbc76c2ad6e618a80cb3",
-      "size": 93222
+      "sha256": "48af11c5d7bc54557639cf705be0a5e233e24a4c2ce23addda93c18280a41b92",
+      "size": 95980
     },
     {
       "path": "views/importexport.js",
-      "sha256": "e7fce25644bbf88718638544b5495c33f305f8e1948971b654ad370a5bdf6e9d",
-      "size": 2297
+      "sha256": "e66119fa25e7b9e837ba398701489af9414d59c53ac9a1856a6dd4a5884154d3",
+      "size": 2465
     },
     {
       "path": "views/jahresvergleich.js",
@@ -945,8 +965,8 @@
     },
     {
       "path": "views/transactions.js",
-      "sha256": "07ccad08922d7b68852461e36a7158d2686306b51bc2df4668c613e98ac25937",
-      "size": 124375
+      "sha256": "1de015f03d21aac344e4d5bc368b52af7005a27617753905ec3d5e645d19173b",
+      "size": 124984
     },
     {
       "path": "views/wiederkehrend.js",
@@ -955,12 +975,12 @@
     },
     {
       "path": "web/ablage.js",
-      "sha256": "af6b878220f0de80f832e32581450bb86004914c63ae3f0cab5419c6e11f29e0",
-      "size": 28142
+      "sha256": "b90370199e80e48049c6068847c42b2b3d88cf2bd9cac3f42b9d4f575aa223d7",
+      "size": 28319
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "df2b488fe6e08fe731f4691f9ebed9c5681fcc9537e181d8a5fe6bc7845e47bf",
+      "sha256": "08c1540d16651a37b744eebbfde81dc3b5b08f21b9b2a87449351c7b7815859c",
       "size": 8012
     },
     {
@@ -970,8 +990,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "f6c946ff725a677dcae338dbca77bba5a2b047686a2602126d2833c9076f57c1",
-      "size": 67584
+      "sha256": "6521f4b5a25d26e1f2e83797ffed2b2929f5ae616609ed05514e4396abb735c3",
+      "size": 69218
     },
     {
       "path": "web/cloud.js",
@@ -985,8 +1005,8 @@
     },
     {
       "path": "web/dateien.js",
-      "sha256": "475e3cd75ee07c03f13cfb32aede773bcd2cdc0d1629e652ec54902a8ce9c4e2",
-      "size": 10627
+      "sha256": "dc1088adac79f365b594ccc5ffcba6ed8031bef4cb358322a13b20d09d5417c3",
+      "size": 10767
     },
     {
       "path": "web/druck.js",
@@ -1110,8 +1130,8 @@
     },
     {
       "path": "web/seed.js",
-      "sha256": "0c228b5ee06e971e3fd21826e5b86149db7dc1c0e252609bd2c376dbe3a38272",
-      "size": 5994
+      "sha256": "10b56944d0ec143bf014e6dd56e56615b7935b0dbb93ffe115a14b2b97538f21",
+      "size": 6011
     },
     {
       "path": "web/sperre.js",
@@ -1120,13 +1140,18 @@
     },
     {
       "path": "web/sql.js",
-      "sha256": "f77a9da2b5355f2e80b939202e8ebc13e027b6eb46cb7df71f76a066065c4609",
-      "size": 8741
+      "sha256": "5a1b377e6bb9ca2cae14f0d2b0781335cfe375ffa452508f673163edbab9472c",
+      "size": 9140
+    },
+    {
+      "path": "web/sqlabfrage.js",
+      "sha256": "e2b7c0175ea01e0d70674b04adaa5b9cfc5063883b670443aaf54823211bf46f",
+      "size": 6651
     },
     {
       "path": "web/sqlkern.js",
-      "sha256": "1c05366ee5b1c5456221fd47a45fee6e7a0b9b7c6ac1246570ff85cc7bb90a58",
-      "size": 18560
+      "sha256": "dbac9243e16c31f8f27a6172cb1f1c3b5d38971f8019651b6188671cf808e693",
+      "size": 21353
     },
     {
       "path": "web/sqlpool.js",
@@ -1135,8 +1160,8 @@
     },
     {
       "path": "web/sqlschema.js",
-      "sha256": "70b208dcb66249f7b861a5615d8566b18b68dfdf9a9e807013f1ce9590d1983f",
-      "size": 13042
+      "sha256": "8c9a0d0c6afa550fe1140dd3dec046b6b87432e8187204554918f38b6a63f71b",
+      "size": 13930
     },
     {
       "path": "web/sqlwerk.js",
@@ -1145,8 +1170,8 @@
     },
     {
       "path": "web/tresor.js",
-      "sha256": "8a9568243ee01271d57338416fa5ef38c800714f48d02d526c3a6b26f79eba4b",
-      "size": 31738
+      "sha256": "e7739c93d1c03cd9916176149ad63196b8b3eb9af8f4eb081a5c121a82dd2a57",
+      "size": 32202
     },
     {
       "path": "web/uebergabe.js",

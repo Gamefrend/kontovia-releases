@@ -1,8 +1,9 @@
 /**
  * Kontovia – Import und Export in einem Bereich der Seitenleiste.
  *
- * Zwei Reiter: „Export“ (views/export.js, Unterlagen für Finanzamt und Kanzlei)
- * und „Import“ (views/datenimport.js, Daten aus anderen Programmen). Die Leiste
+ * Drei Reiter: „Export“ (views/export.js, Unterlagen für Finanzamt und Kanzlei),
+ * „Import“ (views/datenimport.js, Daten aus anderen Programmen) und „Archiv“
+ * (views/archiv.js, Aufbewahrung, Jahresarchiv, Löschlauf, Auskunft). Die Leiste
  * bleibt beim Wechsel stehen, damit die Marke gleiten kann; neu gezeichnet wird
  * nur der Reiter darunter. Der frühere Bereich `datenimport` leitet hierher
  * (Umleitung in app.js).
@@ -13,10 +14,12 @@ import { router } from '../lib/router.js';
 import { markierung, bereichEin } from '../lib/bewegung.js';
 import * as exportAnsicht from './export.js';
 import * as importAnsicht from './datenimport.js';
+import * as archivAnsicht from './archiv.js';
 
 const REITER = {
   export: ['Export', exportAnsicht],
   import: ['Import', importAnsicht],
+  archiv: ['Archiv', archivAnsicht],
 };
 let reiter = 'export';
 

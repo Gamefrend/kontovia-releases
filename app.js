@@ -1497,7 +1497,7 @@ const HILFE_ABSCHNITT = {
   calendar: () => 'termine-und-rechnungen-verknuepfen',
   todos: () => 'aufgaben-ziele-und-wiederholungen',
   reports: (p) => (p.tab === 'kasse' || p.tab === 'vorschau' ? 'kassenbuch-und-liquiditaet' : 'diagramme-und-durchschnittswerte'),
-  export: (p) => (p.reiter === 'import' ? 'daten-aus-einem-anderen-programm-uebernehmen' : 'was-beim-export-herauskommt'),
+  export: (p) => (p.reiter === 'import' ? 'daten-aus-einem-anderen-programm-uebernehmen' : p.reiter === 'archiv' ? 'archiv-und-aufbewahrung' : 'was-beim-export-herauskommt'),
   master: () => 'anschaffungen-ueber-800',
   settings: () => 'zwei-einstellungen-auf-die-es-ankommt',
 };

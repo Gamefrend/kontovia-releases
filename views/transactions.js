@@ -543,6 +543,11 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
   // Original und Gegenbuchung eines Stornos bleiben, wie sie sind – sonst höben
   // sie sich nicht mehr auf.
   const stornoTeil = !!existing && isVoidPart(existing);
+  // Raten gibt es für neue Buchungen und nachträglich für offene, die an nichts anderem hängen (Rechnung, Wiederholung,
+  // Anlagegut, Anzahlung, Fremdwährung, mehrere Steuersätze). Die erste Rate behält die Kennung (lib/raten.js).
+  const ratenErlaubt = isNew || (!locked && !stornoTeil && !existing.paidDate && !existing.ratenId && !existing.recurringId && !existing.assetId
+    && !existing.isDeposit && !existing.voided && !existing.isReversal && !existing.splitId && !existing.fremd
+    && !(store.db.invoices || []).some((r) => (r.transactionIds || []).includes(existing.id)));
 
   /* Belege, die in diesem Dialog neu hinzugekommen sind – bei Abbruch wieder weg. */
   const addedAttachments = [];
@@ -1073,13 +1078,13 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     box.innerHTML = html`<span class="muted">${s.anzahl} Buchungen zusammen:</span> Netto <strong class="num">${money(s.net)} €</strong>, Umsatzsteuer <strong class="num">${money(s.vat)} €</strong>, Brutto <strong class="num">${money(s.gross)} €</strong>${doppelt !== null ? raw(`<div class="neg mt8">Der Satz ${doppelt} % kommt zweimal vor. Jeder Satz darf nur einmal vorkommen.</div>`) : ''}`;
   }
 
-  /** Ratenzahlung: eine neue Buchung in mehrere aufteilen – oder der Hinweis, dass diese schon eine Rate ist. */
+  /** Ratenzahlung: eine offene Buchung in mehrere aufteilen – oder der Hinweis, dass diese schon eine Rate ist. */
   function ratenFelder() {
     if (tx.ratenId) {
       return `<div class="field full"><label>Ratenzahlung</label><div class="small">Das ist Rate ${esc(String(tx.rate || ''))} von ${esc(String(tx.raten || ''))}.
         Jede Rate hat ihre eigene Fälligkeit und wird einzeln als bezahlt eingetragen.</div></div>`;
     }
-    if (!isNew || stornoTeil) return '';
+    if (!ratenErlaubt || stornoTeil) return '';
     return `<div class="field">
         <label for="i_raten">In Raten aufteilen</label>
         <input type="number" min="0" max="${MAX_RATEN}" id="i_raten" placeholder="keine" value="${ratenWahl.anzahl || ''}">
@@ -1803,7 +1808,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
       fieldError(form.querySelector('#i_repeatUntil'), 'Das Ende liegt vor dem Datum der Buchung.');
       return false;
     }
-    const inRaten = isNew && ratenAnzahl(ratenWahl.anzahl) > 1;
+    const inRaten = ratenErlaubt && ratenAnzahl(ratenWahl.anzahl) > 1;
     if (inRaten) {
       const feld = form.querySelector('#i_raten');
       if (wiederholung.freq) { fieldError(feld, 'Raten und Wiederholen lassen sich nicht verbinden. Wählen Sie eines davon.'); return false; }

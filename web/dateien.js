@@ -182,6 +182,11 @@ export async function teilen(files, { title = '', text = '' } = {}) {
  * @param {{name:string, data:Uint8Array}[]} files
  * @returns {Promise<{dir:string, written:string[]}|null>}
  */
+/** Die Dateien als ZIP-Bytes (für das Jahresarchiv, bridge.js: file.archiv). */
+export function zipBytes(files) {
+  return zip(files);
+}
+
 export async function mehrereAnbieten(files, { zipName = 'Kontovia-Export' } = {}) {
   if (window.showDirectoryPicker && !istMobil()) {
     let dir = null;
