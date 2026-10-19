@@ -280,6 +280,7 @@ export default {
   "Installieren": "Install",
   "Rechtliches": "Legal",
   "Datenschutz": "Privacy",
+  "Sicherheit melden": "Report a vulnerability",
   "Testbetrieb: Kontovia ist in Entwicklung. Alle Angaben auf dieser Seite sind vorläufig, ohne Haftung und ohne Gewährleistung.": "Test mode: Kontovia is in development. All information on this page is provisional, without liability and without warranty.",
 
   // config.json: Tarife

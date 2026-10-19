@@ -101,6 +101,7 @@ const RECHTSTEXTE = {
   datenschutz: 'recht/DATENSCHUTZ.md',
   impressum: 'recht/IMPRESSUM.md',
   nutzung: 'recht/NUTZUNGSBEDINGUNGEN.md',
+  sicherheit: 'recht/SICHERHEIT.md',
   schrift: 'fonts/LICENSE-Geist.txt',
 };
 
@@ -1189,9 +1190,10 @@ const api = {
     fassung: handle(async (modell, f16) => KI.fassung(str(modell, 80), !!f16)),
     imCache: handle(async (modelle = []) => kopie(await KI.imCache((Array.isArray(modelle) ? modelle : []).map((m) => str(m, 80))))),
     laden: handle(async (modell, beiFortschritt) => kopie(await KI.laden(str(modell, 80), typeof beiFortschritt === 'function' ? beiFortschritt : null))),
-    antworten: handle(async (anfrage = {}, beiTeil) => kopie(await KI.antworten(kopie(anfrage), typeof beiTeil === 'function' ? beiTeil : null))),
-    abbrechen: handle(async () => KI.abbrechen(), { needsUnlock: false }),
-    vergessen: handle(async () => KI.vergessen(), { needsUnlock: false }),
+    // quelle: 'assistent' oder 'kontoauszug'; Anhalten und „Neues Gespräch“ treffen nur die eigene Quelle (ki.js).
+    antworten: handle(async (anfrage = {}, beiTeil, quelle = 'assistent') => kopie(await KI.antworten(kopie(anfrage), typeof beiTeil === 'function' ? beiTeil : null, str(quelle, 20) || 'assistent'))),
+    abbrechen: handle(async (quelle = '') => KI.abbrechen(str(quelle, 20)), { needsUnlock: false }),
+    vergessen: handle(async (quelle = '') => KI.vergessen(str(quelle, 20)), { needsUnlock: false }),
     entladen: handle(async () => KI.entladen(), { needsUnlock: false }),
     loeschen: handle(async (modell) => KI.loeschen(str(modell, 80))),
     status: handle(async () => KI.status(), { needsUnlock: false }),

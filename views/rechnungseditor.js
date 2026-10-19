@@ -160,7 +160,7 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
           <div class="field"><label for="rk_email">E-Mail für Rechnungen</label><input id="rk_email" type="email" data-f="kaeufer.email" value="${esc(k.email || '')}"></div>
           <div class="field"><label for="rk_ustId">USt-IdNr.</label><input id="rk_ustId" data-f="kaeufer.ustId" value="${esc(k.ustId || '')}" placeholder="nur bei Firmenkunden"></div>
           <div class="field"><label for="rk_kundennummer">Kundennummer</label><input id="rk_kundennummer" data-f="kaeufer.kundennummer" value="${esc(k.kundennummer || '')}"></div>
-          <div class="field full"><label for="rk_leitwegId">Leitweg-ID</label><input id="rk_leitwegId" data-f="kaeufer.leitwegId" value="${esc(k.leitwegId || '')}" placeholder="nur bei Behörden, z. B. 04011000-12345-67">
+          <div class="field full"><label for="rk_leitwegId">Leitweg-ID</label><input id="rk_leitwegId" data-f="kaeufer.leitwegId" value="${esc(k.leitwegId || '')}" placeholder="nur bei Behörden, z. B. 04011000-12345-03">
             <span class="hint">Öffentliche Auftraggeber nennen sie im Auftrag. Mit ihr entsteht eine XRechnung.</span></div>
         </div>
         <div class="row wrap mt8"><button type="button" class="btn sm ghost" id="reKontaktSpeichern">${icon('save', 14).__raw} ${kontakt ? 'Kontakt aktualisieren' : 'Als Kontakt speichern'}</button></div>

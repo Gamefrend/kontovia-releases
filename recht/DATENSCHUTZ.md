@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 19. Oktober 2026, Programmversion 2.44.0
+Stand: 20. Oktober 2026, Programmversion 2.45.0
 
 ---
 
@@ -89,6 +89,10 @@ oder die Ansicht verlassen haben, und wird beim Sperren verworfen. Es gibt keine
 Verbindung zu einem Dienst: Sie laden die Datei selbst bei Ihrer Bank herunter. Die Zuordnung zu Rechnungen folgt
 festen Regeln und keinem lernenden Verfahren. Auch die Kategorie-Vorschläge entstehen auf Ihrem Gerät, aus Ihren
 früheren Buchungen und einer festen Liste bekannter Händlernamen. Dafür wird kein Text an einen Dienst gesendet.
+Nur wenn Sie es per Knopf anfordern und der Assistent ein Sprachmodell auf Ihrem Gerät hat, schlägt zusätzlich
+dieses Modell Kategorien vor (siehe „Assistent“). Es bekommt Betrag, Gegenseite, Verwendungszweck und Buchungstext
+der Umsätze ohne Zuordnung sowie die Namen Ihrer Kategorien, rechnet im Browser und sendet nichts. Seine Vorschläge heißen „Vorschlag
+der KI“ und sind nie ausgewählt.
 
 Gebucht wird nur, was Sie bestätigen. Die Buchungen stehen danach wie alle anderen verschlüsselt in Ihrem Tresor,
 mit dem Namen der Datei und dem Zeitpunkt als Herkunft, mit einem Prüfwert je Umsatz, damit derselbe Umsatz nie

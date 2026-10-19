@@ -34,7 +34,7 @@ import { spracheStarten, spracheGewaehlt, spracheMerken, spracheSetzen, sprache,
 /* Der Assistent lädt erst, wenn ihn jemand öffnet (lib/assistentfenster.js). */
 const KI_KUERZEL = `${MOD} J`;
 const assistentUmschalten = (frage) => import('./lib/assistentfenster.js').then((m) => m.assistentUmschalten(frage)).catch((e) => err('Assistent', e.message));
-import { seite, seitenwechsel, beobachten, markierung, umschalterBeobachten, themaWechsel, schuetteln } from './lib/bewegung.js';
+import { seite, seitenwechsel, beobachten, markierung, umschalterBeobachten, zustandBeobachten, themaWechsel, schuetteln } from './lib/bewegung.js';
 
 const api = window.kontovia;
 const app = document.getElementById('app');
@@ -116,7 +116,8 @@ function renderThemeToggle() {
     <button type="button" data-theme-set="${v}" class="${mode === v ? 'active' : ''}" aria-pressed="${mode === v}"
       title="${v === 'system' ? 'Wie das Betriebssystem' : t}">${icon(ic, 14).__raw}<span>${t}</span></button>`).join('')}</div>`;
   slot.querySelectorAll('[data-theme-set]').forEach((b) => b.addEventListener('click', () => {
-    if (b.dataset.themeSet !== mode) setTheme(b.dataset.themeSet, b);
+    // Den Stand frisch lesen: Der beim Zeichnen gemerkte Wert wäre bei schnellen Klicks veraltet.
+    if (b.dataset.themeSet !== (store.db?.settings?.theme || 'system')) setTheme(b.dataset.themeSet, b);
   }));
 }
 
@@ -152,6 +153,7 @@ async function boot() {
   applyTheme(lastTheme());
   // Jeder Umschalter (Reiter, Einnahme/Ausgabe, Darstellung) bekommt die gleitende Marke.
   umschalterBeobachten();
+  zustandBeobachten();
   // Jede Beschriftung nennt ihr Feld (Bildschirmleser, Klick auf die Beschriftung).
   beschriftungenBeobachten();
   betragHinweiseBeobachten();

@@ -600,8 +600,8 @@ function projektFeld(projektId) {
   return raw(html`<div class="field"><label for="ztProjekt">Projekt</label><select id="ztProjekt">${raw(projektOptionen(''))}</select></div>`);
 }
 
-/** Stoppuhr starten; ohne projektId mit Auswahl des Projekts (Suche, Kopfleiste, Übersicht). `taetigkeit` füllt der Assistent vor. */
-export function stoppuhrDialog(projektId = '', taetigkeit = '') {
+/** Stoppuhr starten; ohne projektId mit Auswahl des Projekts (Suche, Kopfleiste, Übersicht). `taetigkeit` und `person` füllt der Assistent vor. */
+export function stoppuhrDialog(projektId = '', taetigkeit = '', person = '') {
   if (!erlaubt('projekte')) return;
   if (!projektId && !laufende().length) { projektNeu(); return; }
   const p = projektId ? sel.projekt(projektId) : null;
@@ -609,7 +609,7 @@ export function stoppuhrDialog(projektId = '', taetigkeit = '') {
     title: p ? `Stoppuhr für ${p.name}` : 'Stoppuhr starten',
     size: 'slim',
     body: html`${projektFeld(projektId)}<div class="field"><label for="pjTat">Tätigkeit (freiwillig)</label><input id="pjTat" maxlength="200" value="${taetigkeit}" placeholder="z. B. Entwurf Startseite"></div>
-      ${personFeld(projektId, prefs.zeitPerson)}
+      ${personFeld(projektId, person || prefs.zeitPerson)}
       ${laufendeZeit() ? raw(html`<p class="small muted mb0 mt8">Die laufende Stoppuhr wird dabei angehalten und ihre Zeit gespeichert.</p>`) : ''}`,
     foot: html`<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>${icon('play', 15)} Starten</button>`,
   });

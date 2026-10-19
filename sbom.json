@@ -1,0 +1,977 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:ad61dfb0-d102-42cc-8c0b-1b183f6e269b",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-19T23:29:33.534Z",
+    "lifecycles": [
+      {
+        "phase": "build"
+      }
+    ],
+    "tools": {
+      "components": [
+        {
+          "type": "application",
+          "name": "scripts/sbom.js",
+          "description": "Erzeugt aus src/web/vendor/HERKUNFT.md, den Lizenzdateien und src/web/kimodelle.js."
+        }
+      ]
+    },
+    "component": {
+      "type": "application",
+      "bom-ref": "kontovia",
+      "name": "Kontovia",
+      "version": "2.45.0"
+    },
+    "supplier": {
+      "name": "Beispielbetrieb (Platzhalter, noch keine Firma)",
+      "contact": [
+        {
+          "email": "platzhalter@example.org"
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "bom-ref": "sqlite3mc",
+      "name": "SQLite3 Multiple Ciphers",
+      "version": "2.5.1",
+      "author": "Ulrich Telle",
+      "description": "Verschlüsselte SQLite-Datenbank als WebAssembly, läuft nur im Rechenwerk der Datenbank.",
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:github/utelle/sqlite3multipleciphers@v2.5.1",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/utelle/SQLite3MultipleCiphers"
+        }
+      ],
+      "components": [
+        {
+          "type": "library",
+          "bom-ref": "sqlite3mc/sqlite",
+          "name": "SQLite",
+          "version": "3.53.4",
+          "description": "Datenbankkern, in sqlite3.wasm enthalten.",
+          "licenses": [
+            {
+              "license": {
+                "name": "Public Domain (gemeinfrei)"
+              }
+            }
+          ],
+          "purl": "pkg:generic/sqlite@3.53.4",
+          "cpe": "cpe:2.3:a:sqlite:sqlite:3.53.4:*:*:*:*:*:*:*",
+          "externalReferences": [
+            {
+              "type": "website",
+              "url": "https://sqlite.org/"
+            }
+          ],
+          "properties": [
+            {
+              "name": "kontovia:ausgeliefert",
+              "value": "ja"
+            }
+          ]
+        },
+        {
+          "type": "library",
+          "bom-ref": "sqlite3mc/emscripten",
+          "name": "Emscripten-Anteile der JavaScript-Hülle",
+          "description": "Laufzeitanteile im Kopf von sqlite3.mjs; HERKUNFT.md nennt keine Fassung.",
+          "licenses": [
+            {
+              "license": {
+                "name": "MIT/NCSA"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "kontovia:ausgeliefert",
+              "value": "ja"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "bom-ref": "datei:web/vendor/sqlite3.mjs",
+          "name": "web/vendor/sqlite3.mjs",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "058b526608afdd81c244540f525286275d7bcc6a11676d19fdda7be50502f10e"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "bom-ref": "datei:web/vendor/sqlite3.wasm",
+          "name": "web/vendor/sqlite3.wasm",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "b6aedab9eee5cd5de0f13498e0bf64bb5ee9cc786d1d0303cc365578b64d18ab"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "bom-ref": "datei:web/vendor/LICENSE-sqlite3mc.txt",
+          "name": "web/vendor/LICENSE-sqlite3mc.txt",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "39205ec18e0f25f56c62d3bda9768e7509b63a74ba58beb7442903dfc81c247a"
+            }
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "ja"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "web-llm",
+      "name": "@mlc-ai/web-llm",
+      "version": "0.2.85",
+      "description": "Laufzeit für den Sprachmodell-Assistenten (WebGPU), läuft nur im Rechenwerk des Assistenten.",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:npm/%40mlc-ai/web-llm@0.2.85",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/mlc-ai/web-llm"
+        }
+      ],
+      "components": [
+        {
+          "type": "library",
+          "bom-ref": "web-llm/loglevel",
+          "name": "loglevel",
+          "version": "1.9",
+          "description": "In web-llm.js enthalten.",
+          "licenses": [
+            {
+              "license": {
+                "id": "MIT"
+              }
+            }
+          ],
+          "purl": "pkg:npm/loglevel@1.9",
+          "properties": [
+            {
+              "name": "kontovia:ausgeliefert",
+              "value": "ja"
+            }
+          ]
+        },
+        {
+          "type": "library",
+          "bom-ref": "web-llm/tvm",
+          "name": "Apache TVM (Laufzeit)",
+          "description": "In web-llm.js enthalten; HERKUNFT.md nennt keine Fassung.",
+          "licenses": [
+            {
+              "license": {
+                "id": "Apache-2.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "kontovia:ausgeliefert",
+              "value": "ja"
+            }
+          ]
+        },
+        {
+          "type": "library",
+          "bom-ref": "web-llm/xgrammar",
+          "name": "XGrammar",
+          "description": "In web-llm.js enthalten; HERKUNFT.md nennt keine Fassung.",
+          "licenses": [
+            {
+              "license": {
+                "id": "Apache-2.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "kontovia:ausgeliefert",
+              "value": "ja"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "bom-ref": "datei:web/vendor/web-llm.js",
+          "name": "web/vendor/web-llm.js",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "a79b021e27e3048de514a2913bfb55800ddb31b1bd82eb38ba91f9b51b602e1f"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "bom-ref": "datei:web/vendor/LICENSE-web-llm.txt",
+          "name": "web/vendor/LICENSE-web-llm.txt",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "d412ab9d5ac17e6931705aac01e5a0d323da5acd2e89a2c19aa8fc05becc59ad"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "bom-ref": "datei:web/vendor/LICENSE-loglevel.txt",
+          "name": "web/vendor/LICENSE-loglevel.txt",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "670938953c9a91c1b66881d8b3f1a167276e2f32d05d8ba7d9aebde1d15177e1"
+            }
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "ja"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "tesseract.js",
+      "name": "tesseract.js",
+      "version": "6.0.1",
+      "description": "Texterkennung für Fotos von Belegen, läuft nur im Rechenwerk der Texterkennung.",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:npm/tesseract.js@6.0.1",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/naptha/tesseract.js"
+        }
+      ],
+      "components": [
+        {
+          "type": "library",
+          "bom-ref": "tesseract.js/buffer",
+          "name": "buffer",
+          "description": "In worker.min.js gebündelt; HERKUNFT.md nennt keine Fassung.",
+          "licenses": [
+            {
+              "license": {
+                "id": "MIT"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "kontovia:ausgeliefert",
+              "value": "ja"
+            }
+          ]
+        },
+        {
+          "type": "library",
+          "bom-ref": "tesseract.js/ieee754",
+          "name": "ieee754",
+          "description": "In worker.min.js gebündelt; HERKUNFT.md nennt keine Fassung.",
+          "licenses": [
+            {
+              "license": {
+                "id": "BSD-3-Clause"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "kontovia:ausgeliefert",
+              "value": "ja"
+            }
+          ]
+        },
+        {
+          "type": "library",
+          "bom-ref": "tesseract.js/regenerator-runtime",
+          "name": "regenerator-runtime",
+          "description": "In worker.min.js gebündelt; HERKUNFT.md nennt keine Fassung.",
+          "licenses": [
+            {
+              "license": {
+                "id": "MIT"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "kontovia:ausgeliefert",
+              "value": "ja"
+            }
+          ]
+        },
+        {
+          "type": "library",
+          "bom-ref": "tesseract.js/zlib.js",
+          "name": "zlib.js",
+          "description": "In worker.min.js gebündelt; HERKUNFT.md nennt keine Fassung.",
+          "licenses": [
+            {
+              "license": {
+                "id": "MIT"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "kontovia:ausgeliefert",
+              "value": "ja"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "bom-ref": "datei:web/vendor/tesseract/tesseract.esm.min.js",
+          "name": "web/vendor/tesseract/tesseract.esm.min.js",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "da6267cfe5036ae718a59eece3b5744a4655b0b8faa9f16259362b783d74c9bb"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "bom-ref": "datei:web/vendor/tesseract/worker.min.js",
+          "name": "web/vendor/tesseract/worker.min.js",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "38645599043239c0eb6db08a6504a92dcdc292200535f3e9339cd77c4443b842"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "bom-ref": "datei:web/vendor/tesseract/LICENSE-tesseract.js.md",
+          "name": "web/vendor/tesseract/LICENSE-tesseract.js.md",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "bom-ref": "datei:web/vendor/tesseract/LICENSE-worker-bestandteile.txt",
+          "name": "web/vendor/tesseract/LICENSE-worker-bestandteile.txt",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "45f54171aeaa1d10c0c1a66f374b7bba1f02472b1487fbe892eec04f840002ac"
+            }
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "ja"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "tesseract.js-core",
+      "name": "tesseract.js-core",
+      "version": "6.0.0",
+      "description": "Tesseract 5 und Leptonica als WebAssembly (nur LSTM, mit SIMD), in der Datei eingebettet.",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:npm/tesseract.js-core@6.0.0",
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/naptha/tesseract.js-core"
+        }
+      ],
+      "components": [
+        {
+          "type": "library",
+          "bom-ref": "tesseract.js-core/tesseract",
+          "name": "Tesseract",
+          "description": "Texterkennung (Version 5), in tesseract-core-simd-lstm.wasm.js eingebettet.",
+          "licenses": [
+            {
+              "license": {
+                "id": "Apache-2.0"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "kontovia:ausgeliefert",
+              "value": "ja"
+            }
+          ]
+        },
+        {
+          "type": "library",
+          "bom-ref": "tesseract.js-core/leptonica",
+          "name": "Leptonica",
+          "description": "Bildverarbeitung, in tesseract-core-simd-lstm.wasm.js eingebettet; HERKUNFT.md nennt keine Fassung.",
+          "licenses": [
+            {
+              "license": {
+                "name": "BSD-artig"
+              }
+            }
+          ],
+          "properties": [
+            {
+              "name": "kontovia:ausgeliefert",
+              "value": "ja"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "bom-ref": "datei:web/vendor/tesseract/tesseract-core-simd-lstm.wasm.js",
+          "name": "web/vendor/tesseract/tesseract-core-simd-lstm.wasm.js",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "9d7c43fb206dc9f48475228b46bf35f888fa9e6259da2e67d5a75c77049f2dc7"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "bom-ref": "datei:web/vendor/tesseract/LICENSE-tesseract.js-core.txt",
+          "name": "web/vendor/tesseract/LICENSE-tesseract.js-core.txt",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "c6596eb7be8581c18be736c846fb9173b69eccf6ef94c5135893ec56bd92ba08"
+            }
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "ja"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "tesseract-data-deu",
+      "name": "@tesseract.js-data/deu",
+      "version": "1.0.0",
+      "description": "Deutsche Sprachdaten (4.0.0_best_int, aus tessdata_best von tesseract-ocr). Paket MIT, Sprachdaten Apache-2.0.",
+      "licenses": [
+        {
+          "expression": "MIT AND Apache-2.0"
+        }
+      ],
+      "purl": "pkg:npm/%40tesseract.js-data/deu@1.0.0",
+      "components": [
+        {
+          "type": "file",
+          "bom-ref": "datei:web/vendor/tesseract/deu.traineddata.gz",
+          "name": "web/vendor/tesseract/deu.traineddata.gz",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "306c4280d0cbed46fbff727486bd43b92730181bae80f56941a091f363bdf28b"
+            }
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "ja"
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "tesseract-data-eng",
+      "name": "@tesseract.js-data/eng",
+      "version": "1.0.0",
+      "description": "Englische Sprachdaten (4.0.0_best_int, aus tessdata_best von tesseract-ocr). Paket MIT, Sprachdaten Apache-2.0.",
+      "licenses": [
+        {
+          "expression": "MIT AND Apache-2.0"
+        }
+      ],
+      "purl": "pkg:npm/%40tesseract.js-data/eng@1.0.0",
+      "components": [
+        {
+          "type": "file",
+          "bom-ref": "datei:web/vendor/tesseract/eng.traineddata.gz",
+          "name": "web/vendor/tesseract/eng.traineddata.gz",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "45b4cb346724ac1774f1c36f42f182b887bcdb28ebe63e6fff90ac41f3fcff91"
+            }
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "ja"
+        }
+      ]
+    },
+    {
+      "type": "font",
+      "bom-ref": "geist",
+      "name": "Geist",
+      "description": "Schrift der Oberfläche, mit eingebettet in PDF-Dateien. Copyright 2024 The Geist Project Authors; HERKUNFT.md führt sie nicht auf, die Lizenzdatei nennt keine Fassung.",
+      "licenses": [
+        {
+          "license": {
+            "id": "OFL-1.1"
+          }
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "website",
+          "url": "https://github.com/vercel/geist-font"
+        }
+      ],
+      "components": [
+        {
+          "type": "file",
+          "bom-ref": "datei:fonts/geist-latin-ext-wght-normal.woff2",
+          "name": "fonts/geist-latin-ext-wght-normal.woff2",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "824f485b5d26e2f2da3c2b236132ece1bc8e4e43373452950bb0e40548b4313f"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "bom-ref": "datei:fonts/geist-latin-wght-normal.woff2",
+          "name": "fonts/geist-latin-wght-normal.woff2",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "19f9c92546aa300c312235e3125af1b81394d8db9a4bc4a425cd5b641d2d54e1"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "bom-ref": "datei:fonts/geist-pdf.js",
+          "name": "fonts/geist-pdf.js",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "09c12b5d6707aadf1b333f2900ebbaa25592e609c97ef84be115a0b41857c4ca"
+            }
+          ]
+        },
+        {
+          "type": "file",
+          "bom-ref": "datei:fonts/LICENSE-Geist.txt",
+          "name": "fonts/LICENSE-Geist.txt",
+          "hashes": [
+            {
+              "alg": "SHA-256",
+              "content": "71609cbb5c78b5870d712eab73a31d76622635c6ed034ab5cee3b9ecbda8685f"
+            }
+          ]
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "ja"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "modell:Qwen3-0.6B-q4f16_1-MLC",
+      "name": "Qwen3-0.6B-q4f16_1-MLC",
+      "version": "8c14ce481d4c692769976ad52afea453a102df19",
+      "scope": "optional",
+      "description": "Qwen3 (Alibaba Cloud), 4 Bit quantisiert für WebLLM, fest auf diesen Commit gepinnt (src/web/kimodelle.js).",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:huggingface/mlc-ai/Qwen3-0.6B-q4f16_1-MLC@8c14ce481d4c692769976ad52afea453a102df19",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://huggingface.co/mlc-ai/Qwen3-0.6B-q4f16_1-MLC/tree/8c14ce481d4c692769976ad52afea453a102df19"
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "nein"
+        },
+        {
+          "name": "kontovia:vom-nutzer-geladen",
+          "value": "ja, nur nach Zustimmung, in den Browserspeicher"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "modell:Qwen3-0.6B-q4f32_1-MLC",
+      "name": "Qwen3-0.6B-q4f32_1-MLC",
+      "version": "9b4f0b05b08c692ea86fe151ea878406ad22f428",
+      "scope": "optional",
+      "description": "Qwen3 (Alibaba Cloud), 4 Bit quantisiert für WebLLM, fest auf diesen Commit gepinnt (src/web/kimodelle.js).",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:huggingface/mlc-ai/Qwen3-0.6B-q4f32_1-MLC@9b4f0b05b08c692ea86fe151ea878406ad22f428",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://huggingface.co/mlc-ai/Qwen3-0.6B-q4f32_1-MLC/tree/9b4f0b05b08c692ea86fe151ea878406ad22f428"
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "nein"
+        },
+        {
+          "name": "kontovia:vom-nutzer-geladen",
+          "value": "ja, nur nach Zustimmung, in den Browserspeicher"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "modell:Qwen3-1.7B-q4f16_1-MLC",
+      "name": "Qwen3-1.7B-q4f16_1-MLC",
+      "version": "80b3abcec6c3b3f5355dc0cc99cc4fb578f192bc",
+      "scope": "optional",
+      "description": "Qwen3 (Alibaba Cloud), 4 Bit quantisiert für WebLLM, fest auf diesen Commit gepinnt (src/web/kimodelle.js).",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:huggingface/mlc-ai/Qwen3-1.7B-q4f16_1-MLC@80b3abcec6c3b3f5355dc0cc99cc4fb578f192bc",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://huggingface.co/mlc-ai/Qwen3-1.7B-q4f16_1-MLC/tree/80b3abcec6c3b3f5355dc0cc99cc4fb578f192bc"
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "nein"
+        },
+        {
+          "name": "kontovia:vom-nutzer-geladen",
+          "value": "ja, nur nach Zustimmung, in den Browserspeicher"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "modell:Qwen3-1.7B-q4f32_1-MLC",
+      "name": "Qwen3-1.7B-q4f32_1-MLC",
+      "version": "bddd4d584cabe19113f7e4ff46fd9e73b4d3dc89",
+      "scope": "optional",
+      "description": "Qwen3 (Alibaba Cloud), 4 Bit quantisiert für WebLLM, fest auf diesen Commit gepinnt (src/web/kimodelle.js).",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:huggingface/mlc-ai/Qwen3-1.7B-q4f32_1-MLC@bddd4d584cabe19113f7e4ff46fd9e73b4d3dc89",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://huggingface.co/mlc-ai/Qwen3-1.7B-q4f32_1-MLC/tree/bddd4d584cabe19113f7e4ff46fd9e73b4d3dc89"
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "nein"
+        },
+        {
+          "name": "kontovia:vom-nutzer-geladen",
+          "value": "ja, nur nach Zustimmung, in den Browserspeicher"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "modell:Qwen3-4B-q4f16_1-MLC",
+      "name": "Qwen3-4B-q4f16_1-MLC",
+      "version": "a5c9fab855e3ccbdfed2e7e69683d75f30332161",
+      "scope": "optional",
+      "description": "Qwen3 (Alibaba Cloud), 4 Bit quantisiert für WebLLM, fest auf diesen Commit gepinnt (src/web/kimodelle.js).",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:huggingface/mlc-ai/Qwen3-4B-q4f16_1-MLC@a5c9fab855e3ccbdfed2e7e69683d75f30332161",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://huggingface.co/mlc-ai/Qwen3-4B-q4f16_1-MLC/tree/a5c9fab855e3ccbdfed2e7e69683d75f30332161"
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "nein"
+        },
+        {
+          "name": "kontovia:vom-nutzer-geladen",
+          "value": "ja, nur nach Zustimmung, in den Browserspeicher"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "modell:Qwen3-4B-q4f32_1-MLC",
+      "name": "Qwen3-4B-q4f32_1-MLC",
+      "version": "b7e4eb1ba80728187fb5df44055cc1a7c32310e0",
+      "scope": "optional",
+      "description": "Qwen3 (Alibaba Cloud), 4 Bit quantisiert für WebLLM, fest auf diesen Commit gepinnt (src/web/kimodelle.js).",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:huggingface/mlc-ai/Qwen3-4B-q4f32_1-MLC@b7e4eb1ba80728187fb5df44055cc1a7c32310e0",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://huggingface.co/mlc-ai/Qwen3-4B-q4f32_1-MLC/tree/b7e4eb1ba80728187fb5df44055cc1a7c32310e0"
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "nein"
+        },
+        {
+          "name": "kontovia:vom-nutzer-geladen",
+          "value": "ja, nur nach Zustimmung, in den Browserspeicher"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "modell:Qwen3-8B-q4f16_1-MLC",
+      "name": "Qwen3-8B-q4f16_1-MLC",
+      "version": "b3d55c289eae58f77095f5b68c895eeea358ee09",
+      "scope": "optional",
+      "description": "Qwen3 (Alibaba Cloud), 4 Bit quantisiert für WebLLM, fest auf diesen Commit gepinnt (src/web/kimodelle.js).",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:huggingface/mlc-ai/Qwen3-8B-q4f16_1-MLC@b3d55c289eae58f77095f5b68c895eeea358ee09",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://huggingface.co/mlc-ai/Qwen3-8B-q4f16_1-MLC/tree/b3d55c289eae58f77095f5b68c895eeea358ee09"
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "nein"
+        },
+        {
+          "name": "kontovia:vom-nutzer-geladen",
+          "value": "ja, nur nach Zustimmung, in den Browserspeicher"
+        }
+      ]
+    },
+    {
+      "type": "machine-learning-model",
+      "bom-ref": "modell:Qwen3-8B-q4f32_1-MLC",
+      "name": "Qwen3-8B-q4f32_1-MLC",
+      "version": "34026572351006ba1865d11319309b151d9ccf16",
+      "scope": "optional",
+      "description": "Qwen3 (Alibaba Cloud), 4 Bit quantisiert für WebLLM, fest auf diesen Commit gepinnt (src/web/kimodelle.js).",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "purl": "pkg:huggingface/mlc-ai/Qwen3-8B-q4f32_1-MLC@34026572351006ba1865d11319309b151d9ccf16",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://huggingface.co/mlc-ai/Qwen3-8B-q4f32_1-MLC/tree/34026572351006ba1865d11319309b151d9ccf16"
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "nein"
+        },
+        {
+          "name": "kontovia:vom-nutzer-geladen",
+          "value": "ja, nur nach Zustimmung, in den Browserspeicher"
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "modell-programmteil",
+      "name": "binary-mlc-llm-libs (Programmteile der Modelle)",
+      "version": "025bcaf3780fa8254f5e5efd3bfea0a5397248f4",
+      "scope": "optional",
+      "description": "Vorübersetzte WebGPU-Programmteile der Modelle, fest auf diesen Commit gepinnt; kimodelle.js nennt keine Lizenz dafür, deshalb steht hier keine.",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://github.com/mlc-ai/binary-mlc-llm-libs/tree/025bcaf3780fa8254f5e5efd3bfea0a5397248f4"
+        }
+      ],
+      "properties": [
+        {
+          "name": "kontovia:ausgeliefert",
+          "value": "nein"
+        },
+        {
+          "name": "kontovia:vom-nutzer-geladen",
+          "value": "ja, nur nach Zustimmung, in den Browserspeicher"
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "kontovia",
+      "dependsOn": [
+        "sqlite3mc",
+        "web-llm",
+        "tesseract.js",
+        "tesseract.js-core",
+        "tesseract-data-deu",
+        "tesseract-data-eng",
+        "geist",
+        "modell:Qwen3-0.6B-q4f16_1-MLC",
+        "modell:Qwen3-0.6B-q4f32_1-MLC",
+        "modell:Qwen3-1.7B-q4f16_1-MLC",
+        "modell:Qwen3-1.7B-q4f32_1-MLC",
+        "modell:Qwen3-4B-q4f16_1-MLC",
+        "modell:Qwen3-4B-q4f32_1-MLC",
+        "modell:Qwen3-8B-q4f16_1-MLC",
+        "modell:Qwen3-8B-q4f32_1-MLC",
+        "modell-programmteil"
+      ]
+    },
+    {
+      "ref": "sqlite3mc",
+      "dependsOn": [
+        "sqlite3mc/sqlite",
+        "sqlite3mc/emscripten"
+      ]
+    },
+    {
+      "ref": "web-llm",
+      "dependsOn": [
+        "web-llm/loglevel",
+        "web-llm/tvm",
+        "web-llm/xgrammar"
+      ]
+    },
+    {
+      "ref": "tesseract.js",
+      "dependsOn": [
+        "tesseract.js/buffer",
+        "tesseract.js/ieee754",
+        "tesseract.js/regenerator-runtime",
+        "tesseract.js/zlib.js"
+      ]
+    },
+    {
+      "ref": "tesseract.js-core",
+      "dependsOn": [
+        "tesseract.js-core/tesseract",
+        "tesseract.js-core/leptonica"
+      ]
+    }
+  ]
+}

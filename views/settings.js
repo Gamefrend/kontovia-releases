@@ -277,7 +277,32 @@ async function draw(root) {
               <div class="field">
                 <label for="s_rlWeitere">Weitere Einkünfte im Jahr</label>
                 <input id="s_rlWeitere" class="money-input" inputmode="decimal" value="${moneyInput(rl.weitere)}">
-                <span class="hint">Etwa Lohn oder Miete; Abzüge wie Vorsorge mit Minus.</span>
+                <span class="hint">Etwa Lohn oder Miete, Verluste mit Minus.</span>
+              </div>
+              <div class="field">
+                <label for="s_rlVorsorge">Vorsorge im Jahr</label>
+                <input id="s_rlVorsorge" class="money-input" inputmode="decimal" value="${moneyInput(rl.vorsorge)}">
+                <span class="hint">Kranken-, Pflege- und Rentenversicherung, so weit absetzbar.</span>
+              </div>
+              <div class="field">
+                <label for="s_rlSonder">Weitere Sonderausgaben im Jahr</label>
+                <input id="s_rlSonder" class="money-input" inputmode="decimal" value="${moneyInput(rl.sonderausgaben)}">
+                <span class="hint">Etwa Spenden. Mindestens 36 € (zusammen 72 €) rechnet Kontovia von selbst.</span>
+              </div>
+              <div class="field">
+                <label for="s_rlKinder">Kinderfreibeträge</label>
+                <input id="s_rlKinder" type="number" min="0" max="20" step="0.5" value="${rl.kinder}">
+                <span class="hint">Je Kind 1, wenn Sie zusammen veranlagt werden, sonst meist 0,5. Kontovia vergleicht mit dem Kindergeld.</span>
+              </div>
+              <div class="field">
+                <label for="s_rlHinzu">Hinzurechnungen zur Gewerbesteuer</label>
+                <input id="s_rlHinzu" class="money-input" inputmode="decimal" value="${moneyInput(rl.hinzurechnungen)}">
+                <span class="hint">Etwa Anteile von Zinsen und Mieten. Nur eintragen, wenn Ihre Steuerberatung einen Betrag nennt.</span>
+              </div>
+              <div class="field">
+                <label for="s_rlKuerz">Kürzungen der Gewerbesteuer</label>
+                <input id="s_rlKuerz" class="money-input" inputmode="decimal" value="${moneyInput(rl.kuerzungen)}">
+                <span class="hint">Etwa für eigenen Grundbesitz im Betrieb. Nur eintragen, wenn Ihre Steuerberatung einen Betrag nennt.</span>
               </div>
               <div class="field">
                 <label for="s_rlVoraus">Vorauszahlungen ${new Date().getFullYear()}</label>
@@ -732,6 +757,11 @@ async function apply(root, { neuZeichnen = true } = {}) {
     splitting: val('rlSplitting') === 'zusammen',
     kirche: Number(val('rlKirche')) || 0,
     weitere: parseMoney(val('rlWeitere')),
+    vorsorge: Math.max(0, parseMoney(val('rlVorsorge'))),
+    sonderausgaben: Math.max(0, parseMoney(val('rlSonder'))),
+    kinder: Math.min(20, Math.round(Math.max(0, Number(val('rlKinder')) || 0) * 2) / 2),
+    hinzurechnungen: Math.max(0, parseMoney(val('rlHinzu'))),
+    kuerzungen: Math.max(0, parseMoney(val('rlKuerz'))),
     vorauszahlungen: { ...rlAlt.vorauszahlungen, [jahrJetzt]: Math.max(0, parseMoney(val('rlVoraus'))) },
   };
   await commit('einstellungen.aendern', (db) => {

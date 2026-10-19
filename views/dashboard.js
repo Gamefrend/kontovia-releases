@@ -372,13 +372,13 @@ const WIDGETS = {
         : `
         <div class="row between"><span>Jetzt zurücklegen</span><strong class="num amount neg" style="font-size:20px">${esc(money(r.zuruecklegen))} €</strong></div>
         <p class="tiny muted mb8" style="margin-top:4px">${esc(r.monate === 12 ? 'Anteil bis Jahresende' : `Anteil bis Ende ${MONTHS[r.monate - 1]}`)}${r.vorausgezahlt ? esc(`, abzüglich ${money(r.vorausgezahlt)} € Vorauszahlungen`) : ''}</p>
-        ${zeile('Einkommensteuer', r.est, r.anrechnung ? `nach Anrechnung der Gewerbesteuer (${money(r.anrechnung)} €)` : '')}
+        ${zeile('Einkommensteuer', r.est, r.anrechnung ? `nach Anrechnung der Gewerbesteuer (${money(r.anrechnung)} €)` : r.freibetragGuenstiger ? 'mit Kinderfreibeträgen, Kindergeld verrechnet' : '')}
         ${zeile('Solidaritätszuschlag', r.soli)}
         ${zeile('Kirchensteuer', r.kirche)}
         ${zeile('Gewerbesteuer', r.gewst, `Hebesatz ${e.hebesatz} %`)}
         <div class="row between" style="border-top:1px solid var(--border);padding-top:6px;margin-top:4px"><span class="muted">Fürs ganze Jahr geschätzt</span><span class="num">${esc(money(r.summe))} €</span></div>
         <p class="tiny muted mt8 mb0">${r.monate < 12 ? `Hochgerechnet aus ${money(r.gewinnBisher)} € Gewinn bis heute auf ${money(r.gewinnJahr)} € im Jahr.` : `Gewinn ${money(r.gewinnJahr)} €.`}
-          Ohne Sonderausgaben und Freibeträge, eine grobe Schätzung.${e.gesetzt ? '' : ' Gewerbe, Hebesatz und Kirchensteuer stellen Sie in den Einstellungen ein.'}</p>`;
+          Eine grobe Schätzung, kein Steuerbescheid.${r.tarifJahr !== r.jahr ? ` Der Steuertarif ${r.jahr} ist nicht hinterlegt, gerechnet wird mit ${r.tarifJahr}.` : ''}${e.gesetzt ? '' : ' Gewerbe, Kinder, Vorsorge und Kirchensteuer stellen Sie in den Einstellungen ein.'}</p>`;
       return card('Steuerrücklage', body, {
         sub: String(r.jahr),
         ziel: z('settings', { abschnitt: 'ruecklage' }, { haupt: true, titel: 'Angaben zur Steuerrücklage in den Einstellungen' }),

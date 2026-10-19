@@ -539,9 +539,10 @@ function anleitung(root) {
         Ein Klick auf die Überschrift eines Moduls oder auf eine freie Stelle in seiner Karte öffnet die zugehörige Ansicht.</p>
         <p><strong>Steuerrücklage.</strong> Das Modul schätzt, wie viel Einkommensteuer, Solidaritätszuschlag, Kirchensteuer und
         Gewerbesteuer auf Ihren Gewinn des Jahres zukommen, und wie viel davon Sie bis heute zurücklegen sollten. Der Gewinn bis heute
-        wird dafür aufs Jahr hochgerechnet. Ob Gewerbesteuer anfällt, den Hebesatz Ihrer Gemeinde, Kirchensteuer, weitere Einkünfte
-        und schon gezahlte Vorauszahlungen tragen Sie unter Einstellungen › Firma &amp; Steuern ein. Sonderausgaben und Freibeträge
-        kennt die Schätzung nicht; den genauen Betrag nennt erst der Steuerbescheid.</p>
+        wird dafür aufs Jahr hochgerechnet. Ob Gewerbesteuer anfällt, den Hebesatz Ihrer Gemeinde, Kirchensteuer, weitere Einkünfte,
+        Vorsorge und Sonderausgaben, Kinderfreibeträge, Hinzurechnungen und Kürzungen der Gewerbesteuer und schon gezahlte
+        Vorauszahlungen tragen Sie unter Einstellungen › Firma &amp; Steuern ein. Bei Kindern rechnet Kontovia mit den Freibeträgen,
+        wenn sie mehr sparen als das Kindergeld. Es bleibt eine Schätzung; den genauen Betrag nennt erst der Steuerbescheid.</p>
         <p class="small">Die Anordnung gilt nur für dieses Gerät. Am Telefon passt oft eine andere als
         am großen Bildschirm. In den Tresor und den Cloud-Abgleich geht sie nicht.</p>
       </div></div>
@@ -664,6 +665,22 @@ function anleitung(root) {
         <p class="small">Das Änderungsjournal selbst wird nie gelöscht. Die Fristen lassen sich verlängern, etwa bei einer laufenden
         Betriebsprüfung, nie verkürzen. „Auskunft zu einer Person“ stellt alles zusammen, was zu einem Kontakt gespeichert ist,
         für eine Anfrage nach Art. 15 DSGVO.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
+        <h2 class="mt0">Verfahrensdokumentation</h2>
+        <p>Bei einer Betriebsprüfung möchte das Finanzamt wissen, wie Ihre Buchführung läuft: wie Belege ankommen, wer bucht,
+        wie Änderungen nachvollziehbar bleiben und wie Sie sichern und aufbewahren. Unter <a data-go="export" data-reiter="verfahren">Import & Export</a>,
+        Reiter „Verfahren“, schreibt Kontovia diese Beschreibung als PDF aus Ihren Einstellungen und Daten.</p>
+        <ul>
+          <li><strong>Was Kontovia einträgt:</strong> Firma und Steuerstatus samt früheren Ständen, Programmfassung, Benutzer und Rollen,
+              Konten und Kontenrahmen, den Weg vom Beleg zur Buchung, Festschreibung und Änderungsjournal, Sicherung und Cloud,
+              Archiv und Fristen.</li>
+          <li><strong>Was Sie ergänzen:</strong> Ihre eigenen Abläufe in fünf Feldern, etwa wer Belege erfasst, wie Sie mit Bargeld umgehen
+              und wo Ihre Sicherungen liegen. Ein leeres Feld steht im Dokument als offene Frage. Die Felder ändert nur ein Inhaber.</li>
+        </ul>
+        <p class="small">Das Dokument ist eine Vorlage und keine Rechtsberatung. Lesen Sie es durch, lassen Sie es bei Bedarf von Ihrer
+        Steuerberatung prüfen und erstellen Sie eine neue Fassung, wenn sich etwas ändert. Jede Fassung heben Sie auf.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -843,8 +860,8 @@ function cloud(root) {
               <a data-go="settings">Einstellungen → Weitere Geräte</a> mit <em>Neues Gerät hinzufügen</em> einen QR-Code.
               Auf dem neuen Gerät wählen Sie <em>Mit QR-Code vom anderen Gerät öffnen</em> und scannen ihn. Das erste Gerät zeigt den Namen des neuen
               und wartet auf Ihr Ja. Weder Google noch wir können Ihre Buchhaltung dabei lesen: Das Google-Konto allein genügt nicht, der Code allein auch nicht.
-              Der Code gilt fünf Minuten und nur einmal. Kann der Browser den Code nicht lesen (etwa Safari auf dem iPhone), halten Sie die Kamera-App
-              Ihres Handys auf den Code oder tippen Sie den Code von Hand ein.</li>
+              Der Code gilt fünf Minuten und nur einmal. Das geht auch in Safari auf dem iPhone. Klappt das Scannen
+              nicht, halten Sie die Kamera-App Ihres Handys auf den Code oder tippen Sie den Code von Hand ein.</li>
           <li><strong>Mit Passwort:</strong> Geben Sie das Passwort des ersten Geräts ein.</li>
         </ul>
         <p>Ab da arbeiten beide Geräte auf demselben Bestand; die Belege kommen beim ersten Abgleich nach.
@@ -1040,6 +1057,14 @@ function recht(root) {
               Kontakte und Belege nie.</li>`)}
         </ul>
         <button class="btn" id="btnDatenschutz">${icon('file', 15)} Datenschutzhinweise lesen</button>
+      </div></div>
+
+      <div class="card mt16" id="recht-sicherheit"><div class="card-body">
+        <h2 class="mt0">Sicherheitslücke melden</h2>
+        <p>Haben Sie eine Sicherheitslücke gefunden? Schreiben Sie uns, die Adresse und was wir von Ihnen
+        brauchen stehen im Meldeweg, auf Deutsch und Englisch. Welche fremden Bestandteile in Kontovia stecken,
+        zeigt die Stückliste <code>sbom.json</code> auf der Webseite von Kontovia.</p>
+        <button class="btn" data-recht="sicherheit">${icon('file', 15)} Meldeweg lesen</button>
       </div></div>
 
       <div class="card mt16"><div class="card-body">

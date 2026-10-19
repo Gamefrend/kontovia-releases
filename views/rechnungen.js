@@ -14,7 +14,8 @@
  * Editor (rechnungseditor.js), eine ausgestellte zum Ansehen.
  */
 
-import { esc, $, $$, money, moneyInput, parseMoney, fmtDate, todayISO, uid, int, sum } from '../lib/util.js';
+import { esc, $, $$, money, moneyInput, parseMoney, fmtDate, todayISO, uid, int, sum, html, dz } from '../lib/util.js';
+import { skontoFristEnde } from '../lib/sepa.js';
 import { icon, modal, confirmDialog, ok, warn, err, statCard } from '../lib/ui.js';
 import { store, sel, commit, deleteEntity } from '../lib/store.js';
 import { router, navigate, refresh } from '../lib/router.js';
@@ -850,14 +851,18 @@ function eingang(root) {
       { key: 'nummer', label: 'Nummer', type: 'text', tdCls: 'small', value: (r) => r.gelesen?.nummer || '', cell: (r) => esc(r.gelesen?.nummer || '') },
       { key: 'datum', label: 'Datum', type: 'date', cls: 'num', tdCls: 'nowrap', value: (r) => r.gelesen?.datum || '', cell: (r) => esc(fmtDate(r.gelesen?.datum)) },
       { key: 'betrag', label: 'Betrag', type: 'num', value: (r) => r.gelesen?.brutto || 0, cell: (r) => `${esc(money(r.gelesen?.brutto || 0))} €` },
-      { key: 'faellig', label: 'Fällig', type: 'date', cls: 'num', tdCls: 'nowrap small', value: (r) => r.gelesen?.faellig || '', cell: (r) => esc(r.gelesen?.faellig ? fmtDate(r.gelesen.faellig) : '') },
+      {
+        key: 'faellig', label: 'Fällig', type: 'date', cls: 'num', tdCls: 'nowrap small', value: (r) => r.gelesen?.faellig || '',
+        cell: (r) => `${esc(r.gelesen?.faellig ? fmtDate(r.gelesen.faellig) : '')}${skontoBis(r) ? `<div class="tiny muted">Skonto ${esc(dz(r.skontoProzent))} % bis ${esc(fmtDate(skontoBis(r)))}</div>` : ''}`,
+      },
       {
         key: 'stand', label: 'Stand', type: 'text', value: (r) => (r.transactionId && sel.transaction(r.transactionId) ? 'gebucht' : 'neu'),
         cell: (r) => (r.transactionId && sel.transaction(r.transactionId) ? '<span class="badge pos">gebucht</span>' : '<span class="badge info">neu</span>'),
       },
       {
-        key: 'actions', label: '', type: 'none', width: '120px', cls: 'right', tdCls: 'nowrap',
+        key: 'actions', label: '', type: 'none', width: '190px', cls: 'right', tdCls: 'nowrap',
         cell: (r) => `${r.transactionId && sel.transaction(r.transactionId) ? '' : `<button class="btn sm" data-buchen="${esc(r.id)}">Buchen</button>`}
+          ${skontoMoeglich(r) ? `<button class="btn sm ghost" data-skonto="${esc(r.id)}" title="Skonto eintragen" aria-label="Skonto eintragen">Skonto</button>` : ''}
           <button class="btn sm ghost" data-weg="${esc(r.id)}" title="Entfernen" aria-label="Entfernen">${icon('trash', 14).__raw}</button>`,
       },
     ],
@@ -867,7 +872,53 @@ function eingang(root) {
     onRender: (el) => {
       $$('[data-buchen]', el).forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); eingangBuchen(sel.invoice(b.dataset.buchen)); }));
       $$('[data-weg]', el).forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); eingangEntfernen(sel.invoice(b.dataset.weg)); }));
+      $$('[data-skonto]', el).forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); eingangSkonto(sel.invoice(b.dataset.skonto)); }));
     },
+  });
+}
+
+/** Letzter Tag der Skontofrist einer Eingangsrechnung, sonst '' (wie lib/sepa.js, Rechnungsdatum notfalls aus der Buchung). */
+const skontoBis = (r) => skontoFristEnde(r, sel.transaction(r?.transactionId));
+
+/** Skonto lässt sich nur bei einer Rechnung eintragen, die noch zu bezahlen ist (keine Gutschrift, nicht bezahlt). */
+function skontoMoeglich(r) {
+  const t = r.transactionId ? sel.transaction(r.transactionId) : null;
+  return !r.gelesen?.gutschrift && !(t && (t.paidDate || t.voided));
+}
+
+/**
+ * Skonto einer Eingangsrechnung von Hand eintragen oder ändern (Felder wie bei der Ausgangsrechnung). Wirkt auf
+ * „Überweisungen vorbereiten“ (lib/sepa.js) und auf die Zuordnung im Kontoauszug (lib/zuordnung.js).
+ */
+function eingangSkonto(r) {
+  if (!r) return;
+  const m = modal({
+    title: 'Skonto eintragen',
+    size: 'slim',
+    body: html`<p class="small muted mt0">Wenn Sie innerhalb der Frist bezahlen, schlägt Kontovia beim Überweisen den gekürzten Betrag vor.
+        Die Frist zählt ab dem Rechnungsdatum${r.gelesen?.datum ? ` (${fmtDate(r.gelesen.datum)})` : ''}.</p>
+      <div class="form-grid">
+        <div class="field"><label for="esTage">Skonto: innerhalb von Tagen</label><input id="esTage" type="number" min="0" max="365" value="${r.skontoTage || ''}"></div>
+        <div class="field"><label for="esProzent">Skonto in %</label><input id="esProzent" inputmode="decimal" value="${r.skontoProzent ? dz(r.skontoProzent) : ''}"></div>
+      </div>
+      <p class="hint mb0">Leer lassen, wenn es kein Skonto gibt.</p>`,
+    foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Speichern</button>',
+  });
+  $('[data-no]', m.root).addEventListener('click', () => m.close());
+  $('[data-yes]', m.root).addEventListener('click', async () => {
+    const tage = Math.round(Number($('#esTage', m.root).value) || 0);
+    const prozent = Math.round((Number(String($('#esProzent', m.root).value).replace(',', '.')) || 0) * 100) / 100;
+    if (tage < 0 || tage > 365) { warn('Bitte eine Frist zwischen 1 und 365 Tagen eintragen'); return; }
+    if (prozent < 0 || prozent >= 100) { warn('Bitte einen Satz unter 100 % eintragen'); return; }
+    if ((tage > 0) !== (prozent > 0)) { warn('Bitte Frist und Satz eintragen', 'Oder beide Felder leer lassen.'); return; }
+    await commit('rechnung.eingang.skonto', (db) => {
+      const x = db.invoices.find((i) => i.id === r.id);
+      // Der Basisbetrag aus der E-Rechnung bleibt, solange es Skonto gibt.
+      if (x) { x.skontoTage = tage; x.skontoProzent = prozent; if (!tage) x.skontoBasis = 0; x.updatedAt = new Date().toISOString(); }
+    }, { entity: 'rechnung', entityId: r.id, summary: tage ? `Skonto ${dz(prozent)} % in ${tage} Tagen zu ${r.gelesen?.nummer || 'erhaltener Rechnung'}` : `Skonto entfernt zu ${r.gelesen?.nummer || 'erhaltener Rechnung'}` });
+    m.close();
+    ok(tage ? 'Skonto gespeichert' : 'Skonto entfernt');
+    refresh();
   });
 }
 
@@ -893,6 +944,11 @@ export async function eingangHinzufuegen(gewaehlt = null) {
       // Für „Überweisungen vorbereiten“ (lib/sepa.js): Konto und gewünschter Verwendungszweck des Lieferanten.
       iban: String(gelesen.iban || '').replace(/\s/g, '').toUpperCase(), zweck: String(gelesen.verwendungszweck || '').slice(0, 140),
     },
+    // Skonto wie bei der Ausgangsrechnung (Frist in Tagen ab Rechnungsdatum, Satz in %); im Eingang von Hand änderbar.
+    skontoTage: gelesen.skonto?.tage || 0,
+    skontoProzent: gelesen.skonto?.prozent || 0,
+    // Basisbetrag des Skontos in Cent, wenn die E-Rechnung einen kleineren als das Brutto nennt (lib/sepa.js: skontoEingang).
+    skontoBasis: gelesen.skonto?.basis || 0,
     transactionId: '',
     createdAt: new Date().toISOString(),
   };

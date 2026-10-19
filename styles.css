@@ -1788,7 +1788,6 @@ html[data-theme="dark"] .nav-kante-knopf { background: var(--surface-2); box-sha
   position: fixed; top: 0; right: 0; bottom: 0; width: min(420px, 100vw); z-index: 40;
   display: flex; flex-direction: column; min-height: 0;
   background: var(--surface); border-left: 1px solid var(--border); box-shadow: var(--shadow-lg);
-  animation: as-ein .32s var(--aus);
 }
 .as-panel[hidden] { display: none; }
 @keyframes as-ein { from { transform: translateX(24px); opacity: 0; } }
@@ -2137,3 +2136,84 @@ html[data-theme="dark"] { --krone: #f0bf61; }
 .nu-verlauf { display: flex; align-items: flex-end; gap: 3px; height: 96px; }
 .nu-balken { flex: 1 1 0; min-width: 3px; height: 100%; display: flex; align-items: flex-end; }
 .nu-balken > span { display: block; width: 100%; min-height: 2px; background: var(--accent); border-radius: 2px 2px 0 0; }
+
+/* ============================================================================
+   SEC-70: Zustandswechsel und Übergänge auf derselben Seite
+   Bewegung in transform und opacity, 120 bis 400 ms, Kurven aus lib/bewegung.js
+   (--aus, --feder, --feder-weich). „Bewegung reduzieren“ greift über die Regel
+   am Ende von „Skeleton“ weiter oben (alle Dauern .01 ms), die Skripte in
+   bewegung.js tun dann gar nichts. Das Ein- und Ausblenden per Skript steht
+   in bewegung.js (zustandBeobachten, popoverZu, reiterInhalt).
+   ============================================================================ */
+:root { interpolate-size: allow-keywords; }
+
+/* Assistent: gleitet ein, gleitet beim Schließen wieder hinaus (nur transform und opacity). Ab 1280 px
+   springt die Spalte daneben ohne Übergang: Ein Lauf der Breite zeichnete schwere Tabellen und
+   Diagramme (ResizeObserver in ui.js) bei jedem Bild neu. */
+@keyframes as-panel-ein { from { transform: translateX(56px); opacity: 0; } }
+@keyframes as-aus { to { transform: translateX(40px); opacity: 0; } }
+.as-panel { animation: as-panel-ein .42s var(--aus); }
+.as-panel.as-zu { pointer-events: none; animation: as-aus .22s cubic-bezier(.4, 0, 1, 1) forwards; }
+@media (min-width: 1280px) {
+  /* Beim Schließen liegt die Leiste schon über dem Rand, der Inhalt hat die Spalte wieder. */
+  .as-panel.as-zu { position: fixed; top: 0; right: 0; bottom: 0; width: 420px; box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .as-panel, .as-panel.as-zu, .as-vorschlag, .as-schritte li, .as-karte, .as-tipp, .as-leer-logo { animation: none; }
+}
+
+/* Assistent: Knöpfe, Anzeigen und neue Einträge */
+.as-pille, .as-vorschlag, .as-senden {
+  transition: background .18s, border-color .18s, color .18s, filter .18s, opacity .18s, transform .4s var(--feder);
+}
+.as-pille:active:not(:disabled), .as-vorschlag:active, .as-senden:active { transform: scale(.96); transition-duration: .08s, .08s, .08s, .08s, .08s, .1s; }
+.as-senden:hover:not(:disabled) { filter: brightness(1.1); }
+/* Senden wird zu Anhalten und zurück: das Zeichen dreht sich herein. */
+@keyframes ico-wechsel { from { transform: rotate(-80deg) scale(.4); opacity: 0; } }
+.as-senden .ico { animation: ico-wechsel .34s var(--feder); }
+.as-punkt { transition: background .3s, box-shadow .4s; }
+@keyframes as-weich-ein { from { opacity: 0; transform: translateY(8px); } }
+.as-leer-logo { animation: logo-auf .7s var(--feder) both; }
+.as-vorschlag { animation: as-weich-ein .4s var(--aus) backwards; }
+.as-vorschlag:nth-child(2) { animation-delay: .06s; }
+.as-vorschlag:nth-child(3) { animation-delay: .12s; }
+.as-vorschlag:nth-child(4) { animation-delay: .18s; }
+.as-vorschlag:nth-child(n+5) { animation-delay: .24s; }
+.as-schritte li { animation: as-weich-ein .3s var(--aus); }
+.as-karte { animation: as-weich-ein .38s var(--aus); }
+.as-tipp { animation: as-weich-ein .3s var(--aus); }
+
+/* Knöpfe: ein Knopf, den sein Klick gesperrt hat (eine Aktion läuft), pulsiert zweimal nach unten; wird er frei, federt er zurück. */
+@keyframes arbeit-puls { 50% { opacity: .28; } }
+.btn.arbeit:disabled, .icon-btn.arbeit:disabled, .as-senden.arbeit:disabled { animation: arbeit-puls 1s ease-in-out 2; }
+
+/* Aufklappfelder (popover.js): das Abbild eines eben geschlossenen Feldes blendet noch kurz aus (bewegung.js, popoverZu). */
+.pop-geist {
+  position: fixed; z-index: 349; overflow: hidden; pointer-events: none;
+  padding: 6px; background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+}
+
+/* Aufklappbare Bereiche (details): Inhalt gleitet auf und zu, wo der Browser ::details-content kennt;
+   sonst blendet er beim Öffnen wenigstens ein. */
+@supports selector(::details-content) {
+  details::details-content {
+    block-size: 0; opacity: 0; overflow: clip; overflow-clip-margin: 6px;
+    transition: block-size .28s var(--aus), opacity .22s ease, content-visibility .28s allow-discrete;
+  }
+  details[open]::details-content { block-size: auto; opacity: 1; }
+}
+@supports not selector(::details-content) {
+  details[open] > :not(summary) { animation: tglAuf .24s var(--aus); }
+}
+
+/* Kleine Zustände */
+.save-dot { transition: background .3s, transform .3s var(--feder); }
+.save-dot.saved { animation: haken .5s var(--feder); }
+.steps i { transition: background .35s; }
+.pw-toggle .ico { animation: ico-wechsel .3s var(--feder); }
+@keyframes caps-ein { from { opacity: 0; transform: translateY(-4px); } }
+.pw-wrap.capslock .pw-caps { animation: caps-ein .22s var(--aus); }
+.th-sort .th-arrow { transition: opacity .12s, transform .3s var(--feder-weich); }
+.check input { transition: transform .3s var(--feder); }
+.check input:active { transform: scale(.88); }

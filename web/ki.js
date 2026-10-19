@@ -18,6 +18,20 @@ let naechste = 1;
 const auftraege = new Map();
 let gestartet = '';
 let laedt = null;
+/**
+ * Antworten laufen nacheinander (`reihe`): Assistent und Kategorie-Vorschläge
+ * (views/kontoimport.js) teilen sich das Modell. Jede Anfrage trägt ihre
+ * Quelle. `epoche` zählen Sperren und Vergessen hoch: Wartet eine Anfrage noch
+ * und ist die Epoche inzwischen eine andere, startet sie nicht mehr (sonst
+ * rechnete das Modell nach dem Sperren mit Daten der gesperrten Sitzung).
+ */
+let reihe = Promise.resolve();
+let epoche = 0;
+/** Wartende Anfragen: {quelle, abgebrochen} */
+const wartend = new Set();
+/** Quelle der Antwort, die gerade im Worker läuft ('' = keine). */
+let laeuftFuer = '';
+const abbruchFehler = () => Object.assign(new Error('Die Anfrage wurde abgebrochen.'), { code: 'KI_ABGEBROCHEN' });
 
 function werk() {
   if (worker) return worker;
@@ -147,16 +161,49 @@ export async function laden(modell, beiFortschritt) {
  * @returns {Promise<{ende:string, nutzung:object|null, nachricht:string|null}>}  nachricht: die Antwort,
  *   wie die Laufzeit sie sich merkt (lib/assistent.js gibt sie wörtlich zurück, damit nichts neu eingelesen wird)
  */
-export async function antworten(anfrage, beiTeil) {
+export async function antworten(anfrage, beiTeil, quelle = 'assistent') {
   if (!gestartet) throw Object.assign(new Error('Es ist kein Modell gestartet.'), { code: 'KI_NICHT_GESTARTET' });
-  const r = await auftrag({ art: 'chat', anfrage }, { beiTeil });
+  // Eine Antwort nach der anderen. Abgebrochen oder gesperrt, während sie wartet: Sie startet nicht mehr.
+  const eintrag = { quelle: String(quelle || 'assistent'), abgebrochen: false, epoche };
+  wartend.add(eintrag);
+  const lauf = reihe.then(() => {
+    wartend.delete(eintrag);
+    if (eintrag.abgebrochen || eintrag.epoche !== epoche) throw abbruchFehler();
+    laeuftFuer = eintrag.quelle;
+    return auftrag({ art: 'chat', anfrage }, { beiTeil }).finally(() => { laeuftFuer = ''; });
+  });
+  // Die Schlange läuft auch nach einem Fehler weiter.
+  reihe = lauf.catch(() => {});
+  const r = await lauf;
   return { ende: r.ende || '', nutzung: r.nutzung || null, nachricht: typeof r.nachricht === 'string' ? r.nachricht : null };
 }
 
-export function abbrechen() { worker?.postMessage({ art: 'abbrechen' }); }
+/**
+ * Bricht ab. Mit Quelle („Anhalten“ im Assistenten): nur deren laufende und
+ * wartende Anfragen. Ohne Quelle (Sperren): alles, auch was noch wartet.
+ * @param {string} [quelle]
+ */
+export function abbrechen(quelle = '') {
+  if (!quelle) {
+    epoche++;
+    for (const e of wartend) e.abgebrochen = true;
+    worker?.postMessage({ art: 'abbrechen' });
+    return;
+  }
+  for (const e of wartend) if (e.quelle === quelle) e.abgebrochen = true;
+  if (laeuftFuer === quelle) worker?.postMessage({ art: 'abbrechen' });
+}
 
-/** Verwirft den Gesprächsstand im Modell, etwa beim Sperren. */
-export function vergessen() { worker?.postMessage({ art: 'vergessen' }); }
+/**
+ * Verwirft den Gesprächsstand im Modell. Ohne Quelle (Sperren): Alles, was noch
+ * wartet, startet nicht mehr. Mit Quelle („Neues Gespräch“): nur deren Wartendes.
+ * @param {string} [quelle]
+ */
+export function vergessen(quelle = '') {
+  if (!quelle) epoche++;
+  for (const e of wartend) if (!quelle || e.quelle === quelle) e.abgebrochen = true;
+  worker?.postMessage({ art: 'vergessen' });
+}
 
 /** Gibt den Grafikspeicher frei; das Modell bleibt auf dem Gerät. */
 export async function entladen() {

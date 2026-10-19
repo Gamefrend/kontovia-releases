@@ -21,6 +21,10 @@ import {
   fingerabdruecke, zuordnungsKontext, zuordnen, vorausgewaehlt, zaehlen, SICHERHEIT, rateFuer, rechnungsZiel,
 } from '../lib/zuordnung.js';
 import { sperrKarteZeigen } from '../lib/lizenzui.js';
+import { kann } from '../lib/lizenz.js';
+import { prefs } from '../lib/prefs.js';
+import { stufe as kiStufe } from '../lib/assistentmodelle.js';
+import { KI_STAPEL, kiFaehig, kuerzelListe, kategorieAnfrage, kategorieAntwortLesen, kiVorschlaegeSetzen } from '../lib/kategoriemodell.js';
 import {
   zeilePruefen, importBuchen, regelSpeichern, regelLoeschen, vorlageSpeichern, vorlageLoeschen, vorlageFuer,
 } from '../lib/importaktionen.js';
@@ -297,7 +301,7 @@ const FILTER = [
   ['sicher', 'Sicher', (z) => !z.schonImportiert && z.sicherheit === 'sicher'],
   ['pruefen', 'Zu prüfen', (z) => !z.schonImportiert && (z.sicherheit === 'wahrscheinlich' || z.sicherheit === 'unsicher')],
   ['regel', 'Eigene Regel', (z) => !z.schonImportiert && (z.sicherheit === 'regel' || z.sicherheit === 'hand')],
-  ['vorschlag', 'Kategorie-Vorschlag', (z) => !z.schonImportiert && z.sicherheit === 'vorschlag'],
+  ['vorschlag', 'Kategorie-Vorschlag', (z) => !z.schonImportiert && (z.sicherheit === 'vorschlag' || z.sicherheit === 'ki')],
   ['keine', 'Ohne Zuordnung', (z) => !z.schonImportiert && z.sicherheit === 'keine'],
   ['dublette', 'Mögliche Dublette', (z) => !z.schonImportiert && !!z.dublette],
   ['schon', 'Schon importiert', (z) => z.schonImportiert],
@@ -312,7 +316,7 @@ function zielText(z) {
     const r = z.ziele.map((t) => `${t.rate ? `Rate ${t.rate} von ${t.raten}, ` : ''}Rechnung ${t.nummer}${t.kunde ? ` (${t.kunde})` : ''}`).join(', ');
     return `${r}${z.mahnkosten ? `, dazu Mahnkosten ${money(z.mahnkosten)} €` : ''}${z.hinweis ? `, ${z.hinweis}` : ''}`;
   }
-  if (z.art === 'ausgabe') return `Offene Ausgabe: ${sel.transaction(z.txId)?.description || ''}`;
+  if (z.art === 'ausgabe') return `Offene Ausgabe: ${sel.transaction(z.txId)?.description || ''}${z.hinweis ? `, ${z.hinweis}` : ''}`;
   if (z.art === 'uebertrag') return 'Übertrag zwischen Ihren Konten, wird nicht gebucht';
   if (z.art === 'wiederkehrend') return `Wiederkehrende Buchung ${sel.recurringRule(z.wiederkehrendId)?.template?.description || ''}`;
   if (z.art === 'regel' || z.art === 'neu') {
@@ -323,7 +327,67 @@ function zielText(z) {
   return 'Bitte zuordnen, eine Kategorie wählen oder ohne Kategorie buchen';
 }
 
-const BADGE = { sicher: 'pos', wahrscheinlich: 'info', unsicher: 'warn', regel: 'info', vorschlag: 'info', hand: 'info', keine: 'plain' };
+const BADGE = { sicher: 'pos', wahrscheinlich: 'info', unsicher: 'warn', regel: 'info', vorschlag: 'info', ki: 'warn', hand: 'info', keine: 'plain' };
+
+/*
+ * Kategorie-Vorschläge vom Sprachmodell des Assistenten (lib/kategoriemodell.js): nur auf Knopfdruck,
+ * nur mit einer Stufe ab Mini, deren Modell schon auf dem Gerät liegt (kein Download von hier aus).
+ * Die Vorschläge sind nie angehakt, auch „Vorschläge auswählen“ lässt sie aus.
+ */
+const kiStufeJetzt = () => kiStufe(prefs.kiStufe);
+const kiAngeboten = () => !!kiStufeJetzt().modell && kann('assistent') && !!window.kontovia?.ki;
+
+async function kiVorschlagen(host, root) {
+  if (st.kiLaeuft) return;
+  const stand = st;
+  const ki = window.kontovia.ki;
+  const s = kiStufeJetzt();
+  const melden = (t) => { stand.kiStatus = t; const el = $('#kiKiStatus', host); if (el) el.textContent = t; };
+  stand.kiLaeuft = true;
+  const knopf = $('#kiKi', host);
+  if (knopf) knopf.disabled = true;
+  let neu = 0;
+  try {
+    const g = await ki.geraet();
+    if (!g.grafik || g.ersatz) { warn('Hier geht das nicht', 'Dieser Browser gibt den Grafikchip nicht frei. Die KI des Assistenten läuft hier nicht.'); return; }
+    const modell = await ki.fassung(s.modell, g.f16);
+    const da = (await ki.imCache([modell]).catch(() => ({})))[modell] || (await ki.status().catch(() => ({}))).gestartet === modell;
+    if (!da) { warn('Erst im Assistenten laden', `Die Stufe ${s.name} liegt noch nicht auf diesem Gerät. Laden Sie sie einmal im Assistenten, dann geht es auch hier.`); return; }
+    melden('Die KI startet …');
+    await ki.laden(modell);
+    const kuerzel = kuerzelListe(store.db.categories || []);
+    const offen = stand.zeilen.filter(kiFaehig);
+    for (let i = 0; i < offen.length; i += KI_STAPEL) {
+      if (st !== stand) return;
+      melden(`Die KI ordnet zu: ${int(Math.min(i + KI_STAPEL, offen.length))} von ${int(offen.length)} …`);
+      const stapel = offen.slice(i, i + KI_STAPEL);
+      const { messages, schema } = kategorieAnfrage(stapel, kuerzel);
+      const anfrage = { messages, temperature: 0.1, top_p: 0.8, max_tokens: 60 + 24 * stapel.length, extra_body: { enable_thinking: false } };
+      let text = '';
+      const teil = (t) => { text += t; };
+      try {
+        await ki.antworten({ ...anfrage, response_format: { type: 'json_object', schema } }, teil, 'kontoauszug');
+      } catch (e) {
+        // Kann die Laufzeit die Grammatik nicht übersetzen, geht es ohne; geprüft wird die Antwort ohnehin.
+        if (e?.code !== 'KI_GRAMMATIK') throw e;
+        text = '';
+        await ki.antworten(anfrage, teil, 'kontoauszug');
+      }
+      if (st !== stand) return;
+      neu += kiVorschlaegeSetzen(stand.zeilen, kategorieAntwortLesen(text, stapel, kuerzel));
+    }
+    if (neu) ok(neu === 1 ? 'Ein Vorschlag der KI' : `${int(neu)} Vorschläge der KI`, 'Nichts ist ausgewählt. Prüfen Sie jeden Vorschlag und haken Sie ihn selbst an.');
+    else warn('Kein Vorschlag', 'Die KI hat für diese Umsätze keine passende Kategorie gefunden.');
+  } catch (e) {
+    // Gesperrt oder die Ansicht verlassen: still aufhören (ki.js lässt Wartendes nach dem Sperren nicht mehr starten).
+    if (e?.code === 'KI_ABGEBROCHEN' || st !== stand) return;
+    err('Die KI konnte nicht helfen', e?.message || String(e));
+  } finally {
+    stand.kiLaeuft = false;
+    stand.kiStatus = '';
+    if (st === stand && stand.schritt === 'pruefen') schrittPruefen(host, root);
+  }
+}
 
 /** Zeilen, die ohne Zuordnung dastehen und sich im Eiltempo ohne Kategorie buchen lassen. */
 const ohneZuordnung = (z) => !z.schonImportiert && !z.dublette && !z.ausgeschlossen && z.art === 'keine' && pruefen({ ...z, art: 'neu', ohneKategorie: true }).ok;
@@ -345,6 +409,7 @@ function schrittPruefen(host, root) {
         <button class="btn sm" id="kiAnders">${icon('left', 14).__raw} Andere Datei</button>
       </div>
       <p class="small mb0 mt8">Nichts ist gebucht. Ausgewählt sind nur sichere Treffer und Ihre eigenen Regeln. Kategorie-Vorschläge entstehen auf diesem Gerät aus Ihren früheren Buchungen und bekannten Händlernamen, nichts davon wird übertragen. Prüfen Sie den Rest und haken Sie an, was gebucht werden soll. Wer es eilig hat, bucht den Rest auch ohne Kategorie und ordnet später zu.</p>
+      ${kiAngeboten() ? '<p class="small mb0 mt8">Auf Wunsch schlägt auch die KI des Assistenten Kategorien vor, ebenfalls nur auf diesem Gerät. Ihre Vorschläge sind nie ausgewählt: Prüfen Sie jeden und haken Sie ihn selbst an.</p>' : ''}
     </div></div>
     <div class="ki-filter mb8" role="group" aria-label="Anzeige">${FILTER.map(([k, t, f]) => {
     const anz = k === 'alle' ? n.gesamt : st.zeilen.filter(f).length;
@@ -355,7 +420,9 @@ function schrittPruefen(host, root) {
       <button class="btn sm" id="kiVorschlaege" ${st.zeilen.some(vorschlaege) ? '' : 'disabled'}>Vorschläge auswählen (${int(st.zeilen.filter(vorschlaege).length)})</button>
       <button class="btn sm" id="kiOhne" ${st.zeilen.some(ohneZuordnung) ? '' : 'disabled'} title="Bucht diese Umsätze ohne Kategorie. Die Kategorie lässt sich später in der Buchungsliste ergänzen.">Rest ohne Kategorie auswählen (${int(st.zeilen.filter(ohneZuordnung).length)})</button>
       <button class="btn sm ghost" id="kiNichts">Auswahl aufheben</button>
+      ${kiAngeboten() && (st.kiLaeuft || st.zeilen.some(kiFaehig)) ? `<button class="btn sm" id="kiKi" ${st.kiLaeuft ? 'disabled' : ''} title="Das Sprachmodell des Assistenten läuft auf diesem Gerät. Seine Vorschläge sind nie ausgewählt.">${icon('sparkle', 14).__raw} Kategorien von der KI vorschlagen lassen (${int(st.zeilen.filter(kiFaehig).length)})</button>` : ''}
     </div>
+    ${kiAngeboten() ? `<p class="small muted mb8" id="kiKiStatus" role="status">${esc(st.kiStatus || '')}</p>` : ''}
     <div class="card" id="kiTabelle"></div>
     <div class="row between wrap mt16 mb16 apply-bar dirty" id="kiFuss" style="gap:10px"><span id="kiSumme" class="small"></span>
       <button class="btn primary lg" id="kiBuchen">Buchen</button></div>`;
@@ -376,6 +443,7 @@ function schrittPruefen(host, root) {
     schrittPruefen(host, root);
   });
   $('#kiNichts', host).addEventListener('click', () => { for (const x of st.zeilen) x.gewaehlt = false; schrittPruefen(host, root); });
+  $('#kiKi', host)?.addEventListener('click', () => kiVorschlagen(host, root));
   $('#kiBuchen', host).addEventListener('click', () => buchenFrage(root));
 
   const filter = FILTER.find(([k]) => k === st.filter)[2];
@@ -534,7 +602,8 @@ function zeileDialog(z, fertig) {
     const k = entwurf();
     const p = modus === 'zuordnen' ? (k.ziele.length || k.txId ? pruefen(k) : { ok: false, grund: 'Bitte wählen.' }) : { ok: true };
     g('zdPruefung').innerHTML = modus === 'zuordnen' ? (p.ok ? (p.teilzahlung ? `<span class="muted">Das ist eine Teilzahlung: ${esc(money(u.betrag))} € werden verbucht, der Rest bleibt offen.</span>
-      <label class="check mt8"><input type="checkbox" id="zdSkonto" ${k.restSkonto ? 'checked' : ''}> Den Rest als Skonto ausbuchen (der Kunde durfte weniger zahlen)</label>` : '<span class="pos">Passt.</span>') : `<span class="neg">${esc(p.grund)}</span>`) : '';
+      <label class="check mt8"><input type="checkbox" id="zdSkonto" ${k.restSkonto ? 'checked' : ''}> Den Rest als Skonto ausbuchen (der Kunde durfte weniger zahlen)</label>`
+      : p.skonto ? `<span class="pos">Passt mit Skonto: Die fehlenden ${esc(money(p.skonto))} € werden als Skonto ausgebucht.</span>` : '<span class="pos">Passt.</span>') : `<span class="neg">${esc(p.grund)}</span>`) : '';
   };
   $$('[data-modus]', m.root).forEach((b) => b.addEventListener('click', () => { modus = b.dataset.modus; zeigen(); aktualisieren(); }));
   g('zdZiel')?.addEventListener('change', () => { g('zdKosten').dataset.beruehrt = ''; aktualisieren(); });
