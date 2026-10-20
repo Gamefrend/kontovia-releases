@@ -1,11 +1,11 @@
 {
-  "version": "2.45.6",
-  "released": "2026-10-20T19:16:12.859Z",
-  "notes": "Assistent\n\n- Der Assistent versteht jetzt auch „Leg einen neuen Kunden an: …“ und legt den Kontakt zum Bestätigen an.",
+  "version": "2.45.7",
+  "released": "2026-10-20T19:26:33.414Z",
+  "notes": "Kleinere Updates\n\n- Kleine Verbesserungen im Hintergrund, nichts Neues für Sie.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "379aae1be8ecf52f18f03861df018d3da04b340588956af5ef06f1a269e7c162",
+      "sha256": "09e862a3538f875126632e9c3ac0c9c97c1a806804366742b5776f2f21104326",
       "size": 389
     },
     {
@@ -665,8 +665,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz-release.js",
-      "sha256": "bfb7b75411373141962b79dde9671237650c8e969b6927a3a2b8891cafe418df",
-      "size": 4693
+      "sha256": "d743345497ec6e2387c511a94bbb596e1663a4560e6bfc642ddc50e5bef41e5c",
+      "size": 4821
     },
     {
       "path": "lib/sprache/en/zusatz-sec34.js",
@@ -800,8 +800,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "dbd497a230afa31c19b81497627d4c434402ebefcc2015292ddb6e95255be09e",
-      "size": 57524
+      "sha256": "6c090b49a1e6347cf3ff461044b46f867c94bb6323a47d6cba9b686983732f60",
+      "size": 57703
     },
     {
       "path": "lib/waehrung.js",
@@ -840,12 +840,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "b562addf6e0c6839fbbc30cfc5a94b6e5f2d3b25d6f622853b8358a04f33fe3b",
+      "sha256": "aae8a3cf4627e1b584ac4c785ca81194f5ab51704f9751d01d7f8b73c6cfa5f1",
       "size": 2810
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "dbfbc79384333b3ea1e5ee4c8b7c4fb7e11f755baa1671882629de1e83ddb903",
+      "sha256": "50f00b8d17114b4a33fc3cea6145803fcc5bfcc55f0a7e3842b26980574511ff",
       "size": 40257
     },
     {
@@ -865,7 +865,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "958d8cfae9b81755a120f3ffcf66e732c94675f87aa804f91b59243cbde79924",
+      "sha256": "bddf9e573f8f7bcc348dcbf7b1954f810af94868b4aebe4d500c93a5001b61bc",
       "size": 44152
     },
     {
@@ -890,12 +890,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "733235c35189f083d04f6d5872868eab5cc74cce1846d09ae31c2726d0ccf64d",
+      "sha256": "a915fc370c413eef896a96874ca2df8fc23b771c1a8ae15ea165b4744d79b39c",
       "size": 28337
     },
     {
       "path": "security.txt",
-      "sha256": "379aae1be8ecf52f18f03861df018d3da04b340588956af5ef06f1a269e7c162",
+      "sha256": "09e862a3538f875126632e9c3ac0c9c97c1a806804366742b5776f2f21104326",
       "size": 389
     },
     {
@@ -1065,7 +1065,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "d9d383d35f5b524bf3bbc25774e8308c69ab882bf5b542ac83a3211f698069f2",
+      "sha256": "368d8fcd474a0534b481272d7b94063a6a350c78b90c2b320082306866a341fb",
       "size": 10044
     },
     {
