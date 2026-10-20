@@ -16,7 +16,7 @@
     "business",
     "productivity"
   ],
-  "version": "2.45.5",
+  "version": "2.45.6",
   "launch_handler": {
     "client_mode": [
       "focus-existing",

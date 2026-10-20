@@ -1,11 +1,11 @@
 {
-  "version": "2.45.5",
-  "released": "2026-10-20T18:55:26.421Z",
-  "notes": "Gerät verbinden\n\n- Ein beschädigter QR-Code zeigt jetzt die Meldung „Dieser Code stimmt nicht“.",
+  "version": "2.45.6",
+  "released": "2026-10-20T19:16:12.859Z",
+  "notes": "Assistent\n\n- Der Assistent versteht jetzt auch „Leg einen neuen Kunden an: …“ und legt den Kontakt zum Bestätigen an.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "bf0cfaa24f67fdd381e5fdbc397bff9d241008bc2254ab0258806b2095d45bce",
+      "sha256": "379aae1be8ecf52f18f03861df018d3da04b340588956af5ef06f1a269e7c162",
       "size": 389
     },
     {
@@ -120,8 +120,8 @@
     },
     {
       "path": "lib/assistentdeutung.js",
-      "sha256": "773ee6144756171e168235ea8539a50c7b7bbbfd9596bf84125f57c03b26bf50",
-      "size": 64608
+      "sha256": "6e73ca08eba0d5d37c7e8bfa00d278ea5fe3a8bd784f52a770e069b74d6a0f0a",
+      "size": 64905
     },
     {
       "path": "lib/assistentenglisch.js",
@@ -665,8 +665,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz-release.js",
-      "sha256": "077cfbef88a38c8a98d61eb93882fee2aec1549e09b6f89d22e385dcdd998774",
-      "size": 4460
+      "sha256": "bfb7b75411373141962b79dde9671237650c8e969b6927a3a2b8891cafe418df",
+      "size": 4693
     },
     {
       "path": "lib/sprache/en/zusatz-sec34.js",
@@ -800,8 +800,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "bbb6c82d5f039302dc5c25d5e22dedd88ee350d2f5bb2c72facf8277282dcb03",
-      "size": 57301
+      "sha256": "dbd497a230afa31c19b81497627d4c434402ebefcc2015292ddb6e95255be09e",
+      "size": 57524
     },
     {
       "path": "lib/waehrung.js",
@@ -840,12 +840,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "39a10f757cef258d46d4914326dc1f1d7bf02349a3a28a1da40040cccf5e0071",
+      "sha256": "b562addf6e0c6839fbbc30cfc5a94b6e5f2d3b25d6f622853b8358a04f33fe3b",
       "size": 2810
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "b60efd6591f6079616f8b760ed6309b3a55834545ca9433a0f53ae5c01ebe9bb",
+      "sha256": "dbfbc79384333b3ea1e5ee4c8b7c4fb7e11f755baa1671882629de1e83ddb903",
       "size": 40257
     },
     {
@@ -865,7 +865,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "3f87409ee934bfd8784ccaef605d23a4b7631457ac7f9b3964f2700838c2c9b7",
+      "sha256": "958d8cfae9b81755a120f3ffcf66e732c94675f87aa804f91b59243cbde79924",
       "size": 44152
     },
     {
@@ -890,12 +890,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "b7098214b8418c84a520cc4becfa2b2d629a7426aa433d63b2020a5678346ab2",
+      "sha256": "733235c35189f083d04f6d5872868eab5cc74cce1846d09ae31c2726d0ccf64d",
       "size": 28337
     },
     {
       "path": "security.txt",
-      "sha256": "bf0cfaa24f67fdd381e5fdbc397bff9d241008bc2254ab0258806b2095d45bce",
+      "sha256": "379aae1be8ecf52f18f03861df018d3da04b340588956af5ef06f1a269e7c162",
       "size": 389
     },
     {
@@ -1065,7 +1065,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "696e1b85f4559ce249a509df207524c7373ebd0a6cbe7f6e3eced30fd3e6ffac",
+      "sha256": "d9d383d35f5b524bf3bbc25774e8308c69ab882bf5b542ac83a3211f698069f2",
       "size": 10044
     },
     {
