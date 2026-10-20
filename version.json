@@ -1,11 +1,11 @@
 {
-  "version": "2.45.2",
-  "released": "2026-10-20T10:27:03.901Z",
-  "notes": "Kopierte Antworten der KI gekennzeichnet\n\n- Kopieren Sie eine Antwort der KI aus dem Assistenten, trägt die Kopie jetzt den Vermerk „Antwort einer KI“. So bleibt auch außerhalb von Kontovia erkennbar, woher der Text stammt.",
+  "version": "2.45.3",
+  "released": "2026-10-20T10:35:15.233Z",
+  "notes": "Kleinere Updates\n\n- Bei einer Aktualisierung lädt Kontovia nur noch, was sich geändert hat. Alles andere übernimmt es von der Fassung auf Ihrem Gerät, das spart viel Datenvolumen.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "9f7b49e7c2d7a48bd9ee6beb79df626882faa7e8123a58a89cf5dac5d68f2810",
+      "sha256": "98fe55e12c3dc58b410f245a5ee5127bc08d7100137ce72d801ada9a6c9cefc6",
       "size": 389
     },
     {
@@ -665,8 +665,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz-release.js",
-      "sha256": "0ea81a95bd5908c42e55cd69ea11f290ebfbd1ce6636cdcd4327509e80e7dc35",
-      "size": 3501
+      "sha256": "1dc3ad9e78f412c6d2e6cc4e9febf37f5fd4ac0af6a2973e1a149a51f8ed4637",
+      "size": 3860
     },
     {
       "path": "lib/sprache/en/zusatz-sec34.js",
@@ -800,8 +800,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "c6b24cc754c15983f828dc6f83683c5a6cbfd89240dd35c2da98d56bde6f91c1",
-      "size": 56516
+      "sha256": "40e97d7057b328d36b1424f7fd57182f60750f6d1a5ac5c47ec4651e528a8bca",
+      "size": 56798
     },
     {
       "path": "lib/waehrung.js",
@@ -840,12 +840,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "47e6eabb332371664cc373964ec21e6d3c6b62f4c07fc5b71e21a1045f6d591d",
+      "sha256": "54f81bbf2c2e2bc43781f13dbaab54c046a1b6e3147f0d015e4b1c5e5ef79329",
       "size": 2810
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "d87cfc69a6678b6a07bf70d6b112fee5d2ec39e94511e009c1ba19682e0ffc7c",
+      "sha256": "af229a948f84736fd74511337e2e495b9956c60e85a298eeb5bf5fc4f31106bf",
       "size": 39976
     },
     {
@@ -865,7 +865,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "a58cdaa81d2e743e6a38eaf3042f0b75deb386c53ac2380139ef09c48c25085f",
+      "sha256": "71ce5d1cab389e2f49e17e2f424ec89c1108ac6e1ed28a3688965c3f0f20379d",
       "size": 43871
     },
     {
@@ -890,12 +890,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "5d64975740d534effb19a03ab1ba8d16acab4461820e2b216597b5b0aa5ef525",
+      "sha256": "7e41e87df64cd98abbeac8269364df07892c91ef9dffe3fd060a8b6a8c953865",
       "size": 28337
     },
     {
       "path": "security.txt",
-      "sha256": "9f7b49e7c2d7a48bd9ee6beb79df626882faa7e8123a58a89cf5dac5d68f2810",
+      "sha256": "98fe55e12c3dc58b410f245a5ee5127bc08d7100137ce72d801ada9a6c9cefc6",
       "size": 389
     },
     {
@@ -1065,8 +1065,8 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "3c7d7221e1c8487a8593b478c38cc478cf98d6a3dc7468f1d7ce9ff7a407ec7c",
-      "size": 8012
+      "sha256": "8a27c673e3d046e1cea3c805ea6d3da4aec43031ed8abeea44c003c70bcaf983",
+      "size": 10044
     },
     {
       "path": "web/anmeldung.js",

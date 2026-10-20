@@ -8,7 +8,9 @@
  * Ablauf:
  *   pruefen()        version.json vom eigenen Server, Versionsvergleich
  *   herunterladen()  alle Dateien der neuen Fassung in einen eigenen Cache,
- *                    jede gegen ihre SHA-256-Prüfsumme geprüft
+ *                    jede gegen ihre SHA-256-Prüfsumme geprüft; was sich nicht
+ *                    geändert hat (gleiche Prüfsumme wie in der laufenden
+ *                    Fassung), wird vom Gerät übernommen statt neu geladen
  *   installieren()   den Zeiger auf die neue Fassung setzen und neu laden –
  *                    ab da liefert der Service Worker (sw.js) sie aus
  *
@@ -21,7 +23,7 @@
 import { compareVersions } from './updateinfo.js';
 
 /** Wird beim Bauen eingesetzt (scripts/build-web.js). */
-export const VERSION = '2.45.2';
+export const VERSION = '2.45.3';
 
 const META = 'kontovia-meta';
 const PREFIX = 'kontovia-app-';
@@ -136,7 +138,40 @@ export async function dateiHolen(url, version, pfad) {
 }
 
 /**
- * Lädt alle Dateien der neuen Fassung und prüft jede einzeln.
+ * Liegt diese Datei unverändert in der laufenden Fassung? Dann gibt es ihre Bytes zurück, sonst null.
+ * Sicher, weil die Bytes des Geräts gegen dieselbe Prüfsumme aus der neuen Versionsdatei geprüft werden
+ * wie ein Download: Was nicht genau stimmt (beschädigt, verändert), wird einfach neu geladen.
+ */
+export async function ausAlterFassung(alterCache, url, sha256) {
+  if (!alterCache) return null;
+  try {
+    const hit = await alterCache.match(url.href);
+    if (!hit) return null;
+    const buf = await hit.arrayBuffer();
+    if (await sha256Hex(buf) !== sha256) return null;
+    return { buf, typ: hit.headers.get('content-type') || '' };
+  } catch {
+    return null;
+  }
+}
+
+/** Cache der laufenden Fassung, falls es eine gibt (sonst null: dann wird alles geladen). */
+async function alterCacheOeffnen(neueVersion) {
+  try {
+    const meta = await caches.open(META);
+    const res = await meta.match(zeigerUrl());
+    const v = res ? (await res.json()).version : null;
+    if (!v || v === neueVersion || !/^\d+\.\d+\.\d+$/.test(v)) return null;
+    return await caches.open(PREFIX + v);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Lädt die Dateien der neuen Fassung und prüft jede einzeln. Unveränderte Dateien kommen von der
+ * laufenden Fassung auf dem Gerät (gleiche Prüfsumme) und werden nicht noch einmal geladen.
+ * Das Ergebnis nennt, wie viele Bytes tatsächlich übers Netz kamen (`geladen`) und wie viele nicht (`gespart`).
  * `info` kommt aus der Oberfläche zurück und wird deshalb erneut geprüft.
  */
 export async function herunterladen(info, onProgress = () => {}) {
@@ -146,10 +181,21 @@ export async function herunterladen(info, onProgress = () => {}) {
   await caches.delete(name);
   const cache = await caches.open(name);
   const total = neu.files.reduce((n, f) => n + f.size, 0);
+  const alt = await alterCacheOeffnen(neu.version);
   let received = 0;
+  let geladen = 0;
+  let gespart = 0;
   try {
     for (const f of neu.files) {
       const url = new URL(f.path, APP);
+      const lokal = await ausAlterFassung(alt, url, f.sha256);
+      if (lokal) {
+        await cache.put(url, new Response(lokal.buf, { headers: { 'content-type': lokal.typ } }));
+        received += lokal.buf.byteLength;
+        gespart += lokal.buf.byteLength;
+        onProgress({ received, total });
+        continue;
+      }
       // Am Service Worker vorbei (er lieferte die laufende Fassung) und am
       // Zwischenspeicher des Servers vorbei (er könnte noch die alte haben).
       const res = await dateiHolen(url, neu.version, f.path);
@@ -159,13 +205,14 @@ export async function herunterladen(info, onProgress = () => {}) {
       }
       await cache.put(url, new Response(buf, { headers: { 'content-type': res.headers.get('content-type') || '' } }));
       received += buf.byteLength;
+      geladen += buf.byteLength;
       onProgress({ received, total });
     }
   } catch (err) {
     await caches.delete(name);
     throw err;
   }
-  return { path: neu.version, bytes: received };
+  return { path: neu.version, bytes: received, geladen, gespart };
 }
 
 /** Schaltet auf die geprüfte Fassung um. Die Seite lädt danach neu. */
