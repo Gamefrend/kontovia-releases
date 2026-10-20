@@ -1,11 +1,11 @@
 {
-  "version": "2.45.0",
-  "released": "2026-10-19T23:29:33.534Z",
-  "notes": "Verfahrensdokumentation, Skonto und Prüfung der E-Rechnung\n\n- Neu unter Import & Export › Verfahren: Kontovia schreibt Ihre Verfahrensdokumentation für die Betriebsprüfung als PDF, und Sie ergänzen Ihre eigenen Abläufe.\n- Skonto bei erhaltenen Rechnungen: Kontovia liest es aus der E-Rechnung, oder Sie tragen es ein. Beim Überweisen in der Frist wird der gekürzte Betrag vorgeschlagen, den Rest bucht der Kontoauszug als Skonto aus.\n- Vor dem Ausstellen prüft Kontovia jetzt auch die Regeln der E-Rechnung, etwa Summen, Steuersätze, Rabatte, Leitweg-ID und Zahlungsangaben. So wird eine XRechnung beim Empfänger seltener abgelehnt.\n- Die Steuerrücklage rechnet genauer: Vorsorge, Sonderausgaben, Kinderfreibeträge sowie Hinzurechnungen und Kürzungen der Gewerbesteuer tragen Sie in den Einstellungen ein.\n- Außerdem: weichere Übergänge, Person und Stundensatz im Assistenten, Kategorievorschläge der KI beim Kontoauszug (nie vorausgewählt), eigener QR-Leser und Hilfe › Rechtliches zum Melden von Sicherheitslücken.",
+  "version": "2.45.1",
+  "released": "2026-10-20T09:37:46.740Z",
+  "notes": "Ruhigere Reiter\n\n- Beim Wechsel zwischen Reitern, etwa bei Rechnungen (Ausgang, Angebote …), bleibt die Leiste jetzt stehen. Nur die Auswahl gleitet, und der Inhalt darunter blendet sanft ein.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "1690110fed0456878fd135a2740aa16fa1cb488a78a6fcf43d4934f659cf3413",
+      "sha256": "2f06ce8de9d1b5cb6fbe0bb224ee45a12e808c1f4b57430938acaac4ca0ab145",
       "size": 389
     },
     {
@@ -40,8 +40,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "fc76abb5803091a91983975184e72827f9db49c880285cc6493d0225dc2d9cab",
-      "size": 89800
+      "sha256": "c9b4856867e08b7e255fa1dd20a07007913b89a6b124007cd7bdddb9ebeab962",
+      "size": 90266
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -170,8 +170,8 @@
     },
     {
       "path": "lib/bewegung.js",
-      "sha256": "48acd1cbd2dd53c9f83117502a80d27e185494e346e9012e95cfda16ade3f721",
-      "size": 33920
+      "sha256": "6a626d4776de519c8edd9726be6b166dfa2c4d92acf41c0c4795df6dd94a5835",
+      "size": 34429
     },
     {
       "path": "lib/bildschirmfoto.js",
@@ -665,8 +665,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz-release.js",
-      "sha256": "a6b17008756cafb5f25da1b157361966439e4bb372e2242ef52380e9fd3d332b",
-      "size": 2288
+      "sha256": "003ae70c6e1e6a28917119af62144c4f53cd06bc7736e393f4c12a86d8ae9fc9",
+      "size": 2679
     },
     {
       "path": "lib/sprache/en/zusatz-sec34.js",
@@ -800,8 +800,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "46eac14a159be133a893e46f81745c4121bfb6fe2364b23940fb0dbfc4034c4c",
-      "size": 55895
+      "sha256": "cee5b17135f62a103fecf8617f67e6cec0541976384f1ceb3368cd66a5c35303",
+      "size": 56188
     },
     {
       "path": "lib/waehrung.js",
@@ -840,12 +840,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "df3cb7e30ccd210a687e5f8bb69437c7eb2cf4a52063448146938baf11be6250",
+      "sha256": "55690fda8fa53d9f028c810a2c94deda1b31a5fd881c2a915742aaeed006b89e",
       "size": 2810
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "6ace60bc17fdd3e3d39097dd01bcfa8db7f379bc51dbccfb3610749770170432",
+      "sha256": "6b3a323322e15e2f240b54226ba30f86078ab7962075b4b7afbf41a3d7c7d3ec",
       "size": 39976
     },
     {
@@ -865,7 +865,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "049d2877dcb992f135327f8e5c00250ef90e6a9e8b9fbf95b71563cddf5edcda",
+      "sha256": "790a0f9eca62dab08f18bcc827d9748093b9990cffdf403c87d4d010d79defc2",
       "size": 43871
     },
     {
@@ -890,12 +890,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "9e3c82c99feff8189b41822d9b277abd60956f34f2573e0c9cb70d0afc5ebdb5",
+      "sha256": "db9ffe30a337b148ce4a48ade3ece3d8b6ba075ab160dab56c00cc687a3e7b29",
       "size": 28337
     },
     {
       "path": "security.txt",
-      "sha256": "1690110fed0456878fd135a2740aa16fa1cb488a78a6fcf43d4934f659cf3413",
+      "sha256": "2f06ce8de9d1b5cb6fbe0bb224ee45a12e808c1f4b57430938acaac4ca0ab145",
       "size": 389
     },
     {
@@ -1065,7 +1065,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "dc44668a734da080dca02fa0d3c701584befacb026fcd4ec864a395de2bb4cf7",
+      "sha256": "4fbbccb86a6d37b92b2083d23d8a07592556a07aee3753dba21b5eb9005c7f2b",
       "size": 8012
     },
     {

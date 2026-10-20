@@ -34,7 +34,7 @@ import { spracheStarten, spracheGewaehlt, spracheMerken, spracheSetzen, sprache,
 /* Der Assistent lädt erst, wenn ihn jemand öffnet (lib/assistentfenster.js). */
 const KI_KUERZEL = `${MOD} J`;
 const assistentUmschalten = (frage) => import('./lib/assistentfenster.js').then((m) => m.assistentUmschalten(frage)).catch((e) => err('Assistent', e.message));
-import { seite, seitenwechsel, beobachten, markierung, umschalterBeobachten, zustandBeobachten, themaWechsel, schuetteln } from './lib/bewegung.js';
+import { seite, seitenwechsel, reiterGeklickt, beobachten, markierung, umschalterBeobachten, zustandBeobachten, themaWechsel, schuetteln } from './lib/bewegung.js';
 
 const api = window.kontovia;
 const app = document.getElementById('app');
@@ -1513,6 +1513,8 @@ function hilfeKnopfSetzen(view, params) {
 }
 
 let ansichtLauf = 0;
+/** Die Ansicht des letzten Aufrufs: gleiche Ansicht nach Klick auf einen Reiter heißt Reiterwechsel. */
+let letzteAnsicht = '';
 /** Der Bereich, der gerade statt der Ansicht als gesperrt erklärt wird (leer = die Ansicht läuft). */
 let gesperrterBereich = '';
 
@@ -1548,8 +1550,11 @@ onNavigate(async (view, params) => {
   content.scrollTop = 0;
   // Am Telefon scrollt die ganze Spalte (web.css), nicht nur der Inhalt.
   content.closest('.main').scrollTop = 0;
+  // Reiterwechsel in derselben Ansicht: Die Leiste soll stehen bleiben, also bis zum neuen Inhalt nichts leeren.
+  const reiterWechsel = view === letzteAnsicht && reiterGeklickt() && !!content.querySelector('.seg.tabs');
+  letzteAnsicht = view;
   seitenwechsel();
-  content.innerHTML = '<div class="skeleton" style="height:120px"></div>';
+  if (!reiterWechsel) content.innerHTML = '<div class="skeleton" style="height:120px"></div>';
   const lauf = ++ansichtLauf;
   ansichtWechsel(view);
   // Gehört der ganze Bereich zu einem höheren Tarif, steht hier die Erklärung statt der Ansicht.
@@ -1558,7 +1563,7 @@ onNavigate(async (view, params) => {
   gesperrterBereich = bereich && !kann(bereich) ? bereich : '';
   if (gesperrterBereich) {
     sperrKarteZeigen(content, gesperrterBereich);
-    seite(content);
+    seite(content, { reiter: reiterWechsel });
     updateStatus();
     return;
   }
@@ -1573,7 +1578,7 @@ onNavigate(async (view, params) => {
     console.error(e);
     content.innerHTML = html`<div class="notice danger">Die Ansicht konnte nicht dargestellt werden: ${e.message}</div>`;
   }
-  seite(content);
+  seite(content, { reiter: reiterWechsel });
   updateStatus();
 });
 
