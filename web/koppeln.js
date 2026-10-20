@@ -83,6 +83,11 @@ export const codeText = (geheimnis) => nachBase32(geheimnis);
 /** Zum Vorlesen und Abtippen in Vierergruppen. */
 export const codeAnzeige = (code) => String(code).match(/.{1,4}/g)?.join('-') || '';
 
+/** Prozent-Schreibweise auflösen; ein kaputter Code (etwa %E0 aus einem präparierten QR) bleibt unverändert und fällt später als „stimmt nicht“ durch. */
+function entschluesseln(text) {
+  try { return decodeURIComponent(text); } catch { return text; }
+}
+
 /**
  * Liest einen eingetippten oder gescannten Code. Leerzeichen, Striche und
  * Kleinbuchstaben sind egal; auch eine ganze Adresse mit #koppeln=… geht.
@@ -91,7 +96,7 @@ export const codeAnzeige = (code) => String(code).match(/.{1,4}/g)?.join('-') ||
 export function codeLesen(eingabe) {
   let s = String(eingabe ?? '');
   const m = /[#&?]koppeln=([^&\s]+)/i.exec(s);
-  if (m) s = decodeURIComponent(m[1]);
+  if (m) s = entschluesseln(m[1]);
   s = s.toUpperCase().replace(/[\s-]/g, '');
   if (s.length !== CODE_LAENGE) return null;
   let bits = 0;
@@ -119,7 +124,7 @@ export function codeAusAdresse({ loc = globalThis.location, hist = globalThis.hi
   if (!m) return null;
   const rest = String(loc.hash).replace(/^#/, '').split('&').filter((t) => !t.startsWith('koppeln=')).join('&');
   try { hist.replaceState(null, '', loc.pathname + loc.search + (rest ? `#${rest}` : '')); } catch { /* egal */ }
-  return decodeURIComponent(m[1]);
+  return entschluesseln(m[1]);
 }
 
 /* -------------------------------------------------------------------------- */

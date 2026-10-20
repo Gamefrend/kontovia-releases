@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 20. Oktober 2026, Programmversion 2.45.4
+Stand: 20. Oktober 2026, Programmversion 2.45.5
 
 ---
 
@@ -234,6 +234,10 @@ fünf Minuten vom Gerät gelöscht; liegt eine einmal länger, räumt das nächs
 Gerät sie ab. Ohne den QR-Code sind sie wertlos. Die Liste der verbundenen
 Geräte (Name, Datum) steht nur in Ihrem verschlüsselten Tresor auf dem Gerät, von
 dem aus Sie verbunden haben, und wird nicht in die Cloud abgeglichen.
+Zum Scannen des QR-Codes nutzt Kontovia auf Wunsch die Kamera Ihres Geräts. Das
+Kamerabild bleibt im Arbeitsspeicher, wird nie gespeichert und nie gesendet; die
+Kamera schaltet sich aus, sobald der Code gelesen ist oder Sie abbrechen. Sie
+können den Code auch von Hand eingeben.
 Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO.
 
 ## Befristete Zulassung (bei Verbindung mit Google)
