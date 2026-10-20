@@ -1,11 +1,11 @@
 {
-  "version": "2.45.3",
-  "released": "2026-10-20T10:35:15.233Z",
-  "notes": "Kleinere Updates\n\n- Bei einer Aktualisierung lädt Kontovia nur noch, was sich geändert hat. Alles andere übernimmt es von der Fassung auf Ihrem Gerät, das spart viel Datenvolumen.",
+  "version": "2.45.4",
+  "released": "2026-10-20T17:41:27.655Z",
+  "notes": "E-Rechnung bei Kartenzahlung\n\n- E-Rechnungen mit Kartenzahlung sind jetzt auch für Behörden gültig.\n- Ist eine Rechnung schon bezahlt und fehlt Ihre IBAN, bleibt die E-Rechnung trotzdem gültig.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "98fe55e12c3dc58b410f245a5ee5127bc08d7100137ce72d801ada9a6c9cefc6",
+      "sha256": "5f0b0f13f5fd554fbe12c9b6cdc3bd9af679d53faa361d9a79d63bb926033c32",
       "size": 389
     },
     {
@@ -225,8 +225,8 @@
     },
     {
       "path": "lib/erechnung-schreiben.js",
-      "sha256": "df81f0eb90562385c6247d7e203f7ba8b541dca70240eb1168cf7fff60167276",
-      "size": 16087
+      "sha256": "61189271ba19f3bd43c3b018fb8e85dddb2813b6d47153589af34801404213e5",
+      "size": 16421
     },
     {
       "path": "lib/erechnung.js",
@@ -465,8 +465,8 @@
     },
     {
       "path": "lib/rechnung.js",
-      "sha256": "fc0825c113615a44414664c3ddd71ba73c02013a5118c8f7555f1f4e3d931f3f",
-      "size": 67589
+      "sha256": "4cb6052e4a0cac41db5aebfb932e68633bb9f2fc42754306471802d322dc493b",
+      "size": 67256
     },
     {
       "path": "lib/rechnungsaktionen.js",
@@ -665,8 +665,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz-release.js",
-      "sha256": "1dc3ad9e78f412c6d2e6cc4e9febf37f5fd4ac0af6a2973e1a149a51f8ed4637",
-      "size": 3860
+      "sha256": "1c5872a3fda3e00678b93bcd6cd6e69d49ea1f6a69f262cfbf54a5b946d0df11",
+      "size": 4255
     },
     {
       "path": "lib/sprache/en/zusatz-sec34.js",
@@ -675,8 +675,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz-sec35.js",
-      "sha256": "d0248bee32af3ad155b2d9a8c979e47b095d883835d46851784e0ce427f69828",
-      "size": 4307
+      "sha256": "a0a9e34dd5da75a20bcfbacce357e482e67cfffe96d41bc229f25622a56777d5",
+      "size": 3824
     },
     {
       "path": "lib/sprache/en/zusatz-sec37.js",
@@ -800,8 +800,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "40e97d7057b328d36b1424f7fd57182f60750f6d1a5ac5c47ec4651e528a8bca",
-      "size": 56798
+      "sha256": "19d063b691ff9012de7205d42213062f5a27bd367c985b23b340a60726750cd6",
+      "size": 57101
     },
     {
       "path": "lib/waehrung.js",
@@ -840,12 +840,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "54f81bbf2c2e2bc43781f13dbaab54c046a1b6e3147f0d015e4b1c5e5ef79329",
+      "sha256": "fdfeace55866124a46cf2940df2c180776642df2a54545a0fbe92141012222cd",
       "size": 2810
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "af229a948f84736fd74511337e2e495b9956c60e85a298eeb5bf5fc4f31106bf",
+      "sha256": "8795b97efeda1679b8b1cb993589b6acc680632dba47960b4fc95772d8439b11",
       "size": 39976
     },
     {
@@ -865,7 +865,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "71ce5d1cab389e2f49e17e2f424ec89c1108ac6e1ed28a3688965c3f0f20379d",
+      "sha256": "54a3816f9bc4813cdaf030a3045593304ec0c8c86b3f58600a33d962964a9d11",
       "size": 43871
     },
     {
@@ -890,12 +890,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "7e41e87df64cd98abbeac8269364df07892c91ef9dffe3fd060a8b6a8c953865",
+      "sha256": "5dcc9a0db338e7fb135aec53a19b85f4fb7c5d56a76a2904bdbed94fc6c73144",
       "size": 28337
     },
     {
       "path": "security.txt",
-      "sha256": "98fe55e12c3dc58b410f245a5ee5127bc08d7100137ce72d801ada9a6c9cefc6",
+      "sha256": "5f0b0f13f5fd554fbe12c9b6cdc3bd9af679d53faa361d9a79d63bb926033c32",
       "size": 389
     },
     {
@@ -1065,7 +1065,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "8a27c673e3d046e1cea3c805ea6d3da4aec43031ed8abeea44c003c70bcaf983",
+      "sha256": "8e9b5a7a9ebdb5c01dd66208c4e38c729084169060d3442c99e255e032bbd4e6",
       "size": 10044
     },
     {
