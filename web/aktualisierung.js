@@ -23,7 +23,7 @@
 import { compareVersions } from './updateinfo.js';
 
 /** Wird beim Bauen eingesetzt (scripts/build-web.js). */
-export const VERSION = '2.45.7';
+export const VERSION = '2.45.8';
 
 const META = 'kontovia-meta';
 const PREFIX = 'kontovia-app-';

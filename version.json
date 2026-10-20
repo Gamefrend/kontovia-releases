@@ -1,11 +1,11 @@
 {
-  "version": "2.45.7",
-  "released": "2026-10-20T19:26:33.414Z",
-  "notes": "Kleinere Updates\n\n- Kleine Verbesserungen im Hintergrund, nichts Neues für Sie.",
+  "version": "2.45.8",
+  "released": "2026-10-20T21:13:57.989Z",
+  "notes": "Ruhigere Reiter\n\n- Beim Wechsel zwischen Reitern bleiben jetzt auch die kleinen Kronen in der Leiste ruhig.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "09e862a3538f875126632e9c3ac0c9c97c1a806804366742b5776f2f21104326",
+      "sha256": "9150c4307e423bbfe5a24377db1a205205f1a0871186748e740354855b033693",
       "size": 389
     },
     {
@@ -170,8 +170,8 @@
     },
     {
       "path": "lib/bewegung.js",
-      "sha256": "6a626d4776de519c8edd9726be6b166dfa2c4d92acf41c0c4795df6dd94a5835",
-      "size": 34429
+      "sha256": "3ddda0986e4be001ed6fc809b9e66c86f8d9ba72199631f882904fc7a63bc893",
+      "size": 34516
     },
     {
       "path": "lib/bildschirmfoto.js",
@@ -665,8 +665,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz-release.js",
-      "sha256": "d743345497ec6e2387c511a94bbb596e1663a4560e6bfc642ddc50e5bef41e5c",
-      "size": 4821
+      "sha256": "243962acd10fa49ae472bbd385c21bfb7aef993eb1fc13bf16ab81727624ea1a",
+      "size": 5028
     },
     {
       "path": "lib/sprache/en/zusatz-sec34.js",
@@ -800,8 +800,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "6c090b49a1e6347cf3ff461044b46f867c94bb6323a47d6cba9b686983732f60",
-      "size": 57703
+      "sha256": "dcbe140795e284d38ec87e8665055a0963250358f0340cc7a07444cf6146d27c",
+      "size": 57909
     },
     {
       "path": "lib/waehrung.js",
@@ -840,12 +840,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "aae8a3cf4627e1b584ac4c785ca81194f5ab51704f9751d01d7f8b73c6cfa5f1",
+      "sha256": "44c22fa49005f6cfc080dd8d2f5d152d73cac0266b0531ee070137ff93414cdf",
       "size": 2810
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "50f00b8d17114b4a33fc3cea6145803fcc5bfcc55f0a7e3842b26980574511ff",
+      "sha256": "324338178dd3e490e5ed3298864767d210f093ca252073ba700ec796d8e1c005",
       "size": 40257
     },
     {
@@ -865,7 +865,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "bddf9e573f8f7bcc348dcbf7b1954f810af94868b4aebe4d500c93a5001b61bc",
+      "sha256": "948243a697c8692d66cb012bd391be79abd855545696405a03468c1b6b9dd8d6",
       "size": 44152
     },
     {
@@ -890,12 +890,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "a915fc370c413eef896a96874ca2df8fc23b771c1a8ae15ea165b4744d79b39c",
+      "sha256": "0123718d0fd5890987b0f422938211561a02dfdf6e1a6a4f55fa653de70cc95b",
       "size": 28337
     },
     {
       "path": "security.txt",
-      "sha256": "09e862a3538f875126632e9c3ac0c9c97c1a806804366742b5776f2f21104326",
+      "sha256": "9150c4307e423bbfe5a24377db1a205205f1a0871186748e740354855b033693",
       "size": 389
     },
     {
@@ -1065,7 +1065,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "368d8fcd474a0534b481272d7b94063a6a350c78b90c2b320082306866a341fb",
+      "sha256": "95b6ad52694e80506ffb601ef1d709a5c843f51ca791ebafdd7dace510919f05",
       "size": 10044
     },
     {
