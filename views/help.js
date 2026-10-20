@@ -1079,6 +1079,8 @@ function recht(root) {
         festen, geprüften Fassung, lernt nichts dazu und sendet nichts. Es wählt nur aus, welche
         Suche oder Rechnung Kontovia ausführt; die Zahlen selbst rechnet Kontovia. Antworten aus
         dem Modell sind im Assistenten als solche gekennzeichnet.</p>
+        <p>Kopieren Sie eine Antwort der KI, trägt auch die Kopie diesen Vermerk, lesbar im Text und
+        für andere Programme erkennbar.</p>
         <p class="mb0">Ohne Assistent ist die KI-Verordnung der EU (Verordnung (EU) 2024/1689) auf
         Kontovia nicht anwendbar: Erwägungsgrund 12 nimmt Systeme aus, die auf ausschließlich von
         Menschen definierten Regeln beruhen.</p>
