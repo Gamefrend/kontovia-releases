@@ -190,6 +190,11 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   .cal-cell { min-height: 62px; padding: 3px 4px; }
   .cal-ev { font-size: 10px; padding: 1px 3px; }
   .cal-head { font-size: 10px; padding: 5px 2px; }
+  /* Woche am Telefon: die sieben Spalten scrollen quer, die Stundenleiste bleibt. */
+  .cal-week { overflow-x: auto; }
+  .cal-week-head, .cal-allday, .cal-timegrid { min-width: 560px; }
+  .cal-timegrid { max-height: 56vh; }
+  .cal-quick .hint { display: none; }
 
   .gate { padding-left: 12px; padding-right: 12px; }
   .gate-card { padding: 22px 18px; }
@@ -236,6 +241,9 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
     border: 0 !important; border-radius: 3px; background: currentColor !important; opacity: .85;
   }
   .cal-ev.done { opacity: .35; }
+  /* Im Zeitraster der Woche bleibt die Schrift lesbar. */
+  .cal-ev.cal-timed, .cal-allday-cell .cal-ev { font-size: 10px; line-height: 1.2; height: auto; min-height: 0; padding: 2px 4px; border-left: 3px solid var(--ev, var(--accent)) !important; background: color-mix(in srgb, var(--ev, var(--accent)) 18%, var(--surface)) !important; opacity: 1; }
+  .cal-allday-cell .cal-ev { height: auto; }
   .agenda-item .truncate { white-space: normal; overflow: visible; }
   .cal-more { padding-left: 1px; font-size: 10px; line-height: 1.2; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .cal-more::first-line { font-size: 10px; }

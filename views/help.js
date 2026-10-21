@@ -444,13 +444,39 @@ function anleitung(root) {
         <p>Im <a data-go="calendar">Kalender</a> verknüpfen Sie einen Termin mit einer oder mehreren
         Buchungen, zum Beispiel den Montagetermin mit der dazugehörigen Rechnung. Außerdem zeigt der
         Kalender die Fälligkeiten offener Rechnungen.</p>
+        <p><strong>Ansichten:</strong> Monat, Woche, Tag und Liste. In Woche und Tag steht jeder Termin
+        zu seiner Uhrzeit; ein Klick in eine freie halbe Stunde legt dort einen neuen an. Termine lassen
+        sich mit der Maus auf einen anderen Tag oder eine andere Uhrzeit ziehen, eine Reihe wandert dabei
+        als Ganzes. Das Suchfeld findet Termine ein Jahr zurück und voraus.</p>
+        <p><strong>Schnell eintragen:</strong> Das Feld über dem Kalender versteht Eingaben wie
+        „morgen 14:00 Steuerberater“, „Fr 9-10 Zahnarzt #privat“, „15.11. Messe Köln“, „3.-5.12. Fortbildung“
+        oder „jeden Montag 8 Uhr Teambesprechung“. Enter öffnet den fertig ausgefüllten Termin zum Prüfen.</p>
+        <p><strong>Termine ausstatten:</strong> mehrere Tage (letzter Tag), eigene Farbe, Tags, eine
+        Erinnerung und Wiederholungen täglich, wöchentlich an gewählten Wochentagen, alle zwei Wochen,
+        monatlich oder jährlich, jeweils mit Abstand („alle 3 Wochen“) und Enddatum. „Kopie“ legt einen
+        neuen Termin mit denselben Angaben an.</p>
+        <p><strong>Mehrere Kalender, Tags, Filter:</strong> Unter <em>Kalender verwalten</em> legen Sie
+        eigene Kalender mit Farbe an, etwa Beruflich und Privat. Die Reiter über dem Kalender zeigen alle
+        zusammen oder einen allein; unter <em>Anzeige</em> blenden Sie einzelne Kalender aus und filtern nach
+        Tags. Weitere Google-Kalender erscheinen als eigene Reiter.</p>
+        <p><strong>Erinnerungen:</strong> Jeder Termin kann eine Erinnerung tragen. Sie erscheint als Hinweis
+        im Programm und, wenn Sie das unter Einstellungen → Kalender erlauben, als Benachrichtigung des Geräts.
+        Das gilt, solange Kontovia geöffnet und entsperrt ist, auch im Hintergrund. Bei geschlossenem Programm
+        kann Kontovia nicht erinnern; dafür bräuchte es einen Dienst im Netz, und den gibt es bewusst nicht.
+        Wer das braucht, nimmt die Termine per Kalenderdatei in einen anderen Kalender mit, die Erinnerungen gehen mit.
+        Zu Google Kalender gehen Erinnerungen nicht, dort stellen Sie sie selbst ein.</p>
         ${raw(`<p><strong>Google Kalender:</strong> Unter <em>Abgleich</em> oben im
         Kalender oder unter Einstellungen → Kalender-Abgleich verbinden Sie Kontovia mit Ihrem
         Google-Konto. Kontovia legt dort einen eigenen Kalender „Kontovia“ an und gleicht in beide
         Richtungen ab. Auf dem Telefon sehen Sie Ihre Termine in der Google-Kalender-App, und was
         Sie dort im Kalender „Kontovia“ eintragen, erscheint hier. Ihre übrigen Kalender bezieht
         Kontovia nur ein, wenn Sie das ausdrücklich einschalten. Beträge, Buchungen und Kontakte
-        gehen nie an Google. Ohne Google-Konto geht es per Kalenderdatei (.ics).</p>`)}
+        gehen nie an Google. Einen weiteren Kalender lösen Sie unter <em>Abgleich</em> wieder; dabei können Sie
+        die von Kontovia dort angelegten Einträge mit löschen lassen, fremde Termine bleiben immer unberührt.</p>
+        <p><strong>Outlook, Apple Kalender und andere Programme:</strong> ohne Konto per Kalenderdatei (.ics),
+        je Kalender oder alle zusammen. Der Export nimmt mehrere Tage, Erinnerungen, Tags und Wiederholungen mit,
+        der Import erkennt schon übernommene Termine und aktualisiert sie. Aus Outlook: Datei → Kalender speichern;
+        aus Apple Kalender: Ablage → Exportieren.</p>`)}
       </div></div>
 
       <div class="card mt16"><div class="card-body">

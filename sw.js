@@ -132,6 +132,22 @@ self.addEventListener('fetch', (event) => {
   })());
 });
 
+/**
+ * Ein Tipp auf eine Erinnerung (renderer/lib/erinnerungen.js) holt das offene
+ * Kontovia nach vorn oder öffnet es. Mehr tut der Service Worker für
+ * Benachrichtigungen nicht; er erzeugt keine und empfängt keine aus dem Netz.
+ */
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const ziel = scope().href;
+  event.waitUntil((async () => {
+    const fenster = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const offen = fenster.find((c) => c.url.startsWith(ziel));
+    if (offen) return offen.focus();
+    return self.clients.openWindow(ziel);
+  })());
+});
+
 self.addEventListener('message', (event) => {
   if (event.data?.type === 'aufraeumen') {
     // Alte Fassungen entfernen, sobald die neue läuft.

@@ -16,6 +16,7 @@ import { icon, modal, confirmDialog, ok, err, warn } from '../lib/ui.js';
 import { store, sel, commit, saveNow, applyCalendarChanges } from '../lib/store.js';
 import { derivedEntries } from '../lib/gcal.js';
 import { toIcs, parseIcs, appointmentIdForUid } from '../lib/ics.js';
+import { kalenderListe, kalenderSchluessel, lokaleKalender } from '../lib/kalender.js';
 import {
   calState, syncCalendar, startCalendarSync, stopCalendarSync,
   refreshCalendarStatus, calendarSettings, timeZone,
@@ -128,6 +129,10 @@ export async function renderCalendarCard(el) {
     await openKalenderAuswahl();
     rerender();
   });
+  el.querySelectorAll('[data-cal-loesen]').forEach((b) => b.addEventListener('click', async () => {
+    await kalenderLoesen([b.dataset.calLoesen]);
+    rerender();
+  }));
   el.querySelector('[data-cal="ics-export"]').addEventListener('click', exportIcs);
   el.querySelector('[data-cal="ics-import"]').addEventListener('click', async () => { if (await importIcs()) rerender(); });
   el.querySelectorAll('[data-opt]').forEach((c) => c.addEventListener('change', async () => {
@@ -153,9 +158,72 @@ function weitereAbschnitt(st, cfg) {
   return `<hr class="sep">
     <strong style="font-size:13px">Weitere Google-Kalender</strong>
     <p class="small mt8 mb8" style="line-height:1.6">${namen.length
-      ? `In beide Richtungen abgeglichen: <strong>${esc(namen.join(', '))}</strong>. Termine ab gut einem Jahr zurück.`
+      ? 'In beide Richtungen abgeglichen, Termine ab gut einem Jahr zurück. „Lösen“ beendet den Abgleich eines Kalenders; dabei können Sie die von Kontovia dort angelegten Einträge mit löschen lassen, fremde Termine bleiben immer unberührt.'
       : 'Noch kein weiterer Kalender ausgewählt.'}</p>
+    ${cfg.weitere.map((k) => `<div class="row mb8" style="gap:8px"><span style="flex:1">${icon('calendar', 14).__raw} ${esc(k.name || k.id)}</span>
+      <button class="btn sm" data-cal-loesen="${esc(k.id)}">Lösen</button></div>`).join('')}
     <button class="btn" data-cal="weitere-waehlen" data-premium="kalender">${icon('calendar', 15).__raw} Kalender auswählen</button>`;
+}
+
+/**
+ * Kontovia von einem weiteren Google-Kalender lösen. Fragt, ob seine Termine
+ * aus Kontovia verschwinden sollen und ob die von Kontovia dort angelegten
+ * Einträge in Google gelöscht werden; fremde Termine in Google bleiben immer.
+ * @param {string[]} ids  Kalender, die nicht mehr abgeglichen werden
+ * @param {{speichern?:boolean}} o  speichern: die Auswahl selbst fortschreiben (sonst tut es der Aufrufer)
+ * @returns {Promise<boolean>} false, wenn abgebrochen
+ */
+export async function kalenderLoesen(ids, { speichern = true } = {}) {
+  const cfg = calendarSettings();
+  const kalender = ids.map((id) => cfg.weitere.find((k) => k.id === id) || { id, name: id });
+  const betroffen = sel.appointments().filter((a) => a.extern && ids.includes(a.extern.calendarId));
+  // Von Kontovia angelegt: die Ereigniskennung ist aus der Terminkennung berechnet (kv…), nicht von Google vergeben.
+  const eigene = betroffen.filter((a) => String(a.extern.eventId || '').startsWith('kv') && !a.id.startsWith('gcal_') && !a.id.startsWith('gx'));
+  const namen = kalender.map((k) => k.name || k.id).join(', ');
+  const wahl = await new Promise((resolve) => {
+    let settled = false;
+    const m = modal({
+      title: ids.length > 1 ? 'Kalender lösen?' : `Kalender „${namen}“ lösen?`,
+      size: 'slim',
+      body: html`
+        <p class="mt0" style="line-height:1.6">Kontovia gleicht ${ids.length > 1 ? 'diese Kalender' : 'diesen Kalender'} danach nicht mehr ab. Fremde Termine in Google bleiben in jedem Fall unberührt.</p>
+        <label class="check mb8"><input type="checkbox" id="l_lokal" ${betroffen.length ? 'checked' : 'disabled'}> ${int(betroffen.length)} Termine aus diesem Kalender aus Kontovia entfernen (in Google bleiben sie)</label>
+        <label class="check mb8"><input type="checkbox" id="l_google" ${eigene.length ? '' : 'disabled'}> ${int(eigene.length)} von Kontovia dort angelegte Einträge in Google löschen</label>
+        <p class="tiny muted mt8 mb0">Gelöscht werden in Google nur Einträge, die Kontovia selbst angelegt hat. Was Sie oder andere dort eingetragen haben, bleibt.</p>`,
+      foot: '<button class="btn" data-no>Abbrechen</button><button class="btn danger" data-yes>Lösen</button>',
+      onClose: () => { if (!settled) resolve(null); },
+    });
+    m.root.querySelector('[data-no]').addEventListener('click', () => { settled = true; m.close(); resolve(null); });
+    m.root.querySelector('[data-yes]').addEventListener('click', () => {
+      settled = true;
+      const r = { lokal: m.root.querySelector('#l_lokal').checked, google: m.root.querySelector('#l_google').checked };
+      m.close();
+      resolve(r);
+    });
+  });
+  if (!wahl) return false;
+  let geloescht = 0;
+  if (wahl.google && eigene.length) {
+    if (calState.status?.bestaetigen && !await bestaetigen()) { warn('Nicht gelöscht', 'Ohne Bestätigung bei Google bleiben die Einträge dort stehen.'); }
+    else {
+      try {
+        const ops = eigene.map((a) => ({ kind: 'delete', calendarId: a.extern.calendarId, eventId: a.extern.eventId, apptId: a.id }));
+        const res = await api.gcal.push(ops);
+        geloescht = res.filter((r) => r?.ok).length;
+        const fehler = res.find((r) => r && !r.ok);
+        if (fehler) warn('Nicht alles gelöscht', `${int(res.length - geloescht)} Einträge blieben in Google: ${fehler.error || ''}`);
+      } catch (e) {
+        err('Löschen in Google fehlgeschlagen', e.message);
+      }
+    }
+  }
+  if (wahl.lokal && betroffen.length) {
+    await applyCalendarChanges({ removals: betroffen.map((a) => a.id), ohneGrabstein: true, summary: `Google Kalender: ${betroffen.length} Termine gelöster Kalender entfernt` });
+  }
+  if (speichern) await saveCalendarSettings({ weitere: cfg.weitere.filter((k) => !ids.includes(k.id)) });
+  ok('Kalender gelöst', [namen, wahl.lokal && betroffen.length ? `${int(betroffen.length)} Termine aus Kontovia entfernt` : '', geloescht ? `${int(geloescht)} Einträge in Google gelöscht` : ''].filter(Boolean).join(' · '));
+  refresh();
+  return true;
 }
 
 /**
@@ -236,19 +304,9 @@ export async function openKalenderAuswahl() {
   });
   if (!wahl) return false;
 
-  // Abgewählte Kalender: ihre Termine verschwinden aus Kontovia – in Google bleiben sie.
+  // Abgewählte Kalender: Kontovia löst sich davon, auf Wunsch samt seinen Einträgen dort.
   const weg = [...bisher].filter((id) => !wahl.some((k) => k.id === id));
-  const betroffen = sel.appointments().filter((a) => a.extern && weg.includes(a.extern.calendarId));
-  if (betroffen.length) {
-    const entfernen = await confirmDialog({
-      title: 'Termine abgewählter Kalender',
-      text: `${int(betroffen.length)} Termine stammen aus Kalendern, die nicht mehr abgeglichen werden. Aus Kontovia entfernen? In Google bleiben sie unverändert.`,
-      confirmLabel: 'Aus Kontovia entfernen', cancelLabel: 'Behalten',
-    });
-    if (entfernen) {
-      await applyCalendarChanges({ removals: betroffen.map((a) => a.id), ohneGrabstein: true, summary: `Google Kalender: ${betroffen.length} Termine abgewählter Kalender entfernt` });
-    }
-  }
+  if (weg.length && !await kalenderLoesen(weg, { speichern: false })) return false;
   await saveCalendarSettings({ weitere: wahl });
   ok('Auswahl gespeichert', wahl.length ? wahl.map((k) => k.name).join(', ') : 'Kein weiterer Kalender');
   const r = await syncCalendar({ reason: 'auswahl' }).catch((e) => { err('Kalenderabgleich fehlgeschlagen', e.message); return null; });
@@ -483,17 +541,52 @@ export async function disconnectGoogle() {
 /* Kalenderdateien                                                             */
 /* -------------------------------------------------------------------------- */
 
-export async function exportIcs() {
+/** Welche Kalender in die Datei sollen; bei nur einem Kalender ohne Rückfrage. */
+function exportAuswahl() {
   const cfg = calendarSettings();
-  const derived = derivedEntries(store.db, { events: cfg.includeEvents, due: cfg.includeDue });
-  const text = toIcs(sel.appointments(), { derived, name: store.db.settings.companyName ? `Kontovia: ${store.db.settings.companyName}` : 'Kontovia' });
+  const kal = kalenderListe({ settings: sel.settings(), weitere: cfg.weitere, appointments: sel.appointments() });
+  if (kal.length < 2) return Promise.resolve({ keys: kal.map((k) => k.key), mitBuchungen: true });
+  return new Promise((resolve) => {
+    let settled = false;
+    const m = modal({
+      title: 'Welche Kalender exportieren?',
+      size: 'slim',
+      body: html`
+        <p class="mt0 small" style="line-height:1.6">Alle gewählten Kalender kommen in eine Datei. Für je eine Datei pro Kalender wiederholen Sie den Export.</p>
+        ${raw(kal.map((k) => `<label class="check mb8"><input type="checkbox" value="${esc(k.key)}" checked> <span class="cal-dot" style="background:${esc(k.color || 'var(--accent)')}"></span> ${esc(k.name)}${k.art === 'google' ? ' <span class="tiny muted">Google</span>' : ''} <span class="tiny muted">(${int(k.anzahl)})</span></label>`).join(''))}
+        <hr class="sep">
+        <label class="check"><input type="checkbox" id="x_buchungen" checked> Veranstaltungen und Fälligkeiten aus Buchungen mitnehmen</label>`,
+      foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Exportieren</button>',
+      onClose: () => { if (!settled) resolve(null); },
+    });
+    m.root.querySelector('[data-no]').addEventListener('click', () => { settled = true; m.close(); resolve(null); });
+    m.root.querySelector('[data-yes]').addEventListener('click', () => {
+      settled = true;
+      const keys = [...m.root.querySelectorAll('input[type=checkbox][value]:checked')].map((c) => c.value);
+      const mitBuchungen = m.root.querySelector('#x_buchungen').checked;
+      m.close();
+      resolve({ keys, mitBuchungen, kal });
+    });
+  });
+}
+
+export async function exportIcs() {
+  const wahl = await exportAuswahl();
+  if (!wahl) return;
+  const cfg = calendarSettings();
+  const keys = new Set(wahl.keys);
+  const termine = sel.appointments().filter((a) => keys.has(kalenderSchluessel(a)));
+  const derived = wahl.mitBuchungen ? derivedEntries(store.db, { events: cfg.includeEvents, due: cfg.includeDue }) : [];
+  const einer = wahl.keys.length === 1 ? (wahl.kal || kalenderListe({ settings: sel.settings(), weitere: cfg.weitere })).find((k) => k.key === wahl.keys[0]) : null;
+  const firma = store.db.settings.companyName ? `Kontovia: ${store.db.settings.companyName}` : 'Kontovia';
+  const text = toIcs(termine, { derived, name: einer ? `${firma} · ${einer.name}` : firma, color: einer?.color || '' });
   try {
     const p = await api.file.save({
-      defaultName: `Kontovia-Termine_${todayISO()}.ics`,
+      defaultName: `Kontovia-Termine${einer ? '_' + einer.name.replace(/[^\wäöüÄÖÜß-]+/g, '_') : ''}_${todayISO()}.ics`,
       filters: [{ name: 'Kalenderdatei', extensions: ['ics'] }],
       text,
     });
-    if (p) ok('Kalenderdatei gespeichert', `${int(sel.appointments().length + derived.length)} Termine · ${p}`);
+    if (p) ok('Kalenderdatei gespeichert', `${int(termine.length + derived.length)} Termine · ${p}`);
   } catch (e) {
     err('Export fehlgeschlagen', e.message);
   }
@@ -529,29 +622,40 @@ export async function importIcs(gewaehlt = null) {
     const id = appointmentIdForUid(e.uid);
     const alt = sel.appointment(id);
     const felder = {
-      title: e.title, date: e.date, allDay: e.allDay, startTime: e.startTime, endTime: e.endTime,
-      location: e.location, notes: e.notes, recurrence: e.recurrence,
+      title: e.title, date: e.date, endDate: e.endDate || '', allDay: e.allDay, startTime: e.startTime, endTime: e.endTime,
+      location: e.location, notes: e.notes, recurrence: e.recurrence, tags: e.tags || [], reminderMinutes: e.reminderMinutes || 0,
     };
     if (alt) {
-      const gleich = Object.entries(felder).every(([k, v]) => JSON.stringify(alt[k] ?? '') === JSON.stringify(v ?? ''));
+      const gleich = Object.entries(felder).every(([k, v]) => JSON.stringify(alt[k] ?? (Array.isArray(v) ? [] : typeof v === 'number' ? 0 : '')) === JSON.stringify(v ?? ''));
       if (gleich) continue;
       upserts.push({ ...alt, ...felder, updatedAt: now });
       geaendert++;
     } else {
       upserts.push({
-        id, ...felder, contactId: '', color: '', done: false, transactionIds: [],
-        reminderMinutes: 0, createdAt: now, updatedAt: now,
+        id, ...felder, contactId: '', color: '', calendarId: '', done: false, transactionIds: [],
+        createdAt: now, updatedAt: now,
       });
       neu++;
     }
   }
   if (!upserts.length) { ok('Nichts Neues', `Alle ${int(events.length)} Termine der Datei sind schon in Kontovia.`); return false; }
-  const yes = await confirmDialog({
-    title: 'Termine übernehmen?',
-    text: `${file.name}: ${int(neu)} neue Termine${geaendert ? ` und ${int(geaendert)} geänderte` : ''} aus ${int(events.length)} Einträgen.`,
-    confirmLabel: 'Übernehmen',
+  const lokale = lokaleKalender(sel.settings());
+  const ziel = await new Promise((resolve) => {
+    let settled = false;
+    const m = modal({
+      title: 'Termine übernehmen?',
+      size: 'slim',
+      body: html`
+        <p class="mt0" style="line-height:1.6">${file.name}: ${int(neu)} neue Termine${geaendert ? ` und ${int(geaendert)} geänderte` : ''} aus ${int(events.length)} Einträgen.</p>
+        ${lokale.length > 1 && neu ? raw(`<div class="field"><label>Neue Termine in den Kalender</label><select id="i_kalender">${lokale.map((k) => `<option value="${esc(k.id)}">${esc(k.name)}</option>`).join('')}</select></div>`) : ''}`,
+      foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Übernehmen</button>',
+      onClose: () => { if (!settled) resolve(null); },
+    });
+    m.root.querySelector('[data-no]').addEventListener('click', () => { settled = true; m.close(); resolve(null); });
+    m.root.querySelector('[data-yes]').addEventListener('click', () => { settled = true; const k = m.root.querySelector('#i_kalender')?.value || ''; m.close(); resolve(k); });
   });
-  if (!yes) return false;
+  if (ziel === null) return false;
+  for (const u of upserts) if (!sel.appointment(u.id)) u.calendarId = ziel;
   await applyCalendarChanges({ upserts, summary: `Kalenderdatei ${file.name}: ${neu} neu, ${geaendert} geändert` });
   await saveNow();
   ok('Termine übernommen', `${int(neu)} neu, ${int(geaendert)} geändert`);

@@ -1,11 +1,11 @@
 {
-  "version": "2.45.8",
-  "released": "2026-10-20T21:13:57.989Z",
-  "notes": "Ruhigere Reiter\n\n- Beim Wechsel zwischen Reitern bleiben jetzt auch die kleinen Kronen in der Leiste ruhig.",
+  "version": "2.46.0",
+  "released": "2026-10-21T21:28:46.016Z",
+  "notes": "Ein richtiger Kalender\n\n- Neu: Wochen- und Tagesansicht mit Uhrzeiten, Suche, Schnelleingabe („morgen 14:00 Steuerberater“) und Verschieben per Maus.\n- Termine können mehrere Tage dauern, eine Farbe, Tags und eine Erinnerung tragen und sich täglich, an gewählten Wochentagen oder in jedem gewünschten Abstand wiederholen.\n- Mehrere Kalender, etwa Beruflich und Privat: als Reiter einzeln oder alle zusammen, dazu Filter nach Kalender und Tags.\n- Erinnerungen erscheinen im Programm und auf Wunsch als Benachrichtigung des Geräts, solange Kontovia geöffnet ist.\n- Kalenderdateien nehmen mehrere Tage, Erinnerungen und Tags mit, je Kalender oder alle zusammen. Ein weiterer Google-Kalender lässt sich lösen, auf Wunsch samt der von Kontovia dort angelegten Einträge.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "9150c4307e423bbfe5a24377db1a205205f1a0871186748e740354855b033693",
+      "sha256": "8f8f6167aeea7d63aa83eec439a7e2896ecb29c88e6b6cbc1b722bf2e07b0147",
       "size": 389
     },
     {
@@ -40,8 +40,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "c9b4856867e08b7e255fa1dd20a07007913b89a6b124007cd7bdddb9ebeab962",
-      "size": 90266
+      "sha256": "66ac5d90d52d851cb5f5f6925cb8b8348cd6676f9d22980212da86427e8b587d",
+      "size": 90478
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -140,8 +140,8 @@
     },
     {
       "path": "lib/assistentwerkzeuge.js",
-      "sha256": "98f6e81480a0946cf82dec2f55dc7f256f38984186e96db7ac623170d066f3a7",
-      "size": 127666
+      "sha256": "41b8a0dc00fcbdb87e6b7d4d143e8853b75e3597e8d3653df8cc68bc34ef0c86",
+      "size": 127722
     },
     {
       "path": "lib/assistentwissen.js",
@@ -234,6 +234,11 @@
       "size": 20384
     },
     {
+      "path": "lib/erinnerungen.js",
+      "sha256": "4f478fd3a09f188f2a0c6301c4fe3e9aab2a923c6c1642f861c07300746b7f57",
+      "size": 5694
+    },
+    {
       "path": "lib/euer.js",
       "sha256": "d315032c75f9d3873eb2322cf04d9748d3560422d88918802670382f8e977917",
       "size": 7722
@@ -260,8 +265,8 @@
     },
     {
       "path": "lib/gcal.js",
-      "sha256": "bc9bc90b44b34533ce6c1c695dbb119384a654a0a1d83f471c9e2bbf789917c9",
-      "size": 26021
+      "sha256": "0de0f2c503c73fc89b59df544acd0c2e86746a63bd44f4a8141794fce4d0a33c",
+      "size": 25197
     },
     {
       "path": "lib/gcalsync.js",
@@ -285,13 +290,18 @@
     },
     {
       "path": "lib/ics.js",
-      "sha256": "df336d658d11c69404c2189b9f61c7422966ffa90482b2ff4d960862ba2c1b9e",
-      "size": 8609
+      "sha256": "d94e98a0b01e5f4a6677fcf628d8eab078a636d65b29ea562aa7bf170a79db87",
+      "size": 10499
     },
     {
       "path": "lib/importaktionen.js",
       "sha256": "e5f4f0abd851093dd9b2c15a2e46be3ec3943cb9c7ee2eed218352cc6ceb9feb",
       "size": 23217
+    },
+    {
+      "path": "lib/kalender.js",
+      "sha256": "d84b85fdb2a1ba488d8a16b1bf8ab2e7d50c8af1001615a1d1e82f808a530466",
+      "size": 20199
     },
     {
       "path": "lib/kasse.js",
@@ -425,8 +435,8 @@
     },
     {
       "path": "lib/prefs.js",
-      "sha256": "6f37e0453a45cd6aac0b7ebd381ad105ef71dec2d49bc8460cac2d39e36caa5f",
-      "size": 9259
+      "sha256": "b97bf74dcf00b3def96bcde203265f112a0f7e1c1e78c9c0495e4e0b80201e3d",
+      "size": 9490
     },
     {
       "path": "lib/projektaktionen.js",
@@ -540,8 +550,8 @@
     },
     {
       "path": "lib/sprache/en.js",
-      "sha256": "e03302336b1676fc9993f38d3cbd2716997ac16e7db6e15b547dfa407b5826e9",
-      "size": 1837
+      "sha256": "96fb054da4f656fe0083e6693a8fa32ef2023a8980de6ee5863c3d2c2e782def",
+      "size": 1886
     },
     {
       "path": "lib/sprache/en/t01.js",
@@ -704,6 +714,11 @@
       "size": 6859
     },
     {
+      "path": "lib/sprache/en/zusatz-sec85.js",
+      "sha256": "6595e004804881777dd519890fb3b4628a3ddbf41b6b96209d6321c1233fc4dd",
+      "size": 25377
+    },
+    {
       "path": "lib/sprache/en/zusatz.js",
       "sha256": "cf6c77dfc31c1908f1be4500e45f592dd2724bdc041bf682e0fa2b8ebfb56566",
       "size": 229518
@@ -765,8 +780,8 @@
     },
     {
       "path": "lib/termine.js",
-      "sha256": "f021905b4285dcda1368974e35b754033eb6aed4ef82e748e49fdc6176fa30f2",
-      "size": 1523
+      "sha256": "ff3b78c0d95c9148d8a9b1153f1e3c303a8516f593f2667bb196e0fe242457bd",
+      "size": 10674
     },
     {
       "path": "lib/textbearbeiten.js",
@@ -800,8 +815,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "dcbe140795e284d38ec87e8665055a0963250358f0340cc7a07444cf6146d27c",
-      "size": 57909
+      "sha256": "55ca9c831c0155b25125f460311cc5bf1f358840a2cbcfcee87d8dce3b56bbde",
+      "size": 58813
     },
     {
       "path": "lib/waehrung.js",
@@ -840,13 +855,13 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "44c22fa49005f6cfc080dd8d2f5d152d73cac0266b0531ee070137ff93414cdf",
+      "sha256": "6d6b0e3c95262b557c42e86ef0960beaf0354e405f5d2223719c238292f52d27",
       "size": 2810
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "324338178dd3e490e5ed3298864767d210f093ca252073ba700ec796d8e1c005",
-      "size": 40257
+      "sha256": "4612907ead649ad1bf8151b5bb7b08d3d2891c08f4881f1281ae94341faf8f29",
+      "size": 40916
     },
     {
       "path": "recht/IMPRESSUM.md",
@@ -865,8 +880,8 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "948243a697c8692d66cb012bd391be79abd855545696405a03468c1b6b9dd8d6",
-      "size": 44152
+      "sha256": "f500adb32d1fae15788187aa32ddc81cee07cb487aa6e60a498f9e7cf623187d",
+      "size": 44829
     },
     {
       "path": "recht/impressum.html",
@@ -890,12 +905,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "0123718d0fd5890987b0f422938211561a02dfdf6e1a6a4f55fa653de70cc95b",
+      "sha256": "3fb518c70f22eaa6171083cfae96d0abf74bc34c6d5f7338ec804704f6f66903",
       "size": 28337
     },
     {
       "path": "security.txt",
-      "sha256": "9150c4307e423bbfe5a24377db1a205205f1a0871186748e740354855b033693",
+      "sha256": "8f8f6167aeea7d63aa83eec439a7e2896ecb29c88e6b6cbc1b722bf2e07b0147",
       "size": 389
     },
     {
@@ -905,8 +920,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "a80d38ba2b546034c6aa31e5980da9e86517da9d08aa826e3ce5d078a90c798c",
-      "size": 146814
+      "sha256": "0cbf8af7b16425b6b7882ee150b72ef332c5d4fa5be92a2d203d54300243f83e",
+      "size": 152515
     },
     {
       "path": "views/admin.js",
@@ -930,13 +945,13 @@
     },
     {
       "path": "views/calendar.js",
-      "sha256": "1d6535384a3576ef1d2fd7a0846a7ae3a2bd271ec3496e7cea59e9ef5991b288",
-      "size": 38415
+      "sha256": "4ef626bf627fbd9f6860b1c11c958cdbeb30a0b246cac62d73f107fbfd298d88",
+      "size": 68235
     },
     {
       "path": "views/calendarsync.js",
-      "sha256": "cd3300d991ea8a2fe00f5bd91dc25ee236feabdd5c8fab661934547aaee3a4c4",
-      "size": 29122
+      "sha256": "99bf6b8982cb852e6014d875261b358af1a7e9706ed2a24d09b39bdeda778701",
+      "size": 36677
     },
     {
       "path": "views/cloudpanel.js",
@@ -965,8 +980,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "91f42f829843a7152817de9d4ddf3c91284a952848b91cefded9860a4a17e6d0",
-      "size": 98251
+      "sha256": "f49423d0ec6488fccec9c62482bfa558730e557d22803a8b3e9682ebf4f1a812",
+      "size": 100957
     },
     {
       "path": "views/importexport.js",
@@ -977,6 +992,11 @@
       "path": "views/jahresvergleich.js",
       "sha256": "cbaaf786aefb0db8da2597a86f051a9bfddaaeffa637c26b073e87f243438d21",
       "size": 9296
+    },
+    {
+      "path": "views/kalendereinstellungen.js",
+      "sha256": "1e9d9e29ac2aa46d08c4bbddcd5dc89a83050f829fa4dcbd8f71cc6cd7bc7c1b",
+      "size": 5040
     },
     {
       "path": "views/kassenbuch.js",
@@ -1030,8 +1050,8 @@
     },
     {
       "path": "views/settings.js",
-      "sha256": "04675d319b6b68041ac9780ccea6770fcbb8bc4dac43886221160fffc4afc362",
-      "size": 67170
+      "sha256": "821fcafeee61ad40f82b499e33fca119233421e962fc72f42ca327894f269dad",
+      "size": 67361
     },
     {
       "path": "views/spruenge.js",
@@ -1065,7 +1085,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "95b6ad52694e80506ffb601ef1d709a5c843f51ca791ebafdd7dace510919f05",
+      "sha256": "d24a7477e16f9ddf2b2d6751eb2a31a433d77d28fcdc85b3618eccf6d5b80e26",
       "size": 10044
     },
     {
@@ -1345,8 +1365,8 @@
     },
     {
       "path": "web/web.css",
-      "sha256": "ae70e95616392f1b1d74a48138b60f281114a833e633f92570286eb7bfe09c26",
-      "size": 19015
+      "sha256": "560598bbf17b39e784504ea927a4d8c6ae071efe1c86745a0373db9e4cf7bb53",
+      "size": 19675
     },
     {
       "path": "web/weiterleitung.js",

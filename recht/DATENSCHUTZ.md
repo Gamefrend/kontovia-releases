@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 20. Oktober 2026, Programmversion 2.45.8
+Stand: 21. Oktober 2026, Programmversion 2.46.0
 
 ---
 
@@ -437,6 +437,17 @@ Google steht dort nicht. Die Kennung wird bei der Rückkehr sofort gelöscht.
 
 Ohne Google-Konto lassen sich Termine als Kalenderdatei (.ics) exportieren und
 importieren; dabei entsteht keine Verbindung ins Netz.
+
+## Erinnerungen an Termine (nur auf dem Gerät)
+
+Termine können eine Erinnerung tragen. Sie erscheint als Hinweis im Programm
+und, nur wenn Sie das unter *Einstellungen → Kalender* ausdrücklich erlauben
+und Ihr Browser zustimmt, als Benachrichtigung Ihres Geräts. Beides geschieht
+allein auf Ihrem Gerät, solange Kontovia geöffnet und entsperrt ist. Es gibt
+keinen Dienst im Netz, der Erinnerungen zustellt; Kontovia kann deshalb bei
+geschlossenem Programm nicht erinnern und überträgt dafür auch nichts. Welche
+Erinnerungen schon gezeigt wurden, merkt sich der Browser auf dem Gerät (ohne
+Inhalte, nur Kennungen), damit nichts doppelt erscheint.
 
 ## Rechnungen per E-Mail senden (freiwillig)
 

@@ -20,6 +20,7 @@ import { benutzerKarte } from '../lib/benutzer.js';
 import { lizenzKarte } from '../lib/lizenzkarte.js';
 import { renderCloudCard, renderUpdateCard } from './cloudpanel.js';
 import { renderCalendarCard } from './calendarsync.js';
+import { renderKalenderKarte } from './kalendereinstellungen.js';
 import { messungKarte } from '../lib/messungskarte.js';
 import { mahnKarte } from './mahneinstellungen.js';
 import { table, mountTables } from '../lib/table.js';
@@ -445,6 +446,7 @@ async function draw(root) {
 
     <div id="cloudCard"></div>
     <div id="calendarCard"></div>
+    <div id="kalenderCard"></div>
     <div id="messungCard"></div>
     </section>
 
@@ -502,6 +504,7 @@ async function draw(root) {
   mahnKarte($('#mahnCard', root));
   renderCloudCard($('#cloudCard', root));
   renderCalendarCard($('#calendarCard', root));
+  renderKalenderKarte($('#kalenderCard', root));
   messungKarte($('#messungCard', root), { version: appInfo.version });
   renderUpdateCard($('#updateCard', root));
   leistenKarte($('#leistenCard', root));
@@ -1070,6 +1073,7 @@ const VORGAENGE = {
   'einstellung.update': 'Update-Suche geändert',
   'einstellung.darstellung': 'Darstellung geändert',
   'einstellung.kalender': 'Kalender-Abgleich eingestellt',
+  'kalender.liste': 'Kalender geändert',
   'einstellung.datev': 'DATEV-Angaben geändert',
   'konflikte.geleert': 'Konfliktliste geleert',
   'sicherung.eingespielt': 'Vollsicherung eingespielt',

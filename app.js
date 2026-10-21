@@ -13,6 +13,7 @@ import { closePopover, openPopover } from './lib/popover.js';
 import { scope } from './lib/prefs.js';
 import { NAV_GRUPPEN, navSichtbar, istSchmal, schmalSetzen, seitenleisteVerdrahten } from './lib/seitenleiste.js';
 import { startCalendarSync, stopCalendarSync } from './lib/gcalsync.js';
+import { erinnerungenStarten, erinnerungenStoppen } from './lib/erinnerungen.js';
 import { VERSIONEN } from './lib/versionen.js';
 import { mitCodeVerbinden, nachDemVerbinden } from './lib/koppeln.js';
 import { beimEntsperren, hinweisKasten, hinweisVerdrahten } from './lib/zulassung.js';
@@ -1069,6 +1070,8 @@ async function afterUnlock() {
   } catch (e) { console.error('Rückkehr von Google Kalender:', e); }
   // Der Kalenderabgleich läuft nur, wenn auf diesem Gerät ein Google-Konto verbunden ist.
   startCalendarSync().catch((e) => console.error('Kalenderabgleich:', e));
+  // Erinnerungen an Termine, solange Kontovia offen ist (lib/erinnerungen.js).
+  erinnerungenStarten();
   await setupUpdateWatch();
   // Nutzungsmessung: einmal fragen (nur wenn auf diesem Gerät noch nicht entschieden), dann nur mit Zustimmung starten.
   try {
@@ -1604,6 +1607,7 @@ api.on.locked(async ({ reason }) => {
   // Nach dem Entsperren gelten wieder die Zahlen ohne private Buchungen.
   scope.includeUnlisted = false;
   stopCalendarSync();
+  erinnerungenStoppen();
   // Den Rest der Messung noch senden (sie trägt nichts aus dem Tresor), dann alles vergessen.
   messungBeenden().catch(() => {});
   clearDb();

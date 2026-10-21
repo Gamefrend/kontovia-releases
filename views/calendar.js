@@ -1,15 +1,25 @@
-/** Kontovia – Terminkalender, verknüpfbar mit Buchungen und Rechnungen. */
+/**
+ * Kontovia – Terminkalender: Monat, Woche, Tag und Liste; mehrere Kalender,
+ * Tags, Suche, Schnelleingabe, Ziehen und Ablegen. Termine sind mit
+ * Buchungen, Rechnungen, Projekten und Aufgaben verknüpfbar.
+ */
 
 import {
-  html, raw, esc, $, $$, money, fmtDate, fmtDateLong, todayISO, fromISO, uid,
-  addMonths, addDays, monthStart, monthEnd, MONTHS, MONTHS_SHORT, WEEKDAYS, isoWeek, sortBy, int,
+  html, raw, esc, $, $$, money, fmtDate, fmtDateLong, fmtDateShort, todayISO, fromISO, uid,
+  addDays, monthEnd, MONTHS, MONTHS_SHORT, WEEKDAYS, isoWeek, sortBy, int,
 } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, emptyState } from '../lib/ui.js';
-import { sel, upsertAppointment, deleteAppointment, applyTodoChanges, newTodoDraft, newTransactionDraft } from '../lib/store.js';
+import { sel, commit, saveNow, upsertAppointment, deleteAppointment, applyTodoChanges, newTodoDraft, newTransactionDraft } from '../lib/store.js';
 import { depositInfo, isVoidPart } from '../lib/calc.js';
-import { expandAppointments } from '../lib/termine.js';
+import { expandAppointments, expandForList, regelText, wochentage, intervall, WOCHENTAGE } from '../lib/termine.js';
+import {
+  FARBEN, kalenderListe, terminFarbe, neueKalenderId, lokaleKalender, tagsLesen, alleTags,
+  passtTermin, schnellEingabe, ERINNERUNG_ZEIT, ERINNERUNG_GANZTAGS, erinnerungText, verschoben, zeitraum, blaettern,
+  tagesLage, minuten,
+} from '../lib/kalender.js';
 import { refresh } from '../lib/router.js';
 import { fokusMerken } from '../lib/fokus.js';
+import { prefs, setPref } from '../lib/prefs.js';
 import { openTransactionDialog } from './transactions.js';
 import { openCalendarSyncDialog, statusText } from './calendarsync.js';
 import { calState, onCalendarSync, refreshCalendarStatus, syncCalendar, calendarSettings } from '../lib/gcalsync.js';
@@ -21,20 +31,64 @@ import { oeffneFrist } from './spruenge.js';
 import { openTodoDialog } from './todos.js';
 import { projektAuswahl } from '../lib/projektwahl.js';
 
+/* Was gerade zu sehen ist. Darstellung, Filter und Reiter bleiben auf diesem Gerät (prefs). */
 const state = {
-  cursor: monthStart(todayISO()),
-  mode: 'month', // month | agenda
+  cursor: todayISO(),
+  mode: 'month', // month | week | day | agenda
   showDue: true,
   showEvents: true,
   showDone: true,
   showTax: true,
   showTodos: true,
+  kalenderAus: new Set(), // ausgeblendete Kalender (Schlüssel aus lib/kalender.js)
+  tab: null,              // nur dieser Kalender (Reiter), null: alle
+  tags: new Set(),        // gewählte Tags (mindestens einer muss passen)
+  suche: '',
 };
+(() => {
+  const p = prefs.kalenderAnsicht || {};
+  for (const k of ['mode', 'showDue', 'showEvents', 'showDone', 'showTax', 'showTodos']) if (p[k] !== undefined) state[k] = p[k];
+  if (!['month', 'week', 'day', 'agenda'].includes(state.mode)) state.mode = 'month';
+  if (Array.isArray(p.kalenderAus)) state.kalenderAus = new Set(p.kalenderAus);
+  if (Array.isArray(p.tags)) state.tags = new Set(p.tags);
+  if (typeof p.tab === 'string') state.tab = p.tab;
+})();
+function merken() {
+  setPref('kalenderAnsicht', {
+    mode: state.mode, showDue: state.showDue, showEvents: state.showEvents, showDone: state.showDone, showTax: state.showTax, showTodos: state.showTodos,
+    kalenderAus: [...state.kalenderAus], tags: [...state.tags], tab: state.tab,
+  });
+}
 
-const FREQ = { none: 'einmalig', weekly: 'wöchentlich', biweekly: 'alle zwei Wochen', monthly: 'monatlich', yearly: 'jährlich' };
+const FREQ = { none: 'einmalig', daily: 'täglich', weekly: 'wöchentlich', biweekly: 'alle zwei Wochen', monthly: 'monatlich', yearly: 'jährlich' };
+const STUNDE_PX = 48; // Höhe einer Stunde im Zeitraster
+
+/* -------------------------------------------------------------------------- */
+/* Einträge                                                                    */
+/* -------------------------------------------------------------------------- */
+
+/** Alle Kalender der Ansicht: lokale und Google-Kalender, mit Farbe. */
+function kalenderAlle() {
+  return kalenderListe({ settings: sel.settings(), weitere: calendarSettings().weitere, appointments: sel.appointments() });
+}
+
+function filter() {
+  return { kalenderAus: state.kalenderAus, nurKalender: state.tab, tags: state.tags, suche: state.suche, kontaktName: sel.contactName };
+}
+
+/** Termine im Zeitraum, gefiltert und mit Farbe. `liste`: mehrtägige nur einmal. */
+function termine(from, to, { liste = false } = {}) {
+  const f = filter();
+  const kal = kalenderAlle();
+  const alle = (liste ? expandForList : expandAppointments)(sel.appointments(), from, to);
+  return alle
+    .filter((e) => (state.showDone || !e.done) && passtTermin(e, f))
+    .map((e) => ({ ...e, farbe: terminFarbe(e, kal) }));
+}
 
 /** Zahlungstermine (Fälligkeiten offener Rechnungen) als Kalendereinträge. */
 function dueEntries(from, to) {
+  if (state.suche || state.tags.size || state.tab !== null) return [];
   return sel.transactions()
     .filter((t) => !isVoidPart(t) && !t.paidDate && (t.dueDate || t.date) >= from && (t.dueDate || t.date) <= to)
     .map((t) => ({
@@ -55,28 +109,27 @@ function dueEntries(from, to) {
  * und welcher Restbetrag dann noch aussteht.
  */
 function eventEntries(from, to) {
+  if (state.tags.size || state.tab !== null) return [];
   const out = [];
+  const q = state.suche.toLowerCase().trim();
   for (const t of sel.transactions()) {
     if (isVoidPart(t)) continue;
     const dep = depositInfo(t);
     if (!dep?.eventDate || dep.eventDate < from || dep.eventDate > to) continue;
-    out.push({
-      id: 'evt_' + t.id,
-      isEvent: true,
-      txId: t.id,
-      occurrence: dep.eventDate,
-      title: `${t.description}${t.location ? ' · ' + t.location : ''}`
-        + (dep.remaining > 0 ? ` · Restbetrag ${money(dep.remaining)} €` : ''),
-      allDay: true,
-    });
+    const title = `${t.description}${t.location ? ' · ' + t.location : ''}`
+      + (dep.remaining > 0 ? ` · Restbetrag ${money(dep.remaining)} €` : '');
+    if (q && !title.toLowerCase().includes(q)) continue;
+    out.push({ id: 'evt_' + t.id, isEvent: true, txId: t.id, occurrence: dep.eventDate, title, allDay: true });
   }
   return out;
 }
 
 /** Aufgaben mit eigenem Fälligkeitsdatum als Kalendereinträge. Aufgaben an einem Termin zeigt dieser selbst. */
 function todoEntries(from, to) {
+  if (state.tags.size || state.tab !== null) return [];
+  const q = state.suche.toLowerCase().trim();
   return sel.todos()
-    .filter((t) => t.dueDate && t.dueDate >= from && t.dueDate <= to && (state.showDone || !t.done))
+    .filter((t) => t.dueDate && t.dueDate >= from && t.dueDate <= to && (state.showDone || !t.done) && (!q || String(t.title || '').toLowerCase().includes(q)))
     .map((t) => ({
       id: 'todo_' + t.id,
       isTodo: true,
@@ -90,7 +143,7 @@ function todoEntries(from, to) {
 
 /** Steuertermine (Voranmeldung, Jahreserklärungen) als Kalendereinträge. */
 function taxEntries(from, to) {
-  if (!kann('steuertermine')) return [];
+  if (!kann('steuertermine') || state.suche || state.tags.size || state.tab !== null) return [];
   return steuertermine(sel.settings(), from, to).map((t, i) => ({
     ...t,
     id: `tax_${t.datum}_${i}`,
@@ -101,6 +154,16 @@ function taxEntries(from, to) {
   }));
 }
 
+/** Alles im Zeitraum außer den Terminen selbst. */
+function sonstige(from, to) {
+  return [
+    ...(state.showTax ? taxEntries(from, to) : []),
+    ...(state.showTodos ? todoEntries(from, to) : []),
+    ...(state.showDue && state.mode !== 'agenda' ? dueEntries(from, to) : []),
+    ...(state.showEvents ? eventEntries(from, to) : []),
+  ];
+}
+
 /** Kennzeichnet einen Steuertermin im HTML, damit ein Klick zu seinen Zahlen führt. */
 const taxAttrs = (e) => `data-tax="1" data-tax-from="${esc(e.zeitraum?.from || '')}" data-tax-to="${esc(e.zeitraum?.to || '')}" data-tax-jahr="${esc(e.jahr || '')}"`;
 
@@ -109,9 +172,12 @@ const taxAttrs = (e) => `data-tax="1" data-tax-from="${esc(e.zeitraum?.from || '
 /* -------------------------------------------------------------------------- */
 
 export async function render(root, params, { actions } = {}) {
+  if (params?.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date)) state.cursor = params.date;
   actions.innerHTML = html`
     <div class="seg" role="group" aria-label="Darstellung">
       <button data-mode="month" class="${state.mode === 'month' ? 'active' : ''}" aria-pressed="${state.mode === 'month'}">Monat</button>
+      <button data-mode="week" class="${state.mode === 'week' ? 'active' : ''}" aria-pressed="${state.mode === 'week'}">Woche</button>
+      <button data-mode="day" class="${state.mode === 'day' ? 'active' : ''}" aria-pressed="${state.mode === 'day'}">Tag</button>
       <button data-mode="agenda" class="${state.mode === 'agenda' ? 'active' : ''}" aria-pressed="${state.mode === 'agenda'}">Liste</button>
     </div>
     <button class="btn" id="calShow" aria-haspopup="dialog" aria-expanded="false" title="Was der Kalender zeigt">${icon('eye', 16)} Anzeige ${icon('down', 14)}</button>
@@ -119,27 +185,47 @@ export async function render(root, params, { actions } = {}) {
     <button class="btn primary" id="newAppt">${icon('plus', 16)} Neuer Termin</button>`;
   $$('[data-mode]', actions).forEach((b) => b.addEventListener('click', () => {
     state.mode = b.dataset.mode;
+    merken();
     render(root, params, { actions });
   }));
-  // Was eingeblendet wird, steht in einem Menü statt in drei Häkchen über dem Kalender.
+  // Was eingeblendet wird, steht in einem Menü statt in vielen Häkchen über dem Kalender.
   actions.querySelector('#calShow').addEventListener('click', (e) => openMenu(e.currentTarget, {
     label: 'Anzeige',
     keepOpen: true,
     align: 'end',
-    sections: () => [{
-      key: 'show',
-      title: 'Im Kalender zeigen',
-      options: [
-        state.mode === 'month' && { value: 'showDue', label: 'Zahlungstermine offener Rechnungen', on: state.showDue },
-        { value: 'showEvents', label: 'Veranstaltungen aus Anzahlungen', on: state.showEvents },
-        { value: 'showTax', label: 'Steuertermine (Voranmeldung, Erklärungen)', on: state.showTax },
-        { value: 'showTodos', label: 'Aufgaben mit Fälligkeit', on: state.showTodos },
-        { value: 'showDone', label: 'Erledigte Termine', on: state.showDone },
-      ].filter(Boolean),
-    }],
-    onPick: (_, key) => { state[key] = !state[key]; draw(root); },
+    sections: () => {
+      const kal = kalenderAlle();
+      const tags = alleTags(sel.appointments());
+      return [{
+        key: 'show',
+        title: 'Im Kalender zeigen',
+        options: [
+          state.mode !== 'agenda' && { value: 'showDue', label: 'Zahlungstermine offener Rechnungen', on: state.showDue },
+          { value: 'showEvents', label: 'Veranstaltungen aus Anzahlungen', on: state.showEvents },
+          { value: 'showTax', label: 'Steuertermine (Voranmeldung, Erklärungen)', on: state.showTax },
+          { value: 'showTodos', label: 'Aufgaben mit Fälligkeit', on: state.showTodos },
+          { value: 'showDone', label: 'Erledigte Termine', on: state.showDone },
+        ].filter(Boolean),
+      }, kal.length > 1 && {
+        key: 'kal',
+        title: 'Kalender',
+        options: kal.map((k) => ({ value: k.key, label: k.name, sub: k.art === 'google' ? 'Google' : '', on: !state.kalenderAus.has(k.key), count: k.anzahl })),
+      }, tags.length > 0 && {
+        key: 'tag',
+        title: 'Nur Termine mit Tag',
+        search: tags.length > 8,
+        options: tags.map((t) => ({ value: t.tag, label: t.tag, on: state.tags.has(t.tag), count: t.anzahl })),
+      }].filter(Boolean);
+    },
+    onPick: (key, val) => {
+      if (key === 'show') state[val] = !state[val];
+      else if (key === 'kal') { if (state.kalenderAus.has(val)) state.kalenderAus.delete(val); else state.kalenderAus.add(val); }
+      else if (key === 'tag') { if (state.tags.has(val)) state.tags.delete(val); else state.tags.add(val); }
+      merken();
+      draw(root);
+    },
   }));
-  actions.querySelector('#newAppt').addEventListener('click', () => openAppointmentDialog(null, { date: todayISO() }));
+  actions.querySelector('#newAppt').addEventListener('click', () => openAppointmentDialog(null, { date: state.mode === 'month' ? todayISO() : state.cursor, calendarId: lokalerReiter() }));
   actions.querySelector('#calSync').addEventListener('click', openCalendarSyncDialog);
   draw(root);
 
@@ -150,6 +236,11 @@ export async function render(root, params, { actions } = {}) {
   if (st?.linked && !st.bestaetigen && !calState.running && Date.now() - zuletzt > 3 * 60 * 1000) {
     syncCalendar({ reason: 'kalender' }).then((r) => { if (r?.summary && r.summary !== 'alles auf dem gleichen Stand' && root.isConnected) draw(root); }).catch(() => {});
   }
+}
+
+/** Der gewählte lokale Kalender des Reiters, als Vorgabe für neue Termine. */
+function lokalerReiter() {
+  return state.tab && !state.tab.startsWith('g:') ? state.tab : '';
 }
 
 /** Kleiner Hinweis in der Kopfleiste des Kalenders; führt zum Abgleich. */
@@ -173,67 +264,96 @@ function wireSyncBadge(root) {
   });
 }
 
-function draw(root) {
-  if (state.mode === 'agenda') return drawAgenda(root);
-  drawMonth(root);
+/** Überschrift des Ausschnitts. */
+function titel() {
+  const { from, to } = zeitraum(state.mode, state.cursor);
+  if (state.mode === 'month') return `${MONTHS[Number(state.cursor.slice(5, 7)) - 1]} ${state.cursor.slice(0, 4)}`;
+  if (state.mode === 'week') return `KW ${isoWeek(from)}: ${fmtDateShort(from)} bis ${fmtDate(to)}`;
+  if (state.mode === 'day') return `${WEEKDAYS[(fromISO(state.cursor).getDay() + 6) % 7]}, ${fmtDateLong(state.cursor)}`;
+  return 'Kommende Termine';
 }
 
-function drawMonth(root) {
-  const first = monthStart(state.cursor);
-  const last = monthEnd(state.cursor);
-  const firstWeekday = (fromISO(first).getDay() + 6) % 7; // Montag = 0
-  const gridStart = addDays(first, -firstWeekday);
-  const cells = [];
-  for (let i = 0; i < 42; i++) cells.push(addDays(gridStart, i));
-  const gridEnd = cells[41];
-
-  const events = expandAppointments(sel.appointments(), gridStart, gridEnd)
-    .filter((e) => state.showDone || !e.done);
-  const dues = state.showDue ? dueEntries(gridStart, gridEnd) : [];
-  const veranstaltungen = state.showEvents ? eventEntries(gridStart, gridEnd) : [];
-  const fristen = state.showTax ? taxEntries(gridStart, gridEnd) : [];
-  const aufgaben = state.showTodos ? todoEntries(gridStart, gridEnd) : [];
-  const byDay = new Map();
-  for (const e of [...fristen, ...events, ...aufgaben, ...dues, ...veranstaltungen]) {
-    if (!byDay.has(e.occurrence)) byDay.set(e.occurrence, []);
-    byDay.get(e.occurrence).push(e);
-  }
-
-  const monthName = `${MONTHS[Number(first.slice(5, 7)) - 1]} ${first.slice(0, 4)}`;
-  const monthEvents = [...events, ...aufgaben].filter((e) => e.occurrence >= first && e.occurrence <= last);
-
+function draw(root) {
+  const kal = kalenderAlle();
+  const { from, to } = zeitraum(state.mode, state.cursor);
+  const navTitle = { month: 'Monat', week: 'Woche', day: 'Tag' }[state.mode] || '';
   root.innerHTML = html`
     <div class="card">
       <div class="filters">
-        <button class="btn sm" id="prev" title="Vorheriger Monat" aria-label="Vorheriger Monat">${icon('left', 15)}</button>
-        <button class="btn sm" id="today">Heute</button>
-        <button class="btn sm" id="next" title="Nächster Monat" aria-label="Nächster Monat">${icon('right', 15)}</button>
-        <h2 style="margin:0 0 0 8px;font-size:16px">${monthName}</h2>
+        ${state.mode !== 'agenda' ? raw(`
+          <button class="btn sm" id="prev" title="${esc('Vorheriger ' + navTitle)}" aria-label="${esc('Vorheriger ' + navTitle)}">${icon('left', 15).__raw}</button>
+          <button class="btn sm" id="today">Heute</button>
+          <button class="btn sm" id="next" title="${esc('Nächster ' + navTitle)}" aria-label="${esc('Nächster ' + navTitle)}">${icon('right', 15).__raw}</button>`) : ''}
+        <h2 style="margin:0 0 0 8px;font-size:16px">${titel()}</h2>
         <div class="spacer"></div>
+        <input type="search" class="search" id="calSearch" placeholder="Termine suchen …" aria-label="Termine suchen" value="${state.suche}">
         ${raw(syncBadge())}
         ${raw(hiddenHint())}
       </div>
-      <div class="cal-grid">
-        ${raw(WEEKDAYS.map((w) => `<div class="cal-head">${w}</div>`).join(''))}
-        ${raw(cells.map((d) => cellHtml(d, first, byDay.get(d) || [])).join(''))}
+      ${raw(tabsHtml(kal))}
+      <div class="cal-quick">
+        ${icon('plus', 14)}
+        <input id="calQuick" placeholder="Schnell eintragen, z. B. „morgen 14:00 Steuerberater“ oder „Fr 9-10 Zahnarzt #privat“" aria-label="Termin schnell eintragen">
+        <span class="hint small muted">Enter öffnet den fertig ausgefüllten Termin zum Prüfen.</span>
       </div>
+      ${raw(state.mode === 'month' ? monthHtml(from, to) : state.mode === 'agenda' ? '' : weekHtml(from, to))}
     </div>
+    ${raw(listeHtml(from, to))}`;
 
-    <div class="card mt16">
-      <div class="card-head"><h2>Termine im ${monthName}</h2><div class="spacer"></div><span class="badge">${int(monthEvents.length)}</span></div>
-      <div class="card-body ${monthEvents.length ? 'tight' : ''}">
-        ${monthEvents.length
-          ? raw('<div style="padding:0 16px">' + sortBy(monthEvents, (e) => e.occurrence + (e.startTime || '')).map(agendaRow).join('') + '</div>')
-          : emptyState('Keine Termine', 'In diesem Monat ist nichts eingetragen.')}
-      </div>
-    </div>`;
-
-  $('#prev', root).addEventListener('click', () => { state.cursor = addMonths(state.cursor, -1); draw(root); });
-  $('#next', root).addEventListener('click', () => { state.cursor = addMonths(state.cursor, 1); draw(root); });
-  $('#today', root).addEventListener('click', () => { state.cursor = monthStart(todayISO()); draw(root); });
+  $('#prev', root)?.addEventListener('click', () => { state.cursor = blaettern(state.mode, state.cursor, -1); draw(root); });
+  $('#next', root)?.addEventListener('click', () => { state.cursor = blaettern(state.mode, state.cursor, 1); draw(root); });
+  $('#today', root)?.addEventListener('click', () => { state.cursor = todayISO(); draw(root); });
+  const suche = $('#calSearch', root);
+  let sucheTimer = null;
+  suche.addEventListener('input', () => {
+    clearTimeout(sucheTimer);
+    sucheTimer = setTimeout(() => {
+      state.suche = suche.value.trim();
+      const pos = suche.selectionStart;
+      draw(root);
+      const neu = $('#calSearch', root);
+      neu.focus();
+      try { neu.setSelectionRange(pos, pos); } catch { /* egal */ }
+    }, 220);
+  });
+  const quick = $('#calQuick', root);
+  quick.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !quick.value.trim()) return;
+    e.preventDefault();
+    const p = schnellEingabe(quick.value, { heute: todayISO() });
+    if (!p.erkannt.includes('datum') && state.mode !== 'month') p.date = state.cursor;
+    quick.value = '';
+    openAppointmentDialog(null, { ...p, calendarId: lokalerReiter() });
+  });
+  $$('[data-tab]', root).forEach((b) => b.addEventListener('click', () => {
+    state.tab = b.dataset.tab === '*' ? null : b.dataset.tab;
+    merken();
+    draw(root);
+  }));
+  root.querySelector('#calKalender')?.addEventListener('click', () => openKalenderVerwaltung().then(() => draw(root)));
+  if (state.mode === 'week' || state.mode === 'day') {
+    const grid = root.querySelector('.cal-timegrid');
+    // Morgens anfangen, nicht um Mitternacht; am heutigen Tag bei der aktuellen Stunde.
+    const heute = from <= todayISO() && todayISO() <= to;
+    const stunde = heute ? Math.max(0, new Date().getHours() - 1) : 7;
+    if (grid) grid.scrollTop = stunde * STUNDE_PX;
+  }
 
   wireEvents(root);
+  wireDnd(root);
   wireSyncBadge(root);
+}
+
+/** Reiter: alle Kalender zusammen oder einer getrennt. */
+function tabsHtml(kal) {
+  const punkt = (k) => `<span class="cal-dot" style="background:${esc(k.color || 'var(--accent)')}"></span>`;
+  return `<div class="cal-tabs" role="tablist" aria-label="Kalender">
+    <button role="tab" class="chip ${state.tab === null ? 'active' : ''}" aria-selected="${state.tab === null}" data-tab="*">Alle Kalender</button>
+    ${kal.map((k) => `<button role="tab" class="chip ${state.tab === k.key ? 'active' : ''} ${state.kalenderAus.has(k.key) && state.tab !== k.key ? 'cal-aus' : ''}" aria-selected="${state.tab === k.key}" data-tab="${esc(k.key)}"
+      title="${esc(k.art === 'google' ? `Google Kalender „${k.name}“` : k.name)}${state.kalenderAus.has(k.key) ? ' (in der Gesamtansicht ausgeblendet)' : ''}">${punkt(k)} ${esc(k.name)}${k.art === 'google' ? ` <span class="tiny muted">Google</span>` : ''}</button>`).join('')}
+    <span class="spacer"></span>
+    <button class="btn sm ghost" id="calKalender" title="Kalender anlegen, umbenennen, färben">${icon('settings', 14).__raw} Kalender verwalten</button>
+  </div>`;
 }
 
 /**
@@ -242,13 +362,43 @@ function drawMonth(root) {
  */
 function hiddenHint() {
   const weg = [
-    state.mode === 'month' && !state.showDue && 'Zahlungstermine',
+    state.mode !== 'agenda' && !state.showDue && 'Zahlungstermine',
     !state.showEvents && 'Veranstaltungen',
     !state.showTax && 'Steuertermine',
     !state.showTodos && 'Aufgaben',
     !state.showDone && 'Erledigte',
+    state.kalenderAus.size > 0 && state.tab === null && `${state.kalenderAus.size} Kalender`,
   ].filter(Boolean);
-  return weg.length ? `<span class="small muted" title="Über „Anzeige“ oben rechts wieder einblenden">${icon('hide', 13).__raw} ausgeblendet: ${esc(weg.join(', '))}</span>` : '';
+  const tags = state.tags.size ? `<span class="small" title="Über „Anzeige“ oben rechts ändern">${icon('tag', 13).__raw} ${esc([...state.tags].join(', '))}</span>` : '';
+  return (weg.length ? `<span class="small muted" title="Über „Anzeige“ oben rechts wieder einblenden">${icon('hide', 13).__raw} ausgeblendet: ${esc(weg.join(', '))}</span>` : '') + tags;
+}
+
+/* ---- Monat ---------------------------------------------------------------- */
+
+function monthHtml(gridStart, gridEnd) {
+  const first = state.cursor.slice(0, 8) + '01';
+  const byDay = new Map();
+  for (const e of [...sonstige(gridStart, gridEnd), ...termine(gridStart, gridEnd)]) {
+    if (!byDay.has(e.occurrence)) byDay.set(e.occurrence, []);
+    byDay.get(e.occurrence).push(e);
+  }
+  const cells = [];
+  for (let i = 0; i < 42; i++) cells.push(addDays(gridStart, i));
+  return `<div class="cal-grid">
+    ${WEEKDAYS.map((w) => `<div class="cal-head">${w}</div>`).join('')}
+    ${cells.map((d) => cellHtml(d, first, byDay.get(d) || [])).join('')}
+  </div>`;
+}
+
+/** Ein Termin als farbiger Balken (Monat, ganztägig in der Woche). */
+function evHtml(e, { zeit = true } = {}) {
+  if (e.isTax) return `<div class="cal-ev cal-tax" ${taxAttrs(e)} title="${esc(`${e.title}: ${e.hinweis}`)}">§ ${esc(e.title)}</div>`;
+  if (e.isTodo) return `<div class="cal-ev cal-todo ${e.done ? 'done' : ''}" data-cal-todo="${esc(e.todoId)}" title="${esc('Aufgabe: ' + e.title)}">${e.done ? '✓' : '☐'} ${esc(e.title)}</div>`;
+  if (e.isDue) return `<div class="cal-ev cal-due" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(money(e.amount))} € ${esc(e.type === 'income' ? '↓' : '↑')}</div>`;
+  if (e.isEvent) return `<div class="cal-ev cal-event" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(e.title)}</div>`;
+  const span = e.spanLength > 1 ? ` cal-span ${e.spanIndex === 0 ? 'span-start' : ''} ${e.spanIndex === e.spanLength - 1 ? 'span-end' : ''}` : '';
+  const hinweis = [e.title, e.spanLength > 1 ? `${fmtDate(e.spanStart)} bis ${fmtDate(e.spanEnd)}` : '', e.location, e.extern ? `Google Kalender „${kalenderName(e.extern)}“` : '', (e.tags || []).map((t) => '#' + t).join(' ')].filter(Boolean).join(' · ');
+  return `<div class="cal-ev ${e.done ? 'done' : ''}${span}" data-appt="${esc(e.id)}" data-occ="${esc(e.spanStart || e.occurrence)}" draggable="true" title="${esc(hinweis)}" ${e.farbe ? `style="--ev:${esc(e.farbe)}"` : ''}>${zeit && !e.allDay && e.startTime && (e.spanIndex ?? 0) === 0 ? esc(e.startTime) + ' ' : ''}${esc(e.title)}</div>`;
 }
 
 function cellHtml(date, monthRef, items) {
@@ -258,21 +408,66 @@ function cellHtml(date, monthRef, items) {
   const shown = items.slice(0, 3);
   const more = items.length - shown.length;
   // Der vorgelesene Name ist der sichtbare Inhalt (Tag, Einträge) und dahinter, was ein Klick tut.
-  return `<div class="${cls}" data-day="${date}" tabindex="0" role="button">
+  return `<div class="${cls}" data-day="${date}" data-drop="1" tabindex="0" role="button">
     <div class="cal-day">${Number(date.slice(8, 10))}<span class="sr-only">. ${esc(fmtDate(date))}</span></div>
-    ${shown.map((e) => e.isTax
-      ? `<div class="cal-ev cal-tax" ${taxAttrs(e)} title="${esc(`${e.title}: ${e.hinweis}`)}">§ ${esc(e.title)}</div>`
-      : e.isTodo
-      ? `<div class="cal-ev cal-todo ${e.done ? 'done' : ''}" data-cal-todo="${esc(e.todoId)}" title="${esc('Aufgabe: ' + e.title)}">${e.done ? '✓' : '☐'} ${esc(e.title)}</div>`
-      : e.isDue
-      ? `<div class="cal-ev" style="background:var(--warn-soft);color:var(--warn);border-left-color:var(--warn)" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(money(e.amount))} € ${esc(e.type === 'income' ? '↓' : '↑')}</div>`
-      : e.isEvent
-      ? `<div class="cal-ev" style="background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent)" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(e.title)}</div>`
-      : `<div class="cal-ev ${e.done ? 'done' : ''}" data-appt="${esc(e.id)}" title="${esc(e.title + (e.extern ? ` · Google Kalender „${kalenderName(e.extern)}“` : ''))}" ${e.color ? `style="--ev:${esc(e.color)}"` : ''}>${e.allDay ? '' : esc((e.startTime || '') + ' ')}${esc(e.title)}</div>`).join('')}
-    ${more > 0 ? `<div class="cal-more">+ ${more} weitere</div>` : ''}
+    ${shown.map((e) => evHtml(e)).join('')}
+    ${more > 0 ? `<button type="button" class="cal-more" data-more="${date}">+ ${more} weitere</button>` : ''}
     <span class="sr-only">, neuer Termin</span>
   </div>`;
 }
+
+/* ---- Woche und Tag -------------------------------------------------------- */
+
+function weekHtml(from, to) {
+  const tage = [];
+  for (let d = from; d <= to; d = addDays(d, 1)) tage.push(d);
+  const alle = [...sonstige(from, to), ...termine(from, to)];
+  const ganz = new Map();
+  const zeitlich = new Map();
+  for (const e of alle) {
+    const ziel = e.allDay || !e.startTime || e.isTax || e.isTodo || e.isDue || e.isEvent ? ganz : zeitlich;
+    if (!ziel.has(e.occurrence)) ziel.set(e.occurrence, []);
+    ziel.get(e.occurrence).push(e);
+  }
+  const heute = todayISO();
+  const jetzt = new Date();
+  const jetztMin = jetzt.getHours() * 60 + jetzt.getMinutes();
+  const stunden = [];
+  for (let h = 0; h < 24; h++) stunden.push(`<div class="cal-hour" style="height:${STUNDE_PX}px">${String(h).padStart(2, '0')}:00</div>`);
+  const kopf = tage.map((d) => `<button type="button" class="cal-week-day ${d === heute ? 'today' : ''}" data-goday="${d}" title="Tag ansehen">
+    <span class="w">${esc(WEEKDAYS[(fromISO(d).getDay() + 6) % 7])}</span> <span class="d">${Number(d.slice(8, 10))}</span></button>`).join('');
+  const ganzZeilen = tage.map((d) => `<div class="cal-allday-cell" data-day="${d}" data-drop="1">${(ganz.get(d) || []).map((e) => evHtml(e, { zeit: false })).join('')}</div>`).join('');
+  const spalten = tage.map((d) => {
+    const lage = tagesLage(zeitlich.get(d) || []);
+    const slots = [];
+    for (let m = 0; m < 1440; m += 30) {
+      const t = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+      slots.push(`<div class="cal-slot ${m % 60 ? 'half' : ''}" data-day="${d}" data-slot="${t}" data-drop="1" style="height:${STUNDE_PX / 2}px" title="${esc(fmtDateShort(d) + ' ' + t)}"></div>`);
+    }
+    const evs = lage.map(({ e, von, bis, spalte, spalten: n }) => {
+      const top = (von / 60) * STUNDE_PX;
+      const h = Math.max(18, ((bis - von) / 60) * STUNDE_PX - 2);
+      const hinweis = [e.title, `${e.startTime}${e.endTime ? ' bis ' + e.endTime : ''}`, e.location, e.extern ? `Google Kalender „${kalenderName(e.extern)}“` : ''].filter(Boolean).join(' · ');
+      return `<div class="cal-ev cal-timed ${e.done ? 'done' : ''}" data-appt="${esc(e.id)}" data-occ="${esc(e.spanStart || e.occurrence)}" draggable="true"
+        style="top:${top}px;height:${h}px;left:calc(${(spalte / n) * 100}% + 1px);width:calc(${100 / n}% - 3px);${e.farbe ? `--ev:${esc(e.farbe)}` : ''}" title="${esc(hinweis)}">
+        <span class="t">${esc(e.startTime)}${e.endTime ? ' bis ' + esc(e.endTime) : ''}</span>
+        <span class="n">${esc(e.title)}</span>${e.location ? `<span class="l">${esc(e.location)}</span>` : ''}
+      </div>`;
+    }).join('');
+    const now = d === heute ? `<div class="cal-now" style="top:${(jetztMin / 60) * STUNDE_PX}px"></div>` : '';
+    return `<div class="cal-daycol ${d === heute ? 'today' : ''}" data-day="${d}">${slots.join('')}${evs}${now}</div>`;
+  }).join('');
+  return `<div class="cal-week" style="--cols:${tage.length}">
+    <div class="cal-week-head"><div class="cal-gutter"></div>${kopf}</div>
+    <div class="cal-allday"><div class="cal-gutter tiny muted">ganztägig</div>${ganzZeilen}</div>
+    <div class="cal-timegrid">
+      <div class="cal-hours">${stunden.join('')}</div>
+      ${spalten}
+    </div>
+  </div>`;
+}
+
+/* ---- Listen --------------------------------------------------------------- */
 
 /** „✓ 1/3“ – wie viele Aufgaben am Termin schon erledigt sind. */
 function todoBadge(apptId) {
@@ -286,67 +481,76 @@ function agendaRow(e) {
   const linked = (e.transactionIds || []).length;
   // Veranstaltungen stammen aus einer Buchung und führen auch dorthin zurück,
   // Steuertermine zu den Zahlen, die dafür gebraucht werden.
-  const anchor = e.isTax ? taxAttrs(e) : e.isEvent ? `data-tx="${esc(e.txId)}"` : e.isTodo ? `data-cal-todo="${esc(e.todoId)}"` : `data-appt="${esc(e.id)}"`;
+  const anchor = e.isTax ? taxAttrs(e) : e.isEvent || e.isDue ? `data-tx="${esc(e.txId)}"` : e.isTodo ? `data-cal-todo="${esc(e.todoId)}"` : `data-appt="${esc(e.id)}"`;
+  const zeit = e.isTax ? esc(e.hinweis) : e.isTodo ? 'fällig' : e.isDue ? `${esc(money(e.amount))} €`
+    : e.spanEnd && e.spanEnd > e.occurrence ? `bis ${esc(fmtDate(e.spanEnd))}${e.allDay || !e.startTime ? '' : ', ab ' + esc(e.startTime)}`
+      : e.allDay ? 'ganztägig' : esc((e.startTime || '') + (e.endTime ? ' – ' + e.endTime : ''));
+  const tags = (e.tags || []).map((t) => `<span class="badge tiny">#${esc(t)}</span>`).join(' ');
   return `<div class="agenda-item" ${anchor}>
-    <div class="agenda-date">
+    <div class="agenda-date" ${e.farbe ? `style="color:${esc(e.farbe)}"` : ''}>
       <div class="d">${esc(e.occurrence.slice(8, 10))}</div>
       <div class="m">${esc(MONTHS_SHORT[Number(e.occurrence.slice(5, 7)) - 1])}</div>
     </div>
     <div style="flex:1;min-width:0">
-      <div class="strong truncate">${e.done ? '✓ ' : ''}${esc(e.title)}${e.isRepeat ? ' <span class="badge tiny">Wiederholung</span>' : ''}${e.isEvent ? ' <span class="badge info tiny">Veranstaltung</span>' : ''}${e.isTax ? ' <span class="badge warn tiny">Steuertermin</span>' : ''}${e.isTodo ? ' <span class="badge pos tiny">Aufgabe</span>' : ''}</div>
+      <div class="strong truncate">${e.done ? '✓ ' : ''}${esc(e.title)}${e.isRepeat ? ' <span class="badge tiny">Wiederholung</span>' : ''}${e.isEvent ? ' <span class="badge info tiny">Veranstaltung</span>' : ''}${e.isDue ? ' <span class="badge warn tiny">Zahlungstermin</span>' : ''}${e.isTax ? ' <span class="badge warn tiny">Steuertermin</span>' : ''}${e.isTodo ? ' <span class="badge pos tiny">Aufgabe</span>' : ''} ${tags}</div>
       <div class="tiny muted">
-        ${e.isTax ? esc(e.hinweis) : e.isTodo ? 'fällig' : e.allDay ? 'ganztägig' : esc((e.startTime || '') + (e.endTime ? ' – ' + e.endTime : ''))}
+        ${zeit}
         ${e.location ? ' · ' + esc(e.location) : ''}
         ${e.contactId ? ' · ' + esc(sel.contactName(e.contactId)) : ''}
         ${e.projektId && sel.projekt(e.projektId) ? ' · ' + esc(sel.projekt(e.projektId).name) : ''}
+        ${e.extern ? ' · ' + esc(kalenderName(e.extern)) : e.calendarId ? ' · ' + esc(lokaleKalender(sel.settings()).find((k) => k.id === e.calendarId)?.name || '') : ''}
         · KW ${isoWeek(e.occurrence)}
       </div>
     </div>
-    ${e.isEvent || e.isTax || e.isTodo ? '' : todoBadge(e.id)}
+    ${e.isEvent || e.isTax || e.isTodo || e.isDue ? '' : todoBadge(e.id)}
     ${linked ? `<span class="badge info">${icon('link', 12).__raw} ${linked} Buchung${linked > 1 ? 'en' : ''}</span>` : ''}
   </div>`;
 }
 
-function drawAgenda(root) {
-  const from = todayISO();
-  const to = addDays(from, 365);
-  const past = [
-    ...expandAppointments(sel.appointments(), addDays(from, -365), addDays(from, -1)),
-    ...(state.showEvents ? eventEntries(addDays(from, -365), addDays(from, -1)) : []),
-  ];
-  const events = sortBy([
-    ...expandAppointments(sel.appointments(), from, to).filter((e) => state.showDone || !e.done),
-    ...(state.showEvents ? eventEntries(from, to) : []),
-    ...(state.showTax ? taxEntries(from, to) : []),
-    ...(state.showTodos ? todoEntries(from, to) : []),
-  ], (e) => e.occurrence + (e.startTime || ''));
-
-  root.innerHTML = html`
-    <div class="card">
-      <div class="card-head">
-        <h2>Kommende Termine</h2>
-        <span class="sub">nächste zwölf Monate</span>
-        <div class="spacer"></div>
-        ${raw(syncBadge())}
-        ${raw(hiddenHint())}
-      </div>
-      <div class="card-body ${events.length ? 'tight' : ''}">
-        ${events.length ? raw('<div style="padding:0 16px">' + events.map(agendaRow).join('') + '</div>')
-          : emptyState('Nichts geplant', 'Legen Sie oben rechts einen Termin an.')}
-      </div>
-    </div>
-
-    <div class="card mt16">
-      <div class="card-head"><h2>Vergangene Termine</h2><span class="sub">letzte zwölf Monate</span></div>
-      <div class="card-body ${past.length ? 'tight' : ''}">
-        ${past.length ? raw('<div style="padding:0 16px">' + sortBy(past, (e) => e.occurrence, -1).slice(0, 40).map(agendaRow).join('') + '</div>')
-          : emptyState('Keine Einträge', 'Hier erscheinen zurückliegende Termine.')}
-      </div>
+function listeHtml(from, to) {
+  const liste = (eintraege, leerTitel, leerText) => eintraege.length
+    ? '<div style="padding:0 16px">' + eintraege.map(agendaRow).join('') + '</div>'
+    : emptyState(leerTitel, leerText).__raw;
+  if (state.suche) {
+    const von = addDays(todayISO(), -365);
+    const bis = addDays(todayISO(), 365);
+    const treffer = sortBy([...termine(von, bis, { liste: true }), ...sonstige(von, bis)], (e) => e.occurrence + (e.startTime || ''));
+    return `<div class="card mt16">
+      <div class="card-head"><h2>Suche: „${esc(state.suche)}“</h2><span class="sub">ein Jahr zurück und voraus</span><div class="spacer"></div><span class="badge">${int(treffer.length)}</span></div>
+      <div class="card-body ${treffer.length ? 'tight' : ''}">${liste(treffer, 'Nichts gefunden', 'Kein Termin passt zu dieser Suche.')}</div>
     </div>`;
-
-  wireEvents(root);
-  wireSyncBadge(root);
+  }
+  if (state.mode === 'agenda') {
+    const heute = todayISO();
+    const bis = addDays(heute, 365);
+    const past = sortBy([...termine(addDays(heute, -365), addDays(heute, -1), { liste: true }), ...(state.showEvents ? eventEntries(addDays(heute, -365), addDays(heute, -1)) : [])], (e) => e.occurrence, -1).slice(0, 40);
+    const events = sortBy([...termine(heute, bis, { liste: true }), ...sonstige(heute, bis)], (e) => e.occurrence + (e.startTime || ''));
+    return `<div class="card mt16">
+        <div class="card-head"><h2>Kommende Termine</h2><span class="sub">nächste zwölf Monate</span><div class="spacer"></div><span class="badge">${int(events.length)}</span></div>
+        <div class="card-body ${events.length ? 'tight' : ''}">${liste(events, 'Nichts geplant', 'Legen Sie oben rechts einen Termin an.')}</div>
+      </div>
+      <div class="card mt16">
+        <div class="card-head"><h2>Vergangene Termine</h2><span class="sub">letzte zwölf Monate</span></div>
+        <div class="card-body ${past.length ? 'tight' : ''}">${liste(past, 'Keine Einträge', 'Hier erscheinen zurückliegende Termine.')}</div>
+      </div>`;
+  }
+  let a = from;
+  let b = to;
+  let kopf = `Termine im ${titel()}`;
+  if (state.mode === 'month') {
+    a = state.cursor.slice(0, 8) + '01';
+    b = monthEnd(a);
+  } else if (state.mode === 'week') kopf = 'Termine der Woche';
+  else kopf = 'An diesem Tag';
+  // Im Monat stehen unten nur Termine und Aufgaben; Zahlungs- und Steuertermine zeigt das Raster.
+  const eintraege = sortBy([...termine(a, b, { liste: true }), ...(state.mode === 'month' ? (state.showTodos ? todoEntries(a, b) : []) : sonstige(a, b))], (e) => e.occurrence + (e.startTime || ''));
+  return `<div class="card mt16">
+    <div class="card-head"><h2>${esc(kopf)}</h2><div class="spacer"></div><span class="badge">${int(eintraege.length)}</span></div>
+    <div class="card-body ${eintraege.length ? 'tight' : ''}">${liste(eintraege, 'Keine Termine', state.mode === 'day' ? 'An diesem Tag ist nichts eingetragen.' : 'In diesem Zeitraum ist nichts eingetragen.')}</div>
+  </div>`;
 }
+
+/* ---- Verdrahtung ---------------------------------------------------------- */
 
 function wireEvents(root) {
   $$('[data-appt]', root).forEach((n) => n.addEventListener('click', (e) => {
@@ -366,12 +570,84 @@ function wireEvents(root) {
     const { taxFrom: from, taxTo: to, taxJahr: jahr } = n.dataset;
     oeffneFrist({ zeitraum: from && to ? { from, to } : null, jahr: jahr ? Number(jahr) : null });
   }));
-  $$('[data-day]', root).forEach((n) => {
-    n.addEventListener('click', () => openAppointmentDialog(null, { date: n.dataset.day }));
+  $$('[data-more]', root).forEach((n) => n.addEventListener('click', (e) => {
+    e.stopPropagation();
+    state.cursor = n.dataset.more;
+    state.mode = 'day';
+    merken();
+    refresh();
+  }));
+  $$('[data-goday]', root).forEach((n) => n.addEventListener('click', () => {
+    state.cursor = n.dataset.goday;
+    state.mode = 'day';
+    merken();
+    refresh();
+  }));
+  const neu = (day, slot) => openAppointmentDialog(null, { date: day, calendarId: lokalerReiter(), ...(slot ? { allDay: false, startTime: slot, endTime: plusStunde(slot) } : {}) });
+  $$('.cal-cell[data-day]', root).forEach((n) => {
+    n.addEventListener('click', () => neu(n.dataset.day));
     n.addEventListener('keydown', (e) => {
-      if ((e.key === 'Enter' || e.key === ' ') && e.target === n) { e.preventDefault(); openAppointmentDialog(null, { date: n.dataset.day }); }
+      if ((e.key === 'Enter' || e.key === ' ') && e.target === n) { e.preventDefault(); neu(n.dataset.day); }
     });
   });
+  $$('.cal-slot', root).forEach((n) => n.addEventListener('click', () => neu(n.dataset.day, n.dataset.slot)));
+  $$('.cal-allday-cell', root).forEach((n) => n.addEventListener('click', (e) => { if (e.target === n) neu(n.dataset.day); }));
+}
+
+function plusStunde(hhmm) {
+  const t = minuten(hhmm) + 60;
+  return t >= 1440 ? '23:59' : `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+}
+
+/**
+ * Ziehen und Ablegen: ein Termin auf einen anderen Tag (Monat, ganztägige
+ * Zeile) oder in eine andere halbe Stunde (Zeitraster). Eine Reihe wandert
+ * als Ganzes mit. Aufgaben, Zahlungstermine und Steuertermine lassen sich
+ * nicht ziehen, sie gehören zu ihrer Buchung.
+ */
+function wireDnd(root) {
+  let drag = null;
+  $$('.cal-ev[draggable]', root).forEach((n) => {
+    n.addEventListener('dragstart', (e) => {
+      drag = { id: n.dataset.appt, occ: n.dataset.occ };
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', n.dataset.appt); } catch { /* egal */ }
+      n.classList.add('dragging');
+    });
+    n.addEventListener('dragend', () => {
+      drag = null;
+      n.classList.remove('dragging');
+      $$('.drop-over', root).forEach((x) => x.classList.remove('drop-over'));
+    });
+  });
+  $$('[data-drop]', root).forEach((z) => {
+    z.addEventListener('dragover', (e) => {
+      if (!drag) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      z.classList.add('drop-over');
+    });
+    z.addEventListener('dragleave', () => z.classList.remove('drop-over'));
+    z.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      z.classList.remove('drop-over');
+      if (!drag) return;
+      const d = drag;
+      drag = null;
+      await terminAblegen(d, z.dataset.day, z.dataset.slot || '', root);
+    });
+  });
+}
+
+async function terminAblegen({ id, occ }, tag, slot, root) {
+  const a = sel.appointment(id);
+  if (!a || !tag) return;
+  const neu = verschoben(a, { aufTag: tag, vonTag: occ || a.date, startTime: a.allDay ? '' : slot });
+  if (neu.date === a.date && neu.startTime === a.startTime) return;
+  const reihe = (a.recurrence?.freq || 'none') !== 'none';
+  await upsertAppointment(neu);
+  ok('Termin verschoben', reihe ? `Die ganze Reihe beginnt jetzt am ${fmtDate(neu.date)}.` : `${fmtDateLong(neu.date)}${neu.allDay ? '' : ', ' + neu.startTime}`);
+  draw(root);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -385,6 +661,7 @@ export function openAppointmentDialog(id, preset = {}) {
     id: uid('apt'),
     title: '',
     date: preset.date || todayISO(),
+    endDate: '',
     allDay: false,
     startTime: '09:00',
     endTime: '10:00',
@@ -392,15 +669,18 @@ export function openAppointmentDialog(id, preset = {}) {
     notes: '',
     contactId: '',
     projektId: '',
+    calendarId: '',
     color: '',
+    tags: [],
     done: false,
     transactionIds: [],
     recurrence: { freq: 'none', until: '' },
     reminderMinutes: 0,
     createdAt: new Date().toISOString(),
-    // Vorausgefüllt, etwa vom Assistenten oder von der Projektseite: Titel, Zeit, Ort, Notiz, Kontakt, Projekt.
-    ...Object.fromEntries(Object.entries(preset).filter(([k]) => ['title', 'allDay', 'startTime', 'endTime', 'location', 'notes', 'contactId', 'projektId'].includes(k))),
+    // Vorausgefüllt, etwa vom Assistenten, von der Projektseite oder der Schnelleingabe.
+    ...Object.fromEntries(Object.entries(preset).filter(([k, v]) => ['title', 'allDay', 'startTime', 'endTime', 'endDate', 'location', 'notes', 'contactId', 'projektId', 'calendarId', 'tags', 'recurrence', 'color', 'reminderMinutes'].includes(k) && v !== undefined)),
   };
+  if (!Array.isArray(a.tags)) a.tags = [];
   const isNew = !existing;
   /* Stand nach dem ersten Zeichnen; weicht die Eingabe davon ab, fragt das
      Fenster vor dem Wegklicken nach – wie beim Erfassen einer Buchung. */
@@ -415,6 +695,7 @@ export function openAppointmentDialog(id, preset = {}) {
       <div class="left row" style="gap:8px">
         ${!isNew ? `<button class="btn danger sm" id="btnDel">${icon('trash', 14).__raw} Löschen</button>` : ''}
         ${!isNew ? `<button class="btn sm" id="btnDone">${a.done ? 'Als offen markieren' : 'Als erledigt markieren'}</button>` : ''}
+        ${!isNew ? `<button class="btn sm" id="btnCopy" title="Einen neuen Termin mit denselben Angaben anlegen">${icon('copy', 14).__raw} Kopie</button>` : ''}
       </div>
       <button class="btn" id="btnCancel">Abbrechen</button>
       <button class="btn primary" id="btnSave">${isNew ? 'Termin anlegen' : 'Speichern'}</button>`,
@@ -475,10 +756,11 @@ export function openAppointmentDialog(id, preset = {}) {
     await applyTodoChanges({ upserts, removals: [] });
   }
 
-  /* Weitere Google-Kalender: Neue Termine lassen sich direkt dort eintragen,
-     bestehende zeigen, woher sie kommen. Den Kalender eines bestehenden
-     Termins zu wechseln, ist nicht vorgesehen. */
+  /* Kalender: eigene Kalender immer, weitere Google-Kalender nur für neue
+     Termine. Den Google-Kalender eines bestehenden Termins zu wechseln, ist
+     nicht vorgesehen; bestehende zeigen, woher sie kommen. */
   const weitere = calState.status?.linked && calState.status?.weitereErlaubt ? calendarSettings().weitere : [];
+  const lokale = lokaleKalender(sel.settings());
   function kalenderFeld() {
     if (a.extern && !isNew) {
       const aktiv = calendarSettings().weitere.some((k) => k.id === a.extern.calendarId);
@@ -487,15 +769,17 @@ export function openAppointmentDialog(id, preset = {}) {
         ? 'Änderungen und Löschen gehen beim nächsten Abgleich auch dorthin.'
         : 'Dieser Kalender wird derzeit nicht abgeglichen; Änderungen bleiben in Kontovia.'}</div>`;
     }
-    if (!isNew || !weitere.length) return '';
-    const wahl = a.extern?.calendarId || '';
+    if (lokale.length < 2 && !weitere.length) return '';
+    const wahl = a.extern?.calendarId ? 'g:' + a.extern.calendarId : (a.calendarId || '');
     return `<div class="field">
         <label>Kalender</label>
         <select id="t_kalender">
-          <option value="">Kontovia</option>
-          ${weitere.map((k) => `<option value="${esc(k.id)}" ${k.id === wahl ? 'selected' : ''}>${esc(k.name || k.id)}</option>`).join('')}
+          ${lokale.length > 1 && weitere.length ? '<optgroup label="Meine Kalender">' : ''}
+          ${lokale.map((k) => `<option value="${esc(k.id)}" ${k.id === wahl ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}
+          ${lokale.length > 1 && weitere.length ? '</optgroup>' : ''}
+          ${isNew && weitere.length ? `<optgroup label="Google Kalender">${weitere.map((k) => `<option value="g:${esc(k.id)}" ${'g:' + k.id === wahl ? 'selected' : ''}>${esc(k.name || k.id)}</option>`).join('')}</optgroup>` : ''}
         </select>
-        <span class="hint">In welchem Google-Kalender der Termin erscheint.</span>
+        <span class="hint">${weitere.length ? 'Ein Google-Kalender trägt den Termin direkt dort ein.' : 'Kalender lassen sich einzeln ein- und ausblenden.'}</span>
       </div>`;
   }
 
@@ -504,8 +788,58 @@ export function openAppointmentDialog(id, preset = {}) {
     return projektAuswahl(a.projektId || '', { praefix: 't_', hinweis: 'Der Termin steht dann auch auf der Seite des Projekts.' });
   }
 
+  function farbFeld() {
+    const kal = lokale.find((k) => k.id === (a.calendarId || ''));
+    return `<div class="field">
+      <label>Farbe</label>
+      <div class="cal-swatches" role="radiogroup" aria-label="Farbe des Termins">
+        <button type="button" class="cal-swatch ${!a.color ? 'active' : ''}" data-color="" title="Farbe des Kalenders" aria-label="Farbe des Kalenders" aria-pressed="${!a.color}" style="--c:${esc(kal?.color || 'var(--accent)')}"><span class="cal-swatch-auto"></span></button>
+        ${FARBEN.map(([name, wert]) => `<button type="button" class="cal-swatch ${a.color === wert ? 'active' : ''}" data-color="${wert}" title="${esc(name)}" aria-label="${esc(name)}" aria-pressed="${a.color === wert}" style="--c:${wert}"></button>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  function erinnerungFeld() {
+    const ganz = a.allDay || !a.startTime;
+    const liste = ganz ? ERINNERUNG_GANZTAGS : ERINNERUNG_ZEIT;
+    const wert = Number(a.reminderMinutes || 0);
+    const bekannt = liste.some(([mm]) => mm === wert);
+    return `<select id="t_reminder">
+      ${liste.map(([mm, text]) => `<option value="${mm}" ${mm === wert ? 'selected' : ''}>${esc(text)}</option>`).join('')}
+      ${!bekannt && wert ? `<option value="${wert}" selected>${esc(erinnerungText(a))}</option>` : ''}
+    </select>`;
+  }
+
+  function wiederholungFeld() {
+    const r = a.recurrence || {};
+    const freq = r.freq || 'none';
+    const n = intervall(r);
+    const tage = wochentage(r);
+    const mitTagen = freq === 'weekly' || freq === 'biweekly';
+    return `<div class="field">
+        <label>Wiederholung</label>
+        <div class="row" style="gap:8px">
+          <select id="t_freq" style="flex:1">
+            ${Object.entries(FREQ).map(([k, v]) => `<option value="${k}" ${freq === k ? 'selected' : ''}>${esc(v)}</option>`).join('')}
+          </select>
+          <label class="row nowrap small" style="gap:4px;${freq === 'none' || freq === 'biweekly' ? 'display:none' : ''}" id="t_intervalWrap">alle
+            <input type="number" id="t_interval" min="1" max="99" value="${n}" style="width:56px" aria-label="Abstand der Wiederholung">
+            <span id="t_intervalEinheit">${esc({ daily: 'Tage', weekly: 'Wochen', monthly: 'Monate', yearly: 'Jahre' }[freq] || '')}</span></label>
+        </div>
+        <div class="cal-weekdays" id="t_weekdays" style="${mitTagen ? '' : 'display:none'}" role="group" aria-label="Wochentage">
+          ${WOCHENTAGE.map((d, i) => `<label class="cal-weekday"><input type="checkbox" value="${d}" ${tage.includes(d) ? 'checked' : ''}> ${esc(WEEKDAYS[i])}</label>`).join('')}
+        </div>
+      </div>
+      <div class="field">
+        <label>Wiederholen bis</label>
+        <input type="date" id="t_until" value="${esc(r.until || '')}" ${freq === 'none' ? 'disabled' : ''}>
+        <span class="hint" id="t_regelText">${esc(freq === 'none' ? '' : regelText(a, { tage: WEEKDAYS }))}</span>
+      </div>`;
+  }
+
   function draw() {
     const linked = (a.transactionIds || []).map(sel.transaction).filter(Boolean);
+    const tagsBekannt = alleTags(sel.appointments()).map((t) => t.tag);
     form.innerHTML = html`
       ${raw(kalenderFeld())}
       <div class="field">
@@ -518,12 +852,22 @@ export function openAppointmentDialog(id, preset = {}) {
           <input type="date" id="t_date" value="${a.date}">
         </div>
         <div class="field">
+          <label>Letzter Tag</label>
+          <input type="date" id="t_endDate" value="${a.endDate || ''}" min="${a.date}">
+          <span class="hint">Nur für Termine über mehrere Tage, sonst leer lassen.</span>
+        </div>
+        <div class="field">
           <label>Zeit</label>
-          <div class="row" style="gap:8px">
+          <div class="row cal-zeitzeile" style="gap:8px">
             <label class="check nowrap"><input type="checkbox" id="t_allDay" ${a.allDay ? 'checked' : ''}> ganztägig</label>
-            <input type="time" id="t_start" value="${a.startTime || '09:00'}" ${a.allDay ? 'disabled' : ''}>
-            <input type="time" id="t_end" value="${a.endTime || ''}" ${a.allDay ? 'disabled' : ''}>
+            <input type="time" id="t_start" value="${a.startTime || '09:00'}" ${a.allDay ? 'disabled' : ''} aria-label="Beginn">
+            <input type="time" id="t_end" value="${a.endTime || ''}" ${a.allDay ? 'disabled' : ''} aria-label="Ende">
           </div>
+        </div>
+        <div class="field">
+          <label>Erinnerung</label>
+          <span id="t_reminderWrap">${raw(erinnerungFeld())}</span>
+          <span class="hint">Als Hinweis im Programm, auf Wunsch als Benachrichtigung des Geräts (Einstellungen → Kalender).</span>
         </div>
         <div class="field">
           <label>Ort</label>
@@ -538,15 +882,13 @@ export function openAppointmentDialog(id, preset = {}) {
         </div>
         ${raw(projektFeld())}
         <div class="field">
-          <label>Wiederholung</label>
-          <select id="t_freq">
-            ${raw(Object.entries(FREQ).map(([k, v]) => `<option value="${k}" ${(a.recurrence?.freq || 'none') === k ? 'selected' : ''}>${esc(v)}</option>`).join(''))}
-          </select>
+          <label>Tags</label>
+          <input id="t_tags" value="${(a.tags || []).join(', ')}" placeholder="z. B. Kunde, Steuer, privat" list="t_tagsListe">
+          <datalist id="t_tagsListe">${raw(tagsBekannt.map((t) => `<option value="${esc(t)}">`).join(''))}</datalist>
+          <span class="hint">Mehrere mit Komma trennen. Nach Tags lässt sich der Kalender filtern.</span>
         </div>
-        <div class="field">
-          <label>Wiederholen bis</label>
-          <input type="date" id="t_until" value="${a.recurrence?.until || ''}" ${(a.recurrence?.freq || 'none') === 'none' ? 'disabled' : ''}>
-        </div>
+        ${raw(farbFeld())}
+        ${raw(wiederholungFeld())}
         ${Array.isArray(a.recurrence?.google) && (a.recurrence?.freq || 'none') === 'none' ? raw(`
         <div class="notice full mb16">Dieser Termin wiederholt sich in Google Kalender nach einer Regel, die
           Kontovia nicht darstellen kann (<code>${esc(a.recurrence.google.join(' ').replace(/^RRULE:/, ''))}</code>).
@@ -584,9 +926,36 @@ export function openAppointmentDialog(id, preset = {}) {
       a.allDay = e.target.checked;
       form.querySelector('#t_start').disabled = a.allDay;
       form.querySelector('#t_end').disabled = a.allDay;
+      // Ganztägig und mit Uhrzeit haben andere Erinnerungen; der Wert wird zurückgesetzt, wenn er nicht passt.
+      const liste = a.allDay ? ERINNERUNG_GANZTAGS : ERINNERUNG_ZEIT;
+      if (!liste.some(([mm]) => mm === Number(a.reminderMinutes || 0))) a.reminderMinutes = 0;
+      form.querySelector('#t_reminderWrap').innerHTML = html`${raw(erinnerungFeld())}`;
     });
-    form.querySelector('#t_freq').addEventListener('change', (e) => {
-      form.querySelector('#t_until').disabled = e.target.value === 'none';
+    form.querySelector('#t_date').addEventListener('change', (e) => {
+      form.querySelector('#t_endDate').min = e.target.value;
+    });
+    const freqFeld = form.querySelector('#t_freq');
+    const regelZeigen = () => {
+      const freq = freqFeld.value;
+      form.querySelector('#t_until').disabled = freq === 'none';
+      form.querySelector('#t_intervalWrap').style.display = freq === 'none' || freq === 'biweekly' ? 'none' : '';
+      form.querySelector('#t_intervalEinheit').textContent = { daily: 'Tage', weekly: 'Wochen', monthly: 'Monate', yearly: 'Jahre' }[freq] || '';
+      form.querySelector('#t_weekdays').style.display = freq === 'weekly' || freq === 'biweekly' ? '' : 'none';
+      collect();
+      form.querySelector('#t_regelText').textContent = freq === 'none' ? '' : regelText(a, { tage: WEEKDAYS });
+    };
+    freqFeld.addEventListener('change', regelZeigen);
+    form.querySelector('#t_interval').addEventListener('input', regelZeigen);
+    form.querySelectorAll('#t_weekdays input').forEach((c) => c.addEventListener('change', regelZeigen));
+    form.querySelectorAll('.cal-swatch').forEach((b) => b.addEventListener('click', () => {
+      a.color = b.dataset.color;
+      form.querySelectorAll('.cal-swatch').forEach((x) => { x.classList.toggle('active', x === b); x.setAttribute('aria-pressed', String(x === b)); });
+    }));
+    form.querySelector('#t_kalender')?.addEventListener('change', () => {
+      collect();
+      // Die Vorschau „Farbe des Kalenders“ folgt dem gewählten Kalender.
+      const kal = lokale.find((k) => k.id === (a.calendarId || ''));
+      form.querySelector('.cal-swatch[data-color=""]').style.setProperty('--c', kal?.color || 'var(--accent)');
     });
     form.querySelector('#btnLink').addEventListener('click', async () => {
       collect();
@@ -672,6 +1041,8 @@ export function openAppointmentDialog(id, preset = {}) {
     const g = (k) => form.querySelector('#t_' + k);
     a.title = g('title').value.trim();
     a.date = g('date').value || todayISO();
+    const ende = g('endDate').value;
+    a.endDate = ende && ende > a.date ? ende : '';
     a.allDay = g('allDay').checked;
     a.startTime = a.allDay ? '' : g('start').value;
     a.endTime = a.allDay ? '' : g('end').value;
@@ -679,16 +1050,30 @@ export function openAppointmentDialog(id, preset = {}) {
     a.contactId = g('contactId').value;
     if (g('projektId')) a.projektId = g('projektId').value;
     a.notes = g('notes').value.trim();
+    a.tags = tagsLesen(g('tags').value);
+    a.reminderMinutes = Number(g('reminder')?.value || 0) || 0;
     const freq = g('freq').value;
     // Eine Wiederholung aus Google, die Kontovia nicht darstellen kann, bleibt
     // erhalten, solange hier keine eigene gewählt wird.
     const google = freq === 'none' && Array.isArray(a.recurrence?.google) ? { google: a.recurrence.google } : {};
-    a.recurrence = { freq, until: g('until').value, ...google };
+    const r = { freq, until: g('until').value, ...google };
+    const n = Math.min(99, Math.max(1, Number(g('interval').value) || 1));
+    if (freq !== 'none' && freq !== 'biweekly' && n > 1) r.interval = n;
+    if (freq === 'weekly' || freq === 'biweekly') {
+      const tage = [...form.querySelectorAll('#t_weekdays input:checked')].map((c) => c.value);
+      if (tage.length) r.byDay = tage;
+    }
+    a.recurrence = r;
     const kal = form.querySelector('#t_kalender');
     if (kal) {
-      const k = weitere.find((x) => x.id === kal.value);
-      if (k) a.extern = { calendarId: k.id, eventId: eventIdFor(a.id), calendarName: k.name || '' };
-      else delete a.extern;
+      const wert = kal.value;
+      if (wert.startsWith('g:')) {
+        const k = weitere.find((x) => x.id === wert.slice(2));
+        if (k) { a.extern = { calendarId: k.id, eventId: eventIdFor(a.id), calendarName: k.name || '' }; a.calendarId = ''; }
+      } else {
+        if (isNew) delete a.extern;
+        a.calendarId = wert;
+      }
     }
   }
 
@@ -698,19 +1083,24 @@ export function openAppointmentDialog(id, preset = {}) {
     return JSON.stringify([a, todos, geloest.map((t) => t.id), form.querySelector('#t_todoNew')?.value.trim() || '']);
   }
 
-  m.root.querySelector('#btnCancel').addEventListener('click', () => m.dismiss());
-  m.root.querySelector('#btnSave').addEventListener('click', async () => {
-    collect();
-    if (!a.title) { warn('Bitte einen Titel eintragen'); return; }
-    if (!a.allDay && a.startTime && a.endTime && a.endTime < a.startTime) {
-      warn('Ende liegt vor dem Beginn', 'Bitte die Uhrzeiten prüfen. Ein Termin über Mitternacht lässt sich als ganztägig eintragen.');
+  function pruefen() {
+    if (!a.title) { warn('Bitte einen Titel eintragen'); return false; }
+    if (!a.allDay && a.startTime && a.endTime && a.endTime < a.startTime && !a.endDate) {
+      warn('Ende liegt vor dem Beginn', 'Bitte die Uhrzeiten prüfen. Ein Termin über mehrere Tage bekommt einen letzten Tag.');
       form.querySelector('#t_end')?.focus();
-      return;
+      return false;
     }
     if (a.recurrence?.freq !== 'none' && a.recurrence?.until && a.recurrence.until < a.date) {
       warn('Wiederholung endet vor dem ersten Termin', 'Bitte „Wiederholen bis“ prüfen.');
-      return;
+      return false;
     }
+    return true;
+  }
+
+  m.root.querySelector('#btnCancel').addEventListener('click', () => m.dismiss());
+  m.root.querySelector('#btnSave').addEventListener('click', async () => {
+    collect();
+    if (!pruefen()) return;
     fertig = true;
     await upsertAppointment(a);
     await saveTodos();
@@ -738,6 +1128,13 @@ export function openAppointmentDialog(id, preset = {}) {
     ok(a.done ? 'Als erledigt markiert' : 'Wieder als offen markiert');
     refresh();
   });
+  m.root.querySelector('#btnCopy')?.addEventListener('click', () => {
+    collect();
+    fertig = true;
+    m.close();
+    const { id: _id, extern: _extern, done: _done, transactionIds: _tx, createdAt: _c, updatedAt: _u, ...rest } = a;
+    openAppointmentDialog(null, { ...rest, date: a.date });
+  });
 
   draw();
   ausgangslage = stand();
@@ -746,6 +1143,90 @@ export function openAppointmentDialog(id, preset = {}) {
 /** Anzeigename des Google-Kalenders, aus dem ein Termin stammt. */
 function kalenderName(extern) {
   return calendarSettings().weitere.find((k) => k.id === extern?.calendarId)?.name || extern?.calendarName || 'weiterer Kalender';
+}
+
+/* -------------------------------------------------------------------------- */
+/* Kalender verwalten                                                          */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Eigene Kalender anlegen, umbenennen, färben und entfernen. Die Liste steht
+ * in den Einstellungen des Tresors und gilt damit auf allen Geräten. Beim
+ * Entfernen wandern die Termine in den Standardkalender.
+ */
+export function openKalenderVerwaltung() {
+  return new Promise((resolve) => {
+    const s = sel.settings();
+    const liste = lokaleKalender(s).map((k) => ({ ...k }));
+    let fertig = false;
+    const m = modal({
+      title: 'Kalender verwalten',
+      body: '<div id="kalListe"></div>',
+      foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Speichern</button>',
+      onClose: () => { if (!fertig) resolve(false); },
+    });
+    const host = m.root.querySelector('#kalListe');
+    const weitere = calendarSettings().weitere;
+    const anzahl = (id) => sel.appointments().filter((a) => !a.extern && (a.calendarId || '') === id).length;
+    const zeichnen = () => {
+      host.innerHTML = html`
+        <p class="mt0 small" style="line-height:1.6">Mehrere Kalender halten Berufliches und Privates, Standorte oder Personen getrennt. In der Ansicht sehen Sie
+        alle zusammen oder einen einzeln (Reiter), jeder lässt sich ein- und ausblenden.</p>
+        <div class="stack" style="gap:8px">
+          ${raw(liste.map((k, i) => `
+            <div class="row cal-kal-zeile" style="gap:8px">
+              <select data-kal-farbe="${i}" aria-label="Farbe" class="sm cal-farbwahl" style="--c:${esc(k.color || 'var(--accent)')};width:150px;flex:none">
+                <option value="" ${!k.color ? 'selected' : ''}>Standardfarbe</option>
+                ${FARBEN.map(([name, wert]) => `<option value="${wert}" ${k.color === wert ? 'selected' : ''}>${esc(name)}</option>`).join('')}
+              </select>
+              <input data-kal-name="${i}" value="${esc(k.name)}" aria-label="Name des Kalenders" style="flex:1;min-width:0" maxlength="60">
+              <span class="badge" title="Termine in diesem Kalender">${int(anzahl(k.id))}</span>
+              ${k.id ? `<button type="button" class="icon-btn" data-kal-weg="${i}" title="Kalender entfernen (die Termine bleiben und wandern in „${esc(liste[0].name)}“)" aria-label="${esc(k.name)} entfernen">${icon('trash', 15).__raw}</button>` : '<span style="width:28px"></span>'}
+            </div>`).join(''))}
+        </div>
+        <button type="button" class="btn sm mt8" id="kalNeu">${icon('plus', 14)} Neuer Kalender</button>
+        ${weitere.length ? raw(`<hr class="sep"><p class="small muted mt0 mb0">Google-Kalender (${esc(weitere.map((k) => k.name || k.id).join(', '))}) verwalten Sie unter „Abgleich“: dort auswählen, lösen und auf Wunsch die von Kontovia angelegten Einträge löschen.</p>`) : ''}`;
+      host.querySelectorAll('[data-kal-name]').forEach((inp) => inp.addEventListener('input', () => { liste[Number(inp.dataset.kalName)].name = inp.value; }));
+      host.querySelectorAll('[data-kal-farbe]').forEach((sl) => sl.addEventListener('change', () => {
+        liste[Number(sl.dataset.kalFarbe)].color = sl.value;
+        sl.style.setProperty('--c', sl.value || 'var(--accent)');
+      }));
+      host.querySelectorAll('[data-kal-weg]').forEach((b) => b.addEventListener('click', () => { liste.splice(Number(b.dataset.kalWeg), 1); zeichnen(); }));
+      host.querySelector('#kalNeu').addEventListener('click', () => {
+        liste.push({ id: neueKalenderId({ kalender: liste.filter((k) => k.id) }), name: `Kalender ${liste.length}`, color: FARBEN[liste.length % FARBEN.length][1] });
+        zeichnen();
+        host.querySelectorAll('[data-kal-name]')[liste.length - 1]?.select();
+      });
+    };
+    zeichnen();
+    m.root.querySelector('[data-no]').addEventListener('click', () => m.close());
+    m.root.querySelector('[data-yes]').addEventListener('click', async () => {
+      const standard = liste[0];
+      const eigene = liste.slice(1).map((k) => ({ id: k.id, name: k.name.trim() || 'Kalender', color: k.color || '' }));
+      const bleiben = new Set(eigene.map((k) => k.id));
+      fertig = true;
+      await commit('kalender.liste', (db) => {
+        db.settings.kalender = eigene;
+        db.settings.kalenderStandardName = standard.name.trim() || undefined;
+        db.settings.kalenderStandardFarbe = standard.color || undefined;
+        db.settings.updatedAt = new Date().toISOString();
+        // Termine entfernter Kalender gehören jetzt zum Standardkalender.
+        const jetzt = new Date().toISOString();
+        for (const a of db.appointments) {
+          if (a.calendarId && !bleiben.has(a.calendarId)) { a.calendarId = ''; a.updatedAt = jetzt; }
+        }
+        return eigene.length;
+      }, { entity: 'einstellungen', summary: `Kalender: ${[standard.name, ...eigene.map((k) => k.name)].join(', ')}` });
+      await saveNow();
+      // Reiter und Ausblendungen entfernter Kalender aufräumen.
+      if (state.tab && !state.tab.startsWith('g:') && !bleiben.has(state.tab)) state.tab = null;
+      for (const k of [...state.kalenderAus]) if (!k.startsWith('g:') && k && !bleiben.has(k)) state.kalenderAus.delete(k);
+      merken();
+      m.close();
+      ok('Kalender gespeichert');
+      resolve(true);
+    });
+  });
 }
 
 /** Auswahlliste, um bestehende Buchungen mit einem Termin zu verbinden. */
