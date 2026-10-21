@@ -9,11 +9,11 @@ import {
   addDays, monthEnd, MONTHS, MONTHS_SHORT, WEEKDAYS, isoWeek, sortBy, int,
 } from '../lib/util.js';
 import { icon, modal, confirmDialog, ok, warn, emptyState } from '../lib/ui.js';
-import { sel, commit, saveNow, upsertAppointment, deleteAppointment, applyTodoChanges, newTodoDraft, newTransactionDraft } from '../lib/store.js';
+import { sel, commit, saveNow, subscribe, upsertAppointment, deleteAppointment, applyTodoChanges, newTodoDraft, newTransactionDraft } from '../lib/store.js';
 import { depositInfo, isVoidPart } from '../lib/calc.js';
 import { expandAppointments, expandForList, regelText, wochentage, intervall, WOCHENTAGE } from '../lib/termine.js';
 import {
-  FARBEN, kalenderListe, terminFarbe, neueKalenderId, lokaleKalender, tagsLesen, alleTags,
+  FARBEN, kalenderListe, kalenderSchluessel, terminFarbe, neueKalenderId, lokaleKalender, tagsLesen, alleTags,
   passtTermin, schnellEingabe, ERINNERUNG_ZEIT, ERINNERUNG_GANZTAGS, erinnerungText, verschoben, zeitraum, blaettern,
   tagesLage, minuten,
 } from '../lib/kalender.js';
@@ -21,8 +21,8 @@ import { refresh } from '../lib/router.js';
 import { fokusMerken } from '../lib/fokus.js';
 import { prefs, setPref } from '../lib/prefs.js';
 import { openTransactionDialog } from './transactions.js';
-import { openCalendarSyncDialog, statusText } from './calendarsync.js';
-import { calState, onCalendarSync, refreshCalendarStatus, syncCalendar, calendarSettings } from '../lib/gcalsync.js';
+import { openCalendarSyncDialog, statusText, bestaetigen } from './calendarsync.js';
+import { calState, onCalendarSync, refreshCalendarStatus, syncCalendar, calendarSettings, seitAbgleich } from '../lib/gcalsync.js';
 import { eventIdFor } from '../lib/gcal.js';
 import { openMenu } from '../lib/popover.js';
 import { steuertermine } from '../lib/fristen.js';
@@ -41,7 +41,6 @@ const state = {
   showTax: true,
   showTodos: true,
   kalenderAus: new Set(), // ausgeblendete Kalender (Schlüssel aus lib/kalender.js)
-  tab: null,              // nur dieser Kalender (Reiter), null: alle
   tags: new Set(),        // gewählte Tags (mindestens einer muss passen)
   suche: '',
 };
@@ -50,13 +49,13 @@ const state = {
   for (const k of ['mode', 'showDue', 'showEvents', 'showDone', 'showTax', 'showTodos']) if (p[k] !== undefined) state[k] = p[k];
   if (!['month', 'week', 'day', 'agenda'].includes(state.mode)) state.mode = 'month';
   if (Array.isArray(p.kalenderAus)) state.kalenderAus = new Set(p.kalenderAus);
+  // Der frühere Reiter „nur dieser Kalender“ ist jetzt: alle anderen ausgeblendet. Was er gewählt hatte, bleibt unbeachtet.
   if (Array.isArray(p.tags)) state.tags = new Set(p.tags);
-  if (typeof p.tab === 'string') state.tab = p.tab;
 })();
 function merken() {
   setPref('kalenderAnsicht', {
     mode: state.mode, showDue: state.showDue, showEvents: state.showEvents, showDone: state.showDone, showTax: state.showTax, showTodos: state.showTodos,
-    kalenderAus: [...state.kalenderAus], tags: [...state.tags], tab: state.tab,
+    kalenderAus: [...state.kalenderAus], tags: [...state.tags],
   });
 }
 
@@ -73,7 +72,12 @@ function kalenderAlle() {
 }
 
 function filter() {
-  return { kalenderAus: state.kalenderAus, nurKalender: state.tab, tags: state.tags, suche: state.suche, kontaktName: sel.contactName };
+  return { kalenderAus: state.kalenderAus, tags: state.tags, suche: state.suche, kontaktName: sel.contactName };
+}
+
+/** Gehört der Termin zu einem nur lesbaren Google-Kalender (mit dem Konto geteilt)? */
+function nurLesen(a, kal = kalenderAlle()) {
+  return !!a?.extern && kal.find((k) => k.key === kalenderSchluessel(a))?.readOnly === true;
 }
 
 /** Termine im Zeitraum, gefiltert und mit Farbe. `liste`: mehrtägige nur einmal. */
@@ -83,12 +87,12 @@ function termine(from, to, { liste = false } = {}) {
   const alle = (liste ? expandForList : expandAppointments)(sel.appointments(), from, to);
   return alle
     .filter((e) => (state.showDone || !e.done) && passtTermin(e, f))
-    .map((e) => ({ ...e, farbe: terminFarbe(e, kal) }));
+    .map((e) => ({ ...e, farbe: terminFarbe(e, kal), nurLesen: nurLesen(e, kal) }));
 }
 
 /** Zahlungstermine (Fälligkeiten offener Rechnungen) als Kalendereinträge. */
 function dueEntries(from, to) {
-  if (state.suche || state.tags.size || state.tab !== null) return [];
+  if (state.suche || state.tags.size) return [];
   return sel.transactions()
     .filter((t) => !isVoidPart(t) && !t.paidDate && (t.dueDate || t.date) >= from && (t.dueDate || t.date) <= to)
     .map((t) => ({
@@ -109,7 +113,7 @@ function dueEntries(from, to) {
  * und welcher Restbetrag dann noch aussteht.
  */
 function eventEntries(from, to) {
-  if (state.tags.size || state.tab !== null) return [];
+  if (state.tags.size) return [];
   const out = [];
   const q = state.suche.toLowerCase().trim();
   for (const t of sel.transactions()) {
@@ -126,7 +130,7 @@ function eventEntries(from, to) {
 
 /** Aufgaben mit eigenem Fälligkeitsdatum als Kalendereinträge. Aufgaben an einem Termin zeigt dieser selbst. */
 function todoEntries(from, to) {
-  if (state.tags.size || state.tab !== null) return [];
+  if (state.tags.size) return [];
   const q = state.suche.toLowerCase().trim();
   return sel.todos()
     .filter((t) => t.dueDate && t.dueDate >= from && t.dueDate <= to && (state.showDone || !t.done) && (!q || String(t.title || '').toLowerCase().includes(q)))
@@ -143,7 +147,7 @@ function todoEntries(from, to) {
 
 /** Steuertermine (Voranmeldung, Jahreserklärungen) als Kalendereinträge. */
 function taxEntries(from, to) {
-  if (!kann('steuertermine') || state.suche || state.tags.size || state.tab !== null) return [];
+  if (!kann('steuertermine') || state.suche || state.tags.size) return [];
   return steuertermine(sel.settings(), from, to).map((t, i) => ({
     ...t,
     id: `tax_${t.datum}_${i}`,
@@ -184,9 +188,12 @@ export async function render(root, params, { actions } = {}) {
     <button class="btn" id="calSync" title="Mit Google Kalender oder per Kalenderdatei (.ics) abgleichen">${icon('refresh', 16)} Abgleich</button>
     <button class="btn primary" id="newAppt">${icon('plus', 16)} Neuer Termin</button>`;
   $$('[data-mode]', actions).forEach((b) => b.addEventListener('click', () => {
+    if (state.mode === b.dataset.mode) return;
     state.mode = b.dataset.mode;
     merken();
-    render(root, params, { actions });
+    // Die Leiste bleibt stehen, damit die Marke zum neuen Reiter gleiten kann.
+    $$('[data-mode]', actions).forEach((x) => { x.classList.toggle('active', x === b); x.setAttribute('aria-pressed', String(x === b)); });
+    draw(root, { bewegung: 'wechsel' });
   }));
   // Was eingeblendet wird, steht in einem Menü statt in vielen Häkchen über dem Kalender.
   actions.querySelector('#calShow').addEventListener('click', (e) => openMenu(e.currentTarget, {
@@ -195,7 +202,10 @@ export async function render(root, params, { actions } = {}) {
     align: 'end',
     sections: () => {
       const kal = kalenderAlle();
+      const lokal = kal.filter((k) => k.art === 'lokal');
+      const google = kal.filter((k) => k.art === 'google');
       const tags = alleTags(sel.appointments());
+      const kalOption = (k) => ({ value: k.key, label: k.name, sub: k.readOnly ? 'nur lesen' : '', on: !state.kalenderAus.has(k.key), count: k.anzahl });
       return [{
         key: 'show',
         title: 'Im Kalender zeigen',
@@ -206,11 +216,9 @@ export async function render(root, params, { actions } = {}) {
           { value: 'showTodos', label: 'Aufgaben mit Fälligkeit', on: state.showTodos },
           { value: 'showDone', label: 'Erledigte Termine', on: state.showDone },
         ].filter(Boolean),
-      }, kal.length > 1 && {
-        key: 'kal',
-        title: 'Kalender',
-        options: kal.map((k) => ({ value: k.key, label: k.name, sub: k.art === 'google' ? 'Google' : '', on: !state.kalenderAus.has(k.key), count: k.anzahl })),
-      }, tags.length > 0 && {
+      }, lokal.length > 1 && { key: 'kal', title: google.length ? 'Meine Kalender' : 'Kalender', options: lokal.map(kalOption) },
+      google.length > 0 && { key: 'kal', title: 'Google Kalender', options: google.map(kalOption) },
+      tags.length > 0 && {
         key: 'tag',
         title: 'Nur Termine mit Tag',
         search: tags.length > 8,
@@ -228,39 +236,83 @@ export async function render(root, params, { actions } = {}) {
   actions.querySelector('#newAppt').addEventListener('click', () => openAppointmentDialog(null, { date: state.mode === 'month' ? todayISO() : state.cursor, calendarId: lokalerReiter() }));
   actions.querySelector('#calSync').addEventListener('click', openCalendarSyncDialog);
   draw(root);
+  ansichtAktuellHalten(root);
 
   // Beim Öffnen des Kalenders frisch abgleichen, wenn der letzte Abgleich
   // ein paar Minuten zurückliegt – dann stimmt, was hier steht.
   const st = await refreshCalendarStatus();
-  const zuletzt = Date.parse(calState.lastAt || st?.lastSyncAt || 0) || 0;
-  if (st?.linked && !st.bestaetigen && !calState.running && Date.now() - zuletzt > 3 * 60 * 1000) {
-    syncCalendar({ reason: 'kalender' }).then((r) => { if (r?.summary && r.summary !== 'alles auf dem gleichen Stand' && root.isConnected) draw(root); }).catch(() => {});
+  if (st?.linked && !st.bestaetigen && !calState.running && seitAbgleich() > 3 * 60 * 1000) {
+    syncCalendar({ reason: 'kalender' }).then((r) => { if (r?.summary && r.summary !== 'alles auf dem gleichen Stand' && kalenderOffen(root)) draw(root); }).catch(() => {});
   }
 }
 
-/** Der gewählte lokale Kalender des Reiters, als Vorgabe für neue Termine. */
+/**
+ * Vorgabe für neue Termine: der Kalender, den man gerade allein sieht. Sind mehrere
+ * sichtbar oder ist es ein Google-Kalender, bleibt es der Standardkalender
+ * (in einen Google-Kalender schreibt man nur über das Feld „Kalender“ im Termin).
+ */
 function lokalerReiter() {
-  return state.tab && !state.tab.startsWith('g:') ? state.tab : '';
+  const sichtbar = kalenderAlle().filter((k) => !state.kalenderAus.has(k.key));
+  return sichtbar.length === 1 && sichtbar[0].art === 'lokal' ? sichtbar[0].key : '';
 }
 
-/** Kleiner Hinweis in der Kopfleiste des Kalenders; führt zum Abgleich. */
+/**
+ * Solange die Ansicht offen ist: Was ein Abgleich hereinbringt (neue Termine, neu geteilte
+ * Kalender), erscheint ohne Zutun. Kurz gebündelt, damit ein Abgleich mit vielen Änderungen
+ * nur einmal neu zeichnet.
+ */
+let aktuellAb = null;
+function ansichtAktuellHalten(root) {
+  aktuellAb?.();
+  let zeitgeber = null;
+  const ab = subscribe((ev) => {
+    // Der Behälter bleibt beim Wechsel der Ansicht bestehen; ohne Kalender darin ist hier nichts mehr zu tun.
+    if (!kalenderOffen(root)) { ab(); if (aktuellAb === ab) aktuellAb = null; return; }
+    if (ev?.type !== 'change' || !/^(termin\.kalenderabgleich|einstellung\.kalender)$/.test(ev.action || '')) return;
+    clearTimeout(zeitgeber);
+    zeitgeber = setTimeout(() => { if (kalenderOffen(root)) draw(root); }, 150);
+  });
+  aktuellAb = () => { clearTimeout(zeitgeber); ab(); };
+}
+
+/** Zeigt der Behälter noch den Kalender? (Er wird für jede Ansicht wiederverwendet.) */
+function kalenderOffen(root) {
+  return root.isConnected && !!root.querySelector('#calHost');
+}
+
+/**
+ * Kleiner Hinweis in der Kopfleiste des Kalenders. Ist die Bestätigung bei Google
+ * fällig, ist er der eine Tipp dafür; sonst führt er zum Abgleich.
+ */
 function syncBadge() {
   const text = statusText();
   if (!text) return '';
   const fehler = !!(calState.lastError || calState.status?.lastError);
-  return `<button class="badge ${fehler ? 'neg' : 'info'}" id="calSyncBadge" style="border:0;cursor:pointer" title="${esc(fehler ? (calState.lastError || calState.status?.lastError) : 'Kalender-Abgleich öffnen')}">${icon('refresh', 12).__raw} ${esc(text)}</button>`;
+  const warten = !!calState.status?.bestaetigen && !calState.running;
+  const laeuft = calState.running;
+  const titel = fehler ? (calState.lastError || calState.status?.lastError) : warten ? 'Mit einem Tipp bei Google bestätigen, dann läuft der Abgleich weiter' : 'Kalender-Abgleich öffnen';
+  return `<button class="badge cal-sync ${fehler ? 'neg' : warten ? 'warn' : 'info'}${laeuft ? ' dreht' : ''}" id="calSyncBadge" title="${esc(titel)}">${icon('refresh', 12).__raw} ${esc(text)}</button>`;
+}
+
+async function syncBadgeKlick(root) {
+  if (!calState.status?.bestaetigen) { openCalendarSyncDialog(); return; }
+  // Ein Tipp genügt: bestätigen und gleich abgleichen.
+  if (!await bestaetigen()) return;
+  await syncCalendar({ reason: 'bestaetigt' }).catch(() => {});
+  if (kalenderOffen(root)) draw(root);
 }
 
 let badgeWatch = null;
 function wireSyncBadge(root) {
-  root.querySelector('#calSyncBadge')?.addEventListener('click', openCalendarSyncDialog);
+  const anbinden = () => root.querySelector('#calSyncBadge')?.addEventListener('click', () => syncBadgeKlick(root));
+  anbinden();
   // Während eines laufenden Abgleichs den Hinweis mitführen.
   badgeWatch?.();
   badgeWatch = onCalendarSync(() => {
     const el = root.querySelector('#calSyncBadge');
     if (!root.isConnected) { badgeWatch?.(); badgeWatch = null; return; }
     if (el) el.outerHTML = syncBadge() || '<span id="calSyncBadge"></span>';
-    root.querySelector('#calSyncBadge')?.addEventListener('click', openCalendarSyncDialog);
+    anbinden();
   });
 }
 
@@ -273,47 +325,61 @@ function titel() {
   return 'Kommende Termine';
 }
 
-function draw(root) {
+/**
+ * Zeichnet den Kalender. `bewegung` lässt das Raster einblenden: 'vor' und
+ * 'zurueck' beim Blättern (es gleitet aus der Richtung herein), 'wechsel' beim
+ * Wechsel der Darstellung. Bei allem anderen (Filter, Suche, Abgleich) bleibt
+ * es ruhig, sonst flackerte der Kalender bei jedem Tastendruck.
+ */
+function draw(root, { bewegung = '' } = {}) {
   const kal = kalenderAlle();
-  const { from, to } = zeitraum(state.mode, state.cursor);
   const navTitle = { month: 'Monat', week: 'Woche', day: 'Tag' }[state.mode] || '';
   root.innerHTML = html`
-    <div class="card">
-      <div class="filters">
-        ${state.mode !== 'agenda' ? raw(`
-          <button class="btn sm" id="prev" title="${esc('Vorheriger ' + navTitle)}" aria-label="${esc('Vorheriger ' + navTitle)}">${icon('left', 15).__raw}</button>
+    <div class="card cal-card">
+      <div class="filters cal-bar">
+        ${state.mode !== 'agenda' ? raw(`<div class="cal-nav" role="group" aria-label="Blättern">
+          <button class="btn sm icon-only" id="prev" title="${esc('Vorheriger ' + navTitle)}" aria-label="${esc('Vorheriger ' + navTitle)}">${icon('left', 15).__raw}</button>
           <button class="btn sm" id="today">Heute</button>
-          <button class="btn sm" id="next" title="${esc('Nächster ' + navTitle)}" aria-label="${esc('Nächster ' + navTitle)}">${icon('right', 15).__raw}</button>`) : ''}
-        <h2 style="margin:0 0 0 8px;font-size:16px">${titel()}</h2>
+          <button class="btn sm icon-only" id="next" title="${esc('Nächster ' + navTitle)}" aria-label="${esc('Nächster ' + navTitle)}">${icon('right', 15).__raw}</button>
+        </div>`) : ''}
+        <h2 class="cal-titel" aria-live="polite">${titel()}</h2>
         <div class="spacer"></div>
         <input type="search" class="search" id="calSearch" placeholder="Termine suchen …" aria-label="Termine suchen" value="${state.suche}">
         ${raw(syncBadge())}
-        ${raw(hiddenHint())}
+        <span id="calHint" class="cal-hinweis">${raw(hiddenHint())}</span>
       </div>
-      ${raw(tabsHtml(kal))}
-      <div class="cal-quick">
-        ${icon('plus', 14)}
-        <input id="calQuick" placeholder="Schnell eintragen, z. B. „morgen 14:00 Steuerberater“ oder „Fr 9-10 Zahnarzt #privat“" aria-label="Termin schnell eintragen">
-        <span class="hint small muted">Enter öffnet den fertig ausgefüllten Termin zum Prüfen.</span>
+      <div class="cal-body">
+        ${raw(tabsHtml(kal))}
+        <div class="cal-quick">
+          <span class="cal-quick-icon" aria-hidden="true">${icon('plus', 14)}</span>
+          <input id="calQuick" placeholder="Schnell eintragen, z. B. „morgen 14:00 Steuerberater“ oder „Fr 9-10 Zahnarzt #privat“" aria-label="Termin schnell eintragen">
+          <span class="hint small muted">Enter öffnet den fertig ausgefüllten Termin zum Prüfen.</span>
+        </div>
+        <div id="calHost"></div>
       </div>
-      ${raw(state.mode === 'month' ? monthHtml(from, to) : state.mode === 'agenda' ? '' : weekHtml(from, to))}
     </div>
-    ${raw(listeHtml(from, to))}`;
+    <div id="calListe"></div>`;
+  drawInhalt(root, { bewegung });
 
-  $('#prev', root)?.addEventListener('click', () => { state.cursor = blaettern(state.mode, state.cursor, -1); draw(root); });
-  $('#next', root)?.addEventListener('click', () => { state.cursor = blaettern(state.mode, state.cursor, 1); draw(root); });
-  $('#today', root)?.addEventListener('click', () => { state.cursor = todayISO(); draw(root); });
+  const blaettern_ = (richtung) => {
+    state.cursor = blaettern(state.mode, state.cursor, richtung);
+    draw(root, { bewegung: richtung > 0 ? 'vor' : 'zurueck' });
+  };
+  $('#prev', root)?.addEventListener('click', () => blaettern_(-1));
+  $('#next', root)?.addEventListener('click', () => blaettern_(1));
+  $('#today', root)?.addEventListener('click', () => {
+    const richtung = todayISO() >= state.cursor ? 'vor' : 'zurueck';
+    state.cursor = todayISO();
+    draw(root, { bewegung: richtung });
+  });
   const suche = $('#calSearch', root);
   let sucheTimer = null;
   suche.addEventListener('input', () => {
     clearTimeout(sucheTimer);
+    // Nur Raster und Liste werden neu gezeichnet; das Suchfeld bleibt, wie es ist, und behält den Cursor.
     sucheTimer = setTimeout(() => {
       state.suche = suche.value.trim();
-      const pos = suche.selectionStart;
-      draw(root);
-      const neu = $('#calSearch', root);
-      neu.focus();
-      try { neu.setSelectionRange(pos, pos); } catch { /* egal */ }
+      drawInhalt(root);
     }, 220);
   });
   const quick = $('#calQuick', root);
@@ -325,36 +391,88 @@ function draw(root) {
     quick.value = '';
     openAppointmentDialog(null, { ...p, calendarId: lokalerReiter() });
   });
-  $$('[data-tab]', root).forEach((b) => b.addEventListener('click', () => {
-    state.tab = b.dataset.tab === '*' ? null : b.dataset.tab;
+  // Ein Klick blendet einen Kalender ein oder aus, ein Doppelklick zeigt nur diesen. Die Reiter bleiben
+  // dabei stehen (nur ihr Zustand wechselt), damit sie weich umschalten und der Fokus nicht verloren geht.
+  const kalenderWechsel = (neu) => {
+    state.kalenderAus = neu;
     merken();
-    draw(root);
-  }));
+    reiterNachziehen(root);
+    drawInhalt(root);
+  };
+  $$('.cal-chip', root).forEach((b) => {
+    const key = b.dataset.kal;
+    b.addEventListener('click', (e) => {
+      if (e.detail > 1) return;
+      const neu = new Set(state.kalenderAus);
+      if (neu.has(key)) neu.delete(key); else neu.add(key);
+      kalenderWechsel(neu);
+    });
+    b.addEventListener('dblclick', () => kalenderWechsel(new Set(kal.map((k) => k.key).filter((x) => x !== key))));
+  });
+  root.querySelector('#calAlle')?.addEventListener('click', () => {
+    kalenderWechsel(new Set());
+    root.querySelector('.cal-chip')?.focus();
+  });
   root.querySelector('#calKalender')?.addEventListener('click', () => openKalenderVerwaltung().then(() => draw(root)));
+
+  wireSyncBadge(root);
+}
+
+/**
+ * Raster und Liste neu zeichnen, ohne Kopf, Suchfeld und Reiter anzufassen. Das geht
+ * schneller, lässt die Reiter weich umschalten und das Suchfeld seinen Cursor behalten.
+ */
+function drawInhalt(root, { bewegung = '' } = {}) {
+  const host = root.querySelector('#calHost');
+  const liste = root.querySelector('#calListe');
+  if (!host || !liste) return;
+  const { from, to } = zeitraum(state.mode, state.cursor);
+  host.innerHTML = state.mode === 'agenda' ? '' : html`<div class="cal-flaeche${bewegung ? ` cal-ein cal-${bewegung}` : ''}">${raw(state.mode === 'month' ? monthHtml(from, to) : weekHtml(from, to))}</div>`;
+  liste.innerHTML = listeHtml(from, to);
+  const hinweis = root.querySelector('#calHint');
+  if (hinweis) hinweis.innerHTML = hiddenHint();
   if (state.mode === 'week' || state.mode === 'day') {
-    const grid = root.querySelector('.cal-timegrid');
+    const grid = root.querySelector('.cal-week');
     // Morgens anfangen, nicht um Mitternacht; am heutigen Tag bei der aktuellen Stunde.
     const heute = from <= todayISO() && todayISO() <= to;
     const stunde = heute ? Math.max(0, new Date().getHours() - 1) : 7;
     if (grid) grid.scrollTop = stunde * STUNDE_PX;
   }
-
   wireEvents(root);
   wireDnd(root);
-  wireSyncBadge(root);
 }
 
-/** Reiter: alle Kalender zusammen oder einer getrennt. */
+/** Zustand der Kalender-Reiter an `state.kalenderAus` angleichen. */
+function reiterNachziehen(root) {
+  $$('.cal-chip', root).forEach((b) => {
+    const an = !state.kalenderAus.has(b.dataset.kal);
+    b.classList.toggle('aus', !an);
+    b.setAttribute('aria-pressed', String(an));
+  });
+  const alle = root.querySelector('#calAlle');
+  if (alle) alle.hidden = state.kalenderAus.size === 0;
+}
+
+/**
+ * Die Kalender als Reiter: jeder lässt sich ein- und ausblenden (Filter), auch die mit
+ * dem Konto geteilten Google-Kalender. Ein Kalender mit Schloss ist nur lesbar.
+ */
 function tabsHtml(kal) {
-  const punkt = (k) => `<span class="cal-dot" style="background:${esc(k.color || 'var(--accent)')}"></span>`;
-  return `<div class="cal-tabs" role="tablist" aria-label="Kalender">
-    <button role="tab" class="chip ${state.tab === null ? 'active' : ''}" aria-selected="${state.tab === null}" data-tab="*">Alle Kalender</button>
-    ${kal.map((k) => `<button role="tab" class="chip ${state.tab === k.key ? 'active' : ''} ${state.kalenderAus.has(k.key) && state.tab !== k.key ? 'cal-aus' : ''}" aria-selected="${state.tab === k.key}" data-tab="${esc(k.key)}"
-      title="${esc(k.art === 'google' ? `Google Kalender „${k.name}“` : k.name)}${state.kalenderAus.has(k.key) ? ' (in der Gesamtansicht ausgeblendet)' : ''}">${punkt(k)} ${esc(k.name)}${k.art === 'google' ? ` <span class="tiny muted">Google</span>` : ''}</button>`).join('')}
+  if (kal.length < 2) return `<div class="cal-tabs"><span class="spacer"></span>${verwaltenKnopf()}</div>`;
+  return `<div class="cal-tabs" role="group" aria-label="Kalender ein- und ausblenden">
+    ${kal.map((k) => {
+      const an = !state.kalenderAus.has(k.key);
+      const titel = `${k.art === 'google' ? `Google Kalender „${k.name}“${k.readOnly ? ', nur lesen' : ''}` : k.name}. Klick blendet ein oder aus, Doppelklick zeigt nur diesen.`;
+      return `<button type="button" class="chip cal-chip${an ? '' : ' aus'}" aria-pressed="${an}" data-kal="${esc(k.key)}" style="--c:${esc(k.color || 'var(--accent)')}" title="${esc(titel)}">
+        <span class="cal-dot"></span><span class="cal-chip-name">${esc(k.name)}</span>${k.readOnly ? `<span class="cal-chip-lesen" aria-label="nur lesen">${icon('lock', 11).__raw}</span>` : ''}${k.art === 'google' && !k.readOnly ? '<span class="tiny muted">Google</span>' : ''}</button>`;
+    }).join('')}
+    <button type="button" class="chip cal-alle" id="calAlle" ${state.kalenderAus.size ? '' : 'hidden'}>Alle zeigen</button>
     <span class="spacer"></span>
-    <button class="btn sm ghost" id="calKalender" title="Kalender anlegen, umbenennen, färben">${icon('settings', 14).__raw} Kalender verwalten</button>
+    ${verwaltenKnopf()}
   </div>`;
 }
+
+const verwaltenKnopf = () => `<button type="button" class="btn sm ghost" id="calKalender" title="Kalender anlegen, umbenennen, färben">${icon('settings', 14).__raw} Kalender verwalten</button>`;
 
 /**
  * Was gerade ausgeblendet ist – sonst fiele nicht auf, dass etwas fehlt.
@@ -367,10 +485,9 @@ function hiddenHint() {
     !state.showTax && 'Steuertermine',
     !state.showTodos && 'Aufgaben',
     !state.showDone && 'Erledigte',
-    state.kalenderAus.size > 0 && state.tab === null && `${state.kalenderAus.size} Kalender`,
   ].filter(Boolean);
-  const tags = state.tags.size ? `<span class="small" title="Über „Anzeige“ oben rechts ändern">${icon('tag', 13).__raw} ${esc([...state.tags].join(', '))}</span>` : '';
-  return (weg.length ? `<span class="small muted" title="Über „Anzeige“ oben rechts wieder einblenden">${icon('hide', 13).__raw} ausgeblendet: ${esc(weg.join(', '))}</span>` : '') + tags;
+  const tags = state.tags.size ? `<span class="small cal-hinweis-teil" title="Über „Anzeige“ oben rechts ändern">${icon('tag', 13).__raw} ${esc([...state.tags].join(', '))}</span>` : '';
+  return (weg.length ? `<span class="small muted cal-hinweis-teil" title="Über „Anzeige“ oben rechts wieder einblenden">${icon('hide', 13).__raw} ausgeblendet: ${esc(weg.join(', '))}</span>` : '') + tags;
 }
 
 /* ---- Monat ---------------------------------------------------------------- */
@@ -386,7 +503,7 @@ function monthHtml(gridStart, gridEnd) {
   for (let i = 0; i < 42; i++) cells.push(addDays(gridStart, i));
   return `<div class="cal-grid">
     ${WEEKDAYS.map((w) => `<div class="cal-head">${w}</div>`).join('')}
-    ${cells.map((d) => cellHtml(d, first, byDay.get(d) || [])).join('')}
+    ${cells.map((d, i) => cellHtml(d, first, byDay.get(d) || [], i)).join('')}
   </div>`;
 }
 
@@ -397,21 +514,24 @@ function evHtml(e, { zeit = true } = {}) {
   if (e.isDue) return `<div class="cal-ev cal-due" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(money(e.amount))} € ${esc(e.type === 'income' ? '↓' : '↑')}</div>`;
   if (e.isEvent) return `<div class="cal-ev cal-event" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(e.title)}</div>`;
   const span = e.spanLength > 1 ? ` cal-span ${e.spanIndex === 0 ? 'span-start' : ''} ${e.spanIndex === e.spanLength - 1 ? 'span-end' : ''}` : '';
-  const hinweis = [e.title, e.spanLength > 1 ? `${fmtDate(e.spanStart)} bis ${fmtDate(e.spanEnd)}` : '', e.location, e.extern ? `Google Kalender „${kalenderName(e.extern)}“` : '', (e.tags || []).map((t) => '#' + t).join(' ')].filter(Boolean).join(' · ');
-  return `<div class="cal-ev ${e.done ? 'done' : ''}${span}" data-appt="${esc(e.id)}" data-occ="${esc(e.spanStart || e.occurrence)}" draggable="true" title="${esc(hinweis)}" ${e.farbe ? `style="--ev:${esc(e.farbe)}"` : ''}>${zeit && !e.allDay && e.startTime && (e.spanIndex ?? 0) === 0 ? esc(e.startTime) + ' ' : ''}${esc(e.title)}</div>`;
+  const hinweis = [e.title, e.spanLength > 1 ? `${fmtDate(e.spanStart)} bis ${fmtDate(e.spanEnd)}` : '', e.location, e.extern ? `Google Kalender „${kalenderName(e.extern)}“${e.nurLesen ? ', nur lesen' : ''}` : '', (e.tags || []).map((t) => '#' + t).join(' ')].filter(Boolean).join(' · ');
+  // Was nur lesbar ist, lässt sich öffnen, aber nicht verschieben.
+  return `<div class="cal-ev ${e.done ? 'done' : ''}${e.nurLesen ? ' cal-lesen' : ''}${span}" data-appt="${esc(e.id)}" data-occ="${esc(e.spanStart || e.occurrence)}" ${e.nurLesen ? '' : 'draggable="true"'} title="${esc(hinweis)}" ${e.farbe ? `style="--ev:${esc(e.farbe)}"` : ''}>${zeit && !e.allDay && e.startTime && (e.spanIndex ?? 0) === 0 ? `<span class="cal-ev-zeit">${esc(e.startTime)}</span> ` : ''}${esc(e.title)}</div>`;
 }
 
-function cellHtml(date, monthRef, items) {
+function cellHtml(date, monthRef, items, index = 0) {
   const other = date.slice(0, 7) !== monthRef.slice(0, 7);
   const dow = (fromISO(date).getDay() + 6) % 7;
   const cls = ['cal-cell', other ? 'other' : '', date === todayISO() ? 'today' : '', dow >= 5 ? 'weekend' : ''].filter(Boolean).join(' ');
   const shown = items.slice(0, 3);
   const more = items.length - shown.length;
   // Der vorgelesene Name ist der sichtbare Inhalt (Tag, Einträge) und dahinter, was ein Klick tut.
-  return `<div class="${cls}" data-day="${date}" data-drop="1" tabindex="0" role="button">
+  return `<div class="${cls}" data-day="${date}" data-drop="1" tabindex="0" role="button" style="--z:${index}">
     <div class="cal-day">${Number(date.slice(8, 10))}<span class="sr-only">. ${esc(fmtDate(date))}</span></div>
-    ${shown.map((e) => evHtml(e)).join('')}
-    ${more > 0 ? `<button type="button" class="cal-more" data-more="${date}">+ ${more} weitere</button>` : ''}
+    <div class="cal-evs">
+      ${shown.map((e) => evHtml(e)).join('')}
+      ${more > 0 ? `<button type="button" class="cal-more" data-more="${date}">+ ${more} weitere</button>` : ''}
+    </div>
     <span class="sr-only">, neuer Termin</span>
   </div>`;
 }
@@ -442,13 +562,14 @@ function weekHtml(from, to) {
     const slots = [];
     for (let m = 0; m < 1440; m += 30) {
       const t = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-      slots.push(`<div class="cal-slot ${m % 60 ? 'half' : ''}" data-day="${d}" data-slot="${t}" data-drop="1" style="height:${STUNDE_PX / 2}px" title="${esc(fmtDateShort(d) + ' ' + t)}"></div>`);
+      // Die Linie liegt am unteren Rand der Zeile: unter der vollen Stunde gestrichelt (halbe Stunde), unter der halben durchgezogen (volle Stunde).
+      slots.push(`<div class="cal-slot ${m % 60 ? '' : 'half'}" data-day="${d}" data-slot="${t}" data-drop="1" style="height:${STUNDE_PX / 2}px" title="${esc(fmtDateShort(d) + ' ' + t)}"></div>`);
     }
     const evs = lage.map(({ e, von, bis, spalte, spalten: n }) => {
       const top = (von / 60) * STUNDE_PX;
       const h = Math.max(18, ((bis - von) / 60) * STUNDE_PX - 2);
-      const hinweis = [e.title, `${e.startTime}${e.endTime ? ' bis ' + e.endTime : ''}`, e.location, e.extern ? `Google Kalender „${kalenderName(e.extern)}“` : ''].filter(Boolean).join(' · ');
-      return `<div class="cal-ev cal-timed ${e.done ? 'done' : ''}" data-appt="${esc(e.id)}" data-occ="${esc(e.spanStart || e.occurrence)}" draggable="true"
+      const hinweis = [e.title, `${e.startTime}${e.endTime ? ' bis ' + e.endTime : ''}`, e.location, e.extern ? `Google Kalender „${kalenderName(e.extern)}“${e.nurLesen ? ', nur lesen' : ''}` : ''].filter(Boolean).join(' · ');
+      return `<div class="cal-ev cal-timed ${e.done ? 'done' : ''}${e.nurLesen ? ' cal-lesen' : ''}" data-appt="${esc(e.id)}" data-occ="${esc(e.spanStart || e.occurrence)}" ${e.nurLesen ? '' : 'draggable="true"'}
         style="top:${top}px;height:${h}px;left:calc(${(spalte / n) * 100}% + 1px);width:calc(${100 / n}% - 3px);${e.farbe ? `--ev:${esc(e.farbe)}` : ''}" title="${esc(hinweis)}">
         <span class="t">${esc(e.startTime)}${e.endTime ? ' bis ' + esc(e.endTime) : ''}</span>
         <span class="n">${esc(e.title)}</span>${e.location ? `<span class="l">${esc(e.location)}</span>` : ''}
@@ -457,9 +578,13 @@ function weekHtml(from, to) {
     const now = d === heute ? `<div class="cal-now" style="top:${(jetztMin / 60) * STUNDE_PX}px"></div>` : '';
     return `<div class="cal-daycol ${d === heute ? 'today' : ''}" data-day="${d}">${slots.join('')}${evs}${now}</div>`;
   }).join('');
+  // Der ganze Block scrollt, Kopf und ganztägige Zeile bleiben oben stehen: So liegen die Spalten
+  // immer unter ihren Tagen, auch wenn die Bildlaufleiste Platz braucht.
   return `<div class="cal-week" style="--cols:${tage.length}">
-    <div class="cal-week-head"><div class="cal-gutter"></div>${kopf}</div>
-    <div class="cal-allday"><div class="cal-gutter tiny muted">ganztägig</div>${ganzZeilen}</div>
+    <div class="cal-week-kopf">
+      <div class="cal-week-head"><div class="cal-gutter"></div>${kopf}</div>
+      <div class="cal-allday"><div class="cal-gutter cal-gutter-text">ganztägig</div>${ganzZeilen}</div>
+    </div>
     <div class="cal-timegrid">
       <div class="cal-hours">${stunden.join('')}</div>
       ${spalten}
@@ -498,7 +623,7 @@ function agendaRow(e) {
         ${e.location ? ' · ' + esc(e.location) : ''}
         ${e.contactId ? ' · ' + esc(sel.contactName(e.contactId)) : ''}
         ${e.projektId && sel.projekt(e.projektId) ? ' · ' + esc(sel.projekt(e.projektId).name) : ''}
-        ${e.extern ? ' · ' + esc(kalenderName(e.extern)) : e.calendarId ? ' · ' + esc(lokaleKalender(sel.settings()).find((k) => k.id === e.calendarId)?.name || '') : ''}
+        ${e.extern ? ' · ' + esc(kalenderName(e.extern)) + (e.nurLesen ? ' (nur lesen)' : '') : e.calendarId ? ' · ' + esc(lokaleKalender(sel.settings()).find((k) => k.id === e.calendarId)?.name || '') : ''}
         · KW ${isoWeek(e.occurrence)}
       </div>
     </div>
@@ -509,13 +634,13 @@ function agendaRow(e) {
 
 function listeHtml(from, to) {
   const liste = (eintraege, leerTitel, leerText) => eintraege.length
-    ? '<div style="padding:0 16px">' + eintraege.map(agendaRow).join('') + '</div>'
+    ? '<div class="cal-liste-inner">' + eintraege.map(agendaRow).join('') + '</div>'
     : emptyState(leerTitel, leerText).__raw;
   if (state.suche) {
     const von = addDays(todayISO(), -365);
     const bis = addDays(todayISO(), 365);
     const treffer = sortBy([...termine(von, bis, { liste: true }), ...sonstige(von, bis)], (e) => e.occurrence + (e.startTime || ''));
-    return `<div class="card mt16">
+    return `<div class="card mt16 cal-liste">
       <div class="card-head"><h2>Suche: „${esc(state.suche)}“</h2><span class="sub">ein Jahr zurück und voraus</span><div class="spacer"></div><span class="badge">${int(treffer.length)}</span></div>
       <div class="card-body ${treffer.length ? 'tight' : ''}">${liste(treffer, 'Nichts gefunden', 'Kein Termin passt zu dieser Suche.')}</div>
     </div>`;
@@ -525,11 +650,11 @@ function listeHtml(from, to) {
     const bis = addDays(heute, 365);
     const past = sortBy([...termine(addDays(heute, -365), addDays(heute, -1), { liste: true }), ...(state.showEvents ? eventEntries(addDays(heute, -365), addDays(heute, -1)) : [])], (e) => e.occurrence, -1).slice(0, 40);
     const events = sortBy([...termine(heute, bis, { liste: true }), ...sonstige(heute, bis)], (e) => e.occurrence + (e.startTime || ''));
-    return `<div class="card mt16">
+    return `<div class="card mt16 cal-liste">
         <div class="card-head"><h2>Kommende Termine</h2><span class="sub">nächste zwölf Monate</span><div class="spacer"></div><span class="badge">${int(events.length)}</span></div>
         <div class="card-body ${events.length ? 'tight' : ''}">${liste(events, 'Nichts geplant', 'Legen Sie oben rechts einen Termin an.')}</div>
       </div>
-      <div class="card mt16">
+      <div class="card mt16 cal-liste">
         <div class="card-head"><h2>Vergangene Termine</h2><span class="sub">letzte zwölf Monate</span></div>
         <div class="card-body ${past.length ? 'tight' : ''}">${liste(past, 'Keine Einträge', 'Hier erscheinen zurückliegende Termine.')}</div>
       </div>`;
@@ -544,7 +669,7 @@ function listeHtml(from, to) {
   else kopf = 'An diesem Tag';
   // Im Monat stehen unten nur Termine und Aufgaben; Zahlungs- und Steuertermine zeigt das Raster.
   const eintraege = sortBy([...termine(a, b, { liste: true }), ...(state.mode === 'month' ? (state.showTodos ? todoEntries(a, b) : []) : sonstige(a, b))], (e) => e.occurrence + (e.startTime || ''));
-  return `<div class="card mt16">
+  return `<div class="card mt16 cal-liste">
     <div class="card-head"><h2>${esc(kopf)}</h2><div class="spacer"></div><span class="badge">${int(eintraege.length)}</span></div>
     <div class="card-body ${eintraege.length ? 'tight' : ''}">${liste(eintraege, 'Keine Termine', state.mode === 'day' ? 'An diesem Tag ist nichts eingetragen.' : 'In diesem Zeitraum ist nichts eingetragen.')}</div>
   </div>`;
@@ -642,12 +767,16 @@ function wireDnd(root) {
 async function terminAblegen({ id, occ }, tag, slot, root) {
   const a = sel.appointment(id);
   if (!a || !tag) return;
+  if (nurLesen(a)) {
+    warn('Nur lesbar', 'Dieser Termin gehört zu einem geteilten Kalender, den Kontovia nur anzeigt.');
+    return;
+  }
   const neu = verschoben(a, { aufTag: tag, vonTag: occ || a.date, startTime: a.allDay ? '' : slot });
   if (neu.date === a.date && neu.startTime === a.startTime) return;
   const reihe = (a.recurrence?.freq || 'none') !== 'none';
   await upsertAppointment(neu);
   ok('Termin verschoben', reihe ? `Die ganze Reihe beginnt jetzt am ${fmtDate(neu.date)}.` : `${fmtDateLong(neu.date)}${neu.allDay ? '' : ', ' + neu.startTime}`);
-  draw(root);
+  drawInhalt(root);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -759,9 +888,16 @@ export function openAppointmentDialog(id, preset = {}) {
   /* Kalender: eigene Kalender immer, weitere Google-Kalender nur für neue
      Termine. Den Google-Kalender eines bestehenden Termins zu wechseln, ist
      nicht vorgesehen; bestehende zeigen, woher sie kommen. */
-  const weitere = calState.status?.linked && calState.status?.weitereErlaubt ? calendarSettings().weitere : [];
+  const weitere = calState.status?.linked && calState.status?.weitereErlaubt ? calendarSettings().weitere.filter((k) => !k.readOnly) : [];
   const lokale = lokaleKalender(sel.settings());
+  // Ein Termin aus einem mit dem Konto geteilten Kalender: Google gilt, Kontovia schreibt nie dorthin.
+  const lesend = !isNew && nurLesen(existing);
   function kalenderFeld() {
+    if (lesend) {
+      return `<div class="notice mb16 small">${icon('lock', 14).__raw} Aus dem geteilten Google Kalender
+        <strong>„${esc(kalenderName(a.extern))}“</strong>, den Kontovia nur anzeigt. Titel, Zeit, Ort und Notiz ändern sich nur dort.
+        Kontakt, Projekt, Tags, Aufgaben und Buchungen können Sie hier trotzdem ergänzen.</div>`;
+    }
     if (a.extern && !isNew) {
       const aktiv = calendarSettings().weitere.some((k) => k.id === a.extern.calendarId);
       return `<div class="notice mb16 small">${icon('calendar', 14).__raw} Aus Google Kalender
@@ -922,6 +1058,14 @@ export function openAppointmentDialog(id, preset = {}) {
         </div>`).join(''))
         : raw('<p class="muted small">Noch nichts verknüpft. So halten Sie fest, welche Rechnung zu welchem Auftrag oder Termin gehört.</p>')}`;
 
+    // Was von Google kommt, ist gesperrt; die eigenen Angaben darunter bleiben offen.
+    if (lesend) {
+      for (const k of ['title', 'date', 'endDate', 'allDay', 'start', 'end', 'location', 'notes', 'freq', 'interval', 'until']) {
+        const feld = form.querySelector('#t_' + k);
+        if (feld) feld.disabled = true;
+      }
+      form.querySelectorAll('#t_weekdays input').forEach((c) => { c.disabled = true; });
+    }
     form.querySelector('#t_allDay').addEventListener('change', (e) => {
       a.allDay = e.target.checked;
       form.querySelector('#t_start').disabled = a.allDay;
@@ -1084,6 +1228,7 @@ export function openAppointmentDialog(id, preset = {}) {
   }
 
   function pruefen() {
+    if (lesend) return true; // die Angaben von Google sind gesperrt und kommen von dort
     if (!a.title) { warn('Bitte einen Titel eintragen'); return false; }
     if (!a.allDay && a.startTime && a.endTime && a.endTime < a.startTime && !a.endDate) {
       warn('Ende liegt vor dem Beginn', 'Bitte die Uhrzeiten prüfen. Ein Termin über mehrere Tage bekommt einen letzten Tag.');
@@ -1109,8 +1254,10 @@ export function openAppointmentDialog(id, preset = {}) {
     refresh();
   });
   m.root.querySelector('#btnDel')?.addEventListener('click', async () => {
-    const auchGoogle = a.extern && calendarSettings().weitere.some((k) => k.id === a.extern.calendarId)
-      ? ` Beim nächsten Abgleich wird er auch in Google Kalender „${kalenderName(a.extern)}“ gelöscht.` : '';
+    const auchGoogle = lesend
+      ? ` Im geteilten Google Kalender „${kalenderName(a.extern)}“ bleibt er bestehen; Kontovia blendet ihn nur hier aus.`
+      : a.extern && calendarSettings().weitere.some((k) => k.id === a.extern.calendarId)
+        ? ` Beim nächsten Abgleich wird er auch in Google Kalender „${kalenderName(a.extern)}“ gelöscht.` : '';
     if (!await confirmDialog({ title: 'Termin löschen?', text: `Der Termin wird entfernt. Verknüpfte Buchungen${todosVorher.size ? ' und Aufgaben' : ''} bleiben erhalten.${auchGoogle}`, confirmLabel: 'Löschen', danger: true })) return;
     fertig = true;
     await deleteAppointment(a.id);
@@ -1219,7 +1366,6 @@ export function openKalenderVerwaltung() {
       }, { entity: 'einstellungen', summary: `Kalender: ${[standard.name, ...eigene.map((k) => k.name)].join(', ')}` });
       await saveNow();
       // Reiter und Ausblendungen entfernter Kalender aufräumen.
-      if (state.tab && !state.tab.startsWith('g:') && !bleiben.has(state.tab)) state.tab = null;
       for (const k of [...state.kalenderAus]) if (!k.startsWith('g:') && k && !bleiben.has(k)) state.kalenderAus.delete(k);
       merken();
       m.close();

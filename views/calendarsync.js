@@ -4,7 +4,8 @@
  * Zwei Wege:
  *   Google Kalender  laufender Abgleich in beide Richtungen, mit dem
  *                    eigenen Kalender „Kontovia“ und auf Wunsch mit weiteren
- *                    Kalendern des Kontos (Hauptkalender usw.). In der
+ *                    Kalendern des Kontos (Hauptkalender usw.); mit dem
+ *                    Konto geteilte Kalender werden nur angezeigt. In der
  *                    Web-Fassung gilt der Zugriff eine Stunde und wird dann
  *                    mit einem Tipp bestätigt (src/web/gcal.js).
  *   .ics-Datei       Export und Import von Hand, überall – auch für Apple
@@ -16,10 +17,10 @@ import { icon, modal, confirmDialog, ok, err, warn } from '../lib/ui.js';
 import { store, sel, commit, saveNow, applyCalendarChanges } from '../lib/store.js';
 import { derivedEntries } from '../lib/gcal.js';
 import { toIcs, parseIcs, appointmentIdForUid } from '../lib/ics.js';
-import { kalenderListe, kalenderSchluessel, lokaleKalender } from '../lib/kalender.js';
+import { kalenderListe, kalenderSchluessel, lokaleKalender, googleFarbe } from '../lib/kalender.js';
 import {
   calState, syncCalendar, startCalendarSync, stopCalendarSync,
-  refreshCalendarStatus, calendarSettings, timeZone,
+  refreshCalendarStatus, calendarSettings, saveCalendarSettings, timeZone,
 } from '../lib/gcalsync.js';
 import { refresh } from '../lib/router.js';
 
@@ -41,14 +42,6 @@ export function statusText(st = calState.status) {
 /* -------------------------------------------------------------------------- */
 /* Einstellungen                                                               */
 /* -------------------------------------------------------------------------- */
-
-async function saveCalendarSettings(patch) {
-  await commit('einstellung.kalender', (db) => {
-    db.settings.googleCalendar = { ...(db.settings.googleCalendar || {}), ...patch };
-    db.settings.updatedAt = new Date().toISOString();
-  }, { silent: true });
-  await saveNow();
-}
 
 /** Karte für Einstellungen → Kalender-Abgleich. */
 export async function renderCalendarCard(el) {
@@ -150,6 +143,7 @@ function weitereAbschnitt(st, cfg) {
       <strong style="font-size:13px">Weitere Google-Kalender</strong>
       <p class="small mt8" style="line-height:1.6">Termine aus Ihrem Hauptkalender und anderen Kalendern
       in Kontovia sehen und bearbeiten. Änderungen und Löschungen gehen in beide Richtungen.
+      Auch Kalender, die andere mit Ihnen geteilt haben, lassen sich so anzeigen (nur lesend).
       Dafür braucht Kontovia einmal zusätzlich Ihre Freigabe bei Google.</p>
       ${namen.length ? `<div class="notice warn small mb8">Ausgewählt sind ${esc(namen.join(', '))}, auf diesem Gerät
         fehlt aber noch die Freigabe.</div>` : ''}
@@ -158,10 +152,11 @@ function weitereAbschnitt(st, cfg) {
   return `<hr class="sep">
     <strong style="font-size:13px">Weitere Google-Kalender</strong>
     <p class="small mt8 mb8" style="line-height:1.6">${namen.length
-      ? 'In beide Richtungen abgeglichen, Termine ab gut einem Jahr zurück. „Lösen“ beendet den Abgleich eines Kalenders; dabei können Sie die von Kontovia dort angelegten Einträge mit löschen lassen, fremde Termine bleiben immer unberührt.'
+      ? 'Eigene Kalender werden in beide Richtungen abgeglichen, mit Ihnen geteilte, nur lesbare Kalender nur angezeigt. Termine ab gut einem Jahr zurück. „Lösen“ beendet den Abgleich eines Kalenders; dabei können Sie die von Kontovia dort angelegten Einträge mit löschen lassen, fremde Termine bleiben immer unberührt.'
       : 'Noch kein weiterer Kalender ausgewählt.'}</p>
-    ${cfg.weitere.map((k) => `<div class="row mb8" style="gap:8px"><span style="flex:1">${icon('calendar', 14).__raw} ${esc(k.name || k.id)}</span>
+    ${cfg.weitere.map((k) => `<div class="row mb8" style="gap:8px"><span style="flex:1;min-width:0" class="truncate"><span class="cal-dot" style="background:${esc(k.color || googleFarbe(k.id))}"></span> ${esc(k.name || k.id)}${k.readOnly ? ' <span class="badge tiny">nur lesen</span>' : ''}</span>
       <button class="btn sm" data-cal-loesen="${esc(k.id)}">Lösen</button></div>`).join('')}
+    <label class="check mb8 mt8"><input type="checkbox" data-opt="autoGeteilt" ${cfg.autoGeteilt ? 'checked' : ''}> Neu mit mir geteilte Kalender automatisch anzeigen (nur lesend)</label>
     <button class="btn" data-cal="weitere-waehlen" data-premium="kalender">${icon('calendar', 15).__raw} Kalender auswählen</button>`;
 }
 
@@ -246,8 +241,8 @@ async function freigebenWeitere(umleiten = false) {
   const ja = await confirmDialog({
     title: 'Weitere Kalender einbeziehen?',
     text: 'Kontovia fragt bei Google zusätzlich das Recht an, Ihre Kalender aufzulisten und Termine darin zu lesen und zu ändern. '
-      + 'Abgeglichen werden danach nur die Kalender, die Sie anschließend auswählen, und zwar in beide Richtungen: Was Sie dort ändern oder löschen, '
-      + 'ändert sich hier, und umgekehrt. Es öffnet sich die Anmeldung bei Google; danach geht es hier weiter.',
+      + 'Abgeglichen werden danach nur die Kalender, die Sie anschließend auswählen. Eigene Kalender laufen in beide Richtungen: Was Sie dort ändern oder löschen, '
+      + 'ändert sich hier, und umgekehrt. Mit Ihnen geteilte Kalender zeigt Kontovia nur an. Es öffnet sich die Anmeldung bei Google; danach geht es hier weiter.',
     confirmLabel: 'Weiter zu Google',
   });
   if (!ja) return false;
@@ -276,39 +271,65 @@ export async function openKalenderAuswahl() {
     err('Kalender nicht abrufbar', e.message);
     return false;
   }
-  const bisher = new Set(calendarSettings().weitere.map((k) => k.id));
+  const cfg = calendarSettings();
+  const bisher = new Set(cfg.weitere.map((k) => k.id));
+  const frueher = new Map(cfg.weitere.map((k) => [k.id, k]));
+  const abgewaehltVorher = new Set(cfg.abgewaehlt);
+  // Mit mir geteilte, nur lesbare Kalender sind vorgewählt, solange man sie nicht schon einmal abgewählt hat.
+  const vorgewaehlt = (k) => bisher.has(k.id) || (k.geteilt && k.readOnly && !k.sonder && k.angezeigt && !abgewaehltVorher.has(k.id));
+  const gruppen = [
+    ['Meine Kalender', liste.filter((k) => !k.geteilt && !k.sonder)],
+    ['Mit mir geteilt', liste.filter((k) => k.geteilt && !k.sonder)],
+    ['Von Google (Feiertage, Geburtstage …)', liste.filter((k) => k.sonder)],
+  ].filter(([, l]) => l.length);
+  const zeile = (k) => `
+    <label class="check cal-wahl">
+      <input type="checkbox" value="${esc(k.id)}" ${vorgewaehlt(k) ? 'checked' : ''}>
+      <span class="cal-dot" style="background:${esc(k.color || googleFarbe(k.id))}"></span>
+      <span class="cal-wahl-name">${esc(k.name)}${k.primary ? ' <span class="muted small">(Hauptkalender)</span>' : ''}</span>
+      ${k.readOnly ? '<span class="badge tiny">nur lesen</span>' : k.geteilt ? '<span class="badge tiny">geteilt</span>' : ''}
+    </label>`;
   const wahl = await new Promise((resolve) => {
     let settled = false;
     const m = modal({
       title: 'Weitere Google-Kalender abgleichen',
       body: html`
         <p class="mt0 small" style="line-height:1.6">Die Termine der gewählten Kalender erscheinen in Kontovia,
-        ab gut einem Jahr zurück. Ändern oder löschen Sie einen davon hier oder in Google, gilt das beim
-        nächsten Abgleich auf beiden Seiten. Neue Termine können Sie in Kontovia direkt einem dieser Kalender
-        zuordnen.</p>
-        ${liste.length ? raw(liste.map((k) => `
-          <label class="check mb8"><input type="checkbox" value="${esc(k.id)}" ${bisher.has(k.id) ? 'checked' : ''}>
-          ${k.color ? `<span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${esc(k.color)}"></span>` : ''}
-          ${esc(k.name)}${k.primary ? ' <span class="muted small">(Hauptkalender)</span>' : ''}</label>`).join(''))
-          : raw('<p class="muted small">Es gibt keine weiteren Kalender, in die Kontovia schreiben darf.</p>')}`,
+        ab gut einem Jahr zurück. Eigene Kalender gleicht Kontovia in beide Richtungen ab: Ändern oder löschen Sie einen
+        Termin hier oder in Google, gilt das beim nächsten Abgleich auf beiden Seiten. Mit Ihnen geteilte, nur lesbare
+        Kalender zeigt Kontovia nur an und schreibt nie hinein. Wer einen solchen Termin hier löscht, blendet ihn
+        nur in Kontovia aus.</p>
+        ${liste.length ? raw(gruppen.map(([titel, l]) => `
+          <div class="cal-wahl-gruppe"><h3 class="cal-wahl-titel">${esc(titel)}</h3>${l.map(zeile).join('')}</div>`).join('')
+          + `<hr class="sep"><label class="check"><input type="checkbox" id="k_auto" ${cfg.autoGesetzt && !cfg.autoGeteilt ? '' : 'checked'}>
+          Neu mit mir geteilte Kalender automatisch anzeigen (nur lesend)</label>`)
+          : raw('<p class="muted small">Es gibt keine weiteren Kalender, die Kontovia lesen darf.</p>')}`,
       foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Übernehmen</button>',
       onClose: () => { if (!settled) resolve(null); },
     });
     m.root.querySelector('[data-no]').addEventListener('click', () => { settled = true; m.close(); resolve(null); });
     m.root.querySelector('[data-yes]').addEventListener('click', () => {
       settled = true;
-      const ids = [...m.root.querySelectorAll('input[type=checkbox]:checked')].map((c) => c.value);
+      const ids = new Set([...m.root.querySelectorAll('input[type=checkbox][value]:checked')].map((c) => c.value));
+      const auto = !!m.root.querySelector('#k_auto')?.checked;
       m.close();
-      resolve(liste.filter((k) => ids.includes(k.id)).map((k) => ({ id: k.id, name: k.name })));
+      const gewaehlt = liste.filter((k) => ids.has(k.id)).map((k) => ({
+        id: k.id, name: k.name, color: k.color || '',
+        // Ein einmal nur lesend geführter Kalender bleibt es, auch wenn Google inzwischen mehr erlaubt.
+        ...(k.readOnly || frueher.get(k.id)?.readOnly ? { readOnly: true } : {}),
+      }));
+      // Was man sieht und abwählt, soll die Automatik nicht wieder hereinholen.
+      const abgewaehlt = [...new Set([...cfg.abgewaehlt.filter((id) => !ids.has(id)), ...liste.filter((k) => !ids.has(k.id)).map((k) => k.id)])];
+      resolve({ weitere: gewaehlt, autoGeteilt: auto, abgewaehlt });
     });
   });
   if (!wahl) return false;
 
   // Abgewählte Kalender: Kontovia löst sich davon, auf Wunsch samt seinen Einträgen dort.
-  const weg = [...bisher].filter((id) => !wahl.some((k) => k.id === id));
+  const weg = [...bisher].filter((id) => !wahl.weitere.some((k) => k.id === id));
   if (weg.length && !await kalenderLoesen(weg, { speichern: false })) return false;
-  await saveCalendarSettings({ weitere: wahl });
-  ok('Auswahl gespeichert', wahl.length ? wahl.map((k) => k.name).join(', ') : 'Kein weiterer Kalender');
+  await saveCalendarSettings(wahl);
+  ok('Auswahl gespeichert', wahl.weitere.length ? wahl.weitere.map((k) => k.name).join(', ') : 'Kein weiterer Kalender');
   const r = await syncCalendar({ reason: 'auswahl' }).catch((e) => { err('Kalenderabgleich fehlgeschlagen', e.message); return null; });
   if (r?.summary) ok('Kalender abgeglichen', r.summary);
   refresh();
@@ -386,7 +407,7 @@ function connectDialog() {
           <label class="check"><input type="checkbox" id="g_events" ${cfg.includeEvents ? 'checked' : ''}> Veranstaltungstermine aus Anzahlungen mit übertragen (ohne Beträge)</label>
           <label class="check"><input type="checkbox" id="g_due" ${cfg.includeDue ? 'checked' : ''}> Fälligkeiten offener Rechnungen mit übertragen (ohne Beträge)</label>
           <label class="check"><input type="checkbox" id="g_notes" ${cfg.sendNotes ? 'checked' : ''}> Notizen der Termine mit übertragen</label>
-          <label class="check"><input type="checkbox" id="g_andere"> Auch meine anderen Google-Kalender einbeziehen (z. B. den Hauptkalender), in beide Richtungen. Welche, wählen Sie danach</label>
+          <label class="check"><input type="checkbox" id="g_andere"> Auch meine anderen Google-Kalender einbeziehen, etwa den Hauptkalender (in beide Richtungen) und mit mir geteilte Kalender (nur lesend). Welche, wählen Sie danach</label>
         </div>
         <p class="small muted mt16 mb0" style="line-height:1.6">Es öffnet sich die Anmeldung bei Google,
         meist in einem kleinen Fenster; auf manchen Telefonen wechselt dafür die ganze Seite, und Sie

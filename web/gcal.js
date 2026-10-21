@@ -4,7 +4,8 @@
  * Kontovia legt im
  * Google-Konto einen eigenen Kalender „Kontovia“ an (Bereich
  * `calendar.app.created`) und nimmt auf Wunsch weitere Kalender dazu
- * (`calendar.events` und `calendar.readonly`). Was zu tun ist, entscheidet
+ * (`calendar.events` und `calendar.readonly`), auch solche, die jemand nur
+ * lesbar mit dem Konto geteilt hat. Was zu tun ist, entscheidet
  * die Oberfläche (renderer/lib/gcal.js); hier wird es geprüft und ausgeführt.
  *
  * Anders ist nur die Anmeldung. Die frühere Windows-Fassung hält einen dauerhaften
@@ -565,12 +566,12 @@ export class GoogleCalendar {
     return { id: c.id, summary: c.summary, created: true };
   }
 
-  async ereignisse(calendarId, timeMin) {
+  async ereignisse(calendarId, timeMin, timeMax) {
     const events = [];
     let pageToken;
     do {
       const r = await this.api('GET', `/calendars/${enc(calendarId)}/events`, null, {
-        showDeleted: 'true', singleEvents: 'false', maxResults: 2500, timeMin, pageToken,
+        showDeleted: 'true', singleEvents: 'false', maxResults: 2500, timeMin, timeMax, pageToken,
       });
       for (const e of r?.items || []) events.push(knapp(e));
       pageToken = r?.nextPageToken;
@@ -600,19 +601,27 @@ export class GoogleCalendar {
     return { calendarId: g.calendarId, events, map: g.map || {}, recreated: neu };
   }
 
-  /** Die Kalender, in die Kontovia schreiben darf, ohne den eigenen. */
+  /**
+   * Die Kalender des Kontos, die Kontovia lesen darf, ohne den eigenen.
+   * `readOnly`: nur lesbar (geteilt oder abonniert). `geteilt`: gehört jemand
+   * anderem und wurde mit dem Konto geteilt. `sonder`: von Google selbst
+   * geführt (Feiertage, Geburtstage). `angezeigt`: in Google eingeblendet.
+   */
   async kalenderListe() {
     const g = this.state();
     const out = [];
     let pageToken;
     do {
-      const r = await this.api('GET', '/users/me/calendarList', null, { minAccessRole: 'writer', maxResults: 250, pageToken });
+      const r = await this.api('GET', '/users/me/calendarList', null, { minAccessRole: 'reader', maxResults: 250, pageToken });
       for (const c of r?.items || []) {
         if (!c?.id || c.id === g.calendarId || String(c.description || '').includes(MARKER) || c.deleted) continue;
-        if (c.accessRole && !['owner', 'writer'].includes(c.accessRole)) continue;
+        const rolle = c.accessRole || 'owner';
+        if (!['owner', 'writer', 'reader'].includes(rolle)) continue;
         out.push({
           id: String(c.id), name: String(c.summaryOverride || c.summary || c.id).slice(0, 200),
           primary: !!c.primary, color: String(c.backgroundColor || '').slice(0, 20),
+          readOnly: rolle === 'reader', geteilt: rolle !== 'owner' && !c.primary,
+          sonder: /@group\.v\.calendar\.google\.com$/.test(String(c.id)), angezeigt: c.selected !== false && !c.hidden,
         });
       }
       pageToken = r?.nextPageToken;
@@ -620,20 +629,36 @@ export class GoogleCalendar {
     return out.sort((a, b) => (b.primary - a.primary) || a.name.localeCompare(b.name, 'de'));
   }
 
-  /** Ereignisse der ausgewählten weiteren Kalender ab `timeMin`, auch gelöschte. */
-  async pullWeitere({ ids = [], timeMin = '' } = {}) {
+  /**
+   * Ereignisse der ausgewählten weiteren Kalender ab `timeMin`, auch gelöschte.
+   * Für die nur lesbaren (`lesen`) gilt zusätzlich `timeMax`: Ein geteilter
+   * Kalender mit Terminen für Jahre im Voraus soll den Tresor nicht füllen.
+   */
+  async pullWeitere({ ids = [], timeMin = '', timeMax = '', lesen = [] } = {}) {
     const g = this.state();
-    const liste = (Array.isArray(ids) ? ids : []).map(String).filter((id) => KALENDER_ID.test(id) && id !== g.calendarId).slice(0, 20);
-    const ab = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(String(timeMin)) ? String(timeMin) : undefined;
-    const out = [];
-    for (const id of liste) {
-      try {
-        out.push({ calendarId: id, events: await this.ereignisse(id, ab), map: g.weitere?.[id]?.map || {} });
-      } catch (err) {
-        if (ABBRUCH.includes(err.code)) throw err;
-        out.push({ calendarId: id, error: err.status === 404 ? 'Der Kalender ist nicht mehr erreichbar.' : err.message, map: g.weitere?.[id]?.map || {} });
+    const liste = (Array.isArray(ids) ? ids : []).map(String).filter((id) => KALENDER_ID.test(id) && id !== g.calendarId).slice(0, 30);
+    const zeit = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+    const ab = zeit.test(String(timeMin)) ? String(timeMin) : undefined;
+    const bis = zeit.test(String(timeMax)) ? String(timeMax) : undefined;
+    const nurLesen = new Set((Array.isArray(lesen) ? lesen : []).map(String));
+    const out = new Array(liste.length);
+    let abbruch = null;
+    let next = 0;
+    // Drei Kalender zugleich: bei einem Dutzend geteilter Kalender sonst eine lange Wartezeit.
+    const arbeiter = async () => {
+      while (next < liste.length && !abbruch) {
+        const i = next++;
+        const id = liste[i];
+        try {
+          out[i] = { calendarId: id, events: await this.ereignisse(id, ab, nurLesen.has(id) ? bis : undefined), map: g.weitere?.[id]?.map || {} };
+        } catch (err) {
+          if (ABBRUCH.includes(err.code)) { abbruch = err; return; }
+          out[i] = { calendarId: id, error: err.status === 404 ? 'Der Kalender ist nicht mehr erreichbar.' : err.message, map: g.weitere?.[id]?.map || {} };
+        }
       }
-    }
+    };
+    await Promise.all([arbeiter(), arbeiter(), arbeiter()]);
+    if (abbruch) throw abbruch;
     return out;
   }
 
@@ -699,7 +724,7 @@ export class GoogleCalendar {
     if (map && typeof map === 'object') g.map = sauberesMerkblatt(map);
     if (weitere && typeof weitere === 'object') {
       const neu = {};
-      for (const [id, m] of Object.entries(weitere).slice(0, 20)) {
+      for (const [id, m] of Object.entries(weitere).slice(0, 30)) {
         if (KALENDER_ID.test(id) && m && typeof m === 'object') neu[id] = { map: sauberesMerkblatt(m) };
       }
       g.weitere = neu;

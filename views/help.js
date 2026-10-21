@@ -963,6 +963,15 @@ function cloud(root) {
         „Kontovia“ an und gleicht in beide Richtungen ab. Auf Wunsch kommen Ihr Hauptkalender und
         weitere Kalender dazu.</p>
         <ul>
+          <li><strong>Von selbst:</strong> Der Abgleich läuft beim Entsperren, alle fünf Minuten,
+              sobald Sie zu Kontovia zurückkehren oder wieder Netz haben, und kurz nach jeder Änderung
+              an Ihren Terminen. Nur wenn der Zugriff abgelaufen ist, genügt ein Tipp auf den Hinweis
+              <em>Google: bitte kurz bestätigen</em> oben im Kalender.</li>
+          <li><strong>Geteilte Kalender:</strong> Kalender, die andere mit Ihnen geteilt haben, zeigt
+              Kontovia an, auf Wunsch kommen neu geteilte von selbst dazu. Sie bleiben nur lesbar:
+              Kontovia schreibt nie hinein, und was Sie dort in Kontovia löschen, blenden Sie nur hier aus.
+              Im Kalender blenden Sie jeden Kalender über seinen farbigen Schalter ein oder aus; ein
+              Doppelklick zeigt nur diesen.</li>
           <li><strong>Was an Google geht:</strong> Titel, Zeit, Ort und Wiederholung Ihrer Termine, die
               Notiz nur, wenn Sie das einschalten. Anders als beim Cloud-Abgleich ist das
               unverschlüsselt, sonst könnte Google die Termine nicht anzeigen. Beträge, Buchungen,

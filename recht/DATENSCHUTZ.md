@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 21. Oktober 2026, Programmversion 2.46.0
+Stand: 22. Oktober 2026, Programmversion 2.47.0
 
 ---
 
@@ -399,6 +399,17 @@ werden nur die Kalender, die Sie auswählen, in beide Richtungen: Termine daraus
 werden (ab gut einem Jahr zurück) in Ihrem verschlüsselten Tresor gespeichert
 und gehen mit dem Cloud-Abgleich verschlüsselt auf Ihre anderen Geräte;
 Änderungen und Löschungen in Kontovia gehen an diese Kalender zurück.
+
+**Mit Ihnen geteilte Kalender (freiwillig):** Die Auswahl zeigt auch Kalender,
+die andere Personen mit Ihrem Google-Konto geteilt haben, und von Google
+gelieferte (etwa Feiertage). Kontovia liest deren Termine (ab gut einem Jahr
+zurück bis zwei Jahre voraus) nur und schreibt nie hinein; löschen Sie dort einen
+Termin in Kontovia, wird er nur in Kontovia ausgeblendet. Die Termine liegen wie
+alle anderen verschlüsselt in Ihrem Tresor und gehen verschlüsselt auf Ihre
+anderen Geräte. Das sind Angaben Dritter, die Ihnen der Kalender zugänglich
+macht: Wählen Sie nur Kalender, die Sie dafür nutzen dürfen. Neu geteilte
+Kalender nimmt Kontovia nur auf, wenn Sie das ausdrücklich eingeschaltet haben;
+abgewählte kommen nicht wieder.
 
 **Was übertragen wird (anders als beim Cloud-Abgleich unverschlüsselt)**, weil
 Google die Termine sonst nicht anzeigen könnte: Titel, Datum, Uhrzeit, Ort und

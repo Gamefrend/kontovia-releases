@@ -1,7 +1,7 @@
 # Sicherheitskontakt von Kontovia (RFC 9116). Mehr dazu: Policy.
 # Security contact for Kontovia (RFC 9116). See Policy for details.
 Contact: mailto:platzhalter@example.org
-Expires: 2027-08-17T21:28:46Z
+Expires: 2027-08-17T22:11:17Z
 Preferred-Languages: de, en
 Canonical: https://gamefrend.github.io/kontovia-releases/.well-known/security.txt
 Policy: https://gamefrend.github.io/kontovia-releases/recht/sicherheit.html
