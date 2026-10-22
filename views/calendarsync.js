@@ -20,7 +20,7 @@ import { toIcs, parseIcs, appointmentIdForUid } from '../lib/ics.js';
 import { kalenderListe, kalenderSchluessel, lokaleKalender, googleFarbe } from '../lib/kalender.js';
 import {
   calState, syncCalendar, startCalendarSync, stopCalendarSync,
-  refreshCalendarStatus, calendarSettings, saveCalendarSettings, timeZone,
+  refreshCalendarStatus, calendarSettings, saveCalendarSettings, timeZone, stillZuruecksetzen,
 } from '../lib/gcalsync.js';
 import { refresh } from '../lib/router.js';
 
@@ -360,6 +360,7 @@ export function openCalendarSyncDialog() {
 export async function bestaetigen(umleiten = false) {
   try {
     await api.gcal.bestaetigen({ umleiten });
+    stillZuruecksetzen();
     await refreshCalendarStatus();
     return true;
   } catch (e) {

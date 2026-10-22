@@ -1153,6 +1153,7 @@ const api = {
       calendarIdHint: str(opts.calendarIdHint, 300), timeZone: str(opts.timeZone, 80), weitere: !!opts.weitere, merk: opts.merk, umleiten: !!opts.umleiten,
     })),
     bestaetigen: handle(async (opts = {}) => gcal.bestaetigen({ umleiten: !!opts?.umleiten })),
+    still: handle(async () => kopie(await gcal.still())),
     rueckmeldung: handle(async () => kopie(await gcal.rueckmeldung())),
     cancel: handle(async () => gcal.abbrechen(), { needsUnlock: false }),
     disconnect: handle(async (opts = {}) => gcal.disconnect({ deleteCalendar: !!opts.deleteCalendar })),

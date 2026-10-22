@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 22. Oktober 2026, Programmversion 2.47.0
+Stand: 22. Oktober 2026, Programmversion 2.48.0
 
 ---
 
@@ -438,7 +438,7 @@ Ihr Browser spricht dafür direkt mit Google (`accounts.google.com` für die
 Anmeldung, `www.googleapis.com` für die Termine). Google erteilt dort nur einen Zugriff für jeweils eine Stunde. Er
 liegt nur im Arbeitsspeicher des Browsers, nie im Tresor oder im
 Browser-Speicher, und verfällt, sobald Kontovia sich sperrt. Danach wartet der
-Abgleich, bis Sie ihn mit einem Tipp erneut bestätigen.
+Abgleich, bis Sie ihn mit einem Tipp erneut bestätigen. Wo Ihr Browser es zulässt, versucht Kontovia vorher, den Zugriff ohne Ihr Zutun zu erneuern: Es fragt dafür bei `accounts.google.com` in einem unsichtbaren Rahmen nach, ob Sie dort noch angemeldet sind. Das ist dieselbe Gegenstelle wie bei der Anmeldung, es wird nichts Zusätzliches übertragen und nichts dauerhaft gespeichert. Klappt es nicht, bleibt es beim Tipp.
 
 Wo ein zweites Fenster nicht geht (etwa in der App auf dem iPhone), wechselt
 Kontovia stattdessen kurz selbst zu Google. Bis zur Rückkehr, höchstens 15

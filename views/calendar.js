@@ -40,13 +40,16 @@ const state = {
   showDone: true,
   showTax: true,
   showTodos: true,
+  showKontovia: true, // alles, was aus Kontovia stammt; aus = nur die Google-Kalender („privat“)
+  showTermine: true,  // die in Kontovia angelegten Termine
+  showGoogle: true,   // Termine aus weiteren Google-Kalendern
   kalenderAus: new Set(), // ausgeblendete Kalender (Schlüssel aus lib/kalender.js)
   tags: new Set(),        // gewählte Tags (mindestens einer muss passen)
   suche: '',
 };
 (() => {
   const p = prefs.kalenderAnsicht || {};
-  for (const k of ['mode', 'showDue', 'showEvents', 'showDone', 'showTax', 'showTodos']) if (p[k] !== undefined) state[k] = p[k];
+  for (const k of ['mode', 'showDue', 'showEvents', 'showDone', 'showTax', 'showTodos', 'showKontovia', 'showTermine', 'showGoogle']) if (p[k] !== undefined) state[k] = p[k];
   if (!['month', 'week', 'day', 'agenda'].includes(state.mode)) state.mode = 'month';
   if (Array.isArray(p.kalenderAus)) state.kalenderAus = new Set(p.kalenderAus);
   // Der frühere Reiter „nur dieser Kalender“ ist jetzt: alle anderen ausgeblendet. Was er gewählt hatte, bleibt unbeachtet.
@@ -55,6 +58,7 @@ const state = {
 function merken() {
   setPref('kalenderAnsicht', {
     mode: state.mode, showDue: state.showDue, showEvents: state.showEvents, showDone: state.showDone, showTax: state.showTax, showTodos: state.showTodos,
+    showKontovia: state.showKontovia, showTermine: state.showTermine, showGoogle: state.showGoogle,
     kalenderAus: [...state.kalenderAus], tags: [...state.tags],
   });
 }
@@ -72,7 +76,10 @@ function kalenderAlle() {
 }
 
 function filter() {
-  return { kalenderAus: state.kalenderAus, tags: state.tags, suche: state.suche, kontaktName: sel.contactName };
+  return {
+    kalenderAus: state.kalenderAus, tags: state.tags, suche: state.suche, kontaktName: sel.contactName,
+    herkunft: { kontovia: state.showKontovia, termine: state.showTermine, google: state.showGoogle },
+  };
 }
 
 /** Gehört der Termin zu einem nur lesbaren Google-Kalender (mit dem Konto geteilt)? */
@@ -92,7 +99,7 @@ function termine(from, to, { liste = false } = {}) {
 
 /** Zahlungstermine (Fälligkeiten offener Rechnungen) als Kalendereinträge. */
 function dueEntries(from, to) {
-  if (state.suche || state.tags.size) return [];
+  if (!state.showKontovia || state.suche || state.tags.size) return [];
   return sel.transactions()
     .filter((t) => !isVoidPart(t) && !t.paidDate && (t.dueDate || t.date) >= from && (t.dueDate || t.date) <= to)
     .map((t) => ({
@@ -113,7 +120,7 @@ function dueEntries(from, to) {
  * und welcher Restbetrag dann noch aussteht.
  */
 function eventEntries(from, to) {
-  if (state.tags.size) return [];
+  if (!state.showKontovia || state.tags.size) return [];
   const out = [];
   const q = state.suche.toLowerCase().trim();
   for (const t of sel.transactions()) {
@@ -130,7 +137,7 @@ function eventEntries(from, to) {
 
 /** Aufgaben mit eigenem Fälligkeitsdatum als Kalendereinträge. Aufgaben an einem Termin zeigt dieser selbst. */
 function todoEntries(from, to) {
-  if (state.tags.size) return [];
+  if (!state.showKontovia || state.tags.size) return [];
   const q = state.suche.toLowerCase().trim();
   return sel.todos()
     .filter((t) => t.dueDate && t.dueDate >= from && t.dueDate <= to && (state.showDone || !t.done) && (!q || String(t.title || '').toLowerCase().includes(q)))
@@ -147,7 +154,7 @@ function todoEntries(from, to) {
 
 /** Steuertermine (Voranmeldung, Jahreserklärungen) als Kalendereinträge. */
 function taxEntries(from, to) {
-  if (!kann('steuertermine') || state.suche || state.tags.size) return [];
+  if (!state.showKontovia || !kann('steuertermine') || state.suche || state.tags.size) return [];
   return steuertermine(sel.settings(), from, to).map((t, i) => ({
     ...t,
     id: `tax_${t.datum}_${i}`,
@@ -206,16 +213,25 @@ export async function render(root, params, { actions } = {}) {
       const google = kal.filter((k) => k.art === 'google');
       const tags = alleTags(sel.appointments());
       const kalOption = (k) => ({ value: k.key, label: k.name, sub: k.readOnly ? 'nur lesen' : '', on: !state.kalenderAus.has(k.key), count: k.anzahl });
+      const googleDa = google.length > 0 || !!calState.status?.linked;
       return [{
         key: 'show',
-        title: 'Im Kalender zeigen',
+        title: 'Woher die Einträge kommen',
         options: [
+          { value: 'showKontovia', label: 'Kontovia', sub: googleDa ? 'aus: nur Google, also privat' : '', on: state.showKontovia },
+          googleDa && { value: 'showGoogle', label: 'Google Kalender', on: state.showGoogle },
+        ].filter(Boolean),
+      }, {
+        key: 'show',
+        title: 'Aus Kontovia zeigen',
+        options: state.showKontovia ? [
+          { value: 'showTermine', label: 'Meine Termine', on: state.showTermine },
           state.mode !== 'agenda' && { value: 'showDue', label: 'Zahlungstermine offener Rechnungen', on: state.showDue },
           { value: 'showEvents', label: 'Veranstaltungen aus Anzahlungen', on: state.showEvents },
           { value: 'showTax', label: 'Steuertermine (Voranmeldung, Erklärungen)', on: state.showTax },
           { value: 'showTodos', label: 'Aufgaben mit Fälligkeit', on: state.showTodos },
           { value: 'showDone', label: 'Erledigte Termine', on: state.showDone },
-        ].filter(Boolean),
+        ].filter(Boolean) : [{ value: 'showKontovia', label: 'Kontovia ist ausgeblendet', sub: 'zum Einblenden tippen', on: false }],
       }, lokal.length > 1 && { key: 'kal', title: google.length ? 'Meine Kalender' : 'Kalender', options: lokal.map(kalOption) },
       google.length > 0 && { key: 'kal', title: 'Google Kalender', options: google.map(kalOption) },
       tags.length > 0 && {
@@ -241,7 +257,7 @@ export async function render(root, params, { actions } = {}) {
   // Beim Öffnen des Kalenders frisch abgleichen, wenn der letzte Abgleich
   // ein paar Minuten zurückliegt – dann stimmt, was hier steht.
   const st = await refreshCalendarStatus();
-  if (st?.linked && !st.bestaetigen && !calState.running && seitAbgleich() > 3 * 60 * 1000) {
+  if (st?.linked && !calState.running && seitAbgleich() > 3 * 60 * 1000) {
     syncCalendar({ reason: 'kalender' }).then((r) => { if (r?.summary && r.summary !== 'alles auf dem gleichen Stand' && kalenderOffen(root)) draw(root); }).catch(() => {});
   }
 }
@@ -413,6 +429,12 @@ function draw(root, { bewegung = '' } = {}) {
     kalenderWechsel(new Set());
     root.querySelector('.cal-chip')?.focus();
   });
+  root.querySelector('#calPrivat')?.addEventListener('click', () => {
+    state.showKontovia = !state.showKontovia;
+    if (!state.showKontovia) state.showGoogle = true;
+    merken();
+    draw(root);
+  });
   root.querySelector('#calKalender')?.addEventListener('click', () => openKalenderVerwaltung().then(() => draw(root)));
 
   wireSyncBadge(root);
@@ -458,8 +480,13 @@ function reiterNachziehen(root) {
  * dem Konto geteilten Google-Kalender. Ein Kalender mit Schloss ist nur lesbar.
  */
 function tabsHtml(kal) {
-  if (kal.length < 2) return `<div class="cal-tabs"><span class="spacer"></span>${verwaltenKnopf()}</div>`;
+  // Mit Google verbunden: ein Tipp stellt auf „privat“ (nur Google) und wieder zurück.
+  const privat = (kal.some((k) => k.art === 'google') || calState.status?.linked)
+    ? `<button type="button" class="chip" id="calPrivat" aria-pressed="${!state.showKontovia}" title="Blendet alles aus Kontovia aus und zeigt nur die Google-Kalender. Feiner einstellen: Anzeige oben rechts.">${icon('hide', 13).__raw} ${state.showKontovia ? 'Nur privat' : 'Kontovia einblenden'}</button>`
+    : '';
+  if (kal.length < 2) return `<div class="cal-tabs">${privat}<span class="spacer"></span>${verwaltenKnopf()}</div>`;
   return `<div class="cal-tabs" role="group" aria-label="Kalender ein- und ausblenden">
+    ${privat}
     ${kal.map((k) => {
       const an = !state.kalenderAus.has(k.key);
       const titel = `${k.art === 'google' ? `Google Kalender „${k.name}“${k.readOnly ? ', nur lesen' : ''}` : k.name}. Klick blendet ein oder aus, Doppelklick zeigt nur diesen.`;
@@ -480,10 +507,13 @@ const verwaltenKnopf = () => `<button type="button" class="btn sm ghost" id="cal
  */
 function hiddenHint() {
   const weg = [
-    state.mode !== 'agenda' && !state.showDue && 'Zahlungstermine',
-    !state.showEvents && 'Veranstaltungen',
-    !state.showTax && 'Steuertermine',
-    !state.showTodos && 'Aufgaben',
+    !state.showKontovia && 'Kontovia',
+    !state.showGoogle && 'Google Kalender',
+    state.showKontovia && !state.showTermine && 'Meine Termine',
+    state.showKontovia && state.mode !== 'agenda' && !state.showDue && 'Zahlungstermine',
+    state.showKontovia && !state.showEvents && 'Veranstaltungen',
+    state.showKontovia && !state.showTax && 'Steuertermine',
+    state.showKontovia && !state.showTodos && 'Aufgaben',
     !state.showDone && 'Erledigte',
   ].filter(Boolean);
   const tags = state.tags.size ? `<span class="small cal-hinweis-teil" title="Über „Anzeige“ oben rechts ändern">${icon('tag', 13).__raw} ${esc([...state.tags].join(', '))}</span>` : '';

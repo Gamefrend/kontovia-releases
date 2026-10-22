@@ -21,7 +21,9 @@
  * Abgleich, bis jemand kurz bestätigt. Das öffnet dasselbe Fenster; Google
  * kennt die Freigabe dann schon und schließt es meist sofort wieder. Ein
  * Fenster öffnen darf eine Seite nur auf einen Tipp hin, deshalb geschieht
- * das nicht von selbst.
+ * das nicht von selbst. Ein unsichtbarer Rahmen darf es aber: Vorher versucht
+ * still() die Erneuerung mit `prompt=none` (stillOeffnen); gelingt sie, merkt
+ * niemand etwas, sonst bleibt es beim Tipp.
  *
  * Im Tresor (Cloud-Block, nur dieses Gerät) stehen wie früher unter Windows
  * Konto, Kalender und der Merkzettel des Abgleichs, aber kein Schlüssel.
@@ -59,6 +61,9 @@ const ABBRUCH = ['BESTAETIGEN', 'NICHT_VERBUNDEN', 'SCHNITTSTELLE_AUS', 'KEINE_B
 const PRAEFIX = 'kal.';
 const KANAL = 'kontovia-google';
 const FENSTER_MS = 5 * 60 * 1000;
+/** Wie lange die stille Erneuerung auf Google wartet, und ab wann ein Token als „läuft bald ab“ gilt. */
+const STILL_MS = 15 * 1000;
+const BALD_MS = 10 * 60 * 1000;
 const MERKZETTEL = 'kontovia.kal.weiterleitung';
 const GUELTIG_MS = 15 * 60 * 1000;
 
@@ -254,6 +259,52 @@ export function fensterOeffnen({ clientId, scopes, loginHint = '', prompt = '' }
   return { ergebnis, abbrechen: () => abbrechen() };
 }
 
+/**
+ * Stille Erneuerung: Dieselbe Anfrage wie im Fenster, aber mit `prompt=none` in einem
+ * unsichtbaren Rahmen. Kennt Google die Freigabe und die Anmeldung noch, kommt das neue
+ * Zugriffstoken ohne Tipp zurück; sonst (Anmeldung abgelaufen, Browser sperrt Cookies von
+ * Drittseiten) kommt ein Fehler, und es bleibt bei der Bestätigung per Tipp. Die Antwort
+ * trifft wie beim Fenster die Startseite im Rahmen, die sie über den Kanal weiterreicht.
+ * @returns {Promise<object>} wie antwortLesen()
+ */
+export function stillOeffnen({ clientId, scopes, loginHint }, {
+  href = globalThis.location?.href, doc = globalThis.document, Kanal = globalThis.BroadcastChannel, wartezeit = STILL_MS,
+} = {}) {
+  return new Promise((resolve, reject) => {
+    if (!clientId || !loginHint || !doc?.body || !Kanal) { reject(fehler('Stille Erneuerung nicht möglich.', 'STILL_NICHT_MOEGLICH')); return; }
+    const erwartet = { state: PRAEFIX + zufall(), nonce: zufall() };
+    const rahmen = doc.createElement('iframe');
+    let kanal = null;
+    let frist = null;
+    const fertig = (fn, wert) => {
+      clearTimeout(frist);
+      try { kanal?.close(); } catch { /* egal */ }
+      try { rahmen.remove(); } catch { /* egal */ }
+      fn(wert);
+    };
+    try {
+      kanal = new Kanal(KANAL);
+      kanal.onmessage = (e) => {
+        const d = e?.data;
+        if (!d || d.typ !== KANAL) return;
+        try {
+          const antwort = antwortLesen(d.hash, erwartet);
+          if (antwort) fertig(resolve, antwort);
+        } catch (err) {
+          fertig(reject, err);
+        }
+      };
+    } catch { reject(fehler('Stille Erneuerung nicht möglich.', 'STILL_NICHT_MOEGLICH')); return; }
+    frist = setTimeout(() => fertig(reject, fehler('Google hat nicht still geantwortet.', 'STILL_ZEIT')), wartezeit);
+    rahmen.setAttribute('aria-hidden', 'true');
+    rahmen.setAttribute('tabindex', '-1');
+    rahmen.setAttribute('title', 'Stille Erneuerung der Google-Freigabe');
+    rahmen.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none';
+    rahmen.src = anfrageAdresse({ clientId, scopes, loginHint, prompt: 'none', href, ...erwartet });
+    doc.body.append(rahmen);
+  });
+}
+
 /* -------------------------------------------------------------------------- */
 /* Kalender                                                                    */
 /* -------------------------------------------------------------------------- */
@@ -265,10 +316,12 @@ export class GoogleCalendar {
    *   fenster und anfrage ersetzen in Prüfungen das Fenster bei Google und das Netz.
    *   umgebung: { weiterleiten: () => boolean, navigieren: (url) => void, speicher, href }
    */
-  constructor(vault, { clientId, fenster = fensterOeffnen, anfrage = requestJson, umgebung = {} } = {}) {
+  constructor(vault, { clientId, fenster = fensterOeffnen, still = stillOeffnen, anfrage = requestJson, umgebung = {} } = {}) {
     this.vault = vault;
     this.clientId = clientId;
     this.fenster = fenster;
+    this.stillFenster = still;
+    this.stillLauf = null; // laufende stille Erneuerung, damit zwei Aufrufer nicht zwei Rahmen öffnen
     this.anfrage = anfrage;
     this.umgebung = {
       // Standard: nur die App auf dem Home-Bildschirm von iPhone und iPad.
@@ -317,6 +370,8 @@ export class GoogleCalendar {
       linked,
       // Ohne gültiges Zugriffstoken wartet der Abgleich auf eine kurze Bestätigung.
       bestaetigen: linked && !this.tokenGueltig(),
+      // Noch gültig, aber nicht mehr lange: Zeit für die stille Erneuerung, bevor ein Abgleich scheitert.
+      laeuftBaldAb: linked && this.tokenGueltig() && this.token.expiresAt - Date.now() < BALD_MS,
       weitereErlaubt: linked && scopes.includes(SCOPE_EVENTS) && scopes.includes(SCOPE_LISTE),
       email: g.email || '',
       calendarId: g.calendarId || '',
@@ -451,6 +506,34 @@ export class GoogleCalendar {
     const weitere = String(g.scope || '').split(/\s+/).includes(SCOPE_EVENTS);
     const auth = await this.anfordern({ weitere, loginHint: g.email || '', zweck: 'bestaetigen', umleiten });
     return this.uebernehmen(auth);
+  }
+
+  /**
+   * Versucht, das Zugriffstoken ohne Tipp zu erneuern (unsichtbarer Rahmen, `prompt=none`).
+   * Wirft nie: Gelingt es nicht, bleibt alles, wie es ist, und die Bestätigung per Tipp gilt.
+   * @returns {Promise<{ok:boolean, grund?:string}>}
+   */
+  still() {
+    this.stillLauf ??= this.stillErneuern().finally(() => { this.stillLauf = null; });
+    return this.stillLauf;
+  }
+
+  async stillErneuern() {
+    try {
+      const g = this.state();
+      if (!(g.calendarId && g.linkedAt)) return { ok: false, grund: 'NICHT_VERBUNDEN' };
+      if (this.tokenGueltig() && this.token.expiresAt - Date.now() >= BALD_MS) return { ok: true };
+      // Die App auf dem Home-Bildschirm von iPhone und iPad hat kein zweites Fenster, und ein Rahmen sieht Googles Anmeldung dort nicht.
+      if (!g.email || this.umgebung.weiterleiten()) return { ok: false, grund: 'STILL_NICHT_MOEGLICH' };
+      const weitere = String(g.scope || '').split(/\s+/).includes(SCOPE_EVENTS);
+      const scopes = ['openid', 'email', SCOPE, ...(weitere ? [SCOPE_EVENTS, SCOPE_LISTE] : [])];
+      const auth = await this.stillFenster({ clientId: this.clientId, scopes, loginHint: g.email }, { href: this.umgebung.href });
+      this.angenommen(auth);
+      await this.uebernehmen(auth);
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, grund: e.code || 'STILL_FEHLER' };
+    }
   }
 
   /** Setzt das neue Zugriffstoken einer Bestätigung ein, wenn es zum verbundenen Konto gehört. */
