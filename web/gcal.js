@@ -688,7 +688,8 @@ export class GoogleCalendar {
    * Die Kalender des Kontos, die Kontovia lesen darf, ohne den eigenen.
    * `readOnly`: nur lesbar (geteilt oder abonniert). `geteilt`: gehört jemand
    * anderem und wurde mit dem Konto geteilt. `sonder`: von Google selbst
-   * geführt (Feiertage, Geburtstage). `angezeigt`: in Google eingeblendet.
+   * geführt (Feiertage, Geburtstage). `angezeigt`: in Google nicht ausgeblendet. Ob der Haken in
+   * Google gesetzt ist, zählt nicht: Wer einen Kalender teilt, will ihn auch hier sehen.
    */
   async kalenderListe() {
     const g = this.state();
@@ -704,7 +705,7 @@ export class GoogleCalendar {
           id: String(c.id), name: String(c.summaryOverride || c.summary || c.id).slice(0, 200),
           primary: !!c.primary, color: String(c.backgroundColor || '').slice(0, 20),
           readOnly: rolle === 'reader', geteilt: rolle !== 'owner' && !c.primary,
-          sonder: /@group\.v\.calendar\.google\.com$/.test(String(c.id)), angezeigt: c.selected !== false && !c.hidden,
+          sonder: /@group\.v\.calendar\.google\.com$/.test(String(c.id)), angezeigt: !c.hidden,
         });
       }
       pageToken = r?.nextPageToken;

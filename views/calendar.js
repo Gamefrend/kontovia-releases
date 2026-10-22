@@ -21,7 +21,7 @@ import { refresh } from '../lib/router.js';
 import { fokusMerken } from '../lib/fokus.js';
 import { prefs, setPref } from '../lib/prefs.js';
 import { openTransactionDialog } from './transactions.js';
-import { openCalendarSyncDialog, statusText, bestaetigen } from './calendarsync.js';
+import { openCalendarSyncDialog, statusText, bestaetigen, geteilteFreigeben } from './calendarsync.js';
 import { calState, onCalendarSync, refreshCalendarStatus, syncCalendar, calendarSettings, seitAbgleich } from '../lib/gcalsync.js';
 import { eventIdFor } from '../lib/gcal.js';
 import { openMenu } from '../lib/popover.js';
@@ -65,6 +65,7 @@ function merken() {
 
 const FREQ = { none: 'einmalig', daily: 'täglich', weekly: 'wöchentlich', biweekly: 'alle zwei Wochen', monthly: 'monatlich', yearly: 'jährlich' };
 const STUNDE_PX = 48; // Höhe einer Stunde im Zeitraster
+const MIN_TERMIN_PX = 24; // so niedrig ist ein Termin im Zeitraster mindestens (eine Zeile Text)
 
 /* -------------------------------------------------------------------------- */
 /* Einträge                                                                    */
@@ -362,10 +363,10 @@ function draw(root, { bewegung = '' } = {}) {
         <div class="spacer"></div>
         <input type="search" class="search" id="calSearch" placeholder="Termine suchen …" aria-label="Termine suchen" value="${state.suche}">
         ${raw(syncBadge())}
-        <span id="calHint" class="cal-hinweis">${raw(hiddenHint())}</span>
       </div>
       <div class="cal-body">
         ${raw(tabsHtml(kal))}
+        ${raw(quellenHtml())}
         <div class="cal-quick">
           <span class="cal-quick-icon" aria-hidden="true">${icon('plus', 14)}</span>
           <input id="calQuick" placeholder="Schnell eintragen, z. B. „morgen 14:00 Steuerberater“ oder „Fr 9-10 Zahnarzt #privat“" aria-label="Termin schnell eintragen">
@@ -429,11 +430,18 @@ function draw(root, { bewegung = '' } = {}) {
     kalenderWechsel(new Set());
     root.querySelector('.cal-chip')?.focus();
   });
-  root.querySelector('#calPrivat')?.addEventListener('click', () => {
-    state.showKontovia = !state.showKontovia;
-    if (!state.showKontovia) state.showGoogle = true;
+  // Die Schalter für Kontovia: nur Zustand und Inhalt ändern sich, die Leiste bleibt, wie sie ist.
+  $$('.cal-quelle', root).forEach((b) => b.addEventListener('click', () => {
+    const key = b.dataset.quelle;
+    state[key] = !state[key];
+    if (key === 'showKontovia' && !state.showKontovia) state.showGoogle = true;
     merken();
-    draw(root);
+    reiterNachziehen(root);
+    drawInhalt(root);
+  }));
+  root.querySelector('#calGeteilt')?.addEventListener('click', async () => {
+    await geteilteFreigeben();
+    if (kalenderOffen(root)) draw(root);
   });
   root.querySelector('#calKalender')?.addEventListener('click', () => openKalenderVerwaltung().then(() => draw(root)));
 
@@ -473,6 +481,14 @@ function reiterNachziehen(root) {
   });
   const alle = root.querySelector('#calAlle');
   if (alle) alle.hidden = state.kalenderAus.size === 0;
+  $$('.cal-quelle', root).forEach((b) => {
+    const kopf = b.classList.contains('haupt');
+    const key = b.dataset.quelle;
+    const an = kopf ? state.showKontovia : state.showKontovia && state[key];
+    b.classList.toggle('aus', !an);
+    b.setAttribute('aria-pressed', String(an));
+    if (!kopf) b.disabled = !state.showKontovia || (QUELLEN.find((q) => q.key === key)?.nichtListe && state.mode === 'agenda');
+  });
 }
 
 /**
@@ -480,22 +496,46 @@ function reiterNachziehen(root) {
  * dem Konto geteilten Google-Kalender. Ein Kalender mit Schloss ist nur lesbar.
  */
 function tabsHtml(kal) {
-  // Mit Google verbunden: ein Tipp stellt auf „privat“ (nur Google) und wieder zurück.
-  const privat = (kal.some((k) => k.art === 'google') || calState.status?.linked)
-    ? `<button type="button" class="chip" id="calPrivat" aria-pressed="${!state.showKontovia}" title="Blendet alles aus Kontovia aus und zeigt nur die Google-Kalender. Feiner einstellen: Anzeige oben rechts.">${icon('hide', 13).__raw} ${state.showKontovia ? 'Nur privat' : 'Kontovia einblenden'}</button>`
+  // Mit Google verbunden, aber ohne Freigabe für weitere Kalender: ein Tipp führt zur Freigabe,
+  // danach erscheinen die mit dem Konto geteilten Kalender von selbst.
+  const geteilt = calState.status?.linked && calState.status?.weitereErlaubt === false
+    ? `<button type="button" class="chip cal-chip cal-freigabe" id="calGeteilt" title="Geteilte Google-Kalender anzeigen: Kontovia braucht dafür einmal Ihre Freigabe bei Google.">${icon('calendar', 13).__raw} Geteilte Kalender anzeigen</button>`
     : '';
-  if (kal.length < 2) return `<div class="cal-tabs">${privat}<span class="spacer"></span>${verwaltenKnopf()}</div>`;
+  if (kal.length < 2) return `<div class="cal-tabs">${geteilt}<span class="spacer"></span>${verwaltenKnopf()}</div>`;
   return `<div class="cal-tabs" role="group" aria-label="Kalender ein- und ausblenden">
-    ${privat}
     ${kal.map((k) => {
       const an = !state.kalenderAus.has(k.key);
       const titel = `${k.art === 'google' ? `Google Kalender „${k.name}“${k.readOnly ? ', nur lesen' : ''}` : k.name}. Klick blendet ein oder aus, Doppelklick zeigt nur diesen.`;
       return `<button type="button" class="chip cal-chip${an ? '' : ' aus'}" aria-pressed="${an}" data-kal="${esc(k.key)}" style="--c:${esc(k.color || 'var(--accent)')}" title="${esc(titel)}">
         <span class="cal-dot"></span><span class="cal-chip-name">${esc(k.name)}</span>${k.readOnly ? `<span class="cal-chip-lesen" aria-label="nur lesen">${icon('lock', 11).__raw}</span>` : ''}${k.art === 'google' && !k.readOnly ? '<span class="tiny muted">Google</span>' : ''}</button>`;
     }).join('')}
+    ${geteilt}
     <button type="button" class="chip cal-alle" id="calAlle" ${state.kalenderAus.size ? '' : 'hidden'}>Alle zeigen</button>
     <span class="spacer"></span>
     ${verwaltenKnopf()}
+  </div>`;
+}
+
+/** Was aus Kontovia im Kalender stehen kann, je Art ein Schalter. Die Schalter bleiben immer stehen (nur ihr Zustand wechselt), damit nichts verrutscht. */
+const QUELLEN = [
+  { key: 'showTermine', label: 'Termine', farbe: 'var(--accent)', titel: 'Die in Kontovia angelegten Termine' },
+  { key: 'showDue', label: 'Zahlungen', farbe: 'var(--warn)', titel: 'Fälligkeiten offener Rechnungen (nicht in der Liste)', nichtListe: true },
+  { key: 'showEvents', label: 'Veranstaltungen', farbe: 'var(--accent)', titel: 'Veranstaltungstage aus Anzahlungen' },
+  { key: 'showTax', label: 'Steuertermine', farbe: 'var(--warn)', titel: 'Voranmeldung und Erklärungen' },
+  { key: 'showTodos', label: 'Aufgaben', farbe: 'var(--pos)', titel: 'Aufgaben mit Fälligkeit' },
+];
+
+function quellenHtml() {
+  const chip = (q, { kopf = false } = {}) => {
+    const an = kopf ? state.showKontovia : state.showKontovia && state[q.key];
+    const aus = !kopf && (!state.showKontovia || (q.nichtListe && state.mode === 'agenda'));
+    return `<button type="button" class="chip cal-chip cal-quelle${kopf ? ' haupt' : ''}${an ? '' : ' aus'}" data-quelle="${q.key}" aria-pressed="${an}" ${aus ? 'disabled' : ''} style="--c:${q.farbe}" title="${esc(q.titel)}">
+      <span class="cal-dot"></span><span class="cal-chip-name">${esc(q.label)}</span></button>`;
+  };
+  return `<div class="cal-tabs cal-quellen" role="group" aria-label="Was aus Kontovia im Kalender steht">
+    ${chip({ key: 'showKontovia', label: 'Kontovia', farbe: 'var(--accent)', titel: 'Alles aus Kontovia ein- oder ausblenden; aus: nur die Google-Kalender' }, { kopf: true })}
+    ${QUELLEN.map((q) => chip(q)).join('')}
+    <span id="calHint" class="cal-hinweis">${hiddenHint()}</span>
   </div>`;
 }
 
@@ -506,14 +546,9 @@ const verwaltenKnopf = () => `<button type="button" class="btn sm ghost" id="cal
  * Geändert wird es über „Anzeige“ oben rechts.
  */
 function hiddenHint() {
+  // Was aus Kontovia stammt, zeigen die Schalter darüber selbst.
   const weg = [
-    !state.showKontovia && 'Kontovia',
     !state.showGoogle && 'Google Kalender',
-    state.showKontovia && !state.showTermine && 'Meine Termine',
-    state.showKontovia && state.mode !== 'agenda' && !state.showDue && 'Zahlungstermine',
-    state.showKontovia && !state.showEvents && 'Veranstaltungen',
-    state.showKontovia && !state.showTax && 'Steuertermine',
-    state.showKontovia && !state.showTodos && 'Aufgaben',
     !state.showDone && 'Erledigte',
   ].filter(Boolean);
   const tags = state.tags.size ? `<span class="small cal-hinweis-teil" title="Über „Anzeige“ oben rechts ändern">${icon('tag', 13).__raw} ${esc([...state.tags].join(', '))}</span>` : '';
@@ -553,13 +588,14 @@ function cellHtml(date, monthRef, items, index = 0) {
   const other = date.slice(0, 7) !== monthRef.slice(0, 7);
   const dow = (fromISO(date).getDay() + 6) % 7;
   const cls = ['cal-cell', other ? 'other' : '', date === todayISO() ? 'today' : '', dow >= 5 ? 'weekend' : ''].filter(Boolean).join(' ');
-  const shown = items.slice(0, 3);
+  // Die Zellen haben eine feste Höhe: bis zu drei Einträge, bei mehr zwei und der Rest hinter „weitere“.
+  const shown = items.slice(0, items.length > 3 ? 2 : 3);
   const more = items.length - shown.length;
   // Der vorgelesene Name ist der sichtbare Inhalt (Tag, Einträge) und dahinter, was ein Klick tut.
   return `<div class="${cls}" data-day="${date}" data-drop="1" tabindex="0" role="button" style="--z:${index}">
     <div class="cal-day">${Number(date.slice(8, 10))}<span class="sr-only">. ${esc(fmtDate(date))}</span></div>
     <div class="cal-evs">
-      ${shown.map((e) => evHtml(e)).join('')}
+      ${shown.map((e) => (items.length <= 2 ? evHtml(e).replace('class="cal-ev', 'class="cal-ev mehrzeilig') : evHtml(e))).join('')}
       ${more > 0 ? `<button type="button" class="cal-more" data-more="${date}">+ ${more} weitere</button>` : ''}
     </div>
     <span class="sr-only">, neuer Termin</span>
@@ -588,7 +624,14 @@ function weekHtml(from, to) {
     <span class="w">${esc(WEEKDAYS[(fromISO(d).getDay() + 6) % 7])}</span> <span class="d">${Number(d.slice(8, 10))}</span></button>`).join('');
   const ganzZeilen = tage.map((d) => `<div class="cal-allday-cell" data-day="${d}" data-drop="1">${(ganz.get(d) || []).map((e) => evHtml(e, { zeit: false })).join('')}</div>`).join('');
   const spalten = tage.map((d) => {
-    const lage = tagesLage(zeitlich.get(d) || []);
+    // In der Woche sind die Spalten schmal: Mehr als zwei Termine zugleich stehen nicht mehr nebeneinander,
+    // der Rest steht hinter „+n“, das den Tag öffnet.
+    const maxSpalten = state.mode === 'week' ? 2 : 6;
+    const alleLage = tagesLage(zeitlich.get(d) || []);
+    const lage = alleLage.filter((x) => x.spalte < maxSpalten).map((x) => ({ ...x, spalten: Math.min(x.spalten, maxSpalten) }));
+    const versteckt = new Map();
+    for (const x of alleLage) if (x.spalte >= maxSpalten) { const v = versteckt.get(x.gruppe) || { von: x.von, n: 0 }; v.n++; v.von = Math.min(v.von, x.von); versteckt.set(x.gruppe, v); }
+    const mehr = [...versteckt.values()].map((v) => `<button type="button" class="cal-mehr" data-goday="${d}" style="top:${(v.von / 60) * STUNDE_PX + 2}px" title="${esc(`${v.n} weitere Termine zur gleichen Zeit, Tag ansehen`)}">+${v.n}</button>`).join('');
     const slots = [];
     for (let m = 0; m < 1440; m += 30) {
       const t = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
@@ -597,16 +640,24 @@ function weekHtml(from, to) {
     }
     const evs = lage.map(({ e, von, bis, spalte, spalten: n }) => {
       const top = (von / 60) * STUNDE_PX;
-      const h = Math.max(18, ((bis - von) / 60) * STUNDE_PX - 2);
+      const h = Math.max(MIN_TERMIN_PX, ((bis - von) / 60) * STUNDE_PX - 2);
       const hinweis = [e.title, `${e.startTime}${e.endTime ? ' bis ' + e.endTime : ''}`, e.location, e.extern ? `Google Kalender „${kalenderName(e.extern)}“${e.nurLesen ? ', nur lesen' : ''}` : ''].filter(Boolean).join(' · ');
-      return `<div class="cal-ev cal-timed ${e.done ? 'done' : ''}${e.nurLesen ? ' cal-lesen' : ''}" data-appt="${esc(e.id)}" data-occ="${esc(e.spanStart || e.occurrence)}" ${e.nurLesen ? '' : 'draggable="true"'}
-        style="top:${top}px;height:${h}px;left:calc(${(spalte / n) * 100}% + 1px);width:calc(${100 / n}% - 3px);${e.farbe ? `--ev:${esc(e.farbe)}` : ''}" title="${esc(hinweis)}">
-        <span class="t">${esc(e.startTime)}${e.endTime ? ' bis ' + esc(e.endTime) : ''}</span>
-        <span class="n">${esc(e.title)}</span>${e.location ? `<span class="l">${esc(e.location)}</span>` : ''}
+      // Der Text richtet sich nach dem Platz: Wie viele Zeilen passen, bestimmt, wie viel zu sehen ist.
+      // Was nicht hineinpasst, wird mit „…“ gekürzt (der volle Text steht im Hinweis beim Überfahren).
+      const zeilen = Math.max(1, Math.floor((h - 6) / 15));
+      const schmal = n >= 3; // drei und mehr nebeneinander: die Uhrzeit steht nur im Hinweis
+      const kurz = zeilen < 2;
+      // Zwei Einträge nebeneinander in der Woche sind schmal: In einer einzelnen Zeile bekommt der Name den ganzen Platz.
+      const mitZeit = !schmal && !(kurz && n > 1 && state.mode === 'week');
+      const ort = e.location && !kurz && !schmal && zeilen >= 3 ? `<span class="l">${esc(e.location)}</span>` : '';
+      const nameZeilen = kurz ? 1 : Math.max(1, zeilen - (mitZeit ? 1 : 0) - (ort ? 1 : 0));
+      return `<div class="cal-ev cal-timed${kurz ? ' kurz' : ''}${e.done ? ' done' : ''}${e.nurLesen ? ' cal-lesen' : ''}" data-appt="${esc(e.id)}" data-occ="${esc(e.spanStart || e.occurrence)}" ${e.nurLesen ? '' : 'draggable="true"'}
+        style="top:${top}px;height:${h}px;left:calc(${(spalte / n) * 100}% + 1px);width:calc(${100 / n}% - 3px);--zeilen:${nameZeilen};${e.farbe ? `--ev:${esc(e.farbe)}` : ''}" title="${esc(hinweis)}">
+        ${mitZeit ? `<span class="t">${esc(e.startTime)}${e.endTime && !kurz ? ' bis ' + esc(e.endTime) : ''}</span>` : ''}<span class="n">${esc(e.title)}</span>${ort}
       </div>`;
     }).join('');
     const now = d === heute ? `<div class="cal-now" style="top:${(jetztMin / 60) * STUNDE_PX}px"></div>` : '';
-    return `<div class="cal-daycol ${d === heute ? 'today' : ''}" data-day="${d}">${slots.join('')}${evs}${now}</div>`;
+    return `<div class="cal-daycol ${d === heute ? 'today' : ''}" data-day="${d}">${slots.join('')}${evs}${mehr}${now}</div>`;
   }).join('');
   // Der ganze Block scrollt, Kopf und ganztägige Zeile bleiben oben stehen: So liegen die Spalten
   // immer unter ihren Tagen, auch wenn die Bildlaufleiste Platz braucht.

@@ -660,12 +660,12 @@ tr.unlisted td:not(:last-child) { color: var(--text-2); }
 /* Kalender: Karte aus Kopfleiste und Inhalt, überall 16 px Rand. Das Monatsraster hat einen eigenen
    Rahmen mit Haarlinien dazwischen (1 px Abstand auf Linienfarbe), so gibt es keine doppelten Ränder. */
 .cal-grid {
-  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px;
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); grid-template-rows: auto repeat(6, 124px); gap: 1px;
   background: var(--border); border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden;
 }
 .cal-head { padding: 9px 8px; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; color: var(--muted); text-transform: uppercase; text-align: center; background: var(--surface-2); }
 .cal-cell {
-  min-height: 116px; padding: 6px 6px 5px; cursor: pointer; position: relative; background: var(--surface);
+  height: 124px; overflow: hidden; padding: 6px 6px 5px; cursor: pointer; position: relative; background: var(--surface);
   display: flex; flex-direction: column; gap: 3px; min-width: 0;
   transition: background .18s;
 }
@@ -697,6 +697,8 @@ tr.unlisted td:not(:last-child) { color: var(--text-2); }
 /* Nur lesbar (mit dem Konto geteilter Google-Kalender): feine Schraffur statt Griff zum Verschieben. */
 .cal-ev.cal-lesen { background-image: repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--ev, var(--accent)) 13%, transparent) 5px 7px); cursor: pointer; }
 .cal-more { font-size: 11px; color: var(--muted); padding-left: 4px; }
+/* Hat ein Tag höchstens zwei Einträge, ist Platz für zwei Zeilen Text; sonst bleibt es bei einer Zeile mit „…“. */
+.cal-ev.mehrzeilig { white-space: normal; overflow-wrap: anywhere; hyphens: auto; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 
 /* Aufgaben */
 .todo-add { display: flex; gap: 8px; margin-bottom: 16px; }
@@ -2269,7 +2271,13 @@ html[data-theme="dark"] { --krone: #f0bf61; }
 .cal-chip-lesen .ico { width: 11px; height: 11px; }
 .cal-alle { color: var(--accent); background: transparent; border: 1px solid transparent; font-weight: 550; animation: kal-chip-ein .3s var(--aus); }
 .cal-alle:hover { background: var(--accent-soft); }
-.cal-alle[hidden] { display: none; }
+.cal-alle[hidden] { display: inline-flex; visibility: hidden; } /* behält seinen Platz, damit nichts verrutscht */
+.cal-chip:disabled { opacity: .45; cursor: default; }
+.cal-chip.cal-freigabe { border-style: dashed; color: var(--accent); }
+/* Schalter für das, was aus Kontovia stammt: eine feste Zeile, nur ihr Zustand wechselt */
+.cal-quellen { min-height: 30px; box-sizing: content-box; }
+.cal-quelle.haupt { font-weight: 600; margin-right: 6px; }
+.cal-quellen .cal-hinweis { margin-left: auto; flex-wrap: nowrap; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @keyframes kal-chip-ein { from { opacity: 0; transform: translateX(-6px); } }
 
 /* Schnelleingabe: Feld mit Plus davor, der Hinweis darunter */
@@ -2334,16 +2342,28 @@ button.cal-more:hover { background: var(--accent-soft); }
 .cal-slot { border-bottom: 1px solid var(--border); box-sizing: border-box; cursor: pointer; transition: background .15s; }
 .cal-slot.half { border-bottom-style: dashed; border-bottom-color: color-mix(in srgb, var(--border) 55%, transparent); }
 .cal-slot:hover { background: var(--surface-2); }
+/* Termine im Zeitraster: Der Text richtet sich nach dem Platz. Die Zeilenzahl für den Namen kommt aus der
+   Ansicht (--zeilen), was nicht passt, wird mit „…“ gekürzt. Ein ganz niedriger Termin hat Zeit und Name in einer Zeile. */
 .cal-ev.cal-timed {
-  position: absolute; margin: 0; white-space: normal; overflow: hidden; display: flex; flex-direction: column; gap: 1px;
-  padding: 4px 7px; font-size: 11.5px; line-height: 1.28; box-sizing: border-box; z-index: 1;
+  position: absolute; margin: 0; white-space: normal; overflow: hidden; display: flex; flex-direction: column; gap: 0;
+  padding: 3px 6px 3px 7px; font-size: 11.5px; line-height: 15px; box-sizing: border-box; z-index: 1;
   background: color-mix(in srgb, var(--accent) 16%, var(--surface)); border-left-width: 3px; border-radius: 6px;
+  box-shadow: 0 0 0 1px var(--surface);
 }
 .cal-ev.cal-timed[style*="--ev"] { background: color-mix(in srgb, var(--ev) 18%, var(--surface)); }
 .cal-ev.cal-timed:hover { z-index: 3; }
-.cal-ev.cal-timed .t { font-weight: 600; font-size: 10.5px; opacity: .85; font-variant-numeric: tabular-nums; }
-.cal-ev.cal-timed .n { font-weight: 600; }
-.cal-ev.cal-timed .l { font-size: 10.5px; opacity: .8; }
+.cal-ev.cal-timed .t { flex: none; font-weight: 600; font-size: 10.5px; opacity: .85; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-ev.cal-timed .n { font-weight: 600; min-width: 0; overflow: hidden; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: var(--zeilen, 1); line-clamp: var(--zeilen, 1); }
+.cal-ev.cal-timed .l { flex: none; font-size: 10.5px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-ev.cal-timed .n { hyphens: auto; overflow-wrap: break-word; }
+.cal-mehr {
+  position: absolute; right: 3px; z-index: 3; border: 0; border-radius: 9px; padding: 0 7px; min-height: 24px; line-height: 24px;
+  font: inherit; font-size: 10.5px; font-weight: 650; background: var(--text-2); color: var(--surface); cursor: pointer;
+}
+.cal-mehr:hover { background: var(--accent); color: var(--accent-text); }
+.cal-mehr:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.cal-ev.cal-timed.kurz { flex-direction: row; align-items: center; gap: 5px; padding-top: 0; padding-bottom: 0; }
+.cal-ev.cal-timed.kurz .n { display: block; flex: 1 1 0; white-space: nowrap; text-overflow: ellipsis; }
 .cal-now { position: absolute; left: 0; right: 0; height: 2px; background: var(--neg); z-index: 2; pointer-events: none; }
 .cal-now::before { content: ''; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--neg); }
 

@@ -187,7 +187,8 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
   #toasts { left: 12px; right: 12px; }
   .toast { min-width: 0; max-width: none; }
 
-  .cal-cell { min-height: 62px; padding: 3px 4px; }
+  .cal-grid { grid-template-rows: auto repeat(6, 68px); }
+  .cal-cell { height: 68px; padding: 3px 4px; }
   .cal-ev { font-size: 10px; padding: 1px 3px; }
   .cal-head { font-size: 10px; padding: 5px 2px; }
   /* Woche am Telefon: die sieben Spalten scrollen quer, die Stundenleiste bleibt. */
@@ -235,7 +236,8 @@ body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
    abgeschnittener Schrift ("09:00 …"). Gelesen wird in der Liste darunter;
    ein Tipp auf den Tag öffnet ihn. */
 @media (max-width: 560px) {
-  .cal-cell { min-height: 56px; padding: 3px 3px 4px; }
+  .cal-grid { grid-template-rows: auto repeat(6, 60px); }
+  .cal-cell { height: 60px; padding: 3px 3px 4px; }
   .cal-ev {
     font-size: 0; line-height: 0; height: 5px; min-height: 0; padding: 0; margin-bottom: 3px;
     border: 0 !important; border-radius: 3px; background: currentColor !important; opacity: .85;

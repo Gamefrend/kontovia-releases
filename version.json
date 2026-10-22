@@ -1,11 +1,11 @@
 {
-  "version": "2.48.0",
-  "released": "2026-10-22T07:35:03.107Z",
-  "notes": "Kalender nach Herkunft filtern, Google ohne ständiges Bestätigen\n\n- Im Menü „Anzeige“ wählen Sie jetzt, woher die Einträge kommen: Kontovia (eigene Termine, Zahlungstermine, Veranstaltungen, Steuertermine, Aufgaben) und Google Kalender, jeweils einzeln.\n- Der Knopf „Nur privat“ blendet alles aus Kontovia mit einem Tipp aus und zeigt nur Ihre Google-Kalender. Ein zweiter Tipp bringt Kontovia zurück.\n- Der Zugriff auf Google wird nach Möglichkeit von selbst erneuert, bevor er abläuft oder nach dem Entsperren. Klappt das in Ihrem Browser nicht, genügt wie bisher ein Tipp.\n- Die Kalender, die andere mit Ihnen geteilt haben, sehen Sie unter Einstellungen → Kalender-Abgleich → „Kalender auswählen“ und oben im Kalender.",
+  "version": "2.48.1",
+  "released": "2026-10-22T09:26:36.390Z",
+  "notes": "Kalender ruhiger und besser lesbar\n\n- Termine in Woche und Tag passen ihren Text dem Platz an, statt mitten im Wort abgeschnitten zu werden.\n- Wo viele Termine zugleich liegen, stehen höchstens zwei nebeneinander, der Rest hinter „+n“.\n- Beim Ein- und Ausblenden verrutscht nichts mehr, das Monatsraster behält seine Größe.\n- Neue Schalter unter den Kalendern: Termine, Zahlungen, Veranstaltungen, Steuertermine und Aufgaben lassen sich einzeln ausblenden. „Kontovia“ blendet alles auf einmal aus.\n- Mit Ihnen geteilte Google-Kalender erscheinen jetzt von selbst, auch wenn sie in Google nicht angehakt sind.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "7ccb2019e0e15bb54a481d46a5990f49a5f060f245374e04d7dce91489bc8932",
+      "sha256": "d390c5f9c8c360697b1305312a3f710dcfdd0cc44004d1b4155abf0b72951076",
       "size": 389
     },
     {
@@ -270,8 +270,8 @@
     },
     {
       "path": "lib/gcalsync.js",
-      "sha256": "ff86b56144dab49f1e8ff97d7f7bebba6968b830cff53f1588962d417d35e26d",
-      "size": 16187
+      "sha256": "326a3298a09efddb921a29511a6e8d68ff4818268cd7a1fefa768a5bd2aa1add",
+      "size": 16221
     },
     {
       "path": "lib/girocode.js",
@@ -300,8 +300,8 @@
     },
     {
       "path": "lib/kalender.js",
-      "sha256": "de2905d1bba54cf7daa3017d55c2b078a5c65369b8d0618d2b8d6da5833de324",
-      "size": 23611
+      "sha256": "8f73c214db50b343ac8369e1a0c7e7be3ccf813723b095ecd5f82d415e3c92fe",
+      "size": 23904
     },
     {
       "path": "lib/kasse.js",
@@ -670,8 +670,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz-geteilt.js",
-      "sha256": "52c59724460f03154c3ba16a69152b8acda152c324f84fe8c7e3b3e9939abe3f",
-      "size": 12948
+      "sha256": "e12d844cd0352ceeb38adf05179541320207762a5d5b5ff05e1f86c4bf980aab",
+      "size": 15488
     },
     {
       "path": "lib/sprache/en/zusatz-messung.js",
@@ -820,8 +820,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "c18f7f14368a717037fd99cdae4a9a198b3e1b0ad7710dc95a726017f4923b7a",
-      "size": 60478
+      "sha256": "6903ccce4966711f70652b121f5f585ac7fbd53fe08a29b07767299b1641e7f1",
+      "size": 61225
     },
     {
       "path": "lib/waehrung.js",
@@ -860,12 +860,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "8985dfb880ef01cff65e7cba101794a078ec38618111e0e4d2c021c622320012",
+      "sha256": "8463438e35673f4d0ac4c741c8b66da6be6ae81675ba3585be96c8b861baa054",
       "size": 2810
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "a5f4239764c889690e0d1fda233c8bb704f620404ac594ef2344df1fdcaf4134",
+      "sha256": "55adad32cff27503afdf94937791e8e03d544d68a42519e72b9061e364fdd24a",
       "size": 42028
     },
     {
@@ -885,7 +885,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "c1686e870627cc3c25cb78d5019e183e70471f38efe32f164dbffa689dae6c5c",
+      "sha256": "2096bf6336a741f0f7ac6d02aef46accd05272227f35511fa3e49168e7be603f",
       "size": 45971
     },
     {
@@ -910,12 +910,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "80d84f53368b9dba60f9faa6352701741c14a51d1c15570c020616ad0a15d792",
+      "sha256": "a96b7000d0e981f711b56214bc72a992c0894026e7c1aa27e86e6aa4d0349926",
       "size": 28337
     },
     {
       "path": "security.txt",
-      "sha256": "7ccb2019e0e15bb54a481d46a5990f49a5f060f245374e04d7dce91489bc8932",
+      "sha256": "d390c5f9c8c360697b1305312a3f710dcfdd0cc44004d1b4155abf0b72951076",
       "size": 389
     },
     {
@@ -925,8 +925,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "23e4afb6ddc4639d4aea4599995df731818a694c7102336667c8d4717833b4e7",
-      "size": 159469
+      "sha256": "47931e754ac4753ca4974004f0121287cff3ef394ee4dcffb68fa9624efe0067",
+      "size": 161696
     },
     {
       "path": "views/admin.js",
@@ -950,13 +950,13 @@
     },
     {
       "path": "views/calendar.js",
-      "sha256": "5e76fb3c5f76aedf62a98d83bd392ae140af986f4cadbb159fc66b56f9b5f77b",
-      "size": 77897
+      "sha256": "82d619039ec86ac92b430f57f37a3e161f496474b2fb49934ee42cbd5f7a6c52",
+      "size": 82081
     },
     {
       "path": "views/calendarsync.js",
-      "sha256": "982a450b4d2489615eddb5ba7fcd637d62adaac01d2c68368c9c1e2e989d728c",
-      "size": 39081
+      "sha256": "e6273abc6448e4b527dae8d2771500e552b5cd2ea2faf892e95ae5427c32deaa",
+      "size": 39404
     },
     {
       "path": "views/cloudpanel.js",
@@ -1090,7 +1090,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "5b9fa0b14eaa772821de13f2f9e7699707f895fefb1cadf6991299cba2718ed9",
+      "sha256": "51838b3a7c06367bec36cdc88bc7fbbde41ad89d0280cdfdfae95bb8df15c480",
       "size": 10044
     },
     {
@@ -1140,8 +1140,8 @@
     },
     {
       "path": "web/gcal.js",
-      "sha256": "8adebac5096623cc776a17fecb065775f5fc664fed099507c921ce97cc41a7ae",
-      "size": 40198
+      "sha256": "aa4b68b12a20b0aeacd957f13a5cd01793df7bd8ecb75ae0f211db2ecd181727",
+      "size": 40287
     },
     {
       "path": "web/installation.js",
@@ -1370,8 +1370,8 @@
     },
     {
       "path": "web/web.css",
-      "sha256": "560598bbf17b39e784504ea927a4d8c6ae071efe1c86745a0373db9e4cf7bb53",
-      "size": 19675
+      "sha256": "04aa3df9f0475199038189d662fbfea0ce5006bc9818037472db88eca26b1207",
+      "size": 19783
     },
     {
       "path": "web/weiterleitung.js",

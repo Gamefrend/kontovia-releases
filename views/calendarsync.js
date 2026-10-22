@@ -261,6 +261,14 @@ async function freigebenWeitere(umleiten = false) {
   }
 }
 
+/** Aus dem Kalender heraus: einmal bei Google freigeben, dann stehen die geteilten Kalender zur Auswahl. */
+export async function geteilteFreigeben() {
+  if (calState.status?.bestaetigen && !await bestaetigen()) return false;
+  if (!await freigebenWeitere()) return false;
+  await openKalenderAuswahl();
+  return true;
+}
+
 /** Auswahl der weiteren Kalender, die abgeglichen werden. */
 export async function openKalenderAuswahl() {
   if (calState.status?.bestaetigen && !await bestaetigen()) return false;
