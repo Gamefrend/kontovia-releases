@@ -286,8 +286,9 @@ export async function openKalenderAuswahl() {
   // Mit mir geteilte, nur lesbare Kalender sind vorgewählt, solange man sie nicht schon einmal abgewählt hat.
   const vorgewaehlt = (k) => bisher.has(k.id) || (k.geteilt && k.readOnly && !k.sonder && k.angezeigt && !abgewaehltVorher.has(k.id));
   const gruppen = [
-    ['Meine Kalender', liste.filter((k) => !k.geteilt && !k.sonder)],
-    ['Mit mir geteilt', liste.filter((k) => k.geteilt && !k.sonder)],
+    ['Meine Kalender', liste.filter((k) => !k.geteilt && !k.sonder && !k.importiert)],
+    ['Importiert und abonniert', liste.filter((k) => k.importiert && !k.sonder)],
+    ['Mit mir geteilt', liste.filter((k) => k.geteilt && !k.sonder && !k.importiert)],
     ['Von Google (Feiertage, Geburtstage …)', liste.filter((k) => k.sonder)],
   ].filter(([, l]) => l.length);
   const zeile = (k) => `

@@ -1,11 +1,11 @@
 {
-  "version": "2.48.1",
-  "released": "2026-10-22T09:26:36.390Z",
-  "notes": "Kalender ruhiger und besser lesbar\n\n- Termine in Woche und Tag passen ihren Text dem Platz an, statt mitten im Wort abgeschnitten zu werden.\n- Wo viele Termine zugleich liegen, stehen höchstens zwei nebeneinander, der Rest hinter „+n“.\n- Beim Ein- und Ausblenden verrutscht nichts mehr, das Monatsraster behält seine Größe.\n- Neue Schalter unter den Kalendern: Termine, Zahlungen, Veranstaltungen, Steuertermine und Aufgaben lassen sich einzeln ausblenden. „Kontovia“ blendet alles auf einmal aus.\n- Mit Ihnen geteilte Google-Kalender erscheinen jetzt von selbst, auch wenn sie in Google nicht angehakt sind.",
+  "version": "2.48.2",
+  "released": "2026-10-22T15:56:41.245Z",
+  "notes": "Alle Google-Kalender und ein ruhigerer Kalender\n\n- Importierte und abonnierte Google-Kalender erscheinen jetzt in der Auswahl, auch wenn sie in Google ausgeblendet sind.\n- Der Kalender wirkt schlichter: weniger Linien und Flächen, Termine als zarte Farbstreifen, kleinere Schalter.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "d390c5f9c8c360697b1305312a3f710dcfdd0cc44004d1b4155abf0b72951076",
+      "sha256": "801a32f14b33b1ab24dcbf8cd98194c34bf6303ae96a9e63ddb5e7090db8b64c",
       "size": 389
     },
     {
@@ -670,8 +670,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz-geteilt.js",
-      "sha256": "e12d844cd0352ceeb38adf05179541320207762a5d5b5ff05e1f86c4bf980aab",
-      "size": 15488
+      "sha256": "d24dc78afe67ebfe1b1363dfb89d368f8ed2cd6ad3067f48a7fa7760145d6132",
+      "size": 16093
     },
     {
       "path": "lib/sprache/en/zusatz-messung.js",
@@ -820,8 +820,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "6903ccce4966711f70652b121f5f585ac7fbd53fe08a29b07767299b1641e7f1",
-      "size": 61225
+      "sha256": "b287b4bc5306e561b902cf97c9e009ec4e561ee031b2b483dbd03d229cae9b72",
+      "size": 61613
     },
     {
       "path": "lib/waehrung.js",
@@ -860,12 +860,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "8463438e35673f4d0ac4c741c8b66da6be6ae81675ba3585be96c8b861baa054",
+      "sha256": "dd7469055bff6817a0f4bfa15d1e3e95190681511e4fdf74b42b1c1be32b74da",
       "size": 2810
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "55adad32cff27503afdf94937791e8e03d544d68a42519e72b9061e364fdd24a",
+      "sha256": "7b91035797b677c84273732f6560ee6544b5b824290f50ca77d1f2e52f17409b",
       "size": 42028
     },
     {
@@ -885,7 +885,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "2096bf6336a741f0f7ac6d02aef46accd05272227f35511fa3e49168e7be603f",
+      "sha256": "741cbe3549a2d34ce51e86284bbf29a306e1358d635ea899bdd34d273253a5df",
       "size": 45971
     },
     {
@@ -910,12 +910,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "a96b7000d0e981f711b56214bc72a992c0894026e7c1aa27e86e6aa4d0349926",
+      "sha256": "740c9922de6e8e2e8a28177be98c64d10c7a4d451f332bdeaa1ed6ac2ee7ec82",
       "size": 28337
     },
     {
       "path": "security.txt",
-      "sha256": "d390c5f9c8c360697b1305312a3f710dcfdd0cc44004d1b4155abf0b72951076",
+      "sha256": "801a32f14b33b1ab24dcbf8cd98194c34bf6303ae96a9e63ddb5e7090db8b64c",
       "size": 389
     },
     {
@@ -925,8 +925,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "47931e754ac4753ca4974004f0121287cff3ef394ee4dcffb68fa9624efe0067",
-      "size": 161696
+      "sha256": "c61a326b532ed84cb52deff20999e24dc83c2cbbd740b9d1692e088715258e57",
+      "size": 163992
     },
     {
       "path": "views/admin.js",
@@ -955,8 +955,8 @@
     },
     {
       "path": "views/calendarsync.js",
-      "sha256": "e6273abc6448e4b527dae8d2771500e552b5cd2ea2faf892e95ae5427c32deaa",
-      "size": 39404
+      "sha256": "411d79a0a9d9453f3ad28c5dda357d914b5abd1cf43040c2a7b266a9f48d6456",
+      "size": 39520
     },
     {
       "path": "views/cloudpanel.js",
@@ -1090,7 +1090,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "51838b3a7c06367bec36cdc88bc7fbbde41ad89d0280cdfdfae95bb8df15c480",
+      "sha256": "d783c1dc15a4c3c3d1ff457f32fe99f9e3a7f75ae1380db03ed8be4099719998",
       "size": 10044
     },
     {
@@ -1140,8 +1140,8 @@
     },
     {
       "path": "web/gcal.js",
-      "sha256": "aa4b68b12a20b0aeacd957f13a5cd01793df7bd8ecb75ae0f211db2ecd181727",
-      "size": 40287
+      "sha256": "ee96e7573d50e9632fa18f500e16d1fcf5c027a49ee0ad7cc849fa9dd5408731",
+      "size": 40373
     },
     {
       "path": "web/installation.js",

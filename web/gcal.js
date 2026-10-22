@@ -696,7 +696,7 @@ export class GoogleCalendar {
     const out = [];
     let pageToken;
     do {
-      const r = await this.api('GET', '/users/me/calendarList', null, { minAccessRole: 'reader', maxResults: 250, pageToken });
+      const r = await this.api('GET', '/users/me/calendarList', null, { minAccessRole: 'reader', maxResults: 250, showHidden: 'true', pageToken });
       for (const c of r?.items || []) {
         if (!c?.id || c.id === g.calendarId || String(c.description || '').includes(MARKER) || c.deleted) continue;
         const rolle = c.accessRole || 'owner';
@@ -705,7 +705,7 @@ export class GoogleCalendar {
           id: String(c.id), name: String(c.summaryOverride || c.summary || c.id).slice(0, 200),
           primary: !!c.primary, color: String(c.backgroundColor || '').slice(0, 20),
           readOnly: rolle === 'reader', geteilt: rolle !== 'owner' && !c.primary,
-          sonder: /@group\.v\.calendar\.google\.com$/.test(String(c.id)), angezeigt: !c.hidden,
+          sonder: /@group\.v\.calendar\.google\.com$/.test(String(c.id)), importiert: /@import\.calendar\.google\.com$/.test(String(c.id)), angezeigt: !c.hidden,
         });
       }
       pageToken = r?.nextPageToken;
