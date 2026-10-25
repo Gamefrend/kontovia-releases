@@ -1,11 +1,11 @@
 {
-  "version": "2.48.2",
-  "released": "2026-10-22T15:56:41.245Z",
-  "notes": "Alle Google-Kalender und ein ruhigerer Kalender\n\n- Importierte und abonnierte Google-Kalender erscheinen jetzt in der Auswahl, auch wenn sie in Google ausgeblendet sind.\n- Der Kalender wirkt schlichter: weniger Linien und Flächen, Termine als zarte Farbstreifen, kleinere Schalter.",
+  "version": "2.48.3",
+  "released": "2026-10-25T18:42:11.043Z",
+  "notes": "Klarere Kalenderfilter, alle geteilten Kalender\n\n- Die Schalter über dem Kalender stehen jetzt in zwei Gruppen, Kontovia und Google. Das Kästchen vorn blendet die ganze Gruppe ein oder aus.\n- Auch in einer ausgeblendeten Gruppe lässt sich jeder Schalter einzeln einblenden, etwa nur die Steuertermine. Ein Doppelklick zeigt nur diesen.\n- Geteilte Kalender, die frühere Fassungen fälschlich als abgewählt gemerkt hatten, erscheinen wieder. Auch mit Schreibrecht geteilte Kalender sind jetzt vorgewählt.\n- Fehlt ein geteilter Kalender, fügen Sie ihn unter „Kalender auswählen“ mit der E-Mail-Adresse der Person hinzu, die ihn teilt.\n- Kalender, für die nur die Verfügbarkeit freigegeben ist, stehen mit Hinweis in der Auswahl, damit klar ist, warum ihre Termine fehlen.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "801a32f14b33b1ab24dcbf8cd98194c34bf6303ae96a9e63ddb5e7090db8b64c",
+      "sha256": "63245a0da3558a8de582738b33733820cf52c58569d3c74755c1a46c89c37e9d",
       "size": 389
     },
     {
@@ -270,8 +270,8 @@
     },
     {
       "path": "lib/gcalsync.js",
-      "sha256": "326a3298a09efddb921a29511a6e8d68ff4818268cd7a1fefa768a5bd2aa1add",
-      "size": 16221
+      "sha256": "7c53e75c769390e2f2b3e5e0e280b600c33a83e47c92166c20403f58fd9be1e8",
+      "size": 16642
     },
     {
       "path": "lib/girocode.js",
@@ -300,8 +300,8 @@
     },
     {
       "path": "lib/kalender.js",
-      "sha256": "8f73c214db50b343ac8369e1a0c7e7be3ccf813723b095ecd5f82d415e3c92fe",
-      "size": 23904
+      "sha256": "5c0c48bfcc0c9af57afb6bb048da638ef2e9f697f9c8a69af283a1d8fddfb697",
+      "size": 26941
     },
     {
       "path": "lib/kasse.js",
@@ -670,8 +670,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz-geteilt.js",
-      "sha256": "d24dc78afe67ebfe1b1363dfb89d368f8ed2cd6ad3067f48a7fa7760145d6132",
-      "size": 16093
+      "sha256": "81559815aadf0682227ad46755fa991a3094b1c3445fbc027ff8e794dae6fc39",
+      "size": 23251
     },
     {
       "path": "lib/sprache/en/zusatz-messung.js",
@@ -820,8 +820,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "b287b4bc5306e561b902cf97c9e009ec4e561ee031b2b483dbd03d229cae9b72",
-      "size": 61613
+      "sha256": "8186a4949e57e0fb2ead32c957507076379270630306d333932cd115d6872fb4",
+      "size": 62522
     },
     {
       "path": "lib/waehrung.js",
@@ -860,12 +860,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "dd7469055bff6817a0f4bfa15d1e3e95190681511e4fdf74b42b1c1be32b74da",
+      "sha256": "79398602a1206b563a3008dd5e43877bcbbb8955d13d813ed029adef38324f36",
       "size": 2810
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "7b91035797b677c84273732f6560ee6544b5b824290f50ca77d1f2e52f17409b",
+      "sha256": "7ecb65d59eada91db5106d2fa97b221ce9accfa18cc9da2c1ac7d2616ecf0f78",
       "size": 42028
     },
     {
@@ -885,7 +885,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "741cbe3549a2d34ce51e86284bbf29a306e1358d635ea899bdd34d273253a5df",
+      "sha256": "9529896a48c318a6aa427fcc7377e2a330a7148a32c237bba1c8e80c232cdbd6",
       "size": 45971
     },
     {
@@ -910,12 +910,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "740c9922de6e8e2e8a28177be98c64d10c7a4d451f332bdeaa1ed6ac2ee7ec82",
+      "sha256": "aa6ba322bee84f2b9a1d621dca267e5cb0827ce812943418ffe1cb8a3f856eef",
       "size": 28337
     },
     {
       "path": "security.txt",
-      "sha256": "801a32f14b33b1ab24dcbf8cd98194c34bf6303ae96a9e63ddb5e7090db8b64c",
+      "sha256": "63245a0da3558a8de582738b33733820cf52c58569d3c74755c1a46c89c37e9d",
       "size": 389
     },
     {
@@ -925,8 +925,8 @@
     },
     {
       "path": "styles.css",
-      "sha256": "c61a326b532ed84cb52deff20999e24dc83c2cbbd740b9d1692e088715258e57",
-      "size": 163992
+      "sha256": "83c7c4649a009b497e882ca48f3c9caff05c93289e961db1c1564dae6826ddef",
+      "size": 165403
     },
     {
       "path": "views/admin.js",
@@ -950,13 +950,13 @@
     },
     {
       "path": "views/calendar.js",
-      "sha256": "82d619039ec86ac92b430f57f37a3e161f496474b2fb49934ee42cbd5f7a6c52",
-      "size": 82081
+      "sha256": "74e06ba3b9468b98897b440b4149f7eff8e1e13ff267236c11e3f98eb4a271f6",
+      "size": 82997
     },
     {
       "path": "views/calendarsync.js",
-      "sha256": "411d79a0a9d9453f3ad28c5dda357d914b5abd1cf43040c2a7b266a9f48d6456",
-      "size": 39520
+      "sha256": "266a0182cbf980d816a97d64fcd4a374b4cc1c733d3bf60feedb8f8150631083",
+      "size": 41873
     },
     {
       "path": "views/cloudpanel.js",
@@ -985,8 +985,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "9bb7c8f057929496fe9d1b15da4199cabffcfd1fc6f5ceb0de79acea6d3a8695",
-      "size": 101803
+      "sha256": "f612ba3d7c123f9718444bad61cfce3ec4a9249b09ddc4ed534ee244b2d2af3c",
+      "size": 102159
     },
     {
       "path": "views/importexport.js",
@@ -1090,7 +1090,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "d783c1dc15a4c3c3d1ff457f32fe99f9e3a7f75ae1380db03ed8be4099719998",
+      "sha256": "29f2fe1909c6699fd7e0f2193abb881afd81176681b0872fb6ce6df275d06168",
       "size": 10044
     },
     {
@@ -1100,8 +1100,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "862d4d1be6dfd6593eabede90ed971894bd09c184c03678fd541b8cda3562192",
-      "size": 69540
+      "sha256": "05c5118157682e8c6b65c484bccb20da5a0518338d4cde097495784fb9ab547a",
+      "size": 69650
     },
     {
       "path": "web/cloud.js",
@@ -1140,8 +1140,8 @@
     },
     {
       "path": "web/gcal.js",
-      "sha256": "ee96e7573d50e9632fa18f500e16d1fcf5c027a49ee0ad7cc849fa9dd5408731",
-      "size": 40373
+      "sha256": "e9bd120ed28dd6fd334838073ab390c996fe0196dc71937072d85cb5a6566cb0",
+      "size": 42039
     },
     {
       "path": "web/installation.js",

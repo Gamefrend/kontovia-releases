@@ -970,7 +970,11 @@ function cloud(root) {
           <li><strong>Geteilte Kalender:</strong> Kalender, die andere mit Ihnen geteilt haben, zeigt
               Kontovia an, auf Wunsch kommen neu geteilte von selbst dazu. Sie bleiben nur lesbar:
               Kontovia schreibt nie hinein, und was Sie dort in Kontovia löschen, blenden Sie nur hier aus.
-              Im Kalender blenden Sie jeden Kalender über seinen farbigen Schalter ein oder aus; ein
+              Fehlt einer, fügen Sie ihn unter <em>Kalender auswählen</em> mit der E-Mail-Adresse der
+              Person hinzu, die ihn teilt.</li>
+          <li><strong>Was zu sehen ist:</strong> Über dem Kalender stehen die Schalter in zwei Gruppen,
+              Kontovia und Google. Das Kästchen vorn blendet die ganze Gruppe ein oder aus. Jeden
+              Schalter darin können Sie trotzdem einzeln einblenden, etwa nur die Steuertermine; ein
               Doppelklick zeigt nur diesen.</li>
           <li><strong>Was an Google geht:</strong> Titel, Zeit, Ort und Wiederholung Ihrer Termine, die
               Notiz nur, wenn Sie das einschalten. Anders als beim Cloud-Abgleich ist das

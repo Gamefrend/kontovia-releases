@@ -17,7 +17,7 @@ import { icon, modal, confirmDialog, ok, err, warn } from '../lib/ui.js';
 import { store, sel, commit, saveNow, applyCalendarChanges } from '../lib/store.js';
 import { derivedEntries } from '../lib/gcal.js';
 import { toIcs, parseIcs, appointmentIdForUid } from '../lib/ics.js';
-import { kalenderListe, kalenderSchluessel, lokaleKalender, googleFarbe } from '../lib/kalender.js';
+import { kalenderListe, kalenderSchluessel, lokaleKalender, googleFarbe, kalenderAuswahl } from '../lib/kalender.js';
 import {
   calState, syncCalendar, startCalendarSync, stopCalendarSync,
   refreshCalendarStatus, calendarSettings, saveCalendarSettings, timeZone, stillZuruecksetzen,
@@ -272,32 +272,38 @@ export async function geteilteFreigeben() {
 /** Auswahl der weiteren Kalender, die abgeglichen werden. */
 export async function openKalenderAuswahl() {
   if (calState.status?.bestaetigen && !await bestaetigen()) return false;
-  let liste;
+  let kontoListe;
   try {
-    liste = await api.gcal.calendars();
+    kontoListe = await api.gcal.calendars();
   } catch (e) {
     err('Kalender nicht abrufbar', e.message);
     return false;
   }
   const cfg = calendarSettings();
   const bisher = new Set(cfg.weitere.map((k) => k.id));
-  const frueher = new Map(cfg.weitere.map((k) => [k.id, k]));
-  const abgewaehltVorher = new Set(cfg.abgewaehlt);
-  // Mit mir geteilte, nur lesbare Kalender sind vorgewählt, solange man sie nicht schon einmal abgewählt hat.
-  const vorgewaehlt = (k) => bisher.has(k.id) || (k.geteilt && k.readOnly && !k.sonder && k.angezeigt && !abgewaehltVorher.has(k.id));
+  // Vorauswahl, „nur lesen“ und was als abgewählt gilt: lib/kalender.js kalenderAuswahl.
+  const auswahl = kalenderAuswahl({ liste: kontoListe, weitere: cfg.weitere, abgewaehlt: cfg.abgewaehlt });
+  const { liste, vorgewaehlt, nurLesend } = auswahl;
   const gruppen = [
     ['Meine Kalender', liste.filter((k) => !k.geteilt && !k.sonder && !k.importiert)],
     ['Importiert und abonniert', liste.filter((k) => k.importiert && !k.sonder)],
     ['Mit mir geteilt', liste.filter((k) => k.geteilt && !k.sonder && !k.importiert)],
     ['Von Google (Feiertage, Geburtstage …)', liste.filter((k) => k.sonder)],
   ].filter(([, l]) => l.length);
-  const zeile = (k) => `
+  const zeile = (k, an = vorgewaehlt(k)) => k.nurFreiBelegt ? `
+    <label class="check cal-wahl" title="${esc('Die Person, die ihn teilt, hat nur ihre Verfügbarkeit freigegeben. Damit Kontovia die Termine zeigen kann, muss sie Ihnen in Google „Alle Termindetails anzeigen“ erlauben.')}">
+      <input type="checkbox" value="${esc(k.id)}" disabled>
+      <span class="cal-dot" style="background:${esc(k.color || googleFarbe(k.id))}"></span>
+      <span class="cal-wahl-name">${esc(k.name)}</span>
+      <span class="badge tiny">nur Verfügbarkeit</span>
+    </label>` : `
     <label class="check cal-wahl">
-      <input type="checkbox" value="${esc(k.id)}" ${vorgewaehlt(k) ? 'checked' : ''}>
+      <input type="checkbox" value="${esc(k.id)}" ${an ? 'checked' : ''}>
       <span class="cal-dot" style="background:${esc(k.color || googleFarbe(k.id))}"></span>
       <span class="cal-wahl-name">${esc(k.name)}${k.primary ? ' <span class="muted small">(Hauptkalender)</span>' : ''}</span>
-      ${k.readOnly ? '<span class="badge tiny">nur lesen</span>' : k.geteilt ? '<span class="badge tiny">geteilt</span>' : ''}
+      ${nurLesend(k) ? '<span class="badge tiny">nur lesen</span>' : k.geteilt ? '<span class="badge tiny">geteilt</span>' : ''}
     </label>`;
+  const freiBelegt = liste.some((k) => k.nurFreiBelegt);
   const wahl = await new Promise((resolve) => {
     let settled = false;
     const m = modal({
@@ -305,31 +311,65 @@ export async function openKalenderAuswahl() {
       body: html`
         <p class="mt0 small" style="line-height:1.6">Die Termine der gewählten Kalender erscheinen in Kontovia,
         ab gut einem Jahr zurück. Eigene Kalender gleicht Kontovia in beide Richtungen ab: Ändern oder löschen Sie einen
-        Termin hier oder in Google, gilt das beim nächsten Abgleich auf beiden Seiten. Mit Ihnen geteilte, nur lesbare
+        Termin hier oder in Google, gilt das beim nächsten Abgleich auf beiden Seiten. Mit Ihnen geteilte
         Kalender zeigt Kontovia nur an und schreibt nie hinein. Wer einen solchen Termin hier löscht, blendet ihn
         nur in Kontovia aus.</p>
         ${liste.length ? raw(gruppen.map(([titel, l]) => `
-          <div class="cal-wahl-gruppe"><h3 class="cal-wahl-titel">${esc(titel)}</h3>${l.map(zeile).join('')}</div>`).join('')
-          + `<hr class="sep"><label class="check"><input type="checkbox" id="k_auto" ${cfg.autoGesetzt && !cfg.autoGeteilt ? '' : 'checked'}>
-          Neu mit mir geteilte Kalender automatisch anzeigen (nur lesend)</label>`)
-          : raw('<p class="muted small">Es gibt keine weiteren Kalender, die Kontovia lesen darf.</p>')}`,
+          <div class="cal-wahl-gruppe"><h3 class="cal-wahl-titel">${esc(titel)}</h3>${l.map((k) => zeile(k)).join('')}</div>`).join(''))
+          : raw('<p class="muted small">Es gibt keine weiteren Kalender, die Kontovia lesen darf.</p>')}
+        ${freiBelegt ? raw('<p class="small muted mt0">Bei „nur Verfügbarkeit“ sieht Kontovia nur, wann jemand beschäftigt ist, nicht die Termine. Bitten Sie die Person, Ihnen in Google „Alle Termindetails anzeigen“ zu erlauben.</p>') : ''}
+        <div class="cal-wahl-gruppe">
+          <h3 class="cal-wahl-titel">Ein geteilter Kalender fehlt?</h3>
+          <p class="small muted mt0">Google führt einen mit Ihnen geteilten Kalender erst, wenn Sie die Einladung in der E-Mail
+          angenommen haben. Sie können ihn auch hier hinzufügen: mit der E-Mail-Adresse der Person, die ihn teilt,
+          oder mit der Kalender-ID aus seinen Einstellungen in Google.</p>
+          <div id="k_dazu"></div>
+          <div class="row" style="gap:8px">
+            <input id="k_adresse" type="text" inputmode="email" autocomplete="off" spellcheck="false" placeholder="name@beispiel.de" aria-label="Adresse des geteilten Kalenders" style="flex:1;min-width:0">
+            <button class="btn" type="button" id="k_adresse_ok">Hinzufügen</button>
+          </div>
+        </div>
+        <hr class="sep"><label class="check"><input type="checkbox" id="k_auto" ${cfg.autoGesetzt && !cfg.autoGeteilt ? '' : 'checked'}>
+        Neu mit mir geteilte Kalender automatisch anzeigen (nur lesend)</label>`,
       foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Übernehmen</button>',
       onClose: () => { if (!settled) resolve(null); },
     });
+    // Kalender per Adresse: Google prüft, ob Kontovia ihn lesen darf; dann steht er angehakt in der Auswahl.
+    const feld = m.root.querySelector('#k_adresse');
+    const knopf = m.root.querySelector('#k_adresse_ok');
+    const dazu = async () => {
+      const adresse = feld.value.trim();
+      if (!adresse || knopf.disabled) return;
+      const anhaken = (id) => {
+        const box = [...m.root.querySelectorAll('input[type=checkbox][value]')].find((c) => c.value === id && !c.disabled);
+        if (box) box.checked = true;
+        return !!box;
+      };
+      if (anhaken(adresse)) { feld.value = ''; return; }
+      knopf.disabled = true;
+      try {
+        const k = await api.gcal.kalenderNachAdresse(adresse);
+        if (!anhaken(k.id)) {
+          liste.push(k);
+          m.root.querySelector('#k_dazu').insertAdjacentHTML('beforeend', zeile(k, true));
+        }
+        feld.value = '';
+      } catch (e) {
+        err('Kalender nicht hinzugefügt', e.message);
+      } finally {
+        knopf.disabled = false;
+      }
+    };
+    knopf.addEventListener('click', dazu);
+    feld.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); dazu(); } });
     m.root.querySelector('[data-no]').addEventListener('click', () => { settled = true; m.close(); resolve(null); });
     m.root.querySelector('[data-yes]').addEventListener('click', () => {
       settled = true;
       const ids = new Set([...m.root.querySelectorAll('input[type=checkbox][value]:checked')].map((c) => c.value));
       const auto = !!m.root.querySelector('#k_auto')?.checked;
       m.close();
-      const gewaehlt = liste.filter((k) => ids.has(k.id)).map((k) => ({
-        id: k.id, name: k.name, color: k.color || '',
-        // Ein einmal nur lesend geführter Kalender bleibt es, auch wenn Google inzwischen mehr erlaubt.
-        ...(k.readOnly || frueher.get(k.id)?.readOnly ? { readOnly: true } : {}),
-      }));
-      // Was man sieht und abwählt, soll die Automatik nicht wieder hereinholen.
-      const abgewaehlt = [...new Set([...cfg.abgewaehlt.filter((id) => !ids.has(id)), ...liste.filter((k) => !ids.has(k.id)).map((k) => k.id)])];
-      resolve({ weitere: gewaehlt, autoGeteilt: auto, abgewaehlt });
+      // Was man selbst abwählt, soll die Automatik nicht wieder hereinholen. Nie Angehaktes zählt nicht als abgewählt.
+      resolve({ ...auswahl.uebernehmen(ids), autoGeteilt: auto });
     });
   });
   if (!wahl) return false;

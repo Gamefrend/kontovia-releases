@@ -1159,6 +1159,7 @@ const api = {
     disconnect: handle(async (opts = {}) => gcal.disconnect({ deleteCalendar: !!opts.deleteCalendar })),
     pull: handle(async (opts = {}) => kopie(await gcal.pull({ timeZone: str(opts.timeZone, 80) }))),
     calendars: handle(async () => kopie(await gcal.kalenderListe())),
+    kalenderNachAdresse: handle(async (adresse) => kopie(await gcal.kalenderNachAdresse(str(adresse, 300)))),
     pullWeitere: handle(async (opts = {}) => kopie(await gcal.pullWeitere(opts))),
     push: handle(async (ops) => kopie(await gcal.push(ops))),
     finish: handle(async (opts = {}) => kopie(await gcal.finish(opts))),

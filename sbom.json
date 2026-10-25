@@ -1,10 +1,10 @@
 {
   "bomFormat": "CycloneDX",
   "specVersion": "1.5",
-  "serialNumber": "urn:uuid:4f33b64a-0dfa-4e86-859e-8ea1fe8ebe99",
+  "serialNumber": "urn:uuid:585bdaf0-80ea-475c-8e72-46d3a74fbe98",
   "version": 1,
   "metadata": {
-    "timestamp": "2026-10-22T15:56:41.245Z",
+    "timestamp": "2026-10-25T18:42:11.043Z",
     "lifecycles": [
       {
         "phase": "build"
@@ -23,7 +23,7 @@
       "type": "application",
       "bom-ref": "kontovia",
       "name": "Kontovia",
-      "version": "2.48.2"
+      "version": "2.48.3"
     },
     "supplier": {
       "name": "Beispielbetrieb (Platzhalter, noch keine Firma)",

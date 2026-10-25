@@ -15,7 +15,7 @@ import { expandAppointments, expandForList, regelText, wochentage, intervall, WO
 import {
   FARBEN, kalenderListe, kalenderSchluessel, terminFarbe, neueKalenderId, lokaleKalender, tagsLesen, alleTags,
   passtTermin, schnellEingabe, ERINNERUNG_ZEIT, ERINNERUNG_GANZTAGS, erinnerungText, verschoben, zeitraum, blaettern,
-  tagesLage, minuten,
+  tagesLage, minuten, ARTEN, filterGruppen, gruppenStand, gruppeUmschalten,
 } from '../lib/kalender.js';
 import { refresh } from '../lib/router.js';
 import { fokusMerken } from '../lib/fokus.js';
@@ -35,33 +35,36 @@ import { projektAuswahl } from '../lib/projektwahl.js';
 const state = {
   cursor: todayISO(),
   mode: 'month', // month | week | day | agenda
-  showDue: true,
-  showEvents: true,
   showDone: true,
-  showTax: true,
-  showTodos: true,
-  showKontovia: true, // alles, was aus Kontovia stammt; aus = nur die Google-Kalender („privat“)
-  showTermine: true,  // die in Kontovia angelegten Termine
-  showGoogle: true,   // Termine aus weiteren Google-Kalendern
-  kalenderAus: new Set(), // ausgeblendete Kalender (Schlüssel aus lib/kalender.js)
+  // Ausgeblendete Schalter: Kalender (Schlüssel aus lib/kalender.js) und Arten aus Kontovia („art:…“, ARTEN).
+  aus: new Set(),
   tags: new Set(),        // gewählte Tags (mindestens einer muss passen)
   suche: '',
 };
+/* Bis 2.48.2 gab es je Art einen eigenen Schalter und Hauptschalter für Kontovia, Termine und Google.
+   Was davon aus war, steht jetzt in `aus`; die Kalender selbst kennt erst der offene Tresor (render). */
+let altAus = null;
 (() => {
   const p = prefs.kalenderAnsicht || {};
-  for (const k of ['mode', 'showDue', 'showEvents', 'showDone', 'showTax', 'showTodos', 'showKontovia', 'showTermine', 'showGoogle']) if (p[k] !== undefined) state[k] = p[k];
+  for (const k of ['mode', 'showDone']) if (p[k] !== undefined) state[k] = p[k];
   if (!['month', 'week', 'day', 'agenda'].includes(state.mode)) state.mode = 'month';
-  if (Array.isArray(p.kalenderAus)) state.kalenderAus = new Set(p.kalenderAus);
-  // Der frühere Reiter „nur dieser Kalender“ ist jetzt: alle anderen ausgeblendet. Was er gewählt hatte, bleibt unbeachtet.
+  if (Array.isArray(p.aus)) state.aus = new Set(p.aus);
+  else {
+    // Der frühere Reiter „nur dieser Kalender“ ist jetzt: alle anderen ausgeblendet. Was er gewählt hatte, bleibt unbeachtet.
+    state.aus = new Set(Array.isArray(p.kalenderAus) ? p.kalenderAus : []);
+    const alt = { showDue: 'art:due', showEvents: 'art:events', showTax: 'art:tax', showTodos: 'art:todos' };
+    for (const [k, key] of Object.entries(alt)) if (p[k] === false || p.showKontovia === false) state.aus.add(key);
+    if (p.showKontovia === false || p.showTermine === false || p.showGoogle === false) {
+      altAus = { lokal: p.showKontovia === false || p.showTermine === false, google: p.showGoogle === false };
+    }
+  }
   if (Array.isArray(p.tags)) state.tags = new Set(p.tags);
 })();
 function merken() {
-  setPref('kalenderAnsicht', {
-    mode: state.mode, showDue: state.showDue, showEvents: state.showEvents, showDone: state.showDone, showTax: state.showTax, showTodos: state.showTodos,
-    showKontovia: state.showKontovia, showTermine: state.showTermine, showGoogle: state.showGoogle,
-    kalenderAus: [...state.kalenderAus], tags: [...state.tags],
-  });
+  setPref('kalenderAnsicht', { mode: state.mode, showDone: state.showDone, aus: [...state.aus], tags: [...state.tags] });
 }
+/** Ist dieser Schalter (Kalender oder Art) an? */
+const zeigt = (key) => !state.aus.has(key);
 
 const FREQ = { none: 'einmalig', daily: 'täglich', weekly: 'wöchentlich', biweekly: 'alle zwei Wochen', monthly: 'monatlich', yearly: 'jährlich' };
 const STUNDE_PX = 48; // Höhe einer Stunde im Zeitraster
@@ -77,10 +80,7 @@ function kalenderAlle() {
 }
 
 function filter() {
-  return {
-    kalenderAus: state.kalenderAus, tags: state.tags, suche: state.suche, kontaktName: sel.contactName,
-    herkunft: { kontovia: state.showKontovia, termine: state.showTermine, google: state.showGoogle },
-  };
+  return { kalenderAus: state.aus, tags: state.tags, suche: state.suche, kontaktName: sel.contactName };
 }
 
 /** Gehört der Termin zu einem nur lesbaren Google-Kalender (mit dem Konto geteilt)? */
@@ -100,7 +100,7 @@ function termine(from, to, { liste = false } = {}) {
 
 /** Zahlungstermine (Fälligkeiten offener Rechnungen) als Kalendereinträge. */
 function dueEntries(from, to) {
-  if (!state.showKontovia || state.suche || state.tags.size) return [];
+  if (state.suche || state.tags.size) return [];
   return sel.transactions()
     .filter((t) => !isVoidPart(t) && !t.paidDate && (t.dueDate || t.date) >= from && (t.dueDate || t.date) <= to)
     .map((t) => ({
@@ -121,7 +121,7 @@ function dueEntries(from, to) {
  * und welcher Restbetrag dann noch aussteht.
  */
 function eventEntries(from, to) {
-  if (!state.showKontovia || state.tags.size) return [];
+  if (state.tags.size) return [];
   const out = [];
   const q = state.suche.toLowerCase().trim();
   for (const t of sel.transactions()) {
@@ -138,7 +138,7 @@ function eventEntries(from, to) {
 
 /** Aufgaben mit eigenem Fälligkeitsdatum als Kalendereinträge. Aufgaben an einem Termin zeigt dieser selbst. */
 function todoEntries(from, to) {
-  if (!state.showKontovia || state.tags.size) return [];
+  if (state.tags.size) return [];
   const q = state.suche.toLowerCase().trim();
   return sel.todos()
     .filter((t) => t.dueDate && t.dueDate >= from && t.dueDate <= to && (state.showDone || !t.done) && (!q || String(t.title || '').toLowerCase().includes(q)))
@@ -155,7 +155,7 @@ function todoEntries(from, to) {
 
 /** Steuertermine (Voranmeldung, Jahreserklärungen) als Kalendereinträge. */
 function taxEntries(from, to) {
-  if (!state.showKontovia || !kann('steuertermine') || state.suche || state.tags.size) return [];
+  if (!kann('steuertermine') || state.suche || state.tags.size) return [];
   return steuertermine(sel.settings(), from, to).map((t, i) => ({
     ...t,
     id: `tax_${t.datum}_${i}`,
@@ -169,10 +169,10 @@ function taxEntries(from, to) {
 /** Alles im Zeitraum außer den Terminen selbst. */
 function sonstige(from, to) {
   return [
-    ...(state.showTax ? taxEntries(from, to) : []),
-    ...(state.showTodos ? todoEntries(from, to) : []),
-    ...(state.showDue && state.mode !== 'agenda' ? dueEntries(from, to) : []),
-    ...(state.showEvents ? eventEntries(from, to) : []),
+    ...(zeigt('art:tax') ? taxEntries(from, to) : []),
+    ...(zeigt('art:todos') ? todoEntries(from, to) : []),
+    ...(zeigt('art:due') && state.mode !== 'agenda' ? dueEntries(from, to) : []),
+    ...(zeigt('art:events') ? eventEntries(from, to) : []),
   ];
 }
 
@@ -185,6 +185,12 @@ const taxAttrs = (e) => `data-tax="1" data-tax-from="${esc(e.zeitraum?.from || '
 
 export async function render(root, params, { actions } = {}) {
   if (params?.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date)) state.cursor = params.date;
+  if (altAus) {
+    const gr = filterGruppen(kalenderAlle());
+    for (const k of [...(altAus.lokal ? gr.kontovia.filter((x) => !ARTEN.includes(x)) : []), ...(altAus.google ? gr.google : [])]) state.aus.add(k);
+    altAus = null;
+    merken();
+  }
   actions.innerHTML = html`
     <div class="seg" role="group" aria-label="Darstellung">
       <button data-mode="month" class="${state.mode === 'month' ? 'active' : ''}" aria-pressed="${state.mode === 'month'}">Monat</button>
@@ -208,34 +214,38 @@ export async function render(root, params, { actions } = {}) {
     label: 'Anzeige',
     keepOpen: true,
     align: 'end',
+    // Dieselben Gruppen wie die Schalter über dem Kalender: die erste Zeile schaltet die ganze Gruppe.
     sections: () => {
       const kal = kalenderAlle();
       const lokal = kal.filter((k) => k.art === 'lokal');
       const google = kal.filter((k) => k.art === 'google');
+      const gr = filterGruppen(kal);
       const tags = alleTags(sel.appointments());
-      const kalOption = (k) => ({ value: k.key, label: k.name, sub: k.readOnly ? 'nur lesen' : '', on: !state.kalenderAus.has(k.key), count: k.anzahl });
-      const googleDa = google.length > 0 || !!calState.status?.linked;
+      const opt = (value, label, extra = {}) => ({ value, label, on: zeigt(value), ...extra });
+      const kopf = (gruppe, label) => {
+        const stand = gruppenStand(gr[gruppe], state.aus);
+        return { value: 'gruppe:' + gruppe, label, on: stand === 'an', sub: stand === 'teils' ? 'teilweise' : '' };
+      };
       return [{
-        key: 'show',
-        title: 'Woher die Einträge kommen',
+        key: 'aus',
+        title: 'Kontovia',
         options: [
-          { value: 'showKontovia', label: 'Kontovia', sub: googleDa ? 'aus: nur Google, also privat' : '', on: state.showKontovia },
-          googleDa && { value: 'showGoogle', label: 'Google Kalender', on: state.showGoogle },
+          kopf('kontovia', 'Alles aus Kontovia'),
+          ...(lokal.length > 1 ? lokal.map((k) => opt(k.key, k.name, { count: k.anzahl })) : [opt(lokal[0].key, 'Meine Termine')]),
+          state.mode !== 'agenda' && opt('art:due', 'Zahlungstermine offener Rechnungen'),
+          opt('art:events', 'Veranstaltungen aus Anzahlungen'),
+          opt('art:tax', 'Steuertermine (Voranmeldung, Erklärungen)'),
+          opt('art:todos', 'Aufgaben mit Fälligkeit'),
         ].filter(Boolean),
+      }, google.length > 0 && {
+        key: 'aus',
+        title: 'Google Kalender',
+        options: [kopf('google', 'Alle Google-Kalender'), ...google.map((k) => opt(k.key, k.name, { sub: k.readOnly ? 'nur lesen' : '', count: k.anzahl }))],
       }, {
         key: 'show',
-        title: 'Aus Kontovia zeigen',
-        options: state.showKontovia ? [
-          { value: 'showTermine', label: 'Meine Termine', on: state.showTermine },
-          state.mode !== 'agenda' && { value: 'showDue', label: 'Zahlungstermine offener Rechnungen', on: state.showDue },
-          { value: 'showEvents', label: 'Veranstaltungen aus Anzahlungen', on: state.showEvents },
-          { value: 'showTax', label: 'Steuertermine (Voranmeldung, Erklärungen)', on: state.showTax },
-          { value: 'showTodos', label: 'Aufgaben mit Fälligkeit', on: state.showTodos },
-          { value: 'showDone', label: 'Erledigte Termine', on: state.showDone },
-        ].filter(Boolean) : [{ value: 'showKontovia', label: 'Kontovia ist ausgeblendet', sub: 'zum Einblenden tippen', on: false }],
-      }, lokal.length > 1 && { key: 'kal', title: google.length ? 'Meine Kalender' : 'Kalender', options: lokal.map(kalOption) },
-      google.length > 0 && { key: 'kal', title: 'Google Kalender', options: google.map(kalOption) },
-      tags.length > 0 && {
+        title: 'Außerdem',
+        options: [{ value: 'showDone', label: 'Erledigte Termine', on: state.showDone }],
+      }, tags.length > 0 && {
         key: 'tag',
         title: 'Nur Termine mit Tag',
         search: tags.length > 8,
@@ -244,7 +254,8 @@ export async function render(root, params, { actions } = {}) {
     },
     onPick: (key, val) => {
       if (key === 'show') state[val] = !state[val];
-      else if (key === 'kal') { if (state.kalenderAus.has(val)) state.kalenderAus.delete(val); else state.kalenderAus.add(val); }
+      else if (key === 'aus' && val.startsWith('gruppe:')) gruppeSchalten(val.slice(7));
+      else if (key === 'aus') { if (state.aus.has(val)) state.aus.delete(val); else state.aus.add(val); }
       else if (key === 'tag') { if (state.tags.has(val)) state.tags.delete(val); else state.tags.add(val); }
       merken();
       draw(root);
@@ -269,8 +280,20 @@ export async function render(root, params, { actions } = {}) {
  * (in einen Google-Kalender schreibt man nur über das Feld „Kalender“ im Termin).
  */
 function lokalerReiter() {
-  const sichtbar = kalenderAlle().filter((k) => !state.kalenderAus.has(k.key));
+  const sichtbar = kalenderAlle().filter((k) => zeigt(k.key));
   return sichtbar.length === 1 && sichtbar[0].art === 'lokal' ? sichtbar[0].key : '';
+}
+
+/**
+ * Den Kopf einer Gruppe schalten (lib/kalender.js gruppeUmschalten). Geht Kontovia ganz aus,
+ * während auch Google aus ist, kommt Google wieder, sonst stünde der Kalender leer da.
+ */
+function gruppeSchalten(gruppe) {
+  const gr = filterGruppen(kalenderAlle());
+  state.aus = gruppeUmschalten(state.aus, gr[gruppe]);
+  if (gruppe === 'kontovia' && gruppenStand(gr.kontovia, state.aus) === 'aus' && gr.google.length && gruppenStand(gr.google, state.aus) === 'aus') {
+    state.aus = gruppeUmschalten(state.aus, gr.google);
+  }
 }
 
 /**
@@ -365,8 +388,7 @@ function draw(root, { bewegung = '' } = {}) {
         ${raw(syncBadge())}
       </div>
       <div class="cal-body">
-        ${raw(tabsHtml(kal))}
-        ${raw(quellenHtml())}
+        ${raw(filterHtml(kal))}
         <div class="cal-quick">
           <span class="cal-quick-icon" aria-hidden="true">${icon('plus', 14)}</span>
           <input id="calQuick" placeholder="Schnell eintragen, z. B. „morgen 14:00 Steuerberater“ oder „Fr 9-10 Zahnarzt #privat“" aria-label="Termin schnell eintragen">
@@ -408,37 +430,34 @@ function draw(root, { bewegung = '' } = {}) {
     quick.value = '';
     openAppointmentDialog(null, { ...p, calendarId: lokalerReiter() });
   });
-  // Ein Klick blendet einen Kalender ein oder aus, ein Doppelklick zeigt nur diesen. Die Reiter bleiben
-  // dabei stehen (nur ihr Zustand wechselt), damit sie weich umschalten und der Fokus nicht verloren geht.
-  const kalenderWechsel = (neu) => {
-    state.kalenderAus = neu;
+  // Ein Klick blendet einen Schalter ein oder aus, auch in einer ausgeblendeten Gruppe; ein Doppelklick
+  // zeigt nur diesen. Die Schalter bleiben dabei stehen (nur ihr Zustand wechselt), damit sie weich
+  // umschalten und der Fokus nicht verloren geht.
+  const schalterWechsel = (neu) => {
+    state.aus = neu;
     merken();
     reiterNachziehen(root);
     drawInhalt(root);
   };
-  $$('.cal-chip', root).forEach((b) => {
-    const key = b.dataset.kal;
+  const gr = filterGruppen(kal);
+  $$('[data-schalter]', root).forEach((b) => {
+    const key = b.dataset.schalter;
     b.addEventListener('click', (e) => {
       if (e.detail > 1) return;
-      const neu = new Set(state.kalenderAus);
+      const neu = new Set(state.aus);
       if (neu.has(key)) neu.delete(key); else neu.add(key);
-      kalenderWechsel(neu);
+      schalterWechsel(neu);
     });
-    b.addEventListener('dblclick', () => kalenderWechsel(new Set(kal.map((k) => k.key).filter((x) => x !== key))));
+    b.addEventListener('dblclick', () => schalterWechsel(new Set([...gr.kontovia, ...gr.google].filter((x) => x !== key))));
   });
-  root.querySelector('#calAlle')?.addEventListener('click', () => {
-    kalenderWechsel(new Set());
-    root.querySelector('.cal-chip')?.focus();
-  });
-  // Die Schalter für Kontovia: nur Zustand und Inhalt ändern sich, die Leiste bleibt, wie sie ist.
-  $$('.cal-quelle', root).forEach((b) => b.addEventListener('click', () => {
-    const key = b.dataset.quelle;
-    state[key] = !state[key];
-    if (key === 'showKontovia' && !state.showKontovia) state.showGoogle = true;
-    merken();
-    reiterNachziehen(root);
-    drawInhalt(root);
+  $$('[data-gruppe]', root).forEach((b) => b.addEventListener('click', () => {
+    gruppeSchalten(b.dataset.gruppe);
+    schalterWechsel(state.aus);
   }));
+  root.querySelector('#calAlle')?.addEventListener('click', () => {
+    schalterWechsel(new Set());
+    root.querySelector('[data-gruppe]')?.focus();
+  });
   root.querySelector('#calGeteilt')?.addEventListener('click', async () => {
     await geteilteFreigeben();
     if (kalenderOffen(root)) draw(root);
@@ -472,70 +491,73 @@ function drawInhalt(root, { bewegung = '' } = {}) {
   wireDnd(root);
 }
 
-/** Zustand der Kalender-Reiter an `state.kalenderAus` angleichen. */
+/** aria-pressed des Gruppenkopfs je Stand (lib/kalender.js gruppenStand). */
+const GEDRUECKT = { an: 'true', teils: 'mixed', aus: 'false' };
+
+/** Zustand der Schalter und Gruppenköpfe an `state.aus` angleichen. */
 function reiterNachziehen(root) {
-  $$('.cal-chip', root).forEach((b) => {
-    const an = !state.kalenderAus.has(b.dataset.kal);
-    b.classList.toggle('aus', !an);
-    b.setAttribute('aria-pressed', String(an));
+  $$('[data-schalter]', root).forEach((b) => {
+    const ein = zeigt(b.dataset.schalter);
+    b.classList.toggle('aus', !ein);
+    b.setAttribute('aria-pressed', String(ein));
   });
+  const gr = filterGruppen(kalenderAlle());
+  $$('[data-gruppe]', root).forEach((b) => b.setAttribute('aria-pressed', GEDRUECKT[gruppenStand(gr[b.dataset.gruppe] || [], state.aus)]));
   const alle = root.querySelector('#calAlle');
-  if (alle) alle.hidden = state.kalenderAus.size === 0;
-  $$('.cal-quelle', root).forEach((b) => {
-    const kopf = b.classList.contains('haupt');
-    const key = b.dataset.quelle;
-    const an = kopf ? state.showKontovia : state.showKontovia && state[key];
-    b.classList.toggle('aus', !an);
-    b.setAttribute('aria-pressed', String(an));
-    if (!kopf) b.disabled = !state.showKontovia || (QUELLEN.find((q) => q.key === key)?.nichtListe && state.mode === 'agenda');
-  });
+  if (alle) alle.hidden = [...gr.kontovia, ...gr.google].every(zeigt);
 }
 
+/** Was Kontovia außer den Terminen einträgt, je Art ein Schalter (Schlüssel aus lib/kalender.js ARTEN). */
+const ARTEN_ANZEIGE = [
+  { key: 'art:due', label: 'Zahlungen', farbe: 'var(--warn)', titel: 'Fälligkeiten offener Rechnungen (nicht in der Liste)', nichtListe: true },
+  { key: 'art:events', label: 'Veranstaltungen', farbe: 'var(--accent)', titel: 'Veranstaltungstage aus Anzahlungen' },
+  { key: 'art:tax', label: 'Steuertermine', farbe: 'var(--warn)', titel: 'Voranmeldung und Erklärungen' },
+  { key: 'art:todos', label: 'Aufgaben', farbe: 'var(--pos)', titel: 'Aufgaben mit Fälligkeit' },
+];
+
 /**
- * Die Kalender als Reiter: jeder lässt sich ein- und ausblenden (Filter), auch die mit
- * dem Konto geteilten Google-Kalender. Ein Kalender mit Schloss ist nur lesbar.
+ * Die Schalter über dem Kalender, in Gruppen: „Kontovia“ mit den eigenen Kalendern (bei nur einem
+ * schlicht „Termine“) und dem, was Kontovia selbst einträgt, „Google“ mit den weiteren
+ * Google-Kalendern. Der Kopf einer Gruppe (Kästchen mit Haken, Strich für „teilweise“) schaltet
+ * die ganze Gruppe; jeder Schalter darin lässt sich für sich ein- und ausblenden, auch wenn die
+ * Gruppe aus ist. Ein Doppelklick zeigt nur diesen, ein Kalender mit Schloss ist nur lesbar.
+ * Alles bleibt stehen, nur der Zustand wechselt, damit nichts verrutscht.
  */
-function tabsHtml(kal) {
+function filterHtml(kal) {
+  const lokal = kal.filter((k) => k.art === 'lokal');
+  const google = kal.filter((k) => k.art === 'google');
+  const gr = filterGruppen(kal);
+  const schalter = ({ key, name, farbe, titel, lesen = false, gesperrt = false }) => {
+    const ein = zeigt(key);
+    return `<button type="button" class="chip cal-chip${ein ? '' : ' aus'}" aria-pressed="${ein}" data-schalter="${esc(key)}" ${gesperrt ? 'disabled' : ''} style="--c:${esc(farbe)}" title="${esc(`${titel}. Klick blendet ein oder aus, Doppelklick zeigt nur diesen.`)}">
+      <span class="cal-dot"></span><span class="cal-chip-name">${esc(name)}</span>${lesen ? `<span class="cal-chip-lesen" aria-label="nur lesen">${icon('lock', 11).__raw}</span>` : ''}</button>`;
+  };
+  const gruppe = (key, name, titel, teile) => `<div class="cal-gruppe" role="group" aria-label="${esc(name)}">
+    <button type="button" class="cal-gruppe-kopf" data-gruppe="${key}" aria-pressed="${GEDRUECKT[gruppenStand(gr[key], state.aus)]}" title="${esc(titel)}">
+      <span class="cal-haken" aria-hidden="true">${icon('check', 11, 'ico ico-an').__raw}${icon('minus', 11, 'ico ico-teils').__raw}</span>${esc(name)}</button>
+    ${teile.join('')}
+  </div>`;
+  const kontovia = [
+    ...(lokal.length > 1
+      ? lokal.map((k) => schalter({ key: k.key, name: k.name, farbe: k.color || 'var(--accent)', titel: k.name }))
+      : [schalter({ key: lokal[0].key, name: 'Termine', farbe: lokal[0].color || 'var(--accent)', titel: 'Die in Kontovia angelegten Termine' })]),
+    ...ARTEN_ANZEIGE.map((a) => schalter({ key: a.key, name: a.label, farbe: a.farbe, titel: a.titel, gesperrt: a.nichtListe && state.mode === 'agenda' })),
+  ];
   // Mit Google verbunden, aber ohne Freigabe für weitere Kalender: ein Tipp führt zur Freigabe,
   // danach erscheinen die mit dem Konto geteilten Kalender von selbst.
   const geteilt = calState.status?.linked && calState.status?.weitereErlaubt === false
     ? `<button type="button" class="chip cal-chip cal-freigabe" id="calGeteilt" title="Geteilte Google-Kalender anzeigen: Kontovia braucht dafür einmal Ihre Freigabe bei Google.">${icon('calendar', 13).__raw} Geteilte Kalender anzeigen</button>`
     : '';
-  if (kal.length < 2) return `<div class="cal-tabs">${geteilt}<span class="spacer"></span>${verwaltenKnopf()}</div>`;
-  return `<div class="cal-tabs" role="group" aria-label="Kalender ein- und ausblenden">
-    ${kal.map((k) => {
-      const an = !state.kalenderAus.has(k.key);
-      const titel = `${k.art === 'google' ? `Google Kalender „${k.name}“${k.readOnly ? ', nur lesen' : ''}` : k.name}. Klick blendet ein oder aus, Doppelklick zeigt nur diesen.`;
-      return `<button type="button" class="chip cal-chip${an ? '' : ' aus'}" aria-pressed="${an}" data-kal="${esc(k.key)}" style="--c:${esc(k.color || 'var(--accent)')}" title="${esc(titel)}">
-        <span class="cal-dot"></span><span class="cal-chip-name">${esc(k.name)}</span>${k.readOnly ? `<span class="cal-chip-lesen" aria-label="nur lesen">${icon('lock', 11).__raw}</span>` : ''}${k.art === 'google' && !k.readOnly ? '<span class="tiny muted">Google</span>' : ''}</button>`;
-    }).join('')}
+  return `<div class="cal-filter">
+    ${gruppe('kontovia', 'Kontovia', 'Alles aus Kontovia ein- oder ausblenden', kontovia)}
+    ${google.length ? gruppe('google', 'Google', 'Alle Google-Kalender ein- oder ausblenden', google.map((k) => schalter({
+      key: k.key, name: k.name, farbe: k.color || 'var(--accent)', titel: `Google Kalender „${k.name}“${k.readOnly ? ', nur lesen' : ''}`, lesen: k.readOnly,
+    }))) : ''}
     ${geteilt}
-    <button type="button" class="chip cal-alle" id="calAlle" ${state.kalenderAus.size ? '' : 'hidden'}>Alle zeigen</button>
+    <button type="button" class="chip cal-alle" id="calAlle" ${[...gr.kontovia, ...gr.google].every(zeigt) ? 'hidden' : ''}>Alle zeigen</button>
+    <span id="calHint" class="cal-hinweis">${hiddenHint()}</span>
     <span class="spacer"></span>
     ${verwaltenKnopf()}
-  </div>`;
-}
-
-/** Was aus Kontovia im Kalender stehen kann, je Art ein Schalter. Die Schalter bleiben immer stehen (nur ihr Zustand wechselt), damit nichts verrutscht. */
-const QUELLEN = [
-  { key: 'showTermine', label: 'Termine', farbe: 'var(--accent)', titel: 'Die in Kontovia angelegten Termine' },
-  { key: 'showDue', label: 'Zahlungen', farbe: 'var(--warn)', titel: 'Fälligkeiten offener Rechnungen (nicht in der Liste)', nichtListe: true },
-  { key: 'showEvents', label: 'Veranstaltungen', farbe: 'var(--accent)', titel: 'Veranstaltungstage aus Anzahlungen' },
-  { key: 'showTax', label: 'Steuertermine', farbe: 'var(--warn)', titel: 'Voranmeldung und Erklärungen' },
-  { key: 'showTodos', label: 'Aufgaben', farbe: 'var(--pos)', titel: 'Aufgaben mit Fälligkeit' },
-];
-
-function quellenHtml() {
-  const chip = (q, { kopf = false } = {}) => {
-    const an = kopf ? state.showKontovia : state.showKontovia && state[q.key];
-    const aus = !kopf && (!state.showKontovia || (q.nichtListe && state.mode === 'agenda'));
-    return `<button type="button" class="chip cal-chip cal-quelle${kopf ? ' haupt' : ''}${an ? '' : ' aus'}" data-quelle="${q.key}" aria-pressed="${an}" ${aus ? 'disabled' : ''} style="--c:${q.farbe}" title="${esc(q.titel)}">
-      <span class="cal-dot"></span><span class="cal-chip-name">${esc(q.label)}</span></button>`;
-  };
-  return `<div class="cal-tabs cal-quellen" role="group" aria-label="Was aus Kontovia im Kalender steht">
-    ${chip({ key: 'showKontovia', label: 'Kontovia', farbe: 'var(--accent)', titel: 'Alles aus Kontovia ein- oder ausblenden; aus: nur die Google-Kalender' }, { kopf: true })}
-    ${QUELLEN.map((q) => chip(q)).join('')}
-    <span id="calHint" class="cal-hinweis">${hiddenHint()}</span>
   </div>`;
 }
 
@@ -546,11 +568,8 @@ const verwaltenKnopf = () => `<button type="button" class="btn sm ghost" id="cal
  * Geändert wird es über „Anzeige“ oben rechts.
  */
 function hiddenHint() {
-  // Was aus Kontovia stammt, zeigen die Schalter darüber selbst.
-  const weg = [
-    !state.showGoogle && 'Google Kalender',
-    !state.showDone && 'Erledigte',
-  ].filter(Boolean);
+  // Kalender und Arten zeigen die Schalter daneben selbst.
+  const weg = [!state.showDone && 'Erledigte'].filter(Boolean);
   const tags = state.tags.size ? `<span class="small cal-hinweis-teil" title="Über „Anzeige“ oben rechts ändern">${icon('tag', 13).__raw} ${esc([...state.tags].join(', '))}</span>` : '';
   return (weg.length ? `<span class="small muted cal-hinweis-teil" title="Über „Anzeige“ oben rechts wieder einblenden">${icon('hide', 13).__raw} ausgeblendet: ${esc(weg.join(', '))}</span>` : '') + tags;
 }
@@ -729,7 +748,7 @@ function listeHtml(from, to) {
   if (state.mode === 'agenda') {
     const heute = todayISO();
     const bis = addDays(heute, 365);
-    const past = sortBy([...termine(addDays(heute, -365), addDays(heute, -1), { liste: true }), ...(state.showEvents ? eventEntries(addDays(heute, -365), addDays(heute, -1)) : [])], (e) => e.occurrence, -1).slice(0, 40);
+    const past = sortBy([...termine(addDays(heute, -365), addDays(heute, -1), { liste: true }), ...(zeigt('art:events') ? eventEntries(addDays(heute, -365), addDays(heute, -1)) : [])], (e) => e.occurrence, -1).slice(0, 40);
     const events = sortBy([...termine(heute, bis, { liste: true }), ...sonstige(heute, bis)], (e) => e.occurrence + (e.startTime || ''));
     return `<div class="card mt16 cal-liste">
         <div class="card-head"><h2>Kommende Termine</h2><span class="sub">nächste zwölf Monate</span><div class="spacer"></div><span class="badge">${int(events.length)}</span></div>
@@ -749,7 +768,7 @@ function listeHtml(from, to) {
   } else if (state.mode === 'week') kopf = 'Termine der Woche';
   else kopf = 'An diesem Tag';
   // Im Monat stehen unten nur Termine und Aufgaben; Zahlungs- und Steuertermine zeigt das Raster.
-  const eintraege = sortBy([...termine(a, b, { liste: true }), ...(state.mode === 'month' ? (state.showTodos ? todoEntries(a, b) : []) : sonstige(a, b))], (e) => e.occurrence + (e.startTime || ''));
+  const eintraege = sortBy([...termine(a, b, { liste: true }), ...(state.mode === 'month' ? (zeigt('art:todos') ? todoEntries(a, b) : []) : sonstige(a, b))], (e) => e.occurrence + (e.startTime || ''));
   return `<div class="card mt16 cal-liste">
     <div class="card-head"><h2>${esc(kopf)}</h2><div class="spacer"></div><span class="badge">${int(eintraege.length)}</span></div>
     <div class="card-body ${eintraege.length ? 'tight' : ''}">${liste(eintraege, 'Keine Termine', state.mode === 'day' ? 'An diesem Tag ist nichts eingetragen.' : 'In diesem Zeitraum ist nichts eingetragen.')}</div>
@@ -1447,7 +1466,7 @@ export function openKalenderVerwaltung() {
       }, { entity: 'einstellungen', summary: `Kalender: ${[standard.name, ...eigene.map((k) => k.name)].join(', ')}` });
       await saveNow();
       // Reiter und Ausblendungen entfernter Kalender aufräumen.
-      for (const k of [...state.kalenderAus]) if (!k.startsWith('g:') && k && !bleiben.has(k)) state.kalenderAus.delete(k);
+      for (const k of [...state.aus]) if (!k.startsWith('g:') && !ARTEN.includes(k) && k && !bleiben.has(k)) state.aus.delete(k);
       merken();
       m.close();
       ok('Kalender gespeichert');

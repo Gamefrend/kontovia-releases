@@ -690,27 +690,52 @@ export class GoogleCalendar {
    * anderem und wurde mit dem Konto geteilt. `sonder`: von Google selbst
    * geführt (Feiertage, Geburtstage). `angezeigt`: in Google nicht ausgeblendet. Ob der Haken in
    * Google gesetzt ist, zählt nicht: Wer einen Kalender teilt, will ihn auch hier sehen.
+   * `nurFreiBelegt`: Der Besitzer hat nur seine Verfügbarkeit (frei/belegt) freigegeben; die Termine selbst darf
+   * Kontovia nicht lesen. Er steht trotzdem in der Liste, damit man sieht, warum er fehlt.
    */
   async kalenderListe() {
     const g = this.state();
     const out = [];
     let pageToken;
     do {
-      const r = await this.api('GET', '/users/me/calendarList', null, { minAccessRole: 'reader', maxResults: 250, showHidden: 'true', pageToken });
+      const r = await this.api('GET', '/users/me/calendarList', null, { minAccessRole: 'freeBusyReader', maxResults: 250, showHidden: 'true', pageToken });
       for (const c of r?.items || []) {
         if (!c?.id || c.id === g.calendarId || String(c.description || '').includes(MARKER) || c.deleted) continue;
         const rolle = c.accessRole || 'owner';
-        if (!['owner', 'writer', 'reader'].includes(rolle)) continue;
+        if (!['owner', 'writer', 'reader', 'freeBusyReader'].includes(rolle)) continue;
         out.push({
           id: String(c.id), name: String(c.summaryOverride || c.summary || c.id).slice(0, 200),
           primary: !!c.primary, color: String(c.backgroundColor || '').slice(0, 20),
-          readOnly: rolle === 'reader', geteilt: rolle !== 'owner' && !c.primary,
+          readOnly: rolle === 'reader' || rolle === 'freeBusyReader', geteilt: rolle !== 'owner' && !c.primary,
           sonder: /@group\.v\.calendar\.google\.com$/.test(String(c.id)), importiert: /@import\.calendar\.google\.com$/.test(String(c.id)), angezeigt: !c.hidden,
+          ...(rolle === 'freeBusyReader' ? { nurFreiBelegt: true } : {}),
         });
       }
       pageToken = r?.nextPageToken;
     } while (pageToken && out.length < 500);
     return out.sort((a, b) => (b.primary - a.primary) || a.name.localeCompare(b.name, 'de'));
+  }
+
+  /**
+   * Ein geteilter Kalender, der nicht in der Liste des Kontos steht: Google nimmt ihn dort erst
+   * auf, wenn man die Einladung per E-Mail annimmt. Lesen darf Kontovia ihn trotzdem, wenn er
+   * mit dem Konto geteilt ist. `adresse`: Kennung des Kalenders, bei einem persönlichen Kalender
+   * die E-Mail-Adresse der Person. Prüft auch, dass sich seine Termine lesen lassen.
+   */
+  async kalenderNachAdresse(adresse) {
+    const id = String(adresse || '').trim();
+    if (!KALENDER_ID.test(id)) throw fehler('Bitte die Adresse des Kalenders eingeben, etwa die E-Mail-Adresse der Person, die ihn teilt.', 'ADRESSE');
+    const g = this.state();
+    if (id === g.calendarId) throw fehler('Das ist der Kalender „Kontovia“ selbst.', 'ADRESSE');
+    let c;
+    try {
+      c = await this.api('GET', `/calendars/${enc(id)}`);
+      await this.api('GET', `/calendars/${enc(id)}/events`, null, { maxResults: 1 });
+    } catch (err) {
+      if ([403, 404].includes(err.status) && !err.code) throw fehler('Diesen Kalender kann Kontovia nicht lesen. Entweder stimmt die Adresse nicht, oder er ist nicht mit Ihrem Google-Konto geteilt (oder nur seine Verfügbarkeit).', 'ADRESSE');
+      throw err;
+    }
+    return { id: String(c?.id || id), name: String(c?.summary || id).slice(0, 200), readOnly: true, geteilt: true };
   }
 
   /**

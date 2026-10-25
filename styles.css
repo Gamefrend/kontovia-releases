@@ -2254,7 +2254,7 @@ html[data-theme="dark"] { --krone: #f0bf61; }
 .badge.cal-sync:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* Reiter: jeder Kalender als Schalter mit Farbpunkt; ausgeblendet zeigt er einen leeren Ring */
-.cal-tabs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 0 12px; }
+.cal-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 0 12px; }
 .cal-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .cal-chip {
   --c: var(--accent); height: 30px; gap: 7px; padding: 0 12px 0 10px; font-weight: 500; color: var(--text);
@@ -2274,10 +2274,22 @@ html[data-theme="dark"] { --krone: #f0bf61; }
 .cal-alle[hidden] { display: inline-flex; visibility: hidden; } /* behält seinen Platz, damit nichts verrutscht */
 .cal-chip:disabled { opacity: .45; cursor: default; }
 .cal-chip.cal-freigabe { border-style: dashed; color: var(--accent); }
-/* Schalter für das, was aus Kontovia stammt: eine feste Zeile, nur ihr Zustand wechselt */
-.cal-quellen { min-height: 30px; box-sizing: content-box; }
-.cal-quelle.haupt { font-weight: 600; margin-right: 6px; }
-.cal-quellen .cal-hinweis { margin-left: auto; flex-wrap: nowrap; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Gruppen „Kontovia“ und „Google“: ein Rahmen um die Schalter, vorn der Kopf mit Kästchen (Haken: alle,
+   Strich: einige, leer: keiner). Er sieht bewusst anders aus als die Schalter mit Farbpunkt darin. */
+.cal-gruppe { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px; min-width: 0; max-width: 100%; padding: 2px; border: 1px solid var(--border); border-radius: 16px; }
+.cal-gruppe-kopf {
+  display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 11px 0 8px; margin-right: 2px;
+  border: 0; border-radius: 13px; background: var(--surface-2); color: var(--text); font: inherit; font-size: 12.5px; font-weight: 620; cursor: pointer;
+  transition: background .2s, color .2s;
+}
+.cal-gruppe-kopf:hover { background: color-mix(in srgb, var(--accent) 12%, var(--surface-2)); }
+.cal-gruppe-kopf:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cal-gruppe-kopf[aria-pressed="false"] { color: var(--muted); }
+.cal-haken { display: inline-grid; place-items: center; width: 14px; height: 14px; box-sizing: border-box; border-radius: 4px; border: 1.5px solid var(--border-strong); color: var(--accent-text); transition: background .2s, border-color .2s; }
+.cal-haken .ico { grid-area: 1 / 1; width: 10px; height: 10px; stroke-width: 3; opacity: 0; transform: scale(.6); transition: opacity .15s, transform .25s var(--feder); }
+.cal-gruppe-kopf:not([aria-pressed="false"]) .cal-haken { background: var(--accent); border-color: var(--accent); }
+.cal-gruppe-kopf[aria-pressed="true"] .ico-an, .cal-gruppe-kopf[aria-pressed="mixed"] .ico-teils { opacity: 1; transform: none; }
+.cal-filter .cal-hinweis { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @keyframes kal-chip-ein { from { opacity: 0; transform: translateX(-6px); } }
 
 /* Schnelleingabe: Feld mit Plus davor, der Hinweis darunter */
@@ -2397,7 +2409,7 @@ button.cal-more:hover { background: var(--accent-soft); }
 .cal-bar { padding: 10px 14px; }
 .cal-body { padding: 10px 14px 14px; }
 .cal-titel { font-size: 15px; font-weight: 600; }
-.cal-tabs { gap: 4px 2px; padding-bottom: 8px; }
+.cal-filter { gap: 6px 8px; padding-bottom: 8px; }
 .cal-chip { height: 26px; gap: 6px; padding: 0 10px 0 8px; font-size: 12.5px; background: transparent; border: 1px solid transparent; border-radius: 13px; }
 .cal-chip:hover { background: var(--surface-2); border-color: transparent; }
 .cal-chip .cal-dot { width: 8px; height: 8px; }
