@@ -24,7 +24,7 @@ export async function renderCloudCard(root) {
   setCloudVerbunden(status.configured ? !!status.linked : null);
 
   let quotaLine = '';
-  /** „Mit Google entsperren“: nur hier, bei der Google-Verbindung, an- und abzuschalten. */
+  /** „Mit Google entsperren“: nur hier, bei der Google-Verbindung, abzuschalten (einschalten seit SEC-84 nicht mehr). */
   let google = null;
   if (status.linked) {
     const [q, s] = await Promise.all([api.cloud.quota().catch(() => null), api.entsperrung.status().catch(() => null)]);
@@ -140,73 +140,34 @@ export async function renderCloudCard(root) {
 /* -------------------------------------------------------------------------- */
 
 /**
- * Der Schalter für „Mit Google entsperren“. Er steht nur hier, bei der
- * Google-Verbindung, und sagt am Knopf deutlich, was er kostet: Der Schlüssel
- * liegt dann unverschlüsselt im Cloud-Speicher, das Kontovia-Passwort schützt
- * nicht mehr.
+ * „Mit Google entsperren“ wird abgeschafft (SEC-84, Stufe 1 aus SEC-9): Neu
+ * einschalten lässt es sich nicht mehr, es entsteht kein neuer Schlüssel im
+ * Klartext in der Cloud. Wo der Weg schon eingerichtet ist, bleibt er, bis ihn
+ * jemand ausschaltet; hier stehen dafür die Warnung und „Ausschalten“.
+ * Sperrbildschirm und Auffrischen eines vorhandenen Schlüssels bleiben
+ * unverändert (lib/zugaenge.js, web/cloud.js: googleAuffrischen).
  */
 function googleBlock(g) {
-  if (!g) return '';
+  if (!g?.eingerichtet) return '';
   return `
     <h3 class="mt24 mb8" style="font-size:14px">Mit Google entsperren, ohne Passwort</h3>
-    ${g.eingerichtet ? `
-      <div class="notice danger mb8"><strong>Eingeschaltet. Das ist ein großes Sicherheitsrisiko.</strong>
-      Wer sich mit ${esc(g.email || 'Ihrem Google-Konto')} bei Google anmeldet, öffnet Ihre Buchhaltung ohne Ihr
-      Kontovia-Passwort, auf jedem Gerät. Ihre Daten sind damit nur noch durch das Passwort Ihres Google-Kontos geschützt.</div>
-      <button class="btn primary" id="btnGoogleSchluessel">Ausschalten</button>`
-    : `
-      <p class="small muted mt0">Auf Wunsch öffnet Kontovia Ihre Buchhaltung auf jedem Gerät allein mit der Anmeldung bei Google.</p>
-      <div class="notice danger mb8"><strong>Großes Sicherheitsrisiko.</strong> Dafür liegt der Schlüssel zu Ihrer Buchhaltung
-      unverschlüsselt in Ihrem Cloud-Speicher. Ihre Daten sind dann nur noch durch das Passwort Ihres Google-Kontos geschützt,
-      nicht mehr durch Ihr Kontovia-Passwort: Wer Ihr Google-Konto übernimmt, kann Ihre ganze Buchhaltung lesen. Technisch
-      kämen dann auch Google und der Hersteller von Kontovia an sie heran. Wir raten davon ab.</div>
-      <button class="btn danger" id="btnGoogleSchluessel">Trotzdem einschalten …</button>`}`;
+    <div class="notice danger mb8"><strong>Eingeschaltet. Das ist ein großes Sicherheitsrisiko.</strong>
+    Wer sich mit ${esc(g.email || 'Ihrem Google-Konto')} bei Google anmeldet, öffnet Ihre Buchhaltung ohne Ihr
+    Kontovia-Passwort, auf jedem Gerät. Ihre Daten sind damit nur noch durch das Passwort Ihres Google-Kontos geschützt.</div>
+    <p class="small muted mt0">Diesen Weg gibt es künftig nicht mehr. Nach dem Ausschalten lässt er sich nicht wieder einschalten.</p>
+    <button class="btn primary" id="btnGoogleSchluessel">Ausschalten</button>`;
 }
 
 function wireGoogle(root, g) {
   $('#btnGoogleSchluessel', root)?.addEventListener('click', async (e) => {
+    if (!g?.eingerichtet) return;
     const btn = e.currentTarget;
-    if (!g.eingerichtet && !await googleEinschaltenFrage(g.email)) return;
     btn.disabled = true;
     try {
-      if (g.eingerichtet) {
-        await api.entsperrung.googleEntfernen();
-        ok('Ausgeschaltet', 'Der Schlüssel ist aus Ihrem Cloud-Speicher gelöscht. Kontovia öffnet sich wieder nur mit Ihrem Passwort oder Fingerabdruck.');
-      } else {
-        await api.entsperrung.googleEinrichten();
-        ok('Eingeschaltet', 'Kontovia lässt sich jetzt mit Ihrem Google-Konto öffnen, ohne Passwort. Auf Ihren anderen Geräten erscheint der Knopf nach dem nächsten Entsperren.');
-      }
+      await api.entsperrung.googleEntfernen();
+      ok('Ausgeschaltet', 'Der Schlüssel ist aus Ihrem Cloud-Speicher gelöscht. Kontovia öffnet sich wieder nur mit Ihrem Passwort oder Fingerabdruck.');
     } catch (ex) { err('Nicht geklappt', ex.message); }
     renderCloudCard(root);
-  });
-}
-
-/** Einschalten nur nach einem Häkchen: Wer es tut, soll gelesen haben, was es bedeutet. */
-function googleEinschaltenFrage(email) {
-  return new Promise((resolve) => {
-    let fertig = false;
-    const m = modal({
-      title: 'Mit Google entsperren einschalten?',
-      size: 'slim',
-      body: html`
-        <div class="notice danger mt0"><strong>Das ist ein großes Sicherheitsrisiko.</strong></div>
-        <ul class="small" style="line-height:1.6;padding-left:18px">
-          <li>Der Schlüssel zu Ihrer Buchhaltung liegt dann unverschlüsselt in Ihrem Cloud-Speicher.</li>
-          <li>Ihre Daten sind nur noch durch das Passwort Ihres Google-Kontos${email ? ` (${email})` : ''} geschützt. Ihr Kontovia-Passwort schützt sie dann nicht mehr.</li>
-          <li>Wer Ihr Google-Konto übernimmt, kann Ihre ganze Buchhaltung lesen, auf jedem Gerät. Technisch kämen auch Google und der Hersteller von Kontovia an sie heran.</li>
-          <li>Ausschalten löscht den Schlüssel dort wieder. Wer ihn vorher kopiert hat, kann Ihre Buchhaltung aber weiter öffnen, auch mit allen späteren Änderungen.</li>
-        </ul>
-        <p class="small muted">Sicherer: ein neues Gerät mit dem QR-Code verbinden (Sicherheit & Zugang, Weitere Geräte) und dort Fingerabdruck oder Gesicht einschalten.</p>
-        <label class="check mt16"><input type="checkbox" id="gsOk"> <span>Ich habe verstanden, dass meine Buchhaltung dann nur noch durch mein Google-Konto geschützt ist.</span></label>`,
-      foot: '<button class="btn" data-nein>Abbrechen</button><button class="btn danger" data-ja disabled>Trotzdem einschalten</button>',
-      onClose: () => { if (!fertig) resolve(false); },
-    });
-    const feld = m.root.querySelector('#gsOk');
-    const ja = m.root.querySelector('[data-ja]');
-    feld.addEventListener('change', () => { ja.disabled = !feld.checked; });
-    ja.addEventListener('click', () => { fertig = true; m.close(); resolve(true); });
-    m.root.querySelector('[data-nein]').addEventListener('click', () => { fertig = true; m.close(); resolve(false); });
-    setTimeout(() => m.root.querySelector('[data-nein]').focus(), 60);
   });
 }
 

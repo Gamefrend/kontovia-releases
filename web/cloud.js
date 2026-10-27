@@ -386,7 +386,11 @@ export class Cloud {
     return this.ausCloudUebernehmen(a, (blob) => this.vault.adoptContainerWithKey(blob, dek));
   }
 
-  /** Legt den Datenschlüssel in das verbundene Google-Konto (Einstellungen → Sicherheit). */
+  /**
+   * Legt den Datenschlüssel in das verbundene Google-Konto. Seit SEC-84 bietet
+   * die Brücke das nicht mehr an; es bleibt nur, damit die Prüfungen
+   * Bestandskonten nachbilden können, die den Weg schon eingeschaltet haben.
+   */
   async googleEinrichten() {
     this.vault.assertUnlocked();
     const st = this.cfg().state?.firebase || {};

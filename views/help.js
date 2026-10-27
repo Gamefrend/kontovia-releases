@@ -846,10 +846,10 @@ function cloud(root) {
         <p>Neben dem Passwort lässt sich unter <a data-go="settings">Einstellungen → Sicherheit</a>
         <strong>Fingerabdruck oder Gesicht</strong> einschalten (nur auf diesem Gerät, der Schlüssel bleibt im Sicherheitschip).
         Das Passwort bleibt immer gültig.</p>
-        <p class="mb0">Ist Kontovia mit Google verbunden, gibt es unter <a data-go="settings">Einstellungen → Daten &amp; Cloud</a>
-        außerdem <strong>Mit Google entsperren</strong>. <strong>Das ist ein großes Sicherheitsrisiko:</strong> Der Schlüssel zu Ihrer
-        Buchhaltung liegt dann unverschlüsselt im Cloud-Speicher, und Ihre Daten sind nur noch durch das Passwort Ihres
-        Google-Kontos geschützt. Wer Ihr Google-Konto übernimmt, kann alles lesen. Wir raten davon ab.</p>
+        <p class="mb0">Wer früher <strong>Mit Google entsperren</strong> eingeschaltet hat, behält den Weg vorerst und kann ihn unter
+        <a data-go="settings">Einstellungen → Daten &amp; Cloud</a> ausschalten. Neu einschalten lässt er sich nicht mehr.
+        <strong>Er ist ein großes Sicherheitsrisiko:</strong> Der Schlüssel zu Ihrer Buchhaltung liegt dabei unverschlüsselt im
+        Cloud-Speicher, und Ihre Daten sind nur noch durch das Passwort Ihres Google-Kontos geschützt. Wir raten, ihn auszuschalten.</p>
       </div></div>
       <div class="card mb16"><div class="card-body">
         <h2 class="mt0">Rückmeldung geben</h2>
@@ -875,7 +875,7 @@ function cloud(root) {
         regelmäßigen Abständen.</p>
         <div class="notice ok mb0"><strong>Ihre Daten bleiben verschlüsselt.</strong> In die Cloud geht
         nur Ihre bereits verschlüsselte Buchhaltung. Lesen kann sie nur, wer Ihr Passwort kennt.
-        Das sind weder Google noch der Hersteller von Kontovia. Das gilt, solange Sie „Mit Google entsperren“ ausgeschaltet lassen.</div>
+        Das sind weder Google noch der Hersteller von Kontovia. Ausnahme: Sie haben früher „Mit Google entsperren“ eingeschaltet und noch nicht ausgeschaltet.</div>
       </div></div>
 
       <div class="card mt16"><div class="card-body">

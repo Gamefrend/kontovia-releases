@@ -810,7 +810,7 @@ const api = {
         throw err;
       }
     }, { needsUnlock: false }),
-    googleEinrichten: handle(async () => { await cloud.googleEinrichten(); return cloud.googleStatus(); }),
+    // Kein googleEinrichten mehr (SEC-84): „Mit Google entsperren“ lässt sich nur noch ausschalten.
     googleEntfernen: handle(async () => { await cloud.googleEntfernen(); return cloud.googleStatus(); }),
     /** Nach dem Entsperren mit dem Passwort: den Schlüssel im Konto auf dem neuesten Stand halten. */
     googleAuffrischen: handle(async () => cloud.googleAuffrischen()),

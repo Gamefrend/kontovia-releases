@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 27. Oktober 2026, Programmversion 2.48.4
+Stand: 27. Oktober 2026, Programmversion 2.48.5
 
 ---
 
@@ -134,8 +134,8 @@ Sicherungen vollständig wiederherstellbar sind.
 **Was der Betreiber der Ablage sehen kann:** Dateigröße, Änderungszeitpunkt und
 die Identität des angemeldeten Kontos. **Nicht** den Inhalt. Dafür wäre Ihr
 Tresorpasswort nötig, und das verlässt Ihr Gerät nie. Eine Ausnahme gibt es nur,
-wenn Sie selbst „Mit Google entsperren“ unter *Daten & Cloud* einschalten
-(siehe unten).
+wenn Sie „Mit Google entsperren“ früher eingeschaltet und noch nicht
+ausgeschaltet haben (siehe unten).
 
 **Rechtsgrundlage:** Art. 6 Abs. 1 lit. b und f DSGVO (Durchführung der eigenen
 Buchhaltung, berechtigtes Interesse an einer Datensicherung).
@@ -196,10 +196,11 @@ von Gesetzen nötig.
 
 ## Weitere Wege zum Entsperren (freiwillig)
 
-Ihr Passwort bleibt immer gültig. Zusätzlich lassen sich in den Einstellungen
-zwei weitere Wege einschalten: Fingerabdruck oder Gesicht unter *Sicherheit*,
-„Mit Google entsperren“ unter *Daten & Cloud*. Jeder öffnet denselben Tresor
-für sich allein.
+Ihr Passwort bleibt immer gültig. Zusätzlich lässt sich in den Einstellungen
+unter *Sicherheit* Fingerabdruck oder Gesicht einschalten. „Mit Google
+entsperren“ gibt es nur noch für Konten, die es schon eingeschaltet haben; neu
+einschalten lässt es sich nicht mehr. Jeder Weg öffnet denselben Tresor für
+sich allein.
 
 **Fingerabdruck oder Gesicht (nur dieses Gerät).** Ihr Gerät gibt nach der
 Bestätigung per Biometrie ein geheimes Merkmal heraus, aus dem Kontovia einen
@@ -208,16 +209,19 @@ Speicher Ihres Browsers. Fingerabdruck und Gesicht selbst sehen weder Kontovia
 noch der Betreiber noch Google; sie bleiben im Sicherheitschip Ihres Geräts.
 Beim Abmelden wird die Hülle gelöscht.
 
-**Mit Google entsperren (jedes Gerät).** Dafür legt Kontovia den Tresorschlüssel
-unverschlüsselt als kleine Datei in Ihrem eigenen Bereich des Cloud-Speichers ab.
+**Mit Google entsperren (jedes Gerät, nur noch für Konten, die es schon
+eingeschaltet haben).** Dafür hat Kontovia den Tresorschlüssel unverschlüsselt
+als kleine Datei in Ihrem eigenen Bereich des Cloud-Speichers abgelegt und hält
+sie dort aktuell, bis Sie den Weg unter *Daten & Cloud* ausschalten.
 Wer sich mit Ihrem Google-Konto anmeldet, bekommt sie und kann Kontovia ohne
 Passwort öffnen. **Das ist ein großes Sicherheitsrisiko:** Ihre Buchhaltung ist
 dann nur noch durch das Passwort Ihres Google-Kontos geschützt, nicht mehr durch
 Ihr Tresorpasswort. Wer Ihr Google-Konto übernimmt, und wer technisch auf den
 Speicher zugreifen kann (der Betreiber des Cloud-Projekts und Google als
 Auftragsverarbeiter), kommen dann an Ihre Buchhaltung. Ohne diesen Schalter hat
-nur Ihr Passwort den Schlüssel. Mit „Ausschalten“ wird die Datei gelöscht; wer
-den Schlüssel vorher kopiert hat, kann die Buchhaltung aber weiter öffnen. Auch
+nur Ihr Passwort den Schlüssel. Mit „Ausschalten“ wird die Datei gelöscht, und
+der Weg lässt sich danach nicht wieder einschalten; wer den Schlüssel vorher
+kopiert hat, kann die Buchhaltung aber weiter öffnen. Auch
 „Verbindung trennen“ mit Löschen der Cloud-Daten entfernt die Datei.
 
 ## Weiteres Gerät verbinden (freiwillig)
