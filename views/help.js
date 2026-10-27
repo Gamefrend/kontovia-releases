@@ -163,6 +163,8 @@ function anleitung(root) {
         <p>Keine Betriebsausgabe ohne Beleg. Kontovia speichert jede Rechnung verschlüsselt im
         Tresor und merkt sich eine Prüfsumme, mit der sich später nachweisen lässt,
         dass die Datei unverändert ist. Auf der Übersicht sehen Sie Ihre Belegquote.</p>
+        <p>Entfernen Sie einen Beleg, steht das im Änderungsjournal. Ist die Buchung festgeschrieben, bleiben ihre Belege;
+        weitere lassen sich noch anhängen.</p>
         <p>Bei Bewirtungskosten gehören der betriebliche Anlass und die Teilnehmerliste dazu.
         Schreiben Sie beides ins Notizfeld. Kontovia zieht davon automatisch nur 70 % ab.</p>
       </div></div>

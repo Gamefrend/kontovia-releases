@@ -1491,8 +1491,11 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
           : `${esc(bytes(a.size))} · Prüfsumme ${esc(String(a.sha256 || '').slice(0, 10))}…`}</div></div>
         <button class="btn sm ghost" data-view-att="${esc(a.id)}" title="Ansehen">${icon('eye', 14).__raw}</button>
         <button class="btn sm ghost" data-save-att="${esc(a.id)}" title="Speichern unter">${icon('save', 14).__raw}</button>
-        <button class="btn sm ghost" data-del-att="${esc(a.id)}" title="Entfernen">${icon('trash', 14).__raw}</button>
-      </div>`).join('');
+        ${locked && !addedAttachments.some((x) => x.id === a.id) ? ''
+    : `<button class="btn sm ghost" data-del-att="${esc(a.id)}" title="Entfernen">${icon('trash', 14).__raw}</button>`}
+      </div>`).join('')
+      + (locked && attachments.some((a) => !addedAttachments.some((x) => x.id === a.id))
+        ? '<p class="muted tiny mb0">Die Buchung ist festgeschrieben. Ihre Belege bleiben, weitere lassen sich anhängen.</p>' : '');
 
     list.querySelectorAll('[data-view-att]').forEach((b) => b.addEventListener('click', () => {
       // Ein gerade erst angehängter Beleg steht noch nicht im Bestand – seine
@@ -1507,13 +1510,21 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     list.querySelectorAll('[data-del-att]').forEach((b) => b.addEventListener('click', async () => {
       const id2 = b.dataset.delAtt;
       if (!await confirmDialog({ title: 'Beleg entfernen?', text: 'Die Datei wird endgültig aus dem Tresor gelöscht.', confirmLabel: 'Entfernen', danger: true })) return;
-      attachments = attachments.filter((x) => x.id !== id2);
-      await api.attach.remove(id2);
       const i = addedAttachments.findIndex((x) => x.id === id2);
+      try {
+        // War der Beleg bereits gespeichert, muss sein Eintrag mit Grabstein
+        // verschwinden, sonst holt ihn der nächste Abgleich zurück. Zuerst der
+        // Eintrag (SEC-72): Ist die Buchung festgeschrieben, lehnt der Bestand
+        // ab und die Datei bleibt.
+        if (i < 0) await removeAttachmentRecord(id2);
+      } catch (e) {
+        err('Beleg nicht entfernt', e.message);
+        return;
+      }
+      // Bleibt die Datei liegen, findet sie „Aufräumen“ in den Einstellungen.
+      try { await api.attach.remove(id2); } catch { /* siehe oben */ }
       if (i >= 0) addedAttachments.splice(i, 1);
-      // War der Beleg bereits gespeichert, muss sein Eintrag mit Grabstein
-      // verschwinden – sonst holt ihn der nächste Abgleich zurück.
-      else await removeAttachmentRecord(id2);
+      attachments = attachments.filter((x) => x.id !== id2);
       drawAttachments();
     }));
   }
@@ -1762,11 +1773,15 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
    * und sonst nichts verändert? Das ist ein neuer Vorgang im offenen Zeitraum
    * und lässt den abgeschlossenen, wie er erklärt wurde. Ohne diese Ausnahme
    * blieb jede zum Stichtag offene Rechnung für immer offen.
+   * Seit SEC-72 ebenso: nur Belege angehängt (wie sperrVerstoss in store.js).
    */
   function nurZahlungNachgetragen() {
-    if (!zahlungOffen || !tx.paidDate || isLockedDate(tx.paidDate) || ausgangslage === null) return false;
-    const ohneZahlung = ({ paidDate, accountId, ...rest }) => JSON.stringify(rest);
-    return ohneZahlung(tx) === ohneZahlung(JSON.parse(ausgangslage));
+    if (ausgangslage === null) return false;
+    const alt = JSON.parse(ausgangslage);
+    const zahlung = zahlungOffen && !!tx.paidDate && !isLockedDate(tx.paidDate);
+    const rest = ({ paidDate, accountId, attachments, ...r }) => JSON.stringify(zahlung ? r : { paidDate, accountId, ...r });
+    const belege = JSON.stringify(tx.attachments || []) !== JSON.stringify(alt.attachments || []);
+    return rest(tx) === rest(alt) && (zahlung || belege);
   }
 
   /** Prüft die Eingaben und schreibt die Buchung. Gibt zurück, ob gespeichert wurde. */
