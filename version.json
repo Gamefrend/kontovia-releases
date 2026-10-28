@@ -1,11 +1,11 @@
 {
-  "version": "2.48.5",
-  "released": "2026-10-27T10:25:22.274Z",
-  "notes": "„Mit Google entsperren“ lässt sich nicht mehr einschalten\n\n- Neu einschalten lässt sich „Mit Google entsperren“ nicht mehr. So landet kein neuer Schlüssel zu Ihrer Buchhaltung unverschlüsselt in der Cloud.\n- Haben Sie es schon eingeschaltet, bleibt es vorerst, und Sie können es unter Einstellungen › Daten & Cloud ausschalten.\n- Für ein weiteres Gerät gibt es den sicheren Weg mit dem QR-Code unter Sicherheit & Zugang.",
+  "version": "2.48.6",
+  "released": "2026-10-28T10:13:13.977Z",
+  "notes": "Belege festgeschriebener Buchungen bleiben sicher\n\n- Auch beim Speichern bleibt jeder Beleg an einer festgeschriebenen Buchung hängen. Weitere lassen sich weiter anhängen.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "ebf7f3c97dff383b552daae2531931cbab17f1cec1a6ad7c27d4e56b795207b3",
+      "sha256": "085c7ba0fe61e3b2226cabdda38659e599d4cd2a0246feda48161cea57ef873c",
       "size": 389
     },
     {
@@ -720,8 +720,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz-sec72.js",
-      "sha256": "165cfc96725925b3608ed64f37f3501c092fdce606b2da4c5de384777426150a",
-      "size": 1638
+      "sha256": "83c34f0d2572e3b9886032d5c9d3839976c11bc3f0f993192d218ac46fb2b39a",
+      "size": 1986
     },
     {
       "path": "lib/sprache/en/zusatz-sec84.js",
@@ -755,8 +755,8 @@
     },
     {
       "path": "lib/store.js",
-      "sha256": "719ba587b29754a572a6bf5bf10876c0a4e5537a927e3ff28e27e2ac6f812d32",
-      "size": 47201
+      "sha256": "a6b9f38c8b71a0ac7c7b911681f713f69284aeb765f2c59e711f03201fd4867c",
+      "size": 47702
     },
     {
       "path": "lib/suche.js",
@@ -830,8 +830,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "b8c3502c09cce8ea044d54eceda3a9d2865172af7e7f546d74172ed443079d35",
-      "size": 63387
+      "sha256": "6c628d816418b36584c49cfd6ace96ef7b08a921ee4916c999d77380f7c9b084",
+      "size": 63659
     },
     {
       "path": "lib/waehrung.js",
@@ -870,12 +870,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "92639883f1ce434854dcdd11d090081a714fe16cad39becdb1d438301b31751a",
+      "sha256": "2a98293bd39ff8b9e2e5494af33cb8d1ba47c04f7773f55aef5074eee43b5a56",
       "size": 2810
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "9058e45011c7e83012c8dc316a4761667ebe81149e308ed8274c6cc20f6c4740",
+      "sha256": "7034c18c1e23fd93a130690078c1a132840bd543c4392083a0486b8594da12b0",
       "size": 42309
     },
     {
@@ -895,7 +895,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "e897dd2b18966b56de42b47c59bca3d00431f15519490f5a2844de23850c1c64",
+      "sha256": "4f034c9d2d57dc48c806f68ec2192daf2b503259a4f4327b6904bc1c53ae7ace",
       "size": 46241
     },
     {
@@ -920,12 +920,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "98ce8eed50926b42a7800626ac51034f3ac638208bf66f0b0da7e915791731a7",
+      "sha256": "33d797d6a86e09cc7e512ffaecd97d5a0c40b8cb31aee07b835bd0725222a5e2",
       "size": 28337
     },
     {
       "path": "security.txt",
-      "sha256": "ebf7f3c97dff383b552daae2531931cbab17f1cec1a6ad7c27d4e56b795207b3",
+      "sha256": "085c7ba0fe61e3b2226cabdda38659e599d4cd2a0246feda48161cea57ef873c",
       "size": 389
     },
     {
@@ -1100,7 +1100,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "70ed34a6196d386d7f896c8f16537c0bf6d89d36335c66f0d98c4ca0138b95cf",
+      "sha256": "fc38d1de2c1c7cc14e08532cbaecb22f3bf8779d9af4b05020dc49ea227cca17",
       "size": 10044
     },
     {
