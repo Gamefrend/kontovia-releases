@@ -1,11 +1,11 @@
 {
-  "version": "2.48.6",
-  "released": "2026-10-28T10:13:13.977Z",
-  "notes": "Belege festgeschriebener Buchungen bleiben sicher\n\n- Auch beim Speichern bleibt jeder Beleg an einer festgeschriebenen Buchung hängen. Weitere lassen sich weiter anhängen.",
+  "version": "2.48.7",
+  "released": "2026-10-28T10:24:41.437Z",
+  "notes": "Berichte von Shopify, Etsy und Amazon einlesen\n\n- Berichte von Shopify, Etsy und Amazon lassen sich wie ein Kontoauszug einlesen, auf ein Konto der Art „Zahlungsdienst oder Marktplatz“.\n- Jeder Verkauf wird eine Einnahme mit dem vollen Betrag. Gebühren und Werbung werden eigene Ausgaben, Erstattungen stehen einzeln da.\n- Auszahlungen auf Ihr Bankkonto zählen als Übertrag zwischen Ihren Konten, nicht als Einnahme.\n- Steht im Bericht das Land des Käufers und gilt für Sie der One-Stop-Shop, bucht Kontovia Verkäufe in andere EU-Länder mit deren Umsatzsteuer.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "085c7ba0fe61e3b2226cabdda38659e599d4cd2a0246feda48161cea57ef873c",
+      "sha256": "b2fdbfe4d8e17b5b69d3199c9746ff3232912220ce704e439dc26f6d61cd1c0d",
       "size": 389
     },
     {
@@ -295,8 +295,8 @@
     },
     {
       "path": "lib/importaktionen.js",
-      "sha256": "e5f4f0abd851093dd9b2c15a2e46be3ec3943cb9c7ee2eed218352cc6ceb9feb",
-      "size": 23217
+      "sha256": "4ce7b85214106e422660f5190ae25aaa80951002487481b79732d1c6d5146e64",
+      "size": 24244
     },
     {
       "path": "lib/kalender.js",
@@ -320,8 +320,8 @@
     },
     {
       "path": "lib/kontoauszug.js",
-      "sha256": "21adf09a17c88bcda2dd6bfb1f760bb8c4035641e4325e3d02e19ef15b2823f6",
-      "size": 27254
+      "sha256": "4eec2b354214b9aafd53da64974374f64d5fae9d253161dce6e6a6a444293849",
+      "size": 27325
     },
     {
       "path": "lib/koppeln.js",
@@ -550,8 +550,8 @@
     },
     {
       "path": "lib/sprache/en.js",
-      "sha256": "7d618d9a446082c210486a1dfb1b9422aa2487dc6ee06d2540e83d2dda0a0826",
-      "size": 2039
+      "sha256": "a04ba2147fc39f168975da95270a45192e8abf51f7094508e0491cffabf7c513",
+      "size": 2088
     },
     {
       "path": "lib/sprache/en/t01.js",
@@ -719,6 +719,11 @@
       "size": 6859
     },
     {
+      "path": "lib/sprache/en/zusatz-sec64.js",
+      "sha256": "c96367a2a560a8ced01d0af364077e38158db6a5ab5232e292813abbbd90607a",
+      "size": 5036
+    },
+    {
       "path": "lib/sprache/en/zusatz-sec72.js",
       "sha256": "83c34f0d2572e3b9886032d5c9d3839976c11bc3f0f993192d218ac46fb2b39a",
       "size": 1986
@@ -830,8 +835,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "6c628d816418b36584c49cfd6ace96ef7b08a921ee4916c999d77380f7c9b084",
-      "size": 63659
+      "sha256": "909177ff4803cc7149437023125ffb6c62c14c22142862e5a9cf3c1a9e21fcbc",
+      "size": 64350
     },
     {
       "path": "lib/waehrung.js",
@@ -850,8 +855,8 @@
     },
     {
       "path": "lib/zahlungsdienste.js",
-      "sha256": "f26580c66d45be3aeffc9cdb097474f993efd92804c5fac23e1bd3fd4ae699b6",
-      "size": 13476
+      "sha256": "8653358dbbde08f0ec15b3cd84d9d56fda6bbda0764bb7d56e2afa6a4dafdba3",
+      "size": 30141
     },
     {
       "path": "lib/zugaenge.js",
@@ -865,17 +870,17 @@
     },
     {
       "path": "lib/zuordnung.js",
-      "sha256": "444f6d94479227e304c32f1933fb1edba74ad4894a765b3fad6a527f685598d0",
-      "size": 29361
+      "sha256": "49663499edda3fbd8d0bb0a2b83c4f9915df0d18da60535c8cb26881f7fe4cd0",
+      "size": 29379
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "2a98293bd39ff8b9e2e5494af33cb8d1ba47c04f7773f55aef5074eee43b5a56",
+      "sha256": "8066d7302159a4cd00a2f07c44d019415b3d0921c40fd25874e8ca1906023d43",
       "size": 2810
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "7034c18c1e23fd93a130690078c1a132840bd543c4392083a0486b8594da12b0",
+      "sha256": "00176b4d115e6e3840bf187cb1943c4d8e2a536f4cae50e47af40d7e47f5b126",
       "size": 42309
     },
     {
@@ -895,7 +900,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "4f034c9d2d57dc48c806f68ec2192daf2b503259a4f4327b6904bc1c53ae7ace",
+      "sha256": "a8d855b6fcc87d03367d8db281bf1d546534d2599857e05bfdc09b4feb55cd6d",
       "size": 46241
     },
     {
@@ -920,12 +925,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "33d797d6a86e09cc7e512ffaecd97d5a0c40b8cb31aee07b835bd0725222a5e2",
+      "sha256": "5c480dc87573770248db2d11a1449ee4e7bfcf5a8c5bd15ab0681d3766cd6024",
       "size": 28337
     },
     {
       "path": "security.txt",
-      "sha256": "085c7ba0fe61e3b2226cabdda38659e599d4cd2a0246feda48161cea57ef873c",
+      "sha256": "b2fdbfe4d8e17b5b69d3199c9746ff3232912220ce704e439dc26f6d61cd1c0d",
       "size": 389
     },
     {
@@ -995,8 +1000,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "5a77f899198a6e5d0c2ed0b4329aeabeacb1480d90fef88376d9a97e887e3f08",
-      "size": 102388
+      "sha256": "52984e3d9f34d7fa72d74086baced62143d45fbc8d18425addf35e59c8dd501c",
+      "size": 102999
     },
     {
       "path": "views/importexport.js",
@@ -1020,8 +1025,8 @@
     },
     {
       "path": "views/kontoimport.js",
-      "sha256": "404d8c4d8fe9860a46b8510a7db6b2aa0b6e9421b983ac8938f14bffa20f74b3",
-      "size": 55796
+      "sha256": "de0dc66cc3a1db4de65d517e2e3c74ba39204d3f3dc62e8e720803c4f3b16ced",
+      "size": 55871
     },
     {
       "path": "views/mahneinstellungen.js",
@@ -1035,8 +1040,8 @@
     },
     {
       "path": "views/master.js",
-      "sha256": "2767893b017c0ee74e23787668d4768078a5ccdf1c9d1a2f9469207aa6f5b61b",
-      "size": 40539
+      "sha256": "29ac37d16f79a8c68ad9da6fb31e40bc989544690ec0cb0df9ee0c6ca5b8db9d",
+      "size": 40578
     },
     {
       "path": "views/projekte.js",
@@ -1100,7 +1105,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "fc38d1de2c1c7cc14e08532cbaecb22f3bf8779d9af4b05020dc49ea227cca17",
+      "sha256": "189ef8082b698fd3577f0454324b4c5da68c1f9bfa1cd89c59f77cbfc98e1d6d",
       "size": 10044
     },
     {

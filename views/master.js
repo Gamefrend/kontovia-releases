@@ -679,7 +679,7 @@ function accountForm(a) {
         <select id="f_kind">
           <option value="bank" ${a.kind === 'bank' ? 'selected' : ''}>Bankkonto</option>
           <option value="cash" ${a.kind === 'cash' ? 'selected' : ''}>Kasse (Bargeld)</option>
-          <option value="zahlungsdienst" ${a.kind === 'zahlungsdienst' ? 'selected' : ''}>Zahlungsdienst (PayPal, Stripe)</option>
+          <option value="zahlungsdienst" ${a.kind === 'zahlungsdienst' ? 'selected' : ''}>Zahlungsdienst oder Marktplatz (PayPal, Stripe, Shopify, Etsy, Amazon)</option>
           <option value="other" ${a.kind === 'other' ? 'selected' : ''}>Sonstiges (Kreditkarte …)</option>
         </select>
       </div>

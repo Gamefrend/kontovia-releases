@@ -113,7 +113,7 @@ function schrittDatei(host, root) {
         <div class="ki-drop" id="kiDrop">
           ${icon('bank', 28).__raw}
           <strong>Kontoauszug hierher ziehen oder auswählen</strong>
-          <span class="small muted">CSV (Sparkasse, Volksbank, ING, DKB und andere), CAMT.053 (XML) und MT940, dazu Exporte von PayPal und Stripe</span>
+          <span class="small muted">CSV (Sparkasse, Volksbank, ING, DKB und andere), CAMT.053 (XML) und MT940, dazu Exporte von PayPal, Stripe, Shopify, Etsy und Amazon</span>
           <button class="btn primary mt8" id="kiWahl" type="button">${icon('plus', 15).__raw} Datei wählen</button>
           <input type="file" id="kiDatei" hidden accept=".csv,.txt,.tsv,.xml,.sta,.mt940,.940,.camt,.stm">
         </div>
@@ -307,7 +307,7 @@ const FILTER = [
   ['schon', 'Schon importiert', (z) => z.schonImportiert],
 ];
 
-const FORMATNAME = { csv: 'CSV', camt: 'CAMT.053', mt940: 'MT940', paypal: 'PayPal', stripe: 'Stripe' };
+const FORMATNAME = { csv: 'CSV', camt: 'CAMT.053', mt940: 'MT940', paypal: 'PayPal', stripe: 'Stripe', shopify: 'Shopify', etsy: 'Etsy', amazon: 'Amazon' };
 
 const kategorieName = (id) => sel.category(id)?.name || 'Ohne Kategorie';
 

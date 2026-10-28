@@ -351,6 +351,11 @@ function anleitung(root) {
         die Rechnung vor. Gebühren werden eigene Ausgaben. Auszahlungen auf Ihr Bankkonto sind ein Übertrag zwischen Ihren Konten: Kontovia
         bucht sie nicht, auch nicht, wenn sie später im Kontoauszug der Bank auftauchen. Kontovia verbindet sich dafür nicht mit PayPal
         oder Stripe; es liest nur die Datei.</p>
+        <p><strong>Shopify, Etsy und Amazon.</strong> Genauso mit einem Konto der Art „Zahlungsdienst oder Marktplatz“, etwa „Etsy“: bei
+        Shopify unter Zahlungen die Transaktionen als CSV, bei Etsy die Monatsabrechnung als CSV, bei Amazon den Datumsbereichsbericht
+        (Transaktionen). Jeder Verkauf wird eine Einnahme mit dem vollen Betrag, Gebühren und Werbung werden eigene Ausgaben, Erstattungen
+        stehen einzeln da. Steht im Bericht das Land des Käufers und gilt für Sie der One-Stop-Shop (OSS), bucht Kontovia Verkäufe in andere
+        EU-Länder mit deren Umsatzsteuer.</p>
         <p><strong>Rechnungen von Lieferanten bezahlen.</strong> Unter Buchungen › „Überweisen“ (oder Rechnungen › Eingang) wählen Sie offene
         Ausgaben, und Kontovia erstellt daraus eine Datei für Ihr Online-Banking. Die IBAN des Empfängers nimmt Kontovia aus dem Kontakt, aus
         der E-Rechnung oder von einer früheren Zahlung; fehlt sie, tragen Sie sie im Fenster ein. Die Datei laden Sie im Online-Banking hoch
