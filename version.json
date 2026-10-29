@@ -1,11 +1,11 @@
 {
-  "version": "2.48.7",
-  "released": "2026-10-28T10:24:41.437Z",
-  "notes": "Berichte von Shopify, Etsy und Amazon einlesen\n\n- Berichte von Shopify, Etsy und Amazon lassen sich wie ein Kontoauszug einlesen, auf ein Konto der Art „Zahlungsdienst oder Marktplatz“.\n- Jeder Verkauf wird eine Einnahme mit dem vollen Betrag. Gebühren und Werbung werden eigene Ausgaben, Erstattungen stehen einzeln da.\n- Auszahlungen auf Ihr Bankkonto zählen als Übertrag zwischen Ihren Konten, nicht als Einnahme.\n- Steht im Bericht das Land des Käufers und gilt für Sie der One-Stop-Shop, bucht Kontovia Verkäufe in andere EU-Länder mit deren Umsatzsteuer.",
+  "version": "2.48.8",
+  "released": "2026-10-29T09:15:51.597Z",
+  "notes": "E-Rechnungen an Kunden außerhalb der EU\n\n- E-Rechnungen für Leistungen an Unternehmen außerhalb der EU werden jetzt auch von Empfängern angenommen, die nach XRechnung prüfen.\n- Alle Rechnungsarten haben wir mit den offiziellen Prüfprogrammen für XRechnung und ZUGFeRD geprüft.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "b2fdbfe4d8e17b5b69d3199c9746ff3232912220ce704e439dc26f6d61cd1c0d",
+      "sha256": "79919be6393f1e4f6905ac1ea4df4c3ea9aea7b2a020c2d90ae9a1ef644fdd6c",
       "size": 389
     },
     {
@@ -225,8 +225,8 @@
     },
     {
       "path": "lib/erechnung-schreiben.js",
-      "sha256": "61189271ba19f3bd43c3b018fb8e85dddb2813b6d47153589af34801404213e5",
-      "size": 16421
+      "sha256": "09ca40940b762c824ed0268014c9977470384163ec49e7a858e8e034e77400df",
+      "size": 16672
     },
     {
       "path": "lib/erechnung.js",
@@ -550,8 +550,8 @@
     },
     {
       "path": "lib/sprache/en.js",
-      "sha256": "a04ba2147fc39f168975da95270a45192e8abf51f7094508e0491cffabf7c513",
-      "size": 2088
+      "sha256": "2ec0f83c214931c3ea9db171a25121216877884181f6257a5f15203a8dd44b1e",
+      "size": 2137
     },
     {
       "path": "lib/sprache/en/t01.js",
@@ -692,6 +692,11 @@
       "path": "lib/sprache/en/zusatz-sec35.js",
       "sha256": "a0a9e34dd5da75a20bcfbacce357e482e67cfffe96d41bc229f25622a56777d5",
       "size": 3824
+    },
+    {
+      "path": "lib/sprache/en/zusatz-sec36.js",
+      "sha256": "347ecbc9cf5bbded848877b42b18ffc877808093a4a9281aee7d3000cb30a1f2",
+      "size": 747
     },
     {
       "path": "lib/sprache/en/zusatz-sec37.js",
@@ -835,8 +840,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "909177ff4803cc7149437023125ffb6c62c14c22142862e5a9cf3c1a9e21fcbc",
-      "size": 64350
+      "sha256": "f5f5fbca260b835622951f7972cf10c790b406aeed248617b7ac7cdfa29f9996",
+      "size": 64740
     },
     {
       "path": "lib/waehrung.js",
@@ -875,12 +880,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "8066d7302159a4cd00a2f07c44d019415b3d0921c40fd25874e8ca1906023d43",
+      "sha256": "35fdacb02a842b4228fd613c23c27be4ce14080f2037d2c4e5685a2c23788ff4",
       "size": 2810
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "00176b4d115e6e3840bf187cb1943c4d8e2a536f4cae50e47af40d7e47f5b126",
+      "sha256": "bd9896ed5df466cbd5ee1cfb08637a0e2661689d6fc6ad93e0cc8be0adb5dfc2",
       "size": 42309
     },
     {
@@ -900,7 +905,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "a8d855b6fcc87d03367d8db281bf1d546534d2599857e05bfdc09b4feb55cd6d",
+      "sha256": "7f19065812f6a212f881fe8ec48cc6e7902449ef30aa0f31d6301837cf2a746b",
       "size": 46241
     },
     {
@@ -925,12 +930,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "5c480dc87573770248db2d11a1449ee4e7bfcf5a8c5bd15ab0681d3766cd6024",
+      "sha256": "adbedc4410d067dee5a380807a6b3efb5c1b3214b3fce58dd674d7dd01f36d03",
       "size": 28337
     },
     {
       "path": "security.txt",
-      "sha256": "b2fdbfe4d8e17b5b69d3199c9746ff3232912220ce704e439dc26f6d61cd1c0d",
+      "sha256": "79919be6393f1e4f6905ac1ea4df4c3ea9aea7b2a020c2d90ae9a1ef644fdd6c",
       "size": 389
     },
     {
@@ -1105,7 +1110,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "189ef8082b698fd3577f0454324b4c5da68c1f9bfa1cd89c59f77cbfc98e1d6d",
+      "sha256": "c7dbe14e04824916f2cbd5867eb521aa095c959ca318339e36b0efc94362c1e2",
       "size": 10044
     },
     {
