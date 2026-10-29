@@ -1,11 +1,11 @@
 {
-  "version": "2.48.9",
-  "released": "2026-10-29T13:32:38.686Z",
-  "notes": "Bei Kunden abbuchen per Lastschrift\n\n- Beim Kontakt lässt sich ein Lastschriftmandat eintragen, unter Rechnungen › Gestaltung Ihre Gläubiger-Identifikationsnummer.\n- Neue Zahlungsart Lastschrift: Rechnung und E-Mail nennen Tag, Konto und Mandat, so ist Ihr Kunde rechtzeitig informiert.\n- Unter Rechnungen › „Lastschriften einziehen“ erstellt Kontovia die Datei für Ihr Online-Banking.\n- Gibt die Bank eine Lastschrift zurück, erkennt Kontovia das im Kontoauszug, die Rechnung ist wieder offen und die Gebühr wird gebucht.",
+  "version": "2.48.10",
+  "released": "2026-10-29T18:22:34.010Z",
+  "notes": "Fahrtenbuch und Dienstreisen\n\n- Neu unter „Fahrten und Reisen“: das Fahrtenbuch für Ihren Firmenwagen, mit Kilometerstand, Ziel und Anlass jeder Fahrt.\n- Kontovia vergleicht das Fahrtenbuch mit der 1-%-Regel und zeigt, was für Sie günstiger ist.\n- Dienstreisen rechnen die Verpflegungspauschalen nach Tagen, gestellte Mahlzeiten werden abgezogen.\n- Jede Änderung einer Fahrt steht mit dem alten Inhalt im Änderungsjournal. Das Fahrtenbuch lässt sich als CSV speichern.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "a7fd223bbe45088784d0bc6a2ead1b7b181ec9550e8306c72cb3296b38b59894",
+      "sha256": "077d0da5c125843afd4f4e17dce22c433d493e0684661f61a260b3400f2b3b87",
       "size": 389
     },
     {
@@ -40,8 +40,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "57e939a216e4623bb1a9f4e5a5e6b2c2a20ec5c25cde9e1d315b429d3c624ee0",
-      "size": 90520
+      "sha256": "94901a24d0754d8e92d038dc78950b6cb3c43e58d552ad2605d92a44bc2954f1",
+      "size": 90667
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -249,6 +249,16 @@
       "size": 54130
     },
     {
+      "path": "lib/fahrtenaktionen.js",
+      "sha256": "2f3057940798d567fe26415f4f3b3a755663773100206f46dd26210f55e06443",
+      "size": 6701
+    },
+    {
+      "path": "lib/fahrtenbuch.js",
+      "sha256": "898a48981946798cc452669621729cc91a872ea16895280ccd05b83b6c2afb2a",
+      "size": 12319
+    },
+    {
       "path": "lib/feedback.js",
       "sha256": "8a6985054ae341b09802d6bc652cd917d29669e1917bd95450c7b25a749c0048",
       "size": 20397
@@ -375,8 +385,8 @@
     },
     {
       "path": "lib/merge.js",
-      "sha256": "db9048d88e585636d0f30795a8d9611829408c76f3dc30edf3e477b1ebeaf1eb",
-      "size": 20384
+      "sha256": "f0f1e13a05bef4d522e9b24a4f944f7c0509da97a29c0f154a3e148f6638e5c7",
+      "size": 20537
     },
     {
       "path": "lib/messung.js",
@@ -535,8 +545,8 @@
     },
     {
       "path": "lib/seitenleiste.js",
-      "sha256": "a43926bbded458e9fb0f8f85d5e627333c35d09dda0b5dbb0bb0dfbb2b6f90eb",
-      "size": 10200
+      "sha256": "a6ae3c10c1090838c42cd7644ade008134551510d1dde354bdfca0a2938ed9be",
+      "size": 10211
     },
     {
       "path": "lib/sepa.js",
@@ -545,8 +555,8 @@
     },
     {
       "path": "lib/sonderfaelle.js",
-      "sha256": "efe72c03a3bf31fe1d08058a4dd411711d0ce98ece61f0b75b7aee0c4775790c",
-      "size": 10720
+      "sha256": "1f76582c9c7996f0b0dbd5f1e51713abacc13fc5308e145ae69168046e3f4761",
+      "size": 10820
     },
     {
       "path": "lib/sprache.js",
@@ -555,8 +565,8 @@
     },
     {
       "path": "lib/sprache/en.js",
-      "sha256": "0e13435c86bb872d4c6f3c5544f156edd999d73c5037d755b5c2afdbfbad7412",
-      "size": 2186
+      "sha256": "e86d410adde9c2c76f03d7cbdbb033fe4b37059e2a080e37c382d72c1de9a452",
+      "size": 2235
     },
     {
       "path": "lib/sprache/en/t01.js",
@@ -739,6 +749,11 @@
       "size": 5036
     },
     {
+      "path": "lib/sprache/en/zusatz-sec65.js",
+      "sha256": "6f7fd1ac2a23020ee44f5e46a5269af75fcc730a39da89989adb7ef90ada26cc",
+      "size": 14879
+    },
+    {
       "path": "lib/sprache/en/zusatz-sec72.js",
       "sha256": "83c34f0d2572e3b9886032d5c9d3839976c11bc3f0f993192d218ac46fb2b39a",
       "size": 1986
@@ -775,8 +790,8 @@
     },
     {
       "path": "lib/store.js",
-      "sha256": "a6b9f38c8b71a0ac7c7b911681f713f69284aeb765f2c59e711f03201fd4867c",
-      "size": 47702
+      "sha256": "81d231cd8268595c7dc2359e32f094fc8d32cf0931418bc08556f3fe81be905d",
+      "size": 47854
     },
     {
       "path": "lib/suche.js",
@@ -830,8 +845,8 @@
     },
     {
       "path": "lib/ui.js",
-      "sha256": "ca40f65d67a78f6e9bb9ec6cc1b0c75b6b6ec56f67885ea7d64161f7b8af6f87",
-      "size": 47813
+      "sha256": "9c4819aac2b79a4d86a1d760a42a4bf46312b46d4643b4e320fd4fb6fe30397d",
+      "size": 48004
     },
     {
       "path": "lib/updates.js",
@@ -850,8 +865,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "1aff4971e2ec6801a642cc80757708de86ff521cb551bbfbb88ef0724b579e61",
-      "size": 65395
+      "sha256": "d67fb5ed0b79fe05844097b848b074a474b263dd66733775c569c77c8c306097",
+      "size": 65994
     },
     {
       "path": "lib/waehrung.js",
@@ -890,13 +905,13 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "e3ee431a29fcdb0b9944dcbba58448157b25fa7a934d4485aa4d384db8a59cb1",
-      "size": 2810
+      "sha256": "78de602bea0721d96b88e945c23040fab6ff3d9b63e5871cca359f6390f5c603",
+      "size": 2811
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "4d8da49695544f2bc68baf26ba0e77bb76121f907f8974e686a9445f5719435d",
-      "size": 42309
+      "sha256": "e95cb3cb46643f00e7875df7e5b030b20aa7bba2beddd9773dcb0e89efbfc64d",
+      "size": 42310
     },
     {
       "path": "recht/IMPRESSUM.md",
@@ -915,8 +930,8 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "996d1729524298a8e59a4f7e960d466c623ba01e763acdd92abe0855375db7bd",
-      "size": 46241
+      "sha256": "11b6c66d97209a30d4fae9f4257e698fbc0ff5151cb722f5a504b1bad26af78e",
+      "size": 46242
     },
     {
       "path": "recht/impressum.html",
@@ -940,12 +955,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "102e32455965d89fc88b04d374162b88820fd476daa17e49bf0cf2dca485329b",
-      "size": 28337
+      "sha256": "9b7dac2bc5e578270643d9a455786a29b405c23558db43c0d9a99724722760f5",
+      "size": 28338
     },
     {
       "path": "security.txt",
-      "sha256": "a7fd223bbe45088784d0bc6a2ead1b7b181ec9550e8306c72cb3296b38b59894",
+      "sha256": "077d0da5c125843afd4f4e17dce22c433d493e0684661f61a260b3400f2b3b87",
       "size": 389
     },
     {
@@ -1014,9 +1029,14 @@
       "size": 35737
     },
     {
+      "path": "views/fahrten.js",
+      "sha256": "176c5439dc2b068385100d7f305c8cf1d2a02aca7ec8542ddf0942d8d1e51109",
+      "size": 25005
+    },
+    {
       "path": "views/help.js",
-      "sha256": "7e2985ce3e2eab3ec7213fc765d5798fb23901acf555bc131d91feb531a45ed9",
-      "size": 103911
+      "sha256": "28cbf04911d214698c21c65d319128db261cfcaaadb1cf54598c6582921a76b9",
+      "size": 105798
     },
     {
       "path": "views/importexport.js",
@@ -1100,8 +1120,8 @@
     },
     {
       "path": "views/transactions.js",
-      "sha256": "41e50785603ea48452395c3db5f5325fae475a1ebbaf944dd180ce6324a69b1c",
-      "size": 125906
+      "sha256": "75ed9bb840eefc30d56847e9042829e9b1df9d139d0541e060023ac81147387e",
+      "size": 125924
     },
     {
       "path": "views/verfahrensdoku.js",
@@ -1120,8 +1140,8 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "d3afaaca751f8022643193d4d98f238a3b5830532eb707946f8856766415b6b7",
-      "size": 10044
+      "sha256": "cff02a570c7fde637bdc7a26ce99ee6b047f65ebfe15014abbcc5c73c7167420",
+      "size": 10045
     },
     {
       "path": "web/anmeldung.js",
@@ -1270,8 +1290,8 @@
     },
     {
       "path": "web/seed.js",
-      "sha256": "10b56944d0ec143bf014e6dd56e56615b7935b0dbb93ffe115a14b2b97538f21",
-      "size": 6011
+      "sha256": "ba71de2ada14a4eca789b3a087f13b620fdccc5d382dc3157b00fbf4494dd68c",
+      "size": 6028
     },
     {
       "path": "web/sperre.js",
@@ -1300,8 +1320,8 @@
     },
     {
       "path": "web/sqlschema.js",
-      "sha256": "8c9a0d0c6afa550fe1140dd3dec046b6b87432e8187204554918f38b6a63f71b",
-      "size": 13930
+      "sha256": "fa9541943e3f349a34da94a352241ef1c80f638cdce9b016e3c498c585dd7eb8",
+      "size": 14235
     },
     {
       "path": "web/sqlwerk.js",

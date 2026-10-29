@@ -52,6 +52,7 @@ export const VIEWS = {
   todos: { title: 'Aufgaben', icon: 'todo', mod: () => import('./views/todos.js'), key: '5' },
   rechnungen: { title: 'Rechnungen', icon: 'invoice', mod: () => import('./views/rechnungen.js'), key: '3' },
   projekte: { title: 'Projekte', icon: 'folder', mod: () => import('./views/projekte.js') },
+  fahrten: { title: 'Fahrten und Reisen', icon: 'car', mod: () => import('./views/fahrten.js') },
   reports: { title: 'Auswertungen', icon: 'chart', mod: () => import('./views/reports.js'), key: '6' },
   export: { title: 'Import & Export', icon: 'export', mod: () => import('./views/importexport.js'), key: '7' },
   master: { title: 'Stammdaten', icon: 'master', mod: () => import('./views/master.js'), key: '8' },
@@ -1499,6 +1500,7 @@ const HILFE_ABSCHNITT = {
   rechnungen: (p) => (p.tab === 'mahnwesen' ? 'zahlungserinnerung-und-mahnung' : p.tab === 'eingang' ? 'e-rechnungen-empfangen-xrechnung-zugferd'
     : p.tab === 'angebote' || p.beleg || p.neuBeleg ? 'angebote-und-lieferscheine' : 'rechnungen-schreiben'),
   projekte: () => 'projekte-und-zeiterfassung',
+  fahrten: () => 'fahrtenbuch-und-dienstreisen',
   calendar: () => 'termine-und-rechnungen-verknuepfen',
   todos: () => 'aufgaben-ziele-und-wiederholungen',
   reports: (p) => (p.tab === 'kasse' || p.tab === 'vorschau' ? 'kassenbuch-und-liquiditaet' : 'diagramme-und-durchschnittswerte'),

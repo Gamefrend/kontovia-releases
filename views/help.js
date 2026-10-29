@@ -537,6 +537,24 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
+        <h2 class="mt0">Fahrtenbuch und Dienstreisen</h2>
+        <p>Unter <a data-go="fahrten">Fahrten und Reisen</a> führen Sie das Fahrtenbuch für Ihren Firmenwagen. Legen Sie zuerst
+        das Fahrzeug mit Bruttolistenpreis an. Tragen Sie dann jede Fahrt ein: Datum, Kilometerstand am Anfang und am Ende, ob sie
+        betrieblich, privat oder zwischen Wohnung und Betrieb war, und bei betrieblichen Fahrten Ziel und Anlass. Der Kilometerstand
+        der nächsten Fahrt beginnt dort, wo die letzte endete; fehlt eine Strecke, weist Kontovia darauf hin.</p>
+        <p><strong>Fahrtenbuch oder 1-%-Regel.</strong> Kontovia rechnet den privaten Anteil der Kilometer auf die Kosten des
+        Fahrzeugs und vergleicht ihn mit der 1-%-Regel. Die Kosten schlägt Kontovia aus Ihren Kfz-Buchungen vor; Abschreibung und
+        Leasing prüfen Sie bitte. Die 1-%-Regel gibt es nur, wenn mehr als die Hälfte der Kilometer betrieblich war. Jede Änderung
+        einer Fahrt steht mit dem alten Inhalt im Änderungsjournal, und „Als CSV speichern“ gibt Ihnen das Fahrtenbuch für das
+        Finanzamt oder Ihre Kanzlei.</p>
+        <p><strong>Dienstreise.</strong> „Dienstreise“ rechnet die Verpflegungspauschalen: im Inland 14 € für den An- und Abreisetag
+        oder einen Tag mit mehr als 8 Stunden unterwegs, 28 € für jeden vollen Tag dazwischen. Haken Sie gestellte Mahlzeiten an,
+        sinkt die Pauschale (Frühstück um 5,60 €, Mittag- und Abendessen um je 11,20 €). Für Reisen ins Ausland tragen Sie die
+        Sätze des Landes aus der Tabelle des Bundesfinanzministeriums ein. Sind Sie mit dem eigenen Auto gefahren, kommen 0,30 € je
+        Kilometer dazu. Kontovia legt daraus Buchungen ohne Zahlungskonto an; Übernachtung und Fahrkarten buchen Sie mit der Rechnung.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
         <h2 class="mt0">Zeitraum wählen und filtern</h2>
         <p><strong>Zeitraum.</strong> Oben rechts steht der gewählte Zeitraum, etwa „Jahr ${String(new Date().getFullYear())}“.
         Die Pfeile daneben blättern um genau diese Länge weiter, vom März zum April, vom

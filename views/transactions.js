@@ -1001,7 +1001,7 @@ export function openTransactionDialog(id, type = 'expense', { onSaved = null, wi
     } else if (g('listenpreis') || tx.type !== 'income') delete tx.privatnutzung;
     // Entnahme und Nutzungseinlage bewegen kein Geld: ohne Konto, am Tag der Buchung (lib/sonderfaelle.js: ohneGeldfluss).
     // Sie sind gewöhnlich besteuert; eine besondere Behandlung daneben gilt nicht.
-    if (tx.fahrt || tx.privatnutzung) {
+    if (tx.fahrt || tx.privatnutzung || tx.verpflegung) {
       for (const k of ['vatTreatment', 'oss', 'einkauf', 'gutscheinWert']) delete tx[k];
       tx.accountId = '';
       tx.paidDate = tx.paidDate || tx.date;

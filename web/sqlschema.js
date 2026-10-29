@@ -28,7 +28,7 @@
  */
 
 /** Fassung des Schemas (PRAGMA user_version und meta.schema). Verlauf in docs/sql-umstellung.md. */
-export const SCHEMA_FASSUNG = 3;
+export const SCHEMA_FASSUNG = 4;
 
 /** Das Journal: Einträge werden nur angefügt, nie geändert oder gelöscht (sqlkern.js). */
 export const JOURNAL = 'auditLog';
@@ -98,6 +98,11 @@ export const TABELLEN = Object.freeze({
   tombstones: { spalten: { collection: [T, '$.collection'], deletedAt: [T, '$.deletedAt'] }, indizes: [] },
   /** Fassung 3: Archivvermerke je Jahr (lib/archiv.js): wann das Jahresarchiv entstand, Prüfsumme, wann gelöscht. */
   archive: { spalten: { jahr: [I, '$.jahr'], erstelltAm: [T, '$.erstelltAm'], geloeschtAm: [T, '$.geloeschtAm'] }, indizes: [['jahr']] },
+  /** Fassung 4 (SEC-65): Fahrtenbuch (lib/fahrtenbuch.js). Kilometer sind NUMERIC (eine Nachkommastelle), kein Geld. */
+  fahrten: {
+    spalten: { fahrzeugId: [T, '$.fahrzeugId'], datum: [T, '$.datum'], art: [T, '$.art'], km: [N, '$.km'], updatedAt: [T, '$.updatedAt'] },
+    indizes: [['datum']],
+  },
 });
 
 /** Tabellennamen müssen schlichte Bezeichner sein (sie kommen auch aus fremden Abbildern). */
