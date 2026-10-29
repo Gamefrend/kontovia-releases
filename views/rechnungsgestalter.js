@@ -25,7 +25,7 @@ import { store, sel, commit, saveNow } from '../lib/store.js';
 import { router, navigate } from '../lib/router.js';
 import {
   LAENDER, laenderSortiert, neueRechnung, neuePosition, verkaeuferAus, designVoll, design as designAus, profil as profilAus, PROFIL_VORGABE,
-  FLUSS_BAUSTEINE, ELEMENT_VORGABE, PLATZHALTER, ibanGueltig, bezahlLinkFuer,
+  FLUSS_BAUSTEINE, ELEMENT_VORGABE, PLATZHALTER, ibanGueltig, glaeubigerIdGueltig, bezahlLinkFuer,
 } from '../lib/rechnung.js';
 import { vorschauDaten, bildAblegen, bildWaehlen, bildHolen } from '../lib/rechnungsdateien.js';
 import { pixelProMm } from '../lib/rechnungsdruck.js';
@@ -284,6 +284,8 @@ export async function gestaltungZeigen(root, params = {}) {
           <div class="field full"><label for="gp_web">Website</label><input id="gp_web" data-p="web" value="${esc(p.web)}"></div>
           <div class="field full"><label for="gp_bezahl">Link zum Online-Bezahlen (freiwillig)</label><input id="gp_bezahl" data-p="bezahlLink" value="${esc(p.bezahlLink || '')}" placeholder="https://paypal.me/IhrName/{betrag}EUR" autocomplete="off" spellcheck="false">
             <span class="hint" id="gp_bezahlHinweis">Etwa Ihr PayPal.me-Link oder ein Zahlungslink von Stripe oder Ihrer Bank. {betrag} und {nummer} setzt Kontovia je Rechnung ein. Der Link steht mit QR-Code auf der Rechnung und in der E-Mail.</span></div>
+          <div class="field full"><label for="gp_ci">Gläubiger-Identifikationsnummer (nur für Lastschriften)</label><input id="gp_ci" data-p="glaeubigerId" value="${esc(p.glaeubigerId || '')}" placeholder="DE98ZZZ09999999999" autocomplete="off" spellcheck="false">
+            <span class="hint" id="gp_ciHinweis">Wenn Sie bei Kunden abbuchen. Sie bekommen die Nummer kostenlos bei der Deutschen Bundesbank.</span></div>
         </div>
       </div>`;
     $('#gsVorgaben', root).innerHTML = `
@@ -304,6 +306,9 @@ export async function gestaltungZeigen(root, params = {}) {
     const iban = String(entwurf.profil.iban || '').replace(/\s/g, '');
     const h = $('#gp_ibanHinweis', root);
     if (h) h.textContent = iban && !ibanGueltig(iban) ? 'Diese IBAN ist ungültig. Bitte auf Zahlendreher prüfen.' : '';
+    const ci = String(entwurf.profil.glaeubigerId || '').replace(/\s/g, '');
+    const ch = $('#gp_ciHinweis', root);
+    if (ch) ch.textContent = ci && !glaeubigerIdGueltig(ci) ? 'Diese Nummer ist ungültig. Bitte mit dem Schreiben der Bundesbank vergleichen.' : 'Wenn Sie bei Kunden abbuchen. Sie bekommen die Nummer kostenlos bei der Deutschen Bundesbank.';
     const nr = $('#gp_nummerBeispiel', root);
     if (nr) nr.textContent = `Erste Nummer: ${entwurf.profil.praefix || ''}${new Date().getFullYear()}-0001`;
     const bl = $('#gp_bezahlHinweis', root);

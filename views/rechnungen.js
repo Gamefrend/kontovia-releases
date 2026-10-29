@@ -142,8 +142,11 @@ export async function render(root, params = {}, { actions } = {}) {
 
   actions.innerHTML = tab === 'angebote'
     ? `<button class="btn primary" id="reNeu" aria-haspopup="menu" data-premium="angebote">${icon('plus', 16).__raw} Neues Angebot ${icon('down', 14).__raw}</button>`
-    : `<button class="btn primary" id="reNeu" aria-haspopup="menu">${icon('plus', 16).__raw} Neue Rechnung ${icon('down', 14).__raw}</button>`;
+    : `${tab === 'ausgang' && sel.contacts().some((c) => c.mandat?.referenz)
+      ? `<button class="btn" id="reLastschrift" title="Offene Rechnungen von Kunden mit Lastschriftmandat als Datei für Ihr Online-Banking">${icon('euro', 15).__raw} Lastschriften einziehen</button>` : ''}
+      <button class="btn primary" id="reNeu" aria-haspopup="menu">${icon('plus', 16).__raw} Neue Rechnung ${icon('down', 14).__raw}</button>`;
   $('#reNeu', actions).addEventListener('click', (e) => (tab === 'angebote' ? neuBelegMenue(e.currentTarget) : neuMenue(e.currentTarget)));
+  $('#reLastschrift', actions)?.addEventListener('click', async () => (await import('../lib/lastschriften.js')).lastschriftenDialog());
 
   root.innerHTML = `
     <div class="seg tabs mb16" role="group" aria-label="Bereich">

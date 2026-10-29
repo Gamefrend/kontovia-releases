@@ -11,6 +11,7 @@ import {
 import { neuesAnlagegut, anlageFelder, wireAnlageFelder, anlageAusFeldern, anlageGesperrt } from './anlageform.js';
 import { regelTabelle, offeneVorkommen, faelligeAnbieten } from './wiederkehrend.js';
 import { anschriftAusText, LAENDER, laenderSortiert, ibanGueltig } from '../lib/rechnung.js';
+import { mandatsreferenzGueltig, mandatGueltigBis } from '../lib/sepa.js';
 import { openTransactionDialog } from './transactions.js';
 import { refresh, navigate } from '../lib/router.js';
 import { kann } from '../lib/lizenz.js';
@@ -630,6 +631,12 @@ function contactForm(c, vorlage = null) {
         <div class="field"><label>IBAN</label><input id="f_iban" value="${c.iban || ''}" placeholder="für Überweisungen an diesen Kontakt" spellcheck="false" autocomplete="off"></div>
         <div class="field"><label>BIC</label><input id="f_bic" value="${c.bic || ''}" placeholder="kann leer bleiben" spellcheck="false" autocomplete="off"></div>
       </div>
+      <div class="form-grid">
+        <div class="field"><label for="f_mandatRef">Mandatsreferenz für Lastschriften</label><input id="f_mandatRef" value="${c.mandat?.referenz || ''}" placeholder="nur wenn Sie abbuchen dürfen" spellcheck="false" autocomplete="off"></div>
+        <div class="field"><label for="f_mandatDatum">Mandat unterschrieben am</label><input type="date" id="f_mandatDatum" value="${c.mandat?.datum || ''}"></div>
+      </div>
+      <label class="check"><input type="checkbox" id="f_mandatEinmalig" ${c.mandat?.einmalig ? 'checked' : ''}> Mandat gilt nur für eine einzige Lastschrift</label>
+      ${c.mandat?.referenz ? raw(`<p class="hint mt0">${esc(c.mandat.genutzt ? `Zuletzt eingezogen am ${fmtDate(c.mandat.genutzt)}.` : 'Noch nicht eingezogen.')} ${esc(`Gültig bis ${fmtDate(mandatGueltigBis(c.mandat))}, wenn bis dahin nicht eingezogen wird.`)}</p>`) : ''}
       <div class="field"><label>Notiz</label><textarea id="f_notes">${c.notes || ''}</textarea></div>
       ${isNew || !(projekteVonKontakt(store.db, c.id).length || (kann('projekte') && c.kind !== 'supplier')) ? '' : raw('<div class="field" id="f_projekte" data-ohne-stand></div>')}
       ${isNew ? '' : raw('<div class="field" id="f_aufgaben" data-ohne-stand></div>')}`,
@@ -648,11 +655,19 @@ function contactForm(c, vorlage = null) {
       const bic = g('bic').replace(/\s/g, '').toUpperCase();
       if (iban && !ibanGueltig(iban)) { warn('IBAN ungültig', 'Bitte prüfen Sie die IBAN oder lassen Sie das Feld leer.'); return false; }
       if (bic && !/^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(bic)) { warn('BIC ungültig', 'Bitte prüfen Sie die BIC oder lassen Sie das Feld leer.'); return false; }
+      // Lastschriftmandat (SEC-63): Referenz, Tag der Unterschrift, einmalig oder wiederkehrend. Eine neue Referenz ist ein neues Mandat.
+      const mandatRef = g('mandatRef');
+      const mandatDatum = g('mandatDatum');
+      if (mandatRef && !mandatsreferenzGueltig(mandatRef)) { warn('Mandatsreferenz ungültig', 'Erlaubt sind höchstens 35 Zeichen: Buchstaben ohne Umlaute, Ziffern und + ? / - : ( ) . , ohne Leerzeichen.'); return false; }
+      if (mandatRef && !mandatDatum) { warn('Datum der Unterschrift fehlt', 'Ein Mandat gilt erst ab dem Tag, an dem Ihr Kunde es unterschrieben hat.'); return false; }
+      if (mandatRef && !iban) { warn('IBAN fehlt', 'Für Lastschriften braucht es die IBAN Ihres Kunden.'); return false; }
+      const mandatAlt = c.mandat?.referenz === mandatRef ? c.mandat : {};
+      const mandat = mandatRef ? { ...mandatAlt, referenz: mandatRef, datum: mandatDatum, einmalig: rootEl.querySelector('#f_mandatEinmalig').checked, genutzt: mandatAlt.genutzt || '' } : null;
       await upsertEntity('contacts', {
         ...c, name: g('name'), kind: rootEl.querySelector('#f_kind').value,
         email: g('email'), phone: g('phone'), taxId: g('taxId'), notes: g('notes'),
         addressExtra: g('zusatz'), street: g('street'), zip: g('zip'), city: g('city'), country: land,
-        vatId: /^[A-Z]{2}\d/.test(tax) ? tax : '', customerNumber: g('customerNumber'), buyerReference: g('buyerReference'), iban, bic,
+        vatId: /^[A-Z]{2}\d/.test(tax) ? tax : '', customerNumber: g('customerNumber'), buyerReference: g('buyerReference'), iban, bic, mandat,
         // Die Anschrift als Text bleibt für Exporte und ältere Fassungen erhalten.
         address: [g('zusatz'), g('street'), [g('zip'), g('city')].filter(Boolean).join(' '), land !== 'DE' ? LAENDER[land]?.name || land : ''].filter(Boolean).join('\n'),
       }, 'kontakt');

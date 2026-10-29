@@ -21,7 +21,7 @@ import { openMenu } from '../lib/popover.js';
 import {
   EINHEITEN, ARTEN, STEUERFAELLE, ZAHLUNGSARTEN, LAENDER, laenderSortiert, berechnen, pruefen, vollstaendig, verkaeuferAus, neuePosition,
   einheitAusText, einheitText, positionLeer, anschriftAusText, kaeuferAusKontakt, faelligkeit, zahlungsText, betragText, satzText,
-  titel as titelVon, profil as profilAus, istGutschrift, rund, rabatt2,
+  titel as titelVon, profil as profilAus, istGutschrift, rund, rabatt2, mandatVonKontakt, ibanVerdeckt,
 } from '../lib/rechnung.js';
 import { ossSaetze, ossRegelsatz, ossArt, OSS_ARTEN } from '../lib/sonderfaelle.js';
 import {
@@ -622,7 +622,10 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
       <div class="card-head"><h2>${icon('euro', 16).__raw} Zahlung</h2>${gut ? '<span class="sub">Gutschrift: Sie zahlen an den Kunden</span>' : ''}</div>
       <div class="card-body">
         <div class="form-grid">
-          <div class="field"><label for="rz_art">Zahlungsart</label><select id="rz_art" data-f="zahlungsart">${optionen(Object.entries(ZAHLUNGSARTEN).map(([k, z]) => [k, z.name]), r.zahlungsart || 'ueberweisung')}</select></div>
+          <div class="field"><label for="rz_art">Zahlungsart</label><select id="rz_art" data-f="zahlungsart">${optionen(Object.entries(ZAHLUNGSARTEN).map(([k, z]) => [k, z.name]), r.zahlungsart || 'ueberweisung')}</select>
+            ${r.zahlungsart === 'lastschrift' ? `<span class="hint">${esc(r.kaeufer?.mandat?.referenz
+    ? `Mandat ${r.kaeufer.mandat.referenz} vom ${fmtDate(r.kaeufer.mandat.datum)}, Konto ${ibanVerdeckt(r.kaeufer.mandat.iban)}`
+    : 'Beim Kunden ist kein Lastschriftmandat eingetragen. Tragen Sie es beim Kontakt ein und wählen Sie den Kunden neu.')}</span>` : ''}</div>
           <div class="field"><label for="rz_ziel">Zahlungsziel in Tagen</label><input id="rz_ziel" type="number" min="0" max="365" data-f="zahlungszielTage" data-zahl value="${esc(r.zahlungszielTage ?? '')}"></div>
           <div class="field full"><label for="rz_faellig">Fällig am</label>
             <div class="row" style="gap:6px">
@@ -825,6 +828,11 @@ export function editorZeigen(root, { rechnung = null, vorlage = null }, actions)
       angabenZeichnen();
       positionenZeichnen();
       aktualisieren();
+    }
+    // Lastschrift (SEC-63): das Mandat frisch vom Kontakt, falls es dort inzwischen eingetragen oder geändert wurde.
+    if (el.dataset.f === 'zahlungsart' && r.zahlungsart === 'lastschrift' && r.kaeufer?.kontaktId) {
+      const m = mandatVonKontakt(sel.contact(r.kaeufer.kontaktId));
+      if (m) r.kaeufer.mandat = m; else delete r.kaeufer.mandat;
     }
     if (el.dataset.f === 'zahlungsart' || el.dataset.f === 'art') zahlungZeichnen();
     if (el.dataset.f === 'kaeufer.land' && r.steuerfall === 'oss') {

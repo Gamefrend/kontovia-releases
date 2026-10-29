@@ -361,6 +361,13 @@ function anleitung(root) {
         der E-Rechnung oder von einer früheren Zahlung; fehlt sie, tragen Sie sie im Fenster ein. Die Datei laden Sie im Online-Banking hoch
         (meist „Sammelüberweisung“ oder „SEPA-Datei“) und geben sie dort mit Ihrer TAN frei. Kontovia verbindet sich nicht mit Ihrer Bank.
         Bezahlt ist die Ausgabe, sobald Sie danach den Kontoauszug einlesen.</p>
+        <p><strong>Bei Kunden abbuchen (Lastschrift).</strong> Hat Ihr Kunde Ihnen ein Lastschriftmandat unterschrieben, tragen Sie beim
+        Kontakt seine IBAN, die Mandatsreferenz und den Tag der Unterschrift ein, dazu einmal Ihre Gläubiger-Identifikationsnummer unter
+        Rechnungen › Gestaltung (die Nummer gibt die Deutsche Bundesbank kostenlos aus). Auf einer Rechnung mit der Zahlungsart
+        Lastschrift steht dann, an welchem Tag Sie von welchem Konto abbuchen; das ist die Vorankündigung, die Ihr Kunde vorher bekommen
+        muss. Unter Rechnungen › „Lastschriften einziehen“ erstellt Kontovia die Datei für Ihr Online-Banking. Gibt die Bank eine Lastschrift
+        zurück, erkennt Kontovia das beim Einlesen des Kontoauszugs: Die Rechnung ist dann wieder offen, die Gebühr der Bank wird eine
+        Ausgabe. Ein Mandat erlischt, wenn Sie es 36 Monate lang nicht nutzen.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body" id="hilfe-mahnwesen">

@@ -318,6 +318,10 @@ function zielText(z) {
   }
   if (z.art === 'ausgabe') return `Offene Ausgabe: ${sel.transaction(z.txId)?.description || ''}${z.hinweis ? `, ${z.hinweis}` : ''}`;
   if (z.art === 'uebertrag') return 'Übertrag zwischen Ihren Konten, wird nicht gebucht';
+  if (z.art === 'ruecklastschrift') {
+    const r = sel.invoice(z.rechnungId);
+    return `Rücklastschrift: ${r ? `Rechnung ${r.nummer} ist wieder offen` : sel.transaction(z.txId)?.description || ''}${z.gebuehr ? `, dazu Gebühr ${money(z.gebuehr)} € (${kategorieName(z.kategorieId)})` : ''}`;
+  }
   if (z.art === 'wiederkehrend') return `Wiederkehrende Buchung ${sel.recurringRule(z.wiederkehrendId)?.template?.description || ''}`;
   if (z.art === 'regel' || z.art === 'neu') {
     const was = z.u.betrag > 0 ? 'Einnahme' : 'Ausgabe';
@@ -449,7 +453,7 @@ function schrittPruefen(host, root) {
   const filter = FILTER.find(([k]) => k === st.filter)[2];
   const summe = () => {
     const gew = st.zeilen.filter((x) => x.gewaehlt);
-    const zahlungen = gew.filter((x) => x.art === 'rechnung' || x.art === 'ausgabe').length;
+    const zahlungen = gew.filter((x) => x.art === 'rechnung' || x.art === 'ausgabe' || x.art === 'ruecklastschrift').length;
     const uebertraege = gew.filter((x) => x.art === 'uebertrag').length;
     const neu = gew.length - zahlungen - uebertraege;
     const gebucht = gew.filter((x) => x.art !== 'uebertrag');
@@ -644,8 +648,8 @@ function zeileDialog(z, fertig) {
 
 async function buchenFrage(root) {
   const gew = st.zeilen.filter((x) => x.gewaehlt);
-  const zahlungen = gew.filter((x) => x.art === 'rechnung' || x.art === 'ausgabe');
-  const neu = gew.filter((x) => !(x.art === 'rechnung' || x.art === 'ausgabe' || x.art === 'uebertrag'));
+  const zahlungen = gew.filter((x) => x.art === 'rechnung' || x.art === 'ausgabe' || x.art === 'ruecklastschrift');
+  const neu = gew.filter((x) => !(x.art === 'rechnung' || x.art === 'ausgabe' || x.art === 'ruecklastschrift' || x.art === 'uebertrag'));
   const unsicher = gew.filter((x) => ['unsicher', 'wahrscheinlich'].includes(x.sicherheit)).length;
   const ohneKat = neu.filter((x) => !x.kategorieId && (x.art === 'neu' || x.art === 'regel')).length;
   const ja = await confirmDialog({
