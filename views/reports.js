@@ -1,4 +1,4 @@
-/** Kontovia – Auswertungen: GuV, EÜR, Umsatzsteuer, Vermögen, offene Posten. */
+/** Kontovia – Auswertungen: GuV, Kosten nach Kostenart (views/kosten.js), EÜR, Umsatzsteuer, Vermögen, offene Posten. */
 
 import {
   html, raw, esc, $, $$, money, fmtDate, todayISO, int, sum, ymLabel, dz,
@@ -27,6 +27,7 @@ import { vergleich, vergleichEinstellung } from './jahresvergleich.js';
 import { sperrKarteZeigen, erlaubt } from '../lib/lizenzui.js';
 import { kassenbuchZeigen, vorschauZeigen, gewaehlteKasse, vorschauHorizont } from './kassenbuch.js';
 import { bwa, summenSalden, ustJahr } from '../lib/bwa.js';
+import { kostenZeigen } from './kosten.js';
 
 const api = window.kontovia;
 const period = defaultPeriod();
@@ -39,6 +40,7 @@ const TAB_FUNKTION = { euer: 'euer', bwa: 'euer', susa: 'euer', anlagen: 'anlage
 
 const TABS = {
   guv: 'Gewinn & Verlust',
+  kosten: 'Kosten',
   euer: 'Anlage EÜR',
   bwa: 'BWA',
   susa: 'Summen und Salden',
@@ -102,6 +104,7 @@ function draw(root) {
   const neu = () => draw(root);
   ({
     guv, euer, ust, bilanz, opos, konten, anlagen, vergleich, bwa: bwaTab, susa: susaTab,
+    kosten: (b, d) => kostenZeigen(b, d, period, neu),
     // Kasse und Vorschau zählen jede Bewegung des Geldes, auch private (sonst stimmte der Bestand nicht).
     kasse: (b) => kassenbuchZeigen(b, store.db, period, neu),
     vorschau: (b) => vorschauZeigen(b, store.db, neu),
@@ -897,6 +900,7 @@ async function exportPdf(wie) {
   const st = scope.includeUnlisted ? unlistedStats(store.db, period.from, period.to) : { count: 0 };
   const makers = {
     guv: () => [R.guvReport(db, period), `GuV_${period.from}_${period.to}.pdf`],
+    kosten: () => [R.kostenPdf(db, period), `Kosten_${period.from}_${period.to}.pdf`],
     euer: () => [R.euerPdf(db, period), `Anlage-EUER_${period.from.slice(0, 4)}.pdf`],
     bwa: () => [R.bwaPdf(db, period), `BWA_${period.from}_${period.to}.pdf`],
     susa: () => [R.susaPdf(db, period), `Summen-und-Salden_${period.from}_${period.to}.pdf`],

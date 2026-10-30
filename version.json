@@ -1,11 +1,11 @@
 {
-  "version": "2.48.10",
-  "released": "2026-10-29T18:22:34.010Z",
-  "notes": "Fahrtenbuch und Dienstreisen\n\n- Neu unter „Fahrten und Reisen“: das Fahrtenbuch für Ihren Firmenwagen, mit Kilometerstand, Ziel und Anlass jeder Fahrt.\n- Kontovia vergleicht das Fahrtenbuch mit der 1-%-Regel und zeigt, was für Sie günstiger ist.\n- Dienstreisen rechnen die Verpflegungspauschalen nach Tagen, gestellte Mahlzeiten werden abgezogen.\n- Jede Änderung einer Fahrt steht mit dem alten Inhalt im Änderungsjournal. Das Fahrtenbuch lässt sich als CSV speichern.",
+  "version": "2.48.11",
+  "released": "2026-10-30T08:52:39.388Z",
+  "notes": "Wofür Sie Geld ausgeben\n\n- Neu unter Auswertungen › Kosten: Ihre Ausgaben nach Kostenart, etwa Hardware, Software, Miete oder Reisen, mit Anteil in Prozent.\n- Vieles ordnet Kontovia selbst ein. Mit einem Klick auf eine Kostenart sehen Sie die Buchungen und wählen bei Bedarf eine andere.\n- Den Rest kann die KI des Assistenten auf diesem Gerät einordnen, ohne Internet. Ihre Wahl ist gekennzeichnet.\n- Kategorien und Steuer ändern sich dabei nicht. Die Übersicht lässt sich als PDF speichern.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "077d0da5c125843afd4f4e17dce22c433d493e0684661f61a260b3400f2b3b87",
+      "sha256": "7b0f7cb9424216b0defdb8919b2d820e04df068b907f68fac4d2056f36720035",
       "size": 389
     },
     {
@@ -320,8 +320,8 @@
     },
     {
       "path": "lib/kategoriemodell.js",
-      "sha256": "df14969a373d5e6f786c6752b703074adf3edf69f67093e900601e60ec11cac7",
-      "size": 6502
+      "sha256": "af4f89006911240cde491ff60b6ab8ab0ae5f993cf5d4d30b6445a49f8bc8f47",
+      "size": 6539
     },
     {
       "path": "lib/kategorisierung.js",
@@ -337,6 +337,11 @@
       "path": "lib/koppeln.js",
       "sha256": "0bd5f6a1b696932c1fb99336f0c387133c79cfdb0e9c613ab889cc32b032db5b",
       "size": 25854
+    },
+    {
+      "path": "lib/kostenarten.js",
+      "sha256": "8afbdf9c5b1d4d47e238880c9c9214ccbaea11f4371866093ad424241c08e2f3",
+      "size": 15584
     },
     {
       "path": "lib/lastschriften.js",
@@ -520,8 +525,8 @@
     },
     {
       "path": "lib/reports.js",
-      "sha256": "38bfe4e3e40630a29c57ff706a85ea467380753086325b2683564a56061b41e5",
-      "size": 50829
+      "sha256": "712cb32f375c096dc169dd6857ec5970a0135872e3a755ab033849be78ea8f65",
+      "size": 51904
     },
     {
       "path": "lib/richeditor.js",
@@ -565,8 +570,8 @@
     },
     {
       "path": "lib/sprache/en.js",
-      "sha256": "e86d410adde9c2c76f03d7cbdbb033fe4b37059e2a080e37c382d72c1de9a452",
-      "size": 2235
+      "sha256": "90a21d0b6641fa021dc45bd49cdf5f977afc301f0db4c04997e9903be93b5a62",
+      "size": 2287
     },
     {
       "path": "lib/sprache/en/t01.js",
@@ -687,6 +692,11 @@
       "path": "lib/sprache/en/zusatz-geteilt.js",
       "sha256": "81559815aadf0682227ad46755fa991a3094b1c3445fbc027ff8e794dae6fc39",
       "size": 23251
+    },
+    {
+      "path": "lib/sprache/en/zusatz-kosten.js",
+      "sha256": "2ec5444a355b93df6bc1bf06ee274303431a02bfe1c949d448d0ed9a495e5f86",
+      "size": 9399
     },
     {
       "path": "lib/sprache/en/zusatz-messung.js",
@@ -865,8 +875,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "d67fb5ed0b79fe05844097b848b074a474b263dd66733775c569c77c8c306097",
-      "size": 65994
+      "sha256": "e36c75c9ec19c8f9368e736a4fa79fecbc6b913451b77a53bc4294f0efa31261",
+      "size": 66615
     },
     {
       "path": "lib/waehrung.js",
@@ -905,12 +915,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "78de602bea0721d96b88e945c23040fab6ff3d9b63e5871cca359f6390f5c603",
+      "sha256": "6ed38da93509439d68905bf6184650dac60f8f5480ac98e7e690b7609cb1fb75",
       "size": 2811
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "e95cb3cb46643f00e7875df7e5b030b20aa7bba2beddd9773dcb0e89efbfc64d",
+      "sha256": "368a395216df09a7c10e9eccfbf5041a84e6b340d8200c997b18ce6521f6f207",
       "size": 42310
     },
     {
@@ -930,7 +940,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "11b6c66d97209a30d4fae9f4257e698fbc0ff5151cb722f5a504b1bad26af78e",
+      "sha256": "3cb3844119a6670c3b077cebc5db02f5dcc58a9b00814fe1a5793b6385df0088",
       "size": 46242
     },
     {
@@ -955,12 +965,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "9b7dac2bc5e578270643d9a455786a29b405c23558db43c0d9a99724722760f5",
+      "sha256": "7e23711a81df85048c0cdee0a4820cacb39701bbcc6cad2dac3293834857b5e8",
       "size": 28338
     },
     {
       "path": "security.txt",
-      "sha256": "077d0da5c125843afd4f4e17dce22c433d493e0684661f61a260b3400f2b3b87",
+      "sha256": "7b0f7cb9424216b0defdb8919b2d820e04df068b907f68fac4d2056f36720035",
       "size": 389
     },
     {
@@ -1035,8 +1045,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "28cbf04911d214698c21c65d319128db261cfcaaadb1cf54598c6582921a76b9",
-      "size": 105798
+      "sha256": "66cad188195c56b706a86915e9fbe438681e7dc306d8705ef6a9bbc8c2633f55",
+      "size": 106587
     },
     {
       "path": "views/importexport.js",
@@ -1062,6 +1072,11 @@
       "path": "views/kontoimport.js",
       "sha256": "d80e074e27e14e4be2387bed6cbe838dd68bb217d152e167083c62ce2a4fdfe2",
       "size": 56268
+    },
+    {
+      "path": "views/kosten.js",
+      "sha256": "7284e7d5ae7a8fc92c29b9b3a38dca8507a3d91084bdeed8b209f06f8277ce76",
+      "size": 12865
     },
     {
       "path": "views/mahneinstellungen.js",
@@ -1100,8 +1115,8 @@
     },
     {
       "path": "views/reports.js",
-      "sha256": "783dfa11fe7e750151c84bc170df918b56dc16a7544e020a23eb411e9f662448",
-      "size": 59618
+      "sha256": "7e4ef391c62d2b32b4125a8a10819c460b0b922e307086c1029eff130e51a67e",
+      "size": 59865
     },
     {
       "path": "views/settings.js",
@@ -1140,7 +1155,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "cff02a570c7fde637bdc7a26ce99ee6b047f65ebfe15014abbcc5c73c7167420",
+      "sha256": "d5b7ac0ad42927545a4ac6577fcbe9ef78dd8fdb1de8aa16425985a121e9acf3",
       "size": 10045
     },
     {
@@ -1150,8 +1165,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "26d5c1ed3b196f9c962952f55c97b4c3526277d80f2e26db6260ebec57cb4e2a",
-      "size": 69648
+      "sha256": "d1f01e3e316fe3c0c4116ffe5fef0b427cc3e853db3b4aed7a485f9d0951bf7f",
+      "size": 69865
     },
     {
       "path": "web/cloud.js",
@@ -1205,13 +1220,13 @@
     },
     {
       "path": "web/ki-worker.js",
-      "sha256": "434882a456362260c709e94cfe24665c982378f087ba15d0a81d5d90a3833047",
-      "size": 8581
+      "sha256": "e40ee48e7bafa1508eea4a2e015c25c6a09d046e8cda31b31d423cf555c86110",
+      "size": 10743
     },
     {
       "path": "web/ki.js",
-      "sha256": "33a157e84c3a7a50afcd6ae70eaf619159c533ae4979af3bb33c3019541bbd81",
-      "size": 9878
+      "sha256": "f07a65d60a9edcec0ef913c42052f47cdc5f241e3853393c8ff3b9f2ba61acc2",
+      "size": 10160
     },
     {
       "path": "web/kimodelle.js",

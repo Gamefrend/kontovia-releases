@@ -137,14 +137,17 @@ export async function imCache(modelle) {
  * Lädt ein Modell (beim ersten Mal aus dem Netz) und startet es.
  * @param {string} modell  Kennung aus kimodelle.js
  * @param {(p:{anteil:number, text:string, sekunden:number})=>void} [beiFortschritt]
+ * @param {{ohneNetz?:boolean}} [opts]  ohneNetz: nur was schon auf dem Gerät liegt; das Rechenwerk
+ *   lässt dabei gar nichts ins Netz (ki-worker.js), sonst scheitert es mit KI_OHNE_NETZ
  */
-export async function laden(modell, beiFortschritt) {
+export async function laden(modell, beiFortschritt, { ohneNetz = false } = {}) {
   if (!MODELLE[modell]) throw new Error('Dieses Modell kennt Kontovia nicht.');
   if (gestartet === modell) return { modell };
   if (laedt) await laedt.catch(() => {});
+  if (gestartet === modell) return { modell };
   // Ein Modell ist groß und teuer neu zu laden: den Browser bitten, es nicht bei Platzmangel zu räumen.
   try { await navigator.storage?.persist?.(); } catch { /* dann eben ohne Zusage */ }
-  laedt = auftrag({ art: 'laden', modell }, { beiFortschritt });
+  laedt = auftrag({ art: 'laden', modell, netz: !ohneNetz }, { beiFortschritt });
   try {
     await laedt;
     gestartet = modell;

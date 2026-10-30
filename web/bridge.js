@@ -1186,13 +1186,15 @@ const api = {
   },
 
   /* Assistent (ki.js, ki-worker.js): Sprachmodell auf dem Gerät. Daten gehen
-     nicht hinaus; das Netz braucht nur das erste Laden eines Modells. */
+     nicht hinaus; das Netz braucht nur das erste Laden eines Modells, beim
+     Antworten ist es im Rechenwerk ganz zu. */
   ki: {
     geraet: handle(async () => kopie(await KI.geraet())),
     fassung: handle(async (modell, f16) => KI.fassung(str(modell, 80), !!f16)),
     imCache: handle(async (modelle = []) => kopie(await KI.imCache((Array.isArray(modelle) ? modelle : []).map((m) => str(m, 80))))),
-    laden: handle(async (modell, beiFortschritt) => kopie(await KI.laden(str(modell, 80), typeof beiFortschritt === 'function' ? beiFortschritt : null))),
-    // quelle: 'assistent' oder 'kontoauszug'; Anhalten und „Neues Gespräch“ treffen nur die eigene Quelle (ki.js).
+    // ohneNetz: nur vom Gerät, das Rechenwerk lässt dabei nichts hinaus (Kostenarten, views/kosten.js).
+    laden: handle(async (modell, beiFortschritt, opts = {}) => kopie(await KI.laden(str(modell, 80), typeof beiFortschritt === 'function' ? beiFortschritt : null, { ohneNetz: opts?.ohneNetz === true }))),
+    // quelle: 'assistent', 'kontoauszug' oder 'kosten'; Anhalten und „Neues Gespräch“ treffen nur die eigene Quelle (ki.js).
     antworten: handle(async (anfrage = {}, beiTeil, quelle = 'assistent') => kopie(await KI.antworten(kopie(anfrage), typeof beiTeil === 'function' ? beiTeil : null, str(quelle, 20) || 'assistent'))),
     abbrechen: handle(async (quelle = '') => KI.abbrechen(str(quelle, 20)), { needsUnlock: false }),
     vergessen: handle(async (quelle = '') => KI.vergessen(str(quelle, 20)), { needsUnlock: false }),

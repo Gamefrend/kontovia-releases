@@ -8,13 +8,15 @@
  * davon über ein „vergessen“ hinaus.
  *
  * Netz: Die CSP der Seite gilt in einem Worker nicht. Deshalb ersetzt diese
- * Datei vor allem anderen fetch durch eine Sperre: Nur die Modellquellen aus
- * netz.js (modellAdresseErlaubt) gehen durch, auch nach einer Weiterleitung.
- * Gebraucht wird das Netz nur beim ersten Laden eines Modells; danach liegt
- * alles im Cache des Browsers.
+ * Datei vor allem anderen fetch (samt cache.add und XMLHttpRequest) durch eine
+ * Sperre: Nur die Modellquellen aus netz.js (modellAdresseErlaubt) gehen
+ * durch, auch nach einer Weiterleitung, und das nur, solange ein Modell mit
+ * Netz geladen wird. Beim Antworten ist das Netz ganz zu; WebSocket und
+ * Verwandte gibt es hier nicht. Gebraucht wird das Netz nur beim ersten Laden
+ * eines Modells; danach liegt alles im Cache des Browsers.
  *
  * Nachrichten (von ki.js):
- *   {art:'laden', id, modell}        lädt oder startet ein Modell aus kimodelle.js
+ *   {art:'laden', id, modell, netz}  lädt oder startet ein Modell aus kimodelle.js; netz:false nur aus dem Cache
  *   {art:'chat', id, anfrage}        eine Antwort, Stück für Stück ({art:'teil'}), dann {art:'fertig'}
  *                                    mit `nachricht`: der Antwort, wie die Laufzeit sie sich merkt.
  *                                    Beginnt die nächste Anfrage mit genau diesem Verlauf, liest die
@@ -31,14 +33,54 @@
 import { modellAdresseErlaubt } from './netz.js';
 import { MODELLE, laufzeitKonfiguration } from './kimodelle.js';
 
+/*
+ * Das Netz ist zu, außer während ein Modell mit Zustimmung geladen wird
+ * (`laden` mit `netz: true`, nur der Assistent). Beim Antworten und bei
+ * Anfragen mit `netz: false` (Kostenarten, views/kosten.js) geht gar nichts
+ * hinaus, auch nicht zu den Modellquellen: Liegt dann etwas nicht im Cache,
+ * scheitert das Laden mit KI_OHNE_NETZ.
+ */
+let netzOffen = 0;
+const ohneNetz = () => Object.assign(new Error('Die KI arbeitet hier ohne Internet.'), { code: 'KI_OHNE_NETZ' });
+const adresse = (eingabe) => (typeof eingabe === 'string' ? eingabe : eingabe instanceof URL ? eingabe.href : eingabe?.url);
+function netzPruefen(url) {
+  if (!netzOffen) throw ohneNetz();
+  if (!modellAdresseErlaubt(url)) throw new Error(`Diese Gegenstelle ist nicht freigegeben: ${url}`);
+}
+
 const echtesFetch = self.fetch.bind(self);
 self.fetch = async (eingabe, init = {}) => {
-  const url = typeof eingabe === 'string' ? eingabe : eingabe instanceof URL ? eingabe.href : eingabe?.url;
-  if (!modellAdresseErlaubt(url)) throw new Error(`Diese Gegenstelle ist nicht freigegeben: ${url}`);
+  netzPruefen(adresse(eingabe));
   const res = await echtesFetch(eingabe, { ...init, credentials: 'omit', referrerPolicy: 'no-referrer' });
   if (res.redirected && !modellAdresseErlaubt(res.url)) throw new Error('Weiterleitung zu einer nicht freigegebenen Gegenstelle.');
   return res;
 };
+// cache.add holt selbst, an fetch vorbei (WebLLM legt so die Modelldateien ab): auch hier durch die Sperre.
+if (self.Cache?.prototype) {
+  self.Cache.prototype.add = async function (anfrage) {
+    const res = await self.fetch(anfrage);
+    if (!res.ok) throw new TypeError(`Laden fehlgeschlagen (${res.status}).`);
+    return this.put(anfrage, res);
+  };
+  self.Cache.prototype.addAll = async function (anfragen) {
+    for (const a of anfragen) await this.add(a);
+  };
+}
+// Andere Wege ins Netz braucht die KI nicht: XMLHttpRequest nur zu den Modellquellen, der Rest gar nicht.
+if (self.XMLHttpRequest) {
+  const EchtesXhr = self.XMLHttpRequest;
+  self.XMLHttpRequest = class extends EchtesXhr {
+    open(methode, url, ...rest) {
+      const ziel = new URL(String(url), self.location.href);
+      // data: und blob: liegen schon im Speicher, das ist kein Netz.
+      if (ziel.protocol !== 'data:' && ziel.protocol !== 'blob:') netzPruefen(ziel.href);
+      return super.open(methode, url, ...rest);
+    }
+  };
+}
+for (const name of ['WebSocket', 'EventSource', 'WebTransport']) {
+  if (name in self) self[name] = class { constructor() { throw ohneNetz(); } };
+}
 
 /** Die Laufzeit (6 MB) erst laden, wenn sie gebraucht wird. */
 let laufzeit = null;
@@ -76,8 +118,14 @@ if (echtesGeraet) {
 /** Nach einem Absturz nicht gleich nochmal rechnen (das träfe den Treiber wieder); das Modell startet bei der nächsten Frage neu. */
 const absturz = () => Object.assign(new Error('Der Grafikchip hat die Berechnung abgebrochen.'), { code: 'KI_ABSTURZ' });
 
-async function laden(id, modell) {
+async function laden(id, modell, netz) {
   if (!MODELLE[modell]) throw new Error('Dieses Modell kennt Kontovia nicht.');
+  if (!netz) return ladenMit(id, modell);
+  netzOffen++;
+  try { return await ladenMit(id, modell); } finally { netzOffen--; }
+}
+
+async function ladenMit(id, modell) {
   const W = await webllm();
   if (!motor) {
     motor = new W.MLCEngine({
@@ -145,7 +193,7 @@ async function chat(id, anfrage) {
 self.addEventListener('message', async (ev) => {
   const n = ev.data || {};
   try {
-    if (n.art === 'laden') await laden(n.id, n.modell);
+    if (n.art === 'laden') await laden(n.id, n.modell, n.netz !== false);
     else if (n.art === 'chat') {
       laufend = chat(n.id, n.anfrage);
       try { await laufend; } finally { laufend = null; }

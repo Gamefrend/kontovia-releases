@@ -620,6 +620,15 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
+        <h2 class="mt0">Wofür Sie Geld ausgeben</h2>
+        <p>Unter Auswertungen › Kosten sehen Sie Ihre Ausgaben nach Kostenart, etwa Hardware, Software, Miete oder Reisen, mit
+        Betrag und Anteil in Prozent. Vieles erkennt Kontovia an Stichwörtern in Beschreibung, Gegenseite und Kategorie. Klicken Sie auf
+        eine Kostenart, um die Buchungen zu sehen und eine andere zu wählen. Kategorien und Steuer ändern sich dabei nicht.</p>
+        <p>Den Rest kann die KI des Assistenten einordnen, wenn eine Stufe ab „Mini“ auf diesem Gerät liegt. Sie läuft nur hier und hat
+        dabei keinen Zugang zum Internet. Ihre Wahl ist mit „KI“ gekennzeichnet und lässt sich jederzeit ändern.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
         <h2 class="mt0">BWA, Summen und Salden, Umsatzsteuer im Jahr</h2>
         <p><strong>BWA.</strong> Unter Auswertungen › BWA stehen Ihre Zahlen so, wie eine Steuerkanzlei sie zeigt: Umsatz, Material,
         Rohertrag, die Kosten nach Art (Personal, Räume, Fahrzeug, Werbung und Reisen, Abschreibungen …) und das Ergebnis, jeweils mit
