@@ -16,6 +16,10 @@
  *           online bestätigt werden: Löscht der Betreiber ihn, fällt das Konto beim nächsten Abgleich zurück,
  *           spätestens nach der Prüffrist, auch wenn das Gerät nie mehr online geht.
  *
+ * Geräte je Kontolizenz zählt der Server (functions/lizenzlogik.js: geraetMelden): `abgleichen` meldet dieses Gerät
+ * und legt die Antwort zum Schein. Ist das Gerät über der Grenze des Tarifs, gilt die Kontolizenz hier nicht
+ * (Zustand `geraete-grenze`); ohne Netz gilt die letzte Antwort. Ein neues Browserprofil ist ein neues Gerät.
+ *
  * Die Laufzeit hat eine Schonfrist: Wer länger offline ist, behält seine Stufe, bis sie vorbei ist, und
  * bleibt danach auf „Kostenlos“ – Lesen und Exportieren (CSV, Excel, Sicherung) gehen immer. Wird die Uhr
  * zurückgestellt, zählt der höchste je gesehene Zeitpunkt.
@@ -171,6 +175,19 @@ function laufzeit(s, jetztWirksam) {
   return { zustand, schonfristBis: new Date(schonfristBis).toISOString() };
 }
 
+/**
+ * Antwort des Servers zu den Geräten der Kontolizenz, bereinigt, nur wenn sie zu diesem Gerät gehört.
+ * @returns {{zugelassen:boolean, anzahl:number, grenze:number|null, stand:number, liste:{id:string,name:string,seit:string,zuletzt:string,dieses:boolean}[]}|null}
+ */
+function platzLesen(p, geraet) {
+  if (!p || typeof p !== 'object' || p.geraet !== geraet || typeof p.zugelassen !== 'boolean') return null;
+  const grenze = p.grenze === null ? null : Math.max(0, Math.floor(Number(p.grenze) || 0));
+  const liste = (Array.isArray(p.geraete) ? p.geraete : []).slice(0, 50).map((x) => ({
+    id: String(x?.id || ''), name: String(x?.name || '').slice(0, 60), seit: String(x?.seit || ''), zuletzt: String(x?.zuletzt || ''), dieses: x?.id === geraet,
+  }));
+  return { zugelassen: p.zugelassen, anzahl: Math.max(liste.length, Math.floor(Number(p.anzahl) || 0)), grenze, stand: Number(p.stand) || 0, liste };
+}
+
 /** Die bessere von zwei Lizenzen: die mit der höheren wirksamen Stufe, sonst die länger laufende. */
 function besser(a, b) {
   if (!a || !b) return a || b;
@@ -192,13 +209,18 @@ export class Lizenz {
    *   abruf       holt den Kontoschein aus dem Cloud-Speicher: art 'gefunden' (mit text), 'fehlt' (sicher nicht da),
    *               sonst unklar ('netz', 'anmeldung', 'unklar'); serverZeit = Zeit des Servers
    *   melden      trägt das Konto einmal in die Kontenliste des Betreibers ein
+   *   platz       meldet dieses Gerät beim Server für die Kontolizenz (functions/lizenzlogik.js: geraetMelden):
+   *               {zugelassen, anzahl, grenze, geraete}; wirft ohne Netz
+   *   freigeben   gibt den Platz eines Geräts auf dem Server frei (geraetFreigeben)
    *   schluessel  öffentlicher Schlüssel (Prüfungen setzen ihren eigenen ein)
    */
-  constructor({ geraet, konto = () => null, abruf = null, melden = null, schluessel = OEFFENTLICHER_SCHLUESSEL, testphase = TESTPHASE, jetzt = Date.now } = {}) {
+  constructor({ geraet, konto = () => null, abruf = null, melden = null, platz = null, freigeben = null, schluessel = OEFFENTLICHER_SCHLUESSEL, testphase = TESTPHASE, jetzt = Date.now } = {}) {
     this.geraet = geraet;
     this.konto = konto;
     this.abruf = abruf;
     this.melden = melden;
+    this.platz = platz;
+    this.freigeben = freigeben;
     this.schluessel = schluessel;
     this.testphase = testphase;
     this.jetzt = jetzt;
@@ -231,7 +253,7 @@ export class Lizenz {
   }
 
   /** Kontoschein, wenn er echt ist, zur angemeldeten Adresse gehört und nicht zu lange unbestätigt ist. */
-  async #kontoLizenz(konto, jetzt) {
+  async #kontoLizenz(konto, jetzt, geraet) {
     const rec = await this.#lesen(MERKER_KONTO);
     if (rec?.art !== 'konto' || !konto) return null;
     let s = null;
@@ -241,10 +263,13 @@ export class Lizenz {
     let { zustand, schonfristBis } = laufzeit(s, jetztWirksam);
     const bestaetigtBis = (Number(rec.bestaetigt) || 0) + PRUEFFRIST_TAGE * TAG;
     if (zustand !== 'abgelaufen' && jetztWirksam > bestaetigtBis) zustand = 'unbestaetigt';
+    // Der Server zählt die Geräte je Lizenz: Ist dieses Gerät über der Grenze, gilt die Kontolizenz hier nicht.
+    const geraete = platzLesen(rec.platz, geraet);
+    if ((zustand === 'lizenziert' || zustand === 'schonfrist') && geraete?.zugelassen === false) zustand = 'geraete-grenze';
     const gilt = zustand === 'lizenziert' || zustand === 'schonfrist';
     return {
       quelle: 'email', zustand, id: s.id, gebucht: s.stufe, stufe: gilt ? s.stufe : 'kostenlos', bis: s.bis, schonfristBis,
-      bestaetigtBis: new Date(bestaetigtBis).toISOString(), lizenzEmail: s.email,
+      bestaetigtBis: new Date(bestaetigtBis).toISOString(), lizenzEmail: s.email, geraete,
     };
   }
 
@@ -265,12 +290,12 @@ export class Lizenz {
     let rec = await this.#lesen();
     const basis = {
       testphase: this.testphase, geraet, email: konto?.email || '', bis: null, schonfristBis: null, bestaetigtBis: null,
-      id: '', vorschau: null, gebucht: 'kostenlos', quelle: '', lizenz: null,
+      id: '', vorschau: null, gebucht: 'kostenlos', quelle: '', lizenz: null, geraete: null,
     };
 
     const g = await this.#geraeteLizenz(rec, geraet, jetzt);
     if (rec?.art === 'lizenz' && !g) rec = null;
-    const beste = besser(g, await this.#kontoLizenz(konto, jetzt));
+    const beste = besser(g, await this.#kontoLizenz(konto, jetzt, geraet));
     const kurz = beste && { quelle: beste.quelle, zustand: beste.zustand, stufe: beste.gebucht, bis: beste.bis, id: beste.id };
 
     if (this.testphase && !beste) {
@@ -324,10 +349,13 @@ export class Lizenz {
       try { s = await scheinPruefen(a.text, this.schluessel); } catch { s = null; }
       if (s?.email && emailGleich(s.email, konto.email)) {
         const alt = await this.#lesen(MERKER_KONTO);
+        // Ohne Antwort des Servers gilt der letzte bekannte Stand der Geräte (er liegt mit dem Schein zusammen).
+        const platz = (await this.#platzHolen(jetzt)) ?? (alt?.art === 'konto' && emailGleich(alt.email, s.email) ? alt.platz : null);
         await A.schreiben('dateien', MERKER_KONTO, {
           v: 1, art: 'konto', schein: String(a.text).trim(), email: s.email,
           bestaetigt: Number(a.serverZeit) > 0 ? Number(a.serverZeit) : jetzt,
           zuletzt: Math.max(jetzt, Number(alt?.zuletzt) || 0),
+          ...(platz ? { platz } : {}),
         });
       } else {
         ergebnis = 'ungueltig';
@@ -337,6 +365,27 @@ export class Lizenz {
       await A.loeschen('dateien', MERKER_KONTO).catch(() => {});
     }
     return { ergebnis, status: await this.status() };
+  }
+
+  /** Dieses Gerät beim Server für die Kontolizenz melden; `null` ohne Antwort (kein Netz, Funktion fehlt). */
+  async #platzHolen(jetzt) {
+    if (typeof this.platz !== 'function') return null;
+    try {
+      const r = await this.platz();
+      if (!r || typeof r.zugelassen !== 'boolean') return null;
+      return { geraet: String(await this.geraet()), zugelassen: r.zugelassen, anzahl: r.anzahl, grenze: r.grenze ?? null, geraete: r.geraete, stand: jetzt };
+    } catch { return null; }
+  }
+
+  /** Den Platz eines Geräts auf dem Server freigeben und die neue Liste übernehmen. */
+  async geraetFreigeben(id) {
+    if (typeof this.freigeben !== 'function') throw fehler('LIZENZ_OHNE_KONTO', 'Dazu muss Kontovia mit Ihrem Google-Konto verbunden sein.');
+    const r = await this.freigeben(String(id));
+    const rec = await this.#lesen(MERKER_KONTO);
+    if (rec?.art === 'konto' && rec.platz && r && Array.isArray(r.geraete)) {
+      await A.schreiben('dateien', MERKER_KONTO, { ...rec, platz: { ...rec.platz, anzahl: r.anzahl, grenze: r.grenze ?? null, geraete: r.geraete } });
+    }
+    return this.status();
   }
 
   /** Einen Geräteschein einlösen. Wirft bei einem unechten, fremden oder bereits abgelaufenen Schein. */

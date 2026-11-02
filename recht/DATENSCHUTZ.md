@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 30. Oktober 2026, Programmversion 2.48.11
+Stand: 2. November 2026, Programmversion 2.48.12
 
 ---
 
@@ -286,6 +286,14 @@ verbunden, kommt dazu:
   (Tarif, Laufzeit, Hinweis „automatisch“). Google verarbeitet dabei als unser
   Auftragsverarbeiter technische Protokolldaten des Aufrufs (Zeitpunkt, Adresse der
   Funktion, IP-Adresse), wie bei jedem Cloud-Dienst.
+* **Geräte je Lizenz.** Jeder Tarif gilt auf einer bestimmten Zahl von Geräten.
+  Beim Abholen der Lizenz meldet Kontovia deshalb einer Funktion im selben
+  Cloud-Projekt die zufällige Kennung dieses Geräts und seinen Namen (etwa
+  „Windows · Chrome“). Gespeichert werden zu Ihrer Adresse nur diese Kennung, der
+  Name und wann das Gerät zuerst und zuletzt gemeldet hat. Lesen können die Liste
+  nur Ihre angemeldeten Geräte über die Funktion und der Betreiber. Ein Gerät, das sich 60 Tage nicht
+  meldet, fällt von selbst heraus; unter Einstellungen › Weitere Geräte können Sie
+  einen Eintrag sofort entfernen.
 
 Wenn Sie eine Lizenz erwerben, speichern wir zur Adresse den Tarif, die Laufzeit
 und eine kurze Notiz (etwa die Rechnungsnummer), solange die Lizenz läuft und die

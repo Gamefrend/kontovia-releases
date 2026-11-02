@@ -1,11 +1,11 @@
 {
-  "version": "2.48.11",
-  "released": "2026-10-30T08:52:39.388Z",
-  "notes": "Wofür Sie Geld ausgeben\n\n- Neu unter Auswertungen › Kosten: Ihre Ausgaben nach Kostenart, etwa Hardware, Software, Miete oder Reisen, mit Anteil in Prozent.\n- Vieles ordnet Kontovia selbst ein. Mit einem Klick auf eine Kostenart sehen Sie die Buchungen und wählen bei Bedarf eine andere.\n- Den Rest kann die KI des Assistenten auf diesem Gerät einordnen, ohne Internet. Ihre Wahl ist gekennzeichnet.\n- Kategorien und Steuer ändern sich dabei nicht. Die Übersicht lässt sich als PDF speichern.",
+  "version": "2.48.12",
+  "released": "2026-11-02T08:52:43.345Z",
+  "notes": "Geräte Ihrer Lizenz\n\n- Unter Einstellungen › Weitere Geräte sehen Sie jetzt alle Geräte, die Ihre Lizenz nutzen, auch die von anderen Geräten aus verbundenen.\n- Nutzen Sie ein Gerät nicht mehr, geben Sie dort seinen Platz frei. Nach 60 Tagen ohne Verbindung geschieht das von selbst.\n- Sind alle Plätze Ihres Tarifs belegt, gilt auf einem weiteren Gerät der kostenlose Tarif, bis ein Platz frei wird.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "7b0f7cb9424216b0defdb8919b2d820e04df068b907f68fac4d2056f36720035",
+      "sha256": "c4b5b166cca04f7c25036b5674389b77e64df05a0c5ae7e88cbd99eca31a14c2",
       "size": 389
     },
     {
@@ -335,8 +335,8 @@
     },
     {
       "path": "lib/koppeln.js",
-      "sha256": "0bd5f6a1b696932c1fb99336f0c387133c79cfdb0e9c613ab889cc32b032db5b",
-      "size": 25854
+      "sha256": "82d5d7350748d861313fdd2f3d2ec55592dd96de31b29775709cfa2825e4b411",
+      "size": 27710
     },
     {
       "path": "lib/kostenarten.js",
@@ -360,8 +360,8 @@
     },
     {
       "path": "lib/lizenzkarte.js",
-      "sha256": "ec1a2abf6d68b10d3a83688ad5ec53564f9580b7585fc60ecea6fbeab18b8565",
-      "size": 12073
+      "sha256": "cbb94ae958fab894ad07153d73cad47fb6ecd641587b67c2ebe9e11848be20af",
+      "size": 12508
     },
     {
       "path": "lib/lizenzui.js",
@@ -570,8 +570,8 @@
     },
     {
       "path": "lib/sprache/en.js",
-      "sha256": "90a21d0b6641fa021dc45bd49cdf5f977afc301f0db4c04997e9903be93b5a62",
-      "size": 2287
+      "sha256": "ab70f0f4c23da0334e3327a565fa0d477650998ef9209e3fb10dea8e0f189878",
+      "size": 2336
     },
     {
       "path": "lib/sprache/en/t01.js",
@@ -707,6 +707,11 @@
       "path": "lib/sprache/en/zusatz-release.js",
       "sha256": "243962acd10fa49ae472bbd385c21bfb7aef993eb1fc13bf16ab81727624ea1a",
       "size": 5028
+    },
+    {
+      "path": "lib/sprache/en/zusatz-sec30.js",
+      "sha256": "7c5689c4e97d54a53c2261159b9edc6d5a787c2f1a9e43a736d21c858c75d9bc",
+      "size": 2315
     },
     {
       "path": "lib/sprache/en/zusatz-sec34.js",
@@ -875,8 +880,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "e36c75c9ec19c8f9368e736a4fa79fecbc6b913451b77a53bc4294f0efa31261",
-      "size": 66615
+      "sha256": "00a96819721f625e291e9686b6f35190bef334efef2735d15bfcdb0c198622ca",
+      "size": 67138
     },
     {
       "path": "lib/waehrung.js",
@@ -915,13 +920,13 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "6ed38da93509439d68905bf6184650dac60f8f5480ac98e7e690b7609cb1fb75",
+      "sha256": "9b3feecafb94a2020512f164ac9e655e9ba6cda24781ce32d5397683191ff9df",
       "size": 2811
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "368a395216df09a7c10e9eccfbf5041a84e6b340d8200c997b18ce6521f6f207",
-      "size": 42310
+      "sha256": "1295d21818f99e1d42a82c8b938765a143c8ae1db463067eb67aaada82c53f95",
+      "size": 42942
     },
     {
       "path": "recht/IMPRESSUM.md",
@@ -940,8 +945,8 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "3cb3844119a6670c3b077cebc5db02f5dcc58a9b00814fe1a5793b6385df0088",
-      "size": 46242
+      "sha256": "0f43598157ada0ee049b6da9806d142ea6e248ab9fc7c56734e354b75963fa72",
+      "size": 46879
     },
     {
       "path": "recht/impressum.html",
@@ -965,12 +970,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "7e23711a81df85048c0cdee0a4820cacb39701bbcc6cad2dac3293834857b5e8",
+      "sha256": "e683f4735f839feb8b3bdddeba70957d850ae6889f016792fea5f6e5b3e43a37",
       "size": 28338
     },
     {
       "path": "security.txt",
-      "sha256": "7b0f7cb9424216b0defdb8919b2d820e04df068b907f68fac4d2056f36720035",
+      "sha256": "c4b5b166cca04f7c25036b5674389b77e64df05a0c5ae7e88cbd99eca31a14c2",
       "size": 389
     },
     {
@@ -1155,7 +1160,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "d5b7ac0ad42927545a4ac6577fcbe9ef78dd8fdb1de8aa16425985a121e9acf3",
+      "sha256": "c9a7e2c38a538b408020d8689562a3588797f4d2df4905bfaa421d765c95b7a4",
       "size": 10045
     },
     {
@@ -1165,8 +1170,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "d1f01e3e316fe3c0c4116ffe5fef0b427cc3e853db3b4aed7a485f9d0951bf7f",
-      "size": 69865
+      "sha256": "5ad0f2f4b2df38c8511451a8d91222ac77b30f01b07092e8a3633b7f9e72c2ff",
+      "size": 70255
     },
     {
       "path": "web/cloud.js",
@@ -1200,8 +1205,8 @@
     },
     {
       "path": "web/firebase.js",
-      "sha256": "17536e3a248b4a5ff07036a0cadb1a8a4359289dfa6938555439bb762644feed",
-      "size": 26165
+      "sha256": "00d617e1092e5247a1a1189c24ba1f95c96c064d98c6c7f417ebde2e3e326a1c",
+      "size": 27273
     },
     {
       "path": "web/gcal.js",
@@ -1245,8 +1250,8 @@
     },
     {
       "path": "web/lizenz.js",
-      "sha256": "60c3cb1a34bb9d2bd8054c8bd93d87b3cb6e986d5c1c48d65550746a3b264cca",
-      "size": 20143
+      "sha256": "0ce1d0e3d10b4af9f589a3e435d649937aa7881bb1f5711c461b2cd36af6add7",
+      "size": 23518
     },
     {
       "path": "web/lizenzschluessel.js",

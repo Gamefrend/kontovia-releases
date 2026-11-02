@@ -531,6 +531,26 @@ export class FirebaseBackend {
   }
 
   /**
+   * Eine Cloud Function (functions/, Frankfurt) mit dem Anmelde-Token aufrufen. Adresse und Bestätigung prüft der Server
+   * selbst am Token. Wirft bei Netz- oder Serverfehlern.
+   */
+  async funktion(name, daten) {
+    const idToken = await this.idToken();
+    const projekt = this.cfg.projectId || String(this.cfg.bucket || '').split('.')[0];
+    const res = await requestJson(`https://europe-west3-${projekt}.cloudfunctions.net/${name}`, {
+      method: 'POST', headers: { authorization: `Bearer ${idToken}`, 'content-type': 'application/json' },
+      body: new TextEncoder().encode(JSON.stringify({ data: daten || {} })), timeoutMs: 20000,
+    });
+    return res?.result ?? null;
+  }
+
+  /** Dieses Gerät für die Lizenz des Kontos melden (lizenz.js: abgleichen). Antwort: {zugelassen, anzahl, grenze, geraete}. */
+  geraetMelden(geraet, name) { return this.funktion('geraetMelden', { geraet, name }); }
+
+  /** Den Platz eines Geräts in der Liste der Lizenz freigeben (Einstellungen › Weitere Geräte). */
+  geraetFreigeben(geraet) { return this.funktion('geraetFreigeben', { geraet }); }
+
+  /**
    * Das Konto einmal in die Kontenliste des Betreibers eintragen: konten/<uid>.json mit Adresse und
    * Datum, sonst nichts. Nur Anlegen ist erlaubt; steht der Eintrag schon, lehnen die Regeln ab.
    */

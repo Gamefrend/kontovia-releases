@@ -88,6 +88,8 @@ const lizenz = new LZ.Lizenz({
   konto: lizenzKonto,
   abruf: () => cloud.be().lizenzLesen(),
   melden: () => cloud.be().kontoMelden(),
+  platz: () => cloud.be().geraetMelden(device.id, device.name),
+  freigeben: (id) => cloud.be().geraetFreigeben(id),
 });
 
 let autoLockMinutes = 10;
@@ -1232,6 +1234,12 @@ const api = {
       const r = kopie(await lizenz.abgleichen());
       send('lizenz', r.status);
       return r;
+    }),
+    /** Den Platz eines Geräts in der Geräteliste der Kontolizenz freigeben (der Server zählt die Geräte). */
+    geraetFreigeben: handle(async (id) => {
+      const s = kopie(await lizenz.geraetFreigeben(str(id, 40)));
+      send('lizenz', s);
+      return s;
     }),
     /**
      * Die Tarif-Einstellung des Betreibers (welche Funktion ab welchem Tarif), nur mit gültiger Signatur. Geholt wird
