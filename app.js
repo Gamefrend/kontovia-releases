@@ -1503,7 +1503,7 @@ const HILFE_ABSCHNITT = {
   fahrten: () => 'fahrtenbuch-und-dienstreisen',
   calendar: () => 'termine-und-rechnungen-verknuepfen',
   todos: () => 'aufgaben-ziele-und-wiederholungen',
-  reports: (p) => (p.tab === 'kasse' || p.tab === 'vorschau' ? 'kassenbuch-und-liquiditaet' : 'diagramme-und-durchschnittswerte'),
+  reports: (p) => (p.tab === 'kasse' || p.tab === 'vorschau' ? 'kassenbuch-und-liquiditaet' : p.tab === 'lager' ? 'lager-und-wareneinsatz' : 'diagramme-und-durchschnittswerte'),
   export: (p) => (p.reiter === 'import' ? 'daten-aus-einem-anderen-programm-uebernehmen' : p.reiter === 'archiv' ? 'archiv-und-aufbewahrung' : 'was-beim-export-herauskommt'),
   master: () => 'anschaffungen-ueber-800',
   settings: () => 'zwei-einstellungen-auf-die-es-ankommt',

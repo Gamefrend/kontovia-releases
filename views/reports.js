@@ -28,6 +28,7 @@ import { sperrKarteZeigen, erlaubt } from '../lib/lizenzui.js';
 import { kassenbuchZeigen, vorschauZeigen, gewaehlteKasse, vorschauHorizont } from './kassenbuch.js';
 import { bwa, summenSalden, ustJahr } from '../lib/bwa.js';
 import { kostenZeigen } from './kosten.js';
+import { lagerZeigen } from './lager.js';
 
 const api = window.kontovia;
 const period = defaultPeriod();
@@ -36,7 +37,7 @@ let tab = 'guv';
 let periodCtl = null;
 
 /** Reiter, die zu einer Premium-Funktion gehören (Krone am Reiter, Sperrkarte statt Inhalt). */
-const TAB_FUNKTION = { euer: 'euer', bwa: 'euer', susa: 'euer', anlagen: 'anlagen', vergleich: 'jahresvergleich', kasse: 'kassenbuch', vorschau: 'liquiditaet' };
+const TAB_FUNKTION = { euer: 'euer', bwa: 'euer', susa: 'euer', anlagen: 'anlagen', vergleich: 'jahresvergleich', kasse: 'kassenbuch', vorschau: 'liquiditaet', lager: 'vorlagen' };
 
 const TABS = {
   guv: 'Gewinn & Verlust',
@@ -49,6 +50,7 @@ const TABS = {
   opos: 'Offene Posten',
   konten: 'Konten',
   kasse: 'Kassenbuch',
+  lager: 'Lager',
   vorschau: 'Liquidität',
   anlagen: 'Anlagevermögen',
   vergleich: 'Jahresvergleich',
@@ -107,6 +109,7 @@ function draw(root) {
     kosten: (b, d) => kostenZeigen(b, d, period, neu),
     // Kasse und Vorschau zählen jede Bewegung des Geldes, auch private (sonst stimmte der Bestand nicht).
     kasse: (b) => kassenbuchZeigen(b, store.db, period, neu),
+    lager: (b) => lagerZeigen(b, store.db, period, neu),
     vorschau: (b) => vorschauZeigen(b, store.db, neu),
   }[tab] || guv)(body, db);
   mountCharts(body);
@@ -910,6 +913,7 @@ async function exportPdf(wie) {
     konten: () => [R.accountsPdf(db, period), `Kontenblaetter_${period.from}_${period.to}.pdf`],
     anlagen: () => [R.assetsPdf(db, period), `Anlagenverzeichnis_${period.to}.pdf`],
     kasse: () => [R.kassenbuchPdf(store.db, period, gewaehlteKasse()), `Kassenbuch_${period.from}_${period.to}.pdf`],
+    lager: () => [R.lagerPdf(store.db, period), `Lager_${period.to}.pdf`],
     vorschau: () => [R.liquiditaetPdf(store.db, vorschauHorizont()), `Liquiditaet_${todayISO()}.pdf`],
     vergleich: () => {
       const v = vergleichEinstellung(db);

@@ -19,7 +19,8 @@ import { mountTable } from '../lib/table.js';
 import { textAusBytes } from '../lib/kontoauszug.js';
 import * as I from '../lib/datenimport.js';
 import { elsterLesen, meldungVergleichen, zeitraumText } from '../lib/elster.js';
-import { xlsxLesen, alsCsv } from '../lib/xlsx.js';
+import { xlsxLesen, alsCsv, zipLesen } from '../lib/xlsx.js';
+import { istDsfinvk, dsfinvkLesen, dsfinvkZuBuchungen } from '../lib/kassendaten.js';
 import { base64 } from '../lib/pdfausgabe.js';
 import {
   buchungenUebernehmen, kontakteUebernehmen, produkteUebernehmen, meldungenSpeichern, meldungLoeschen,
@@ -79,6 +80,8 @@ async function verlassen() {
 
 const KARTEN = [
   ['buchungen', 'book', 'Buchungen aus einem anderen Programm', 'DATEV-Format (von der Kanzlei, aus Lexware Office, sevDesk und anderen), Excel-Tabelle oder CSV. Kategorien werden am Sachkonto oder am Namen erkannt.'],
+  ['lohn', 'users', 'Lohnjournal vom Lohnbüro', 'Die Buchungsliste Ihres Lohnbüros im DATEV-Format. Kontovia rechnet keinen Lohn ab, es bucht Nettolöhne, Lohnsteuer und Sozialversicherung je Monat als Ausgaben.'],
+  ['kasse', 'euro', 'Kassendaten einer Registrierkasse', 'Den Export Ihrer Kasse mit TSE (DSFinV-K, ZIP-Datei). Jeder Tagesabschluss kommt ins Kassenbuch, Kartenzahlungen auf Ihr Bankkonto.'],
   ['elster', 'euro', 'Umsatzsteuer-Voranmeldung aus ELSTER', 'XML-Datei einer Voranmeldung, etwa aus Ihrem bisherigen Programm. Kontovia stellt sie neben die eigene Berechnung und zeigt Abweichungen.'],
   ['kontakte', 'users', 'Kunden und Lieferanten', 'Visitenkarten (vCard) aus Outlook, Google oder vom Telefon, Tabellen mit Adressen oder DATEV-Debitoren und -Kreditoren.'],
   ['produkte', 'tag', 'Produkte und Leistungen', 'Tabelle mit Bezeichnung, Preis, Einheit und Steuersatz, zum Beispiel aus Ihrem bisherigen Rechnungsprogramm.'],
@@ -95,9 +98,9 @@ function start(root) {
       <div class="ki-drop" id="diDrop" style="margin-top:0">
         ${icon('folder', 28).__raw}
         <strong>Datei hierher ziehen oder auswählen</strong>
-        <span class="small muted">Kontovia erkennt das Format selbst: DATEV, Excel, CSV, ELSTER-XML, vCard, Kalenderdatei, E-Rechnung und Kontoauszug.</span>
+        <span class="small muted">Kontovia erkennt das Format selbst: DATEV, Excel, CSV, ELSTER-XML, vCard, Kalenderdatei, E-Rechnung, Kassendaten und Kontoauszug.</span>
         <button class="btn primary mt8" id="diWahl" type="button">${icon('plus', 15).__raw} Datei wählen</button>
-        <input type="file" id="diDatei" hidden accept=".csv,.txt,.tsv,.xlsx,.xml,.vcf,.vcard,.ics,.pdf,.sta,.940,.mt940">
+        <input type="file" id="diDatei" hidden accept=".csv,.txt,.tsv,.xlsx,.xml,.vcf,.vcard,.ics,.pdf,.sta,.940,.mt940,.zip">
       </div>
       <p class="small muted mb0 mt8" id="diStatus" role="status"></p>
     </div></div>
@@ -128,11 +131,11 @@ function start(root) {
   $$('[data-ziel]', root).forEach((b) => b.addEventListener('click', () => {
     if (b.dataset.ziel === 'kontoauszug') { navigate('kontoimport'); return; }
     const accept = {
-      buchungen: '.csv,.txt,.tsv,.xlsx', elster: '.xml', kontakte: '.vcf,.vcard,.csv,.txt,.xlsx', produkte: '.csv,.txt,.xlsx', erechnung: '.xml,.pdf', kalender: '.ics',
+      buchungen: '.csv,.txt,.tsv,.xlsx', lohn: '.csv,.txt', kasse: '.zip', elster: '.xml', kontakte: '.vcf,.vcard,.csv,.txt,.xlsx', produkte: '.csv,.txt,.xlsx', erechnung: '.xml,.pdf', kalender: '.ics',
     }[b.dataset.ziel];
     input.setAttribute('accept', accept);
     waehlen(b.dataset.ziel);
-    input.setAttribute('accept', '.csv,.txt,.tsv,.xlsx,.xml,.vcf,.vcard,.ics,.pdf,.sta,.940,.mt940');
+    input.setAttribute('accept', '.csv,.txt,.tsv,.xlsx,.xml,.vcf,.vcard,.ics,.pdf,.sta,.940,.mt940,.zip');
   }));
 
   if (meldungen.length) meldungenTabelle(root, meldungen);
@@ -218,8 +221,18 @@ async function dateiLesen(datei, root, ziel) {
   const name = datei.name;
   const weiter = { name, dataBase64: '' };
   try {
-    // Excel: erst in Zeilen, dann wie eine CSV-Datei.
-    if (/\.xlsx$/i.test(name) || (bytes[0] === 0x50 && bytes[1] === 0x4b)) {
+    // ZIP: Kassendaten (DSFinV-K) oder eine Excel-Mappe.
+    if (/\.(xlsx|zip)$/i.test(name) || (bytes[0] === 0x50 && bytes[1] === 0x4b)) {
+      const kasse = await zipLesen(bytes, (n) => /(^|\/)(businesscases|cashpointclosing|payment|vat)\.csv$|(^|\/)index\.xml$/i.test(n)).catch(() => null);
+      if (kasse && istDsfinvk(kasse.keys())) {
+        const gelesen = dsfinvkLesen(kasse);
+        st = { ...leer(), schritt: 'pruefen', art: 'buchungen', quelle: 'Kasse', name, kasse: gelesen, hinweise: gelesen.hinweise };
+        st.kontoId = standardKonto();
+        vorschlaegeBerechnen();
+        meld('');
+        return zeichnen(root);
+      }
+      if (/\.zip$/i.test(name) || ziel === 'kasse') throw Object.assign(new Error('In diesem Archiv stehen keine Kassendaten. Gelesen wird der DSFinV-K-Export einer Kasse mit TSE (mit businesscases.csv und cashpointclosing.csv).'), { code: 'FORMAT' });
       const text = alsCsv(await xlsxLesen(bytes));
       return tabelleOeffnen(text, name, ziel, root, 'Excel-Tabelle');
     }
@@ -249,7 +262,7 @@ async function dateiLesen(datei, root, ziel) {
     if (art === 'datev') {
       const stapel = I.datevLesen(text);
       if (stapel.kategorie === 16) return stammOeffnen('kontakte', I.datevKontakte(stapel), name, root, 'DATEV', stapel.hinweise);
-      st = { ...leer(), schritt: 'pruefen', art: 'buchungen', quelle: 'DATEV', name, stapel, hinweise: stapel.hinweise };
+      st = { ...leer(), schritt: 'pruefen', art: 'buchungen', quelle: 'DATEV', name, stapel, hinweise: stapel.hinweise, lohn: I.istLohnjournal(stapel, stapel.kopf.rahmen || (store.db.settings.chartOfAccounts === 'SKR04' ? 'skr04' : 'skr03')) };
       st.kontoId = standardKonto();
       vorschlaegeBerechnen();
       return zeichnen(root);
@@ -311,7 +324,10 @@ function vorschlaegeBerechnen() {
   const gewaehltVorher = new Set(st.vorschlaege.filter((v) => v.gewaehlt).map((v) => v.hash));
   const nochNie = !st.vorschlaege.length;
   let liste;
-  if (st.stapel) {
+  if (st.kasse) {
+    liste = dsfinvkZuBuchungen(st.kasse, store.db, { kontoId: st.kontoId, datei: st.name });
+    st.neueKontakte = [];
+  } else if (st.stapel) {
     liste = I.datevZuBuchungen(st.stapel, store.db, { kontoId: st.kontoId, datei: st.name });
     st.neueKontakte = [];
   } else {
@@ -348,7 +364,8 @@ function artText(v) {
 
 function pruefenBuchungen(root) {
   const n = (f) => st.vorschlaege.filter(f).length;
-  const konten = sel.accounts().filter((a) => a.active !== false);
+  // Bei Kassendaten geht der Baranteil immer in die Kasse; gewählt wird nur das Konto für Kartenzahlungen.
+  const konten = sel.accounts().filter((a) => a.active !== false && (st.quelle !== 'Kasse' || a.kind !== 'cash'));
   const v = st.vorschlaege;
   const von = v.map((x) => x.datum).sort()[0];
   const bis = v.map((x) => x.datum).sort().at(-1);
@@ -357,13 +374,15 @@ function pruefenBuchungen(root) {
     <div class="card mb16"><div class="card-body">
       <div class="row between wrap" style="gap:10px">
         <div><strong>${esc(st.name)}</strong>
-          <div class="small muted">${esc(st.quelle === 'DATEV' ? `DATEV-Buchungsstapel${k?.berater ? `, Berater ${k.berater}, Mandant ${k.mandant}` : ''}${k?.rahmen ? `, ${k.rahmen.toUpperCase()}` : ''}` : 'Tabelle')}, ${int(v.length)} Zeilen${von ? ` vom ${esc(fmtDate(von))} bis ${esc(fmtDate(bis))}` : ''}</div></div>
+          <div class="small muted">${esc(st.quelle === 'Kasse' ? `Kassendaten (DSFinV-K), ${st.kasse.abschluesse.length} ${st.kasse.abschluesse.length === 1 ? 'Tagesabschluss' : 'Tagesabschlüsse'}` : st.quelle === 'DATEV' ? `${st.lohn ? 'Lohnjournal (DATEV-Buchungsstapel des Lohnbüros)' : 'DATEV-Buchungsstapel'}${k?.berater ? `, Berater ${k.berater}, Mandant ${k.mandant}` : ''}${k?.rahmen ? `, ${k.rahmen.toUpperCase()}` : ''}` : 'Tabelle')}, ${int(v.filter((x) => !x.zusatz).length)} Zeilen${von ? ` vom ${esc(fmtDate(von))} bis ${esc(fmtDate(bis))}` : ''}</div></div>
         <button class="btn sm" id="diAnders">${icon('left', 14).__raw} Andere Datei</button>
       </div>
       <div class="field mt8" style="max-width:420px">
-        <label for="diKonto">${st.quelle === 'DATEV' ? 'Zahlungskonto, wenn die Datei keines nennt' : 'Zahlungskonto'}</label>
+        <label for="diKonto">${st.quelle === 'Kasse' ? 'Kartenzahlungen buchen auf' : st.quelle === 'DATEV' ? 'Zahlungskonto, wenn die Datei keines nennt' : 'Zahlungskonto'}</label>
         <select id="diKonto">${konten.map((a) => `<option value="${esc(a.id)}" ${a.id === st.kontoId ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select>
       </div>
+      ${st.quelle === 'Kasse' ? '<p class="small mt8">Kontovia ist keine Kasse. Es übernimmt je Tagesabschluss die Umsätze nach Steuersatz: den Baranteil ins Kassenbuch, Karten und Zahlungsdienste auf das gewählte Konto.</p>' : ''}
+      ${st.lohn ? '<p class="small mt8">Kontovia rechnet keinen Lohn ab. Es fasst die Lohnzeilen je Monat zu offenen Ausgaben zusammen: Nettolöhne, Lohnsteuer und Sozialversicherung. Bezahlt sind sie, sobald die Abbuchung in dieser Datei oder später im Kontoauszug steht.</p>' : ''}
       <p class="small mb0">Nichts ist übernommen. Ausgewählt ist, was sich eindeutig übernehmen lässt. Zeilen, die schon einmal übernommen wurden, bleiben aus. ${st.neueKontakte.length ? `${int(st.neueKontakte.length)} ${st.neueKontakte.length === 1 ? 'Kontakt wird' : 'Kontakte werden'} dabei neu angelegt.` : ''}</p>
       ${st.hinweise.length ? `<details class="mt8"><summary class="small">${int(st.hinweise.length)} ${st.hinweise.length === 1 ? 'Hinweis' : 'Hinweise'} zur Datei</summary><ul class="small">${st.hinweise.slice(0, 50).map((h) => `<li>${esc(h)}</li>`).join('')}</ul></details>` : ''}
     </div></div>

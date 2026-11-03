@@ -1,11 +1,11 @@
 {
-  "version": "2.48.12",
-  "released": "2026-11-02T08:52:43.345Z",
-  "notes": "Geräte Ihrer Lizenz\n\n- Unter Einstellungen › Weitere Geräte sehen Sie jetzt alle Geräte, die Ihre Lizenz nutzen, auch die von anderen Geräten aus verbundenen.\n- Nutzen Sie ein Gerät nicht mehr, geben Sie dort seinen Platz frei. Nach 60 Tagen ohne Verbindung geschieht das von selbst.\n- Sind alle Plätze Ihres Tarifs belegt, gilt auf einem weiteren Gerät der kostenlose Tarif, bis ein Platz frei wird.",
+  "version": "2.48.13",
+  "released": "2026-11-03T15:47:23.384Z",
+  "notes": "Lager, Kassendaten und Lohnjournal\n\n- Neu unter Auswertungen › Lager: Bestand je Produkt mit Wert und Wareneinsatz. Verkaufte Mengen zieht Kontovia aus Rechnungen und Lieferscheinen ab.\n- Zugänge erfassen Sie von Hand oder aus der E-Rechnung Ihres Lieferanten. Mit „Inventur zählen“ halten Sie den Bestand fest.\n- Die Tagesabschlüsse einer Kasse mit TSE lassen sich einlesen: Bares kommt ins Kassenbuch, Kartenzahlungen aufs Bankkonto.\n- Das Lohnjournal Ihres Lohnbüros wird je Monat zu Ausgaben für Nettolöhne, Lohnsteuer und Sozialversicherung.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "c4b5b166cca04f7c25036b5674389b77e64df05a0c5ae7e88cbd99eca31a14c2",
+      "sha256": "fcc9cdcd1a9ea87909784451d59a33b152d91a94d0bad2f55b8e4f2f28c3957c",
       "size": 389
     },
     {
@@ -25,13 +25,13 @@
     },
     {
       "path": "abo/en.js",
-      "sha256": "11fe5b3555c84d85899f093d594a6ae6d6b9c38fadae9c97ba541711dfa586b3",
-      "size": 28425
+      "sha256": "3eaa890a228a828630c18e61de9d5cf43239e99affcc6e8ca1ea868166329bc7",
+      "size": 28721
     },
     {
       "path": "abo/index.html",
-      "sha256": "0fb13892a872da61d1e720f8944f8233443c3207ac58ea43cfa65917225de1d8",
-      "size": 35377
+      "sha256": "75ce69a8a88a245093bc20ff266380b268cbad5f03f72d89a5d0aa4c661f6dc6",
+      "size": 35509
     },
     {
       "path": "abo/vorab.js",
@@ -40,8 +40,8 @@
     },
     {
       "path": "app.js",
-      "sha256": "94901a24d0754d8e92d038dc78950b6cb3c43e58d552ad2605d92a44bc2954f1",
-      "size": 90667
+      "sha256": "f5365406f521fdb105d7db869d43af9b7e477681b5c004c17c362503225b60df",
+      "size": 90714
     },
     {
       "path": "fonts/LICENSE-Geist.txt",
@@ -195,8 +195,8 @@
     },
     {
       "path": "lib/datenimport.js",
-      "sha256": "10f5dc06674030bab829a2f89522cd2e6891dd736f1764fed388523789b03a68",
-      "size": 42610
+      "sha256": "b6aafb4e662a813e5cad2a98877ec54952b919592a1b9ae30f90a8bedf6804ea",
+      "size": 50518
     },
     {
       "path": "lib/datenimportaktionen.js",
@@ -315,8 +315,13 @@
     },
     {
       "path": "lib/kasse.js",
-      "sha256": "5e6a1a86fbdcd9d192017c57d65af79eea6ded077b66a091387e4863ccec0427",
-      "size": 3534
+      "sha256": "744b76204a2377784d7cb2b395be9c4b45056afad1efb50d3f90931ecc0ddf5a",
+      "size": 3655
+    },
+    {
+      "path": "lib/kassendaten.js",
+      "sha256": "4d92c4592f8c059800a06d9649d4ca754df29431a79e4ea4ac894709f2fa8568",
+      "size": 12859
     },
     {
       "path": "lib/kategoriemodell.js",
@@ -342,6 +347,16 @@
       "path": "lib/kostenarten.js",
       "sha256": "8afbdf9c5b1d4d47e238880c9c9214ccbaea11f4371866093ad424241c08e2f3",
       "size": 15584
+    },
+    {
+      "path": "lib/lager.js",
+      "sha256": "29b86adad140f0c53ce02153e531b4fdfdf97ee8507494db8261eae3e0b65624",
+      "size": 9177
+    },
+    {
+      "path": "lib/lageraktionen.js",
+      "sha256": "74002cab9bf8e7709840f06c4763ab40084f81475cf03029f52f5803b525751b",
+      "size": 2939
     },
     {
       "path": "lib/lastschriften.js",
@@ -390,8 +405,8 @@
     },
     {
       "path": "lib/merge.js",
-      "sha256": "f0f1e13a05bef4d522e9b24a4f944f7c0509da97a29c0f154a3e148f6638e5c7",
-      "size": 20537
+      "sha256": "799ef648553a4f26338179dee900d0d91b9cf7fd9a5c5c307f6b4c38518c5afd",
+      "size": 20720
     },
     {
       "path": "lib/messung.js",
@@ -525,8 +540,8 @@
     },
     {
       "path": "lib/reports.js",
-      "sha256": "712cb32f375c096dc169dd6857ec5970a0135872e3a755ab033849be78ea8f65",
-      "size": 51904
+      "sha256": "3efeb6e2d64c2f06790c7b56bd532eb9996c5b673463b24ec19152d4744806af",
+      "size": 53236
     },
     {
       "path": "lib/richeditor.js",
@@ -570,8 +585,8 @@
     },
     {
       "path": "lib/sprache/en.js",
-      "sha256": "ab70f0f4c23da0334e3327a565fa0d477650998ef9209e3fb10dea8e0f189878",
-      "size": 2336
+      "sha256": "0362881f8c904ded9c8e3782b874815d8c042697443e804d860ca33610aa3108",
+      "size": 2385
     },
     {
       "path": "lib/sprache/en/t01.js",
@@ -769,6 +784,11 @@
       "size": 14879
     },
     {
+      "path": "lib/sprache/en/zusatz-sec66.js",
+      "sha256": "7c59ce831f02a06fb2e5347d3e379568e72bf5c9dd6f37fd985654ded8fe1080",
+      "size": 20110
+    },
+    {
       "path": "lib/sprache/en/zusatz-sec72.js",
       "sha256": "83c34f0d2572e3b9886032d5c9d3839976c11bc3f0f993192d218ac46fb2b39a",
       "size": 1986
@@ -805,8 +825,8 @@
     },
     {
       "path": "lib/store.js",
-      "sha256": "81d231cd8268595c7dc2359e32f094fc8d32cf0931418bc08556f3fe81be905d",
-      "size": 47854
+      "sha256": "b77839ad8a9ff55aab1fd7e1d8fa701ff110c5646d01c3ddde20a33347985105",
+      "size": 47901
     },
     {
       "path": "lib/suche.js",
@@ -830,8 +850,8 @@
     },
     {
       "path": "lib/tarife.js",
-      "sha256": "fc6979f9f06a34dc2b25b996d8de9835bd377027ebb3cd703c36ddf96f723d8c",
-      "size": 12537
+      "sha256": "b7bade8a4524c2e1e1696fbd68c080846b024de961930af50e18c0aa92f868a3",
+      "size": 12682
     },
     {
       "path": "lib/tarifkonfig.js",
@@ -880,8 +900,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "00a96819721f625e291e9686b6f35190bef334efef2735d15bfcdb0c198622ca",
-      "size": 67138
+      "sha256": "2dd71ce2deeb73d085d9bc1d3a1d799a7cdea71f94e594d0071c02b4acfa68dd",
+      "size": 67817
     },
     {
       "path": "lib/waehrung.js",
@@ -895,8 +915,8 @@
     },
     {
       "path": "lib/xlsx.js",
-      "sha256": "aef006db1786ba117fe2abe1384d284389b85987676fe249afec98bb224e13ed",
-      "size": 19550
+      "sha256": "509f771a4201a3aa4128717552dcebb04362d0c60529fc7ce67cf7eefa2857d1",
+      "size": 19601
     },
     {
       "path": "lib/zahlungsdienste.js",
@@ -920,12 +940,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "9b3feecafb94a2020512f164ac9e655e9ba6cda24781ce32d5397683191ff9df",
+      "sha256": "24c1aa243e9c81d3d9f83c5743f16fb5300559ee3671b510b4ab0e93e516925c",
       "size": 2811
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "1295d21818f99e1d42a82c8b938765a143c8ae1db463067eb67aaada82c53f95",
+      "sha256": "b409261313a45ce0a14279c9fdf6cf23a8fc601a047c217b0555ad30dd4aa2ea",
       "size": 42942
     },
     {
@@ -945,7 +965,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "0f43598157ada0ee049b6da9806d142ea6e248ab9fc7c56734e354b75963fa72",
+      "sha256": "78618d50c191f79c46d4c910ff73271e2ef2bab23504a167c20e1c307c1631ab",
       "size": 46879
     },
     {
@@ -970,12 +990,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "e683f4735f839feb8b3bdddeba70957d850ae6889f016792fea5f6e5b3e43a37",
+      "sha256": "925032d17e9acbc6c1e840266be4bb8c291ddf0d88fa68b5be2fc489c1038c1f",
       "size": 28338
     },
     {
       "path": "security.txt",
-      "sha256": "c4b5b166cca04f7c25036b5674389b77e64df05a0c5ae7e88cbd99eca31a14c2",
+      "sha256": "fcc9cdcd1a9ea87909784451d59a33b152d91a94d0bad2f55b8e4f2f28c3957c",
       "size": 389
     },
     {
@@ -1030,8 +1050,8 @@
     },
     {
       "path": "views/datenimport.js",
-      "sha256": "9da820439ba1cbcac081a56ba3a2ce072ce922bc2ea8c48996899bbf4b33a13e",
-      "size": 40478
+      "sha256": "662aedbabc953e748b88572791b28443c2cadb8b27f4a29bda7bf370e553f07f",
+      "size": 43064
     },
     {
       "path": "views/erechnung.js",
@@ -1050,8 +1070,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "66cad188195c56b706a86915e9fbe438681e7dc306d8705ef6a9bbc8c2633f55",
-      "size": 106587
+      "sha256": "85038e0ac703d2b98e4b04777165b3633c6da75b16ede9fdfa35f6d565a131d5",
+      "size": 108934
     },
     {
       "path": "views/importexport.js",
@@ -1082,6 +1102,11 @@
       "path": "views/kosten.js",
       "sha256": "7284e7d5ae7a8fc92c29b9b3a38dca8507a3d91084bdeed8b209f06f8277ce76",
       "size": 12865
+    },
+    {
+      "path": "views/lager.js",
+      "sha256": "36daa81c3d70d1dc88bbe52d57341e0300dde506fb182addaa1bf4442518ff9d",
+      "size": 14871
     },
     {
       "path": "views/mahneinstellungen.js",
@@ -1120,8 +1145,8 @@
     },
     {
       "path": "views/reports.js",
-      "sha256": "7e4ef391c62d2b32b4125a8a10819c460b0b922e307086c1029eff130e51a67e",
-      "size": 59865
+      "sha256": "b3729e5cf836056eb8c316b9d87abf8d70fc17d637703db9b88f94203def3efb",
+      "size": 60076
     },
     {
       "path": "views/settings.js",
@@ -1160,7 +1185,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "c9a7e2c38a538b408020d8689562a3588797f4d2df4905bfaa421d765c95b7a4",
+      "sha256": "b5674c4b67baeeac028a83241b9c4d2ab0364035ad5e2bf2aabf3599dc57db79",
       "size": 10045
     },
     {
@@ -1310,8 +1335,8 @@
     },
     {
       "path": "web/seed.js",
-      "sha256": "ba71de2ada14a4eca789b3a087f13b620fdccc5d382dc3157b00fbf4494dd68c",
-      "size": 6028
+      "sha256": "3d59880e3c11faf2f8839a12a5bba5bca41c98cafa1a81c3a28e2b77881bf745",
+      "size": 6043
     },
     {
       "path": "web/sperre.js",
@@ -1340,8 +1365,8 @@
     },
     {
       "path": "web/sqlschema.js",
-      "sha256": "fa9541943e3f349a34da94a352241ef1c80f638cdce9b016e3c498c585dd7eb8",
-      "size": 14235
+      "sha256": "ff7a294add6e9b860c1437c460b4b4285d7cc72a7e3aa1459caf7abae576cc91",
+      "size": 14600
     },
     {
       "path": "web/sqlwerk.js",
@@ -1465,8 +1490,8 @@
     },
     {
       "path": "abo/",
-      "sha256": "0fb13892a872da61d1e720f8944f8233443c3207ac58ea43cfa65917225de1d8",
-      "size": 35377
+      "sha256": "75ce69a8a88a245093bc20ff266380b268cbad5f03f72d89a5d0aa4c661f6dc6",
+      "size": 35509
     }
   ]
 }

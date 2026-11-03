@@ -120,8 +120,9 @@ function anleitung(root) {
         <p><strong>Gut geeignet:</strong> Freiberufler, Selbstständige und kleine Betriebe, allein oder mit ein, zwei Mitarbeitenden, die ihren
         Gewinn mit der Einnahmen-Überschuss-Rechnung ermitteln und Dienstleistungen oder Waren in Rechnung stellen.</p>
         <p><strong>Nicht gedacht ist Kontovia</strong> für Kapitalgesellschaften wie GmbH und UG, die eine Bilanz aufstellen (doppelte Buchführung,
-        Jahresabschluss), und für Betriebe mit mehr als zehn Mitarbeitenden. Lohnabrechnung, Kassensysteme mit TSE-Pflicht, ein
-        Fahrtenbuch für den Firmenwagen und eine Warenwirtschaft mit Lager gibt es nicht.
+        Jahresabschluss), und für Betriebe mit mehr als zehn Mitarbeitenden. Kontovia rechnet keinen Lohn ab und ist keine Kasse:
+        Das Lohnjournal Ihres Lohnbüros und die Tagesabschlüsse einer Kasse mit TSE lassen sich aber einlesen. Ein Fahrtenbuch und
+        ein einfaches Lager mit Wareneinsatz gibt es, eine Warenwirtschaft mit Bestellungen nicht.
         Für Rechnungen und Belege lässt sich Kontovia trotzdem neben einem anderen Programm nutzen; die Buchführung gehört dann dorthin
         oder zu Ihrer Steuerkanzlei.</p>
         <p><strong>Seit 2.41 dabei:</strong> Verkäufe an Privatkunden in anderen EU-Ländern mit deren Steuersatz und der OSS-Meldung,
@@ -648,9 +649,27 @@ function anleitung(root) {
         Tagesabschluss und Bestand. Fällt der Bestand an einem Abend unter null, weist Kontovia darauf hin, denn eine Kasse kann
         nicht weniger als nichts enthalten. Mit „Kasse zählen“ halten Sie den gezählten Bestand fest, auf Wunsch nach Scheinen und
         Münzen; weicht er ab, schlägt Kontovia eine Buchung für die Differenz vor.</p>
+        <p><strong>Kassendaten einer Registrierkasse.</strong> Hat Ihre Kasse eine TSE, gibt sie ihre Daten als ZIP-Datei aus (DSFinV-K).
+        Ziehen Sie diese Datei unter <a data-go="datenimport">Import & Export</a> hinein. Je Tagesabschluss übernimmt Kontovia die Umsätze
+        nach Steuersatz: den Baranteil ins Kassenbuch, Kartenzahlungen auf das Konto, das Sie wählen. Privatentnahmen und
+        Kassendifferenzen kommen mit. Gutscheine, Anzahlungen und das Einzahlen auf die Bank erfassen Sie selbst. Jeder Tagesabschluss
+        wird nur einmal übernommen.</p>
         <p><strong>Liquidität.</strong> Der Reiter zeigt, wie sich der Stand Ihrer Konten in den nächsten Wochen entwickelt: aus offenen
         Einnahmen und Ausgaben zu ihrer Fälligkeit, wiederkehrenden Buchungen und Rechnungen und der Umsatzsteuer, die Sie
         voraussichtlich zahlen. Droht ein Engpass, sehen Sie wann. Neue Aufträge kennt die Vorschau nicht.</p>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
+        <h2 class="mt0">Lager und Wareneinsatz</h2>
+        <p>Verkaufen Sie Waren, führt Kontovia unter <a data-go="reports">Auswertungen</a> → Lager einen Bestand je Produkt. Erfassen Sie
+        einen <strong>Zugang</strong> mit Menge und Einkaufspreis, von Hand oder aus der E-Rechnung Ihres Lieferanten. Verkaufte Mengen
+        zieht Kontovia selbst ab, aus ausgestellten Rechnungen und Lieferscheinen mit diesem Produkt. Eine Rechnung zu einem Lieferschein
+        zählt dabei nicht noch einmal.</p>
+        <p>Mit <strong>„Inventur zählen“</strong> halten Sie den gezählten Bestand fest; die Differenz gilt als Zu- oder Abgang. Bewertet wird
+        mit dem gleitenden Durchschnittspreis. Der <strong>Wareneinsatz</strong> ist der Wert dessen, was im Zeitraum hinausging. Die
+        Inventurliste zum Stichtag speichern Sie als CSV oder PDF.</p>
+        <p>In der Einnahmen-Überschuss-Rechnung zählt der Wareneinkauf, wenn Sie ihn bezahlen. Bestand und Wareneinsatz sind eine
+        Übersicht für Sie und Ihre Kanzlei, keine Buchung.</p>
       </div></div>
 
       <div class="card mt16"><div class="card-body">
@@ -700,6 +719,10 @@ function anleitung(root) {
           <li><strong>DATEV-Format:</strong> Buchungsstapel von Ihrer Steuerkanzlei oder aus Programmen wie Lexware Office und sevDesk.
               Die Kategorie folgt aus dem Sachkonto, der Steuersatz aus dem Steuerschlüssel oder der Kategorie. Rechnung und Zahlung
               in derselben Datei werden zu einer bezahlten Buchung. Umbuchungen zwischen Sachkonten, etwa Abschreibungen, bleiben draußen.</li>
+          <li><strong>Lohnjournal:</strong> die Buchungsliste Ihres Lohnbüros im DATEV-Format. Kontovia fasst die Lohnzeilen je Monat zu
+              offenen Ausgaben zusammen: Nettolöhne, Lohnsteuer und Sozialversicherung, den Arbeitgeberanteil getrennt. Bezahlt sind
+              sie, sobald die Abbuchung in derselben Datei oder später im Kontoauszug steht.</li>
+          <li><strong>Kassendaten:</strong> der DSFinV-K-Export einer Kasse mit TSE (ZIP-Datei), siehe Kassenbuch.</li>
           <li><strong>Excel und CSV:</strong> Tabellen mit Buchungen, Kontakten oder Produkten. Spalten wie Datum, Betrag, Netto,
               Steuersatz, Kategorie und Kunde erkennt Kontovia an der Überschrift, auch die eigenen Exporte.</li>
           <li><strong>ELSTER:</strong> die XML-Datei einer Umsatzsteuer-Voranmeldung. Kontovia stellt die gemeldeten Werte neben die

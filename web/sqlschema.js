@@ -28,7 +28,7 @@
  */
 
 /** Fassung des Schemas (PRAGMA user_version und meta.schema). Verlauf in docs/sql-umstellung.md. */
-export const SCHEMA_FASSUNG = 4;
+export const SCHEMA_FASSUNG = 5;
 
 /** Das Journal: Einträge werden nur angefügt, nie geändert oder gelöscht (sqlkern.js). */
 export const JOURNAL = 'auditLog';
@@ -102,6 +102,11 @@ export const TABELLEN = Object.freeze({
   fahrten: {
     spalten: { fahrzeugId: [T, '$.fahrzeugId'], datum: [T, '$.datum'], art: [T, '$.art'], km: [N, '$.km'], updatedAt: [T, '$.updatedAt'] },
     indizes: [['datum']],
+  },
+  /** Fassung 5 (SEC-66): Lagerbewegungen (lib/lager.js), nur Zugänge und Inventuren. Menge NUMERIC (kein Geld), Einkaufspreis Cent. */
+  lager: {
+    spalten: { produktId: [T, '$.produktId'], datum: [T, '$.datum'], art: [T, '$.art'], menge: [N, '$.menge'], einkauf: [I, '$.einkauf'], updatedAt: [T, '$.updatedAt'] },
+    indizes: [['produktId'], ['datum']],
   },
 });
 
