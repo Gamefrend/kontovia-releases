@@ -1079,6 +1079,8 @@ async function afterUnlock() {
     await einwilligungFragen({ version: appInfo.version });
     if (messungAn()) messungStarten({ version: appInfo.version });
   } catch (e) { console.error('Nutzungsmessung:', e); }
+  // Neues im Eingangsordner (SEC-62): nur ein Hinweis, geöffnet wird unter Import & Export.
+  import('./views/belegeingang.js').then((m) => m.ordnerHinweis()).catch((e) => console.error('Belege holen:', e));
   // Eine Datei, die per „Öffnen mit“ oder „Teilen“ kam, geht vor: dann warten die wiederkehrenden Buchungen bis zum nächsten Mal.
   if (await eingangFreigeben().catch((e) => { console.error('Dateien von außen:', e); return false; })) return;
   // Fällige wiederkehrende Buchungen erst nach der Frage zur Update-Prüfung anbieten.

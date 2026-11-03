@@ -38,7 +38,7 @@ const GMAIL_SENDEN = 'https://gmail.googleapis.com/gmail/v1/users/me/messages/se
 const GMAIL_MAX = 25 * 1024 * 1024;
 
 const MS_AUTH = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
-const MS_TOKEN = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+export const MS_TOKEN = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
 const MS_SENDEN = 'https://graph.microsoft.com/v1.0/me/sendMail';
 export const MS_SCOPES = ['openid', 'profile', 'email', 'https://graph.microsoft.com/Mail.Send'];
 /* Eine Anfrage an Microsoft darf höchstens 4 MB groß sein; Base64 macht Anhänge um ein Drittel größer. */
@@ -107,14 +107,14 @@ export function msAntwortLesen(hash, { state }) {
   return { code };
 }
 
-/** Die Adresse bei Microsoft. */
-export function msAnfrageAdresse({ clientId, href, state, nonce, challenge, loginHint = '', prompt = '' }) {
+/** Die Adresse bei Microsoft. `scopes`: Senden (Voreinstellung) oder Lesen (belegeingang.js). */
+export function msAnfrageAdresse({ clientId, href, state, nonce, challenge, loginHint = '', prompt = '', scopes = MS_SCOPES }) {
   return `${MS_AUTH}?${form({
     client_id: clientId,
     response_type: 'code',
     response_mode: 'fragment',
     redirect_uri: rueckAdresse(href),
-    scope: MS_SCOPES.join(' '),
+    scope: scopes.join(' '),
     state,
     nonce,
     code_challenge: challenge,
@@ -130,7 +130,7 @@ export function msAnfrageAdresse({ clientId, href, state, nonce, challenge, logi
  * folgt, sobald die Prüfsumme für PKCE berechnet ist.
  * @returns {{ergebnis: Promise<{code:string, verifier:string, nonce:string, redirectUri:string}>, abbrechen: () => void}}
  */
-export function msFensterOeffnen({ clientId, loginHint = '', prompt = '' }, {
+export function msFensterOeffnen({ clientId, loginHint = '', prompt = '', scopes = MS_SCOPES }, {
   href = location.href, oeffnen = (u, n, f) => window.open(u, n, f), ziel = window,
   Kanal = globalThis.BroadcastChannel, wartezeit = FENSTER_MS,
 } = {}) {
@@ -184,7 +184,7 @@ export function msFensterOeffnen({ clientId, loginHint = '', prompt = '' }, {
     abbrechen = () => fertig(reject, fehler('Die Anmeldung wurde abgebrochen.', 'ABGEBROCHEN'));
 
     crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)).then((h) => {
-      const url = msAnfrageAdresse({ clientId, href, ...erwartet, challenge: base64url(new Uint8Array(h)), loginHint, prompt });
+      const url = msAnfrageAdresse({ clientId, href, ...erwartet, challenge: base64url(new Uint8Array(h)), loginHint, prompt, scopes });
       try { w.location.href = url; } catch (err) { fertig(reject, err); }
     }, (err) => fertig(reject, err));
   });

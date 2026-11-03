@@ -18,6 +18,7 @@ import { Cloud } from './cloud.js';
 import * as W from './weiterleitung.js';
 import * as G from './gcal.js';
 import * as MV from './mailversand.js';
+import * as BE from './belegeingang.js';
 import * as Z from './sperre.js';
 import * as UE from './uebergabe.js';
 import * as EN from './entsperrung.js';
@@ -65,6 +66,9 @@ const cloud = new Cloud(vault, { zeigeCode });
 const gcal = new G.GoogleCalendar(vault, { clientId: BUILTIN.googleWeb?.clientId || '' });
 gcal.rueckkehr(googleRueckkehr);
 const mail = new MV.MailVersand(vault, { googleClientId: BUILTIN.googleWeb?.clientId || '', microsoftClientId: BUILTIN.microsoft?.clientId || '' });
+/* Belege holen (SEC-62): Eingangsordner auf dem Gerät und Outlook-Postfach (nur lesen). */
+const eingangsordner = new BE.Eingangsordner();
+const postfach = new BE.Postfach({ microsoftClientId: BUILTIN.microsoft?.clientId || '' });
 
 /* Zurück von einer Anmeldung per Weiterleitung? Die Antwort von Google steht
    im Anker der Adresse; sie wird sofort entfernt und im Hintergrund bei
@@ -222,6 +226,7 @@ function nachSperre(reason) {
   if (reason !== 'aktualisierung') UE.verwerfen().catch(() => {});
   gcal.vergessen();
   mail.vergessen();
+  postfach.vergessen();
   // Der Assistent bricht ab und verwirft, was er von dieser Sitzung gesehen hat.
   KI.abbrechen();
   KI.vergessen();
@@ -1176,6 +1181,23 @@ const api = {
     }))),
     abmelden: handle(async (anbieter) => mail.abmelden(str(anbieter, 20))),
     cancel: handle(async () => mail.abbrechen(), { needsUnlock: false }),
+  },
+
+  /* Belege holen (belegeingang.js): nur lesen, gebucht wird in der Oberfläche nach einem Klick.
+     ordnerWaehlen, ordnerZugriff und postfachHolen müssen direkt aus dem Klick kommen. */
+  belegeingang: {
+    ordnerStatus: handle(async () => kopie(await eingangsordner.status())),
+    ordnerWaehlen: handle(async () => kopie(await eingangsordner.waehlen())),
+    ordnerVergessen: handle(async () => kopie(await eingangsordner.vergessen())),
+    ordnerZugriff: handle(async () => eingangsordner.zugriffErbitten()),
+    ordnerNeue: handle(async (gesehen) => kopie(await eingangsordner.neue(Array.isArray(gesehen) ? gesehen.map((k) => str(k, 400)) : []))),
+    ordnerLesen: handle(async (kennung) => kopie(await eingangsordner.lesen(str(kennung, 400)))),
+    postfachStatus: handle(async () => postfach.status()),
+    postfachHolen: handle(async (p = {}) => kopie(await postfach.holen({
+      absender: Array.isArray(p.absender) ? p.absender.slice(0, 50).map((a) => str(a, 254)) : [], seit: str(p.seit, 10),
+      gesehen: Array.isArray(p.gesehen) ? p.gesehen.map((k) => str(k, 400)) : [],
+    }))),
+    postfachAbmelden: handle(async () => { postfach.vergessen(); return postfach.status(); }),
   },
 
   /* Die PDF-Dateien entstehen in der Oberfläche (lib/pdfausgabe.js). Hier

@@ -52,7 +52,7 @@ export const STORES = ['dateien', 'belege', 'sicherungen'];
  * befristeten Zulassung (zulassung.js: Im Ordner, der mit auf ein anderes Gerät wandert, ließe
  * es die 30 Tage und eine Fernsperre dort umgehen).
  */
-const NUR_IM_BROWSER = new Set(['geraet', 'konten', 'speicherort', 'uebergabe', 'biometrie', 'entsperrung-google', 'entsperrung-google-anzeige', 'lizenz', 'lizenz-konto', 'lizenz-gemeldet', 'zulassung']);
+const NUR_IM_BROWSER = new Set(['geraet', 'konten', 'speicherort', 'uebergabe', 'biometrie', 'entsperrung-google', 'entsperrung-google-anzeige', 'lizenz', 'lizenz-konto', 'lizenz-gemeldet', 'zulassung', 'eingangsordner']);
 /** Gehören zum Gerät, nicht zu einem Konto: Gerätekennung und die Liste der Konten. */
 const GERAET_GLOBAL = new Set(['geraet', 'konten']);
 /** Was aus dem Bereich „dateien“ in den Ordner gehört. */

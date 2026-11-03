@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 3. November 2026, Programmversion 2.48.13
+Stand: 3. November 2026, Programmversion 2.48.14
 
 ---
 
@@ -491,6 +491,22 @@ Kontovia sich sperrt. Im Tresor merkt sich Kontovia auf diesem Gerät nur die
 Adresse des Kontos, mit dem zuletzt gesendet wurde; „Anderes Konto“ löscht sie.
 Bei Google gilt die Freigabe zusammen mit der für Google Kalender: Trennen Sie
 dort den Kalender, endet auch das Senden.
+
+**Belege aus Outlook holen (freiwillig):** Wählen Sie unter Import & Export
+„Postfach prüfen“, fragt Microsoft in einem eigenen Fenster, ob Kontovia Ihre
+E-Mails **lesen** darf (`Mail.Read`). Diese Freigabe ist getrennt von der zum
+Senden. Ihr Browser fragt dann `graph.microsoft.com` nur nach E-Mails mit Anhang
+ab dem Tag, den Sie wählen, und lädt nur die Anhänge (PDF, Fotos, XML) von den
+Absendern, die Sie selbst genannt haben. Andere E-Mails, Texte und Kontakte liest
+Kontovia nicht und speichert sie nicht. Ein Anhang bleibt auf dem Gerät, bis Sie
+ihn öffnen; erst dann wird er wie jeder Beleg verschlüsselt abgelegt. Im Tresor
+stehen nur die genannten Absender und Kennungen der schon gezeigten Anhänge,
+damit sie nicht wiederkommen. Der Zugriff gilt rund eine Stunde, liegt nur im
+Arbeitsspeicher und verfällt beim Sperren. Gmail wird nicht gelesen.
+
+**Eingangsordner:** Wählen Sie einen Ordner auf Ihrem Gerät, liest Kontovia dort
+nur die Namen und, wenn Sie eine Datei öffnen, deren Inhalt. Nichts verlässt
+dabei das Gerät. Den Zugriff merkt sich nur dieser Browser.
 
 **Über Ihr E-Mail-Programm:** Kontovia legt die fertige E-Mail als Datei in
 Ihren Download-Ordner, übergibt sie über das Teilen-Menü Ihres Geräts oder

@@ -735,6 +735,21 @@ function anleitung(root) {
       </div></div>
 
       <div class="card mt16"><div class="card-body">
+        <h2 class="mt0">Belege automatisch holen</h2>
+        <p>Unter <a data-go="datenimport">Import & Export</a>, Reiter „Import“, sammelt Kontovia neue Belege für Sie ein. Gebucht wird nichts von
+        selbst: Jeder Beleg erscheint in einer Liste, „Öffnen“ bringt ihn ins Buchungsfenster oder, als E-Rechnung, zu den erhaltenen
+        Rechnungen. „Ausblenden“ legt ihn beiseite. Was einmal gezeigt wurde, kommt nicht wieder.</p>
+        <ul>
+          <li><strong>Eingangsordner:</strong> Wählen Sie einen Ordner auf Ihrem Computer, etwa den Download-Ordner. Kontovia liest dort
+              PDF-Dateien, Fotos und E-Rechnungen und meldet sich beim Entsperren, wenn etwas Neues da ist. Das geht mit Chrome
+              und Edge; nach einem Neustart des Browsers fragt er einmal, ob Kontovia den Ordner wieder lesen darf.</li>
+          <li><strong>Outlook:</strong> Nennen Sie die Absender Ihrer Rechnungen, eine Adresse oder eine ganze Domain wie @telekom.de.
+              „Postfach prüfen“ fragt Outlook nach E-Mails mit Anhang von genau diesen Absendern und lädt nur die Anhänge.
+              Beim ersten Mal fragt Microsoft, ob Sie das erlauben. Gmail kann Kontovia nicht lesen.</li>
+        </ul>
+      </div></div>
+
+      <div class="card mt16"><div class="card-body">
         <h2 class="mt0">Archiv und Aufbewahrung</h2>
         <p>Buchungen und Rechnungen müssen Sie zehn Jahre aufheben, Belege acht (§ 147 AO, § 14b UStG). Die Frist beginnt
         mit dem Ende des Jahres. Danach dürfen Sie Daten über Kunden und Lieferanten nicht endlos behalten (Datenschutz).

@@ -21,6 +21,7 @@ import * as I from '../lib/datenimport.js';
 import { elsterLesen, meldungVergleichen, zeitraumText } from '../lib/elster.js';
 import { xlsxLesen, alsCsv, zipLesen } from '../lib/xlsx.js';
 import { istDsfinvk, dsfinvkLesen, dsfinvkZuBuchungen } from '../lib/kassendaten.js';
+import { belegeingangKarte } from './belegeingang.js';
 import { base64 } from '../lib/pdfausgabe.js';
 import {
   buchungenUebernehmen, kontakteUebernehmen, produkteUebernehmen, meldungenSpeichern, meldungLoeschen,
@@ -104,6 +105,7 @@ function start(root) {
       </div>
       <p class="small muted mb0 mt8" id="diStatus" role="status"></p>
     </div></div>
+    <div class="card mt16" id="diBelegeingang"></div>
     <div class="grid c2 mt16">
       ${KARTEN.map(([id, ic, titel, text]) => `
         <div class="card">
@@ -139,6 +141,7 @@ function start(root) {
   }));
 
   if (meldungen.length) meldungenTabelle(root, meldungen);
+  belegeingangKarte($('#diBelegeingang', root)).catch((e) => console.error('Belege holen:', e));
 }
 
 /** Liste der gespeicherten Voranmeldungen mit Abgleich gegen die eigenen Zahlen. */
