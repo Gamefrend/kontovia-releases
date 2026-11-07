@@ -1,11 +1,11 @@
 {
-  "version": "2.48.14",
-  "released": "2026-11-03T16:03:40.775Z",
-  "notes": "Belege automatisch holen\n\n- Neu unter Import & Export › Import: Kontovia holt Belege aus einem Ordner auf Ihrem Computer, etwa dem Download-Ordner.\n- Auch aus Outlook: Nennen Sie die Absender Ihrer Rechnungen, Kontovia lädt nur deren Anhänge.\n- Gebucht wird nichts von selbst. Jeder Beleg öffnet sich auf Klick im Buchungsfenster oder als E-Rechnung.\n- Was einmal gezeigt wurde, kommt nicht wieder, auch nicht auf Ihren anderen Geräten.",
+  "version": "2.48.15",
+  "released": "2026-11-07T00:01:07.779Z",
+  "notes": "Zuverlässigere Prüfung vor jedem Update\n\n- Vor jeder neuen Fassung prüft Kontovia, dass der DATEV-Export vor und nach einer Umstellung gleich bleibt. Diese Prüfung meldet jetzt keinen Fehler mehr, wo keiner ist.\n- An Ihren Daten und Exporten ändert sich nichts.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "9a80bca055d1fa636f30968e315363a723a3230bd7694ebec27ee03fe6fc931d",
+      "sha256": "818615d39f48c6664290dd32f1c971277395a23c3b36e1bbd962a862ea7e3d0d",
       "size": 389
     },
     {
@@ -815,8 +815,8 @@
     },
     {
       "path": "lib/sprache/en/zusatz.js",
-      "sha256": "cf6c77dfc31c1908f1be4500e45f592dd2724bdc041bf682e0fa2b8ebfb56566",
-      "size": 229518
+      "sha256": "78fa6f79562880777a0fba0efaa22e5db1a60687680032a2c0bc3cb0d7906dfc",
+      "size": 230054
     },
     {
       "path": "lib/steuerruecklage.js",
@@ -910,8 +910,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "63e3473c43fd51098d814354407250205560c8e7362fc30cdfd973b5afdd4eea",
-      "size": 68380
+      "sha256": "f7d6d7780e4c1f84768e0cad4bde4ca7cbf798c417aa12da3fa375cfa9e93ad7",
+      "size": 68753
     },
     {
       "path": "lib/waehrung.js",
@@ -950,12 +950,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "2dc8372062d004d7f464742daa5e93bc6b92eb789482a24040d423cd740d37d3",
+      "sha256": "8ff5e6e24cc7b081aa3897445bf3bd53b6c0db0169ee3d7dcad72ac4dd8faef6",
       "size": 2811
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "bfdc3e9596eb0ab088715ef5ec5c1d29839e72fe4b97d8a8ad1f2a1c22ced2c4",
+      "sha256": "f3ee328efd2ad98bffe1d203e71c6e9a8b49f11d69b0680e647d0c15470fe91f",
       "size": 44040
     },
     {
@@ -975,7 +975,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "0529f341a9be319aa4033e367418c147f1aebba7b1c850287dd38d32cecced4e",
+      "sha256": "0d75446426ccfab61f3bf0f1ca5700929b59ab29015b1069d6043502ccd6210d",
       "size": 48054
     },
     {
@@ -1000,12 +1000,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "96056def51024cdd018bfeb35bea4720e319eca68b0c05eb4b7df0e1242513e5",
+      "sha256": "0babd44cda718451ad32f1319e924561ccf885a15340d6fbca75aa76e17b6298",
       "size": 28338
     },
     {
       "path": "security.txt",
-      "sha256": "9a80bca055d1fa636f30968e315363a723a3230bd7694ebec27ee03fe6fc931d",
+      "sha256": "818615d39f48c6664290dd32f1c971277395a23c3b36e1bbd962a862ea7e3d0d",
       "size": 389
     },
     {
@@ -1200,7 +1200,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "1c07512b4dbeca8cf71332b67d6407e44173a295d35f70e946588e042e942262",
+      "sha256": "91ed54a1a3edd42a2952042eba51cf7dff2e2ae0c122d8f178e480bfe87a1f02",
       "size": 10045
     },
     {
