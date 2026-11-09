@@ -1,11 +1,11 @@
 {
-  "version": "2.48.15",
-  "released": "2026-11-07T00:01:07.779Z",
-  "notes": "Zuverlässigere Prüfung vor jedem Update\n\n- Vor jeder neuen Fassung prüft Kontovia, dass der DATEV-Export vor und nach einer Umstellung gleich bleibt. Diese Prüfung meldet jetzt keinen Fehler mehr, wo keiner ist.\n- An Ihren Daten und Exporten ändert sich nichts.",
+  "version": "2.48.16",
+  "released": "2026-11-09T10:34:38.555Z",
+  "notes": "Outlook Kalender abgleichen\n\n- Neu unter Einstellungen › Kalender-Abgleich: Ihr Outlook-Konto (Microsoft 365 oder Outlook.com) gleicht Kontovia in beide Richtungen ab, wie Google Kalender.\n- Auf Wunsch kommen weitere Outlook-Kalender dazu. Mit Ihnen geteilte Kalender zeigt Kontovia nur an.\n- Beträge, Buchungen, Kontakte und Belege gehen nie an Microsoft.\n- Google und Outlook lassen sich gleichzeitig nutzen. Apple Kalender bleibt bei der Kalenderdatei (.ics).",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "818615d39f48c6664290dd32f1c971277395a23c3b36e1bbd962a862ea7e3d0d",
+      "sha256": "259509c126df7415d269324dfee754512f7a9abf422dd7f0d4888bac6b6f2020",
       "size": 389
     },
     {
@@ -20,13 +20,13 @@
     },
     {
       "path": "abo/config.json",
-      "sha256": "332f71d6b814c5ec4f51db1d7c39afb7ec103c89fd2a84ac9533ce9ededdf1a1",
-      "size": 11879
+      "sha256": "1317b8bcd1ac1447ca95c338987142c3b79f11e2a2af1c0c2acb8c81e6a409c9",
+      "size": 11903
     },
     {
       "path": "abo/en.js",
-      "sha256": "c6f1f90982b93b98915d5c8f189239656ea025fb1b4b3de062ee0c1bc124f51d",
-      "size": 28833
+      "sha256": "317816dedf0bb48fe3fb1882ab3a427233d75112ee1f2a277519e3465781c69a",
+      "size": 28857
     },
     {
       "path": "abo/index.html",
@@ -280,13 +280,13 @@
     },
     {
       "path": "lib/gcal.js",
-      "sha256": "284d26ab48d348f52e2f90cc982a9efcacc8beb041fd1882be38542de6e27a06",
-      "size": 26606
+      "sha256": "f6a381c27b3c6ddd3020a9b65682b8a232143101a04e1eee2d1509be1988e3a0",
+      "size": 27268
     },
     {
       "path": "lib/gcalsync.js",
-      "sha256": "7c53e75c769390e2f2b3e5e0e280b600c33a83e47c92166c20403f58fd9be1e8",
-      "size": 16642
+      "sha256": "fa6a26de9b4215a1099d4750deb3b0380f6a5d46006b5defc0d9ddf1d421b481",
+      "size": 19776
     },
     {
       "path": "lib/girocode.js",
@@ -315,8 +315,8 @@
     },
     {
       "path": "lib/kalender.js",
-      "sha256": "5c0c48bfcc0c9af57afb6bb048da638ef2e9f697f9c8a69af283a1d8fddfb697",
-      "size": 26941
+      "sha256": "a1038463e58f1a63dfb6211f7c4c2d4aa92deb5f26b082a6142be396958783f5",
+      "size": 28089
     },
     {
       "path": "lib/kasse.js",
@@ -590,8 +590,8 @@
     },
     {
       "path": "lib/sprache/en.js",
-      "sha256": "c34cac8ecd7bc9be6b59f3abb32b595c9e9381b2e368095c30da03c5fd94ed14",
-      "size": 2434
+      "sha256": "4bc8f36b80e8574ffc24a8ba85a2b8a627b4b05813ccfabdeed01de979e0e90f",
+      "size": 2483
     },
     {
       "path": "lib/sprache/en/t01.js",
@@ -814,9 +814,14 @@
       "size": 24905
     },
     {
+      "path": "lib/sprache/en/zusatz-sec86.js",
+      "sha256": "b96015e5a3df7731ff6910919f490c34b2a864b48dc18d1dfca4f3788e70f74c",
+      "size": 18674
+    },
+    {
       "path": "lib/sprache/en/zusatz.js",
-      "sha256": "78fa6f79562880777a0fba0efaa22e5db1a60687680032a2c0bc3cb0d7906dfc",
-      "size": 230054
+      "sha256": "7aabe81e952e72153645511d7d1aac3be3ef88f50916ed43daa560cd34e5c96b",
+      "size": 230078
     },
     {
       "path": "lib/steuerruecklage.js",
@@ -860,8 +865,8 @@
     },
     {
       "path": "lib/tarife.js",
-      "sha256": "fe3173b41b0e62f52ca9433c3f728434a18118becdb9ce6fa7560bd5f2098567",
-      "size": 12942
+      "sha256": "b08f0cd241ab888b04d2b277ab76e574a8de79658b727210f3e4e4a1b6e467eb",
+      "size": 12954
     },
     {
       "path": "lib/tarifkonfig.js",
@@ -910,8 +915,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "f7d6d7780e4c1f84768e0cad4bde4ca7cbf798c417aa12da3fa375cfa9e93ad7",
-      "size": 68753
+      "sha256": "83812b55467680e7e39be5221ec2991db301546caf27e69bb075ac04b6cb1803",
+      "size": 69339
     },
     {
       "path": "lib/waehrung.js",
@@ -950,13 +955,13 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "8ff5e6e24cc7b081aa3897445bf3bd53b6c0db0169ee3d7dcad72ac4dd8faef6",
+      "sha256": "08767a65086289166a2799cadb1d9621c69c30f9b04d5d72d2c2af34be27da7e",
       "size": 2811
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "f3ee328efd2ad98bffe1d203e71c6e9a8b49f11d69b0680e647d0c15470fe91f",
-      "size": 44040
+      "sha256": "9a28c62abc3492b05b070c109b3ed238a47f529c44cb90aa67f47bbc7bcaf323",
+      "size": 47720
     },
     {
       "path": "recht/IMPRESSUM.md",
@@ -975,8 +980,8 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "0d75446426ccfab61f3bf0f1ca5700929b59ab29015b1069d6043502ccd6210d",
-      "size": 48054
+      "sha256": "83a7fbbc8cd7dbe1ea5218ef23632005bdda538e9f72845714deb28bb8ae78ca",
+      "size": 51874
     },
     {
       "path": "recht/impressum.html",
@@ -1000,12 +1005,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "0babd44cda718451ad32f1319e924561ccf885a15340d6fbca75aa76e17b6298",
+      "sha256": "d15ef6219a06c4331d95deaa1d7da8755ac0a6d95e78a0312b436ba1697606b3",
       "size": 28338
     },
     {
       "path": "security.txt",
-      "sha256": "818615d39f48c6664290dd32f1c971277395a23c3b36e1bbd962a862ea7e3d0d",
+      "sha256": "259509c126df7415d269324dfee754512f7a9abf422dd7f0d4888bac6b6f2020",
       "size": 389
     },
     {
@@ -1045,13 +1050,13 @@
     },
     {
       "path": "views/calendar.js",
-      "sha256": "74e06ba3b9468b98897b440b4149f7eff8e1e13ff267236c11e3f98eb4a271f6",
-      "size": 82997
+      "sha256": "211d882176852eea3a54ed6a8e61721f08556490050a82a69d95cd575363df16",
+      "size": 85747
     },
     {
       "path": "views/calendarsync.js",
-      "sha256": "266a0182cbf980d816a97d64fcd4a374b4cc1c733d3bf60feedb8f8150631083",
-      "size": 41873
+      "sha256": "7d69bbf6d3ff829eb78874331011f70dc14fcef655f47d2302245c04d561cfa9",
+      "size": 61225
     },
     {
       "path": "views/cloudpanel.js",
@@ -1200,7 +1205,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "91ed54a1a3edd42a2952042eba51cf7dff2e2ae0c122d8f178e480bfe87a1f02",
+      "sha256": "7a51dd210e05ec226e93f01d81620473abb650cce14837ce2f1eb8d1350527bb",
       "size": 10045
     },
     {
@@ -1215,8 +1220,8 @@
     },
     {
       "path": "web/bridge.js",
-      "sha256": "a924c666410dc6226ad59c4cdb7ac195c478be0d127df2d2bd3f3ab553f40f98",
-      "size": 71754
+      "sha256": "62aa557a329ebe266d7b5cc6378039283efb83430f8746feaf506cc911f0ccfe",
+      "size": 73159
     },
     {
       "path": "web/cloud.js",
@@ -1322,6 +1327,11 @@
       "path": "web/mobil.js",
       "sha256": "28ad7fab84f1529646dcabec6bb94f4ec470fedcb9cd9b73cb4ccb5cf8e53a1f",
       "size": 6381
+    },
+    {
+      "path": "web/mscal.js",
+      "sha256": "bde4425edc1e2a0e9bc43e6dd631d384a89e7a86e82c1a4dc8756dee309adcde",
+      "size": 32132
     },
     {
       "path": "web/netz.js",

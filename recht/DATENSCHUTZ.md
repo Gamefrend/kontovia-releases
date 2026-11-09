@@ -1,6 +1,6 @@
 # Datenschutzhinweise zu Kontovia
 
-Stand: 7. November 2026, Programmversion 2.48.15
+Stand: 9. November 2026, Programmversion 2.48.16
 
 ---
 
@@ -26,7 +26,7 @@ und sich dort wie ein Programm installieren lässt. Ohne Cloud-Abgleich gibt es
 kein Benutzerkonto beim Anbieter. Eine Auswertung Ihrer Nutzung gibt es nur, wenn Sie der freiwilligen
 Nutzungsmessung zustimmen; sie sagt, wie das Programm benutzt wird (zum Beispiel in welchem Bereich Sie sich
 aufhalten und wie lange etwas lädt), und nie, was in Ihrer Buchhaltung steht. Ohne den ausdrücklich
-eingerichteten Cloud-Abgleich und ohne verbundenen Google Kalender verlässt
+eingerichteten Cloud-Abgleich und ohne verbundenen Google oder Outlook Kalender verlässt
 keine Angabe aus Ihrer Buchhaltung Ihr Gerät; die Suche nach neuen Versionen
 und die Nutzungsmessung laufen nur mit Ihrer Zustimmung.
 
@@ -60,7 +60,7 @@ Ordner liegt ein ebenso verschlüsseltes Abbild davon.
 
 Kontovia baut von sich aus keine Verbindung ins Internet auf. Die einzigen
 Verbindungen, die das Programm überhaupt aufbauen kann, sind die unten
-genannten: der Cloud-Abgleich, der Abgleich mit Google Kalender, das Senden von
+genannten: der Cloud-Abgleich, der Abgleich mit Google Kalender oder Outlook Kalender, das Senden von
 Rechnungen per E-Mail, das einmalige Herunterladen eines Sprachmodells für den
 Assistenten, die Suche nach einer neuen Programmversion und die freiwillige Nutzungsmessung. Alle laufen erst,
 wenn Sie ihnen ausdrücklich zustimmen.
@@ -458,8 +458,64 @@ Minuten, merkt es sich dafür im Browser-Speicher nur den Zweck, eine
 Zufallskennung und Ihre Häkchen aus dem Verbindungsdialog; die Berechtigung von
 Google steht dort nicht. Die Kennung wird bei der Rückkehr sofort gelöscht.
 
-Ohne Google-Konto lassen sich Termine als Kalenderdatei (.ics) exportieren und
+Ohne Google- oder Outlook-Konto lassen sich Termine als Kalenderdatei (.ics) exportieren und
 importieren; dabei entsteht keine Verbindung ins Netz.
+
+## Outlook Kalender (freiwillig)
+
+Auf Wunsch gleicht Kontovia Ihre Termine auch mit Ihrem Outlook-Konto
+(Microsoft 365 oder Outlook.com) ab, in beide Richtungen, wie bei Google. Das
+geschieht erst, nachdem Sie unter *Einstellungen → Kalender-Abgleich*
+ausdrücklich verbunden und sich bei Microsoft angemeldet haben. Google und
+Outlook lassen sich einzeln oder zusammen verbinden; jeder Anbieter hat eigene
+Einstellungen. Apple Kalender wird nicht laufend abgeglichen, dafür gibt es die
+Kalenderdatei (.ics).
+
+Kontovia legt in Ihrem Outlook-Konto einen eigenen Kalender „Kontovia“ an. Dafür
+fragt Microsoft in einem eigenen Fenster, ob Kontovia Ihre Kalender lesen und
+ändern darf (Bereich `Calendars.ReadWrite`). Diese Freigabe ist getrennt von der
+zum Senden von E-Mails und der zum Lesen des Postfachs und wird erst auf Ihren
+Klick angefragt. Der Bereich gilt für alle Kalender des Kontos; Kontovia gleicht
+aber nur den Kalender „Kontovia“ ab und, auf Ihre Auswahl hin, weitere Kalender,
+die Sie selbst auswählen. Mit Ihnen geteilte Kalender, die nur lesbar sind,
+zeigt Kontovia nur an und schreibt nie hinein. Ein Termin, den jemand von Hand im
+Kalender „Kontovia“ anlegt, bekommt von Kontovia eine eigene Kennung (eine
+zusätzliche Eigenschaft am Termin bei Microsoft), damit er hier und in Google
+derselbe Termin bleibt.
+
+**Was übertragen wird (anders als beim Cloud-Abgleich unverschlüsselt)**, weil
+Outlook die Termine sonst nicht anzeigen könnte: dasselbe wie bei Google, also
+Titel, Datum, Uhrzeit, Ort und Wiederholung Ihrer Termine, sofern eingeschaltet
+die Notiz, auf Wunsch außerdem Veranstaltungstermine aus Anzahlungen und
+Fälligkeiten offener Rechnungen, jeweils **ohne Beträge**. Buchungen, Beträge,
+Kontakte und Belege gehen nie an Microsoft. Stehen Namen von Kunden im Titel eines
+Termins, gelangen sie damit zu Microsoft; bei geschäftlicher Nutzung sollte das
+Konto deshalb von einem Auftragsverarbeitungsvertrag gedeckt sein (etwa
+Microsoft 365). Termine aus den abgeglichenen Kalendern liegen verschlüsselt in
+Ihrem Tresor und gehen mit dem Cloud-Abgleich verschlüsselt auf Ihre anderen
+Geräte.
+
+**Rechtsgrundlage:** Ihre Einwilligung durch das Verbinden (Art. 6 Abs. 1 lit. a
+DSGVO) bzw. bei geschäftlicher Nutzung das berechtigte Interesse an einem
+gemeinsamen Terminkalender (Art. 6 Abs. 1 lit. f DSGVO). Der Hersteller von
+Kontovia erhält dabei keine Daten.
+
+**Widerruf:** *Trennen* beendet den Abgleich; auf Wunsch wird der Kalender
+„Kontovia“ in Outlook gelöscht. Die Termine in Kontovia bleiben erhalten. Die
+Freigabe selbst bleibt in Ihrem Microsoft-Konto eingetragen, bis Sie sie dort bei
+den Berechtigungen für Apps entziehen; Kontovia kann sie nicht selbst
+zurückziehen. Ist Outlook Kalender auch auf einem anderen Gerät verbunden, läuft
+er dort weiter.
+
+Ihr Browser spricht dafür direkt mit Microsoft (`login.microsoftonline.com` für
+die Anmeldung, `graph.microsoft.com` für die Termine); beide Gegenstellen sind
+dieselben wie beim Senden von E-Mails. Microsoft erteilt dort einen Zugriff für
+jeweils rund eine Stunde. Er liegt nur im Arbeitsspeicher des Browsers, nie im
+Tresor oder im Browser-Speicher, und verfällt, sobald Kontovia sich sperrt. Danach
+wartet der Abgleich, bis Sie ihn mit einem Tipp erneut bestätigen; eine stille
+Erneuerung gibt es hier nicht. Im Tresor stehen auf diesem Gerät nur das Konto,
+der Kalender und der Merkzettel des Abgleichs, kein Schlüssel. In der App auf dem
+Home-Bildschirm von iPhone und iPad lässt sich Outlook Kalender nicht verbinden.
 
 ## Erinnerungen an Termine (nur auf dem Gerät)
 
@@ -670,7 +726,7 @@ keine automatisierte Entscheidungsfindung und kein Profiling (Art. 22 DSGVO).
 Die Auslieferung der Web-App läuft über GitHub (GitHub, Inc., USA) und die
 Cloud-Anmeldung, der Cloud-Speicher und der Kalenderabgleich über Google
 (Google Ireland Limited bzw. Google LLC, USA). Senden Sie Rechnungen direkt über
-Gmail oder Outlook, geht die E-Mail über Google bzw. Microsoft (Microsoft
+Gmail oder Outlook oder gleichen Sie Termine mit Outlook Kalender ab, gehen die E-Mail bzw. die Termine über Google bzw. Microsoft (Microsoft
 Ireland Operations Limited bzw. Microsoft Corporation, USA). Die Übermittlung in
 die USA stützt sich auf den Angemessenheitsbeschluss der EU-Kommission zum
 EU-US Data Privacy Framework, bei dem diese Unternehmen zertifiziert sind, und ergänzend auf

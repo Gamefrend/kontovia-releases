@@ -61,7 +61,7 @@
         "Mahnwesen mit Erinnerung und Mahnstufen",
         "Direkt aus Gmail oder Outlook senden",
         "Assistent auf dem Gerät (Vorschau)",
-        "Google Kalender abgleichen",
+        "Google Kalender und Outlook abgleichen",
         "3 Benutzer und 5 Geräte"
       ]
     },
@@ -438,7 +438,7 @@
           }
         },
         {
-          "name": "Google Kalender abgleichen",
+          "name": "Google Kalender und Outlook abgleichen",
           "werte": {
             "kostenlos": false,
             "standard": false,

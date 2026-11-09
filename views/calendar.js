@@ -13,7 +13,7 @@ import { sel, commit, saveNow, subscribe, upsertAppointment, deleteAppointment, 
 import { depositInfo, isVoidPart } from '../lib/calc.js';
 import { expandAppointments, expandForList, regelText, wochentage, intervall, WOCHENTAGE } from '../lib/termine.js';
 import {
-  FARBEN, kalenderListe, kalenderSchluessel, terminFarbe, neueKalenderId, lokaleKalender, tagsLesen, alleTags,
+  FARBEN, kalenderListe, kalenderSchluessel, anbieterVon, terminFarbe, neueKalenderId, lokaleKalender, tagsLesen, alleTags,
   passtTermin, schnellEingabe, ERINNERUNG_ZEIT, ERINNERUNG_GANZTAGS, erinnerungText, verschoben, zeitraum, blaettern,
   tagesLage, minuten, ARTEN, filterGruppen, gruppenStand, gruppeUmschalten,
 } from '../lib/kalender.js';
@@ -21,8 +21,8 @@ import { refresh } from '../lib/router.js';
 import { fokusMerken } from '../lib/fokus.js';
 import { prefs, setPref } from '../lib/prefs.js';
 import { openTransactionDialog } from './transactions.js';
-import { openCalendarSyncDialog, statusText, bestaetigen, geteilteFreigeben } from './calendarsync.js';
-import { calState, onCalendarSync, refreshCalendarStatus, syncCalendar, calendarSettings, seitAbgleich } from '../lib/gcalsync.js';
+import { openCalendarSyncDialog, statusText, statusLage, bestaetigen, geteilteFreigeben } from './calendarsync.js';
+import { calState, onCalendarSync, refreshCalendarStatus, syncCalendar, calendarSettings, seitAbgleich, alleWeitere, ANBIETER_IDS, ANBIETER } from '../lib/gcalsync.js';
 import { eventIdFor } from '../lib/gcal.js';
 import { openMenu } from '../lib/popover.js';
 import { steuertermine } from '../lib/fristen.js';
@@ -76,7 +76,7 @@ const MIN_TERMIN_PX = 24; // so niedrig ist ein Termin im Zeitraster mindestens 
 
 /** Alle Kalender der Ansicht: lokale und Google-Kalender, mit Farbe. */
 function kalenderAlle() {
-  return kalenderListe({ settings: sel.settings(), weitere: calendarSettings().weitere, appointments: sel.appointments() });
+  return kalenderListe({ settings: sel.settings(), weitere: alleWeitere(), appointments: sel.appointments() });
 }
 
 function filter() {
@@ -187,7 +187,7 @@ export async function render(root, params, { actions } = {}) {
   if (params?.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date)) state.cursor = params.date;
   if (altAus) {
     const gr = filterGruppen(kalenderAlle());
-    for (const k of [...(altAus.lokal ? gr.kontovia.filter((x) => !ARTEN.includes(x)) : []), ...(altAus.google ? gr.google : [])]) state.aus.add(k);
+    for (const k of [...(altAus.lokal ? gr.kontovia.filter((x) => !ARTEN.includes(x)) : []), ...(altAus.google ? gr.fremd : [])]) state.aus.add(k);
     altAus = null;
     merken();
   }
@@ -219,6 +219,7 @@ export async function render(root, params, { actions } = {}) {
       const kal = kalenderAlle();
       const lokal = kal.filter((k) => k.art === 'lokal');
       const google = kal.filter((k) => k.art === 'google');
+      const outlook = kal.filter((k) => k.art === 'outlook');
       const gr = filterGruppen(kal);
       const tags = alleTags(sel.appointments());
       const opt = (value, label, extra = {}) => ({ value, label, on: zeigt(value), ...extra });
@@ -241,6 +242,10 @@ export async function render(root, params, { actions } = {}) {
         key: 'aus',
         title: 'Google Kalender',
         options: [kopf('google', 'Alle Google-Kalender'), ...google.map((k) => opt(k.key, k.name, { sub: k.readOnly ? 'nur lesen' : '', count: k.anzahl }))],
+      }, outlook.length > 0 && {
+        key: 'aus',
+        title: 'Outlook Kalender',
+        options: [kopf('outlook', 'Alle Outlook-Kalender'), ...outlook.map((k) => opt(k.key, k.name, { sub: k.readOnly ? 'nur lesen' : '', count: k.anzahl }))],
       }, {
         key: 'show',
         title: 'Außerdem',
@@ -268,9 +273,11 @@ export async function render(root, params, { actions } = {}) {
 
   // Beim Öffnen des Kalenders frisch abgleichen, wenn der letzte Abgleich
   // ein paar Minuten zurückliegt – dann stimmt, was hier steht.
-  const st = await refreshCalendarStatus();
-  if (st?.linked && !calState.running && seitAbgleich() > 3 * 60 * 1000) {
-    syncCalendar({ reason: 'kalender' }).then((r) => { if (r?.summary && r.summary !== 'alles auf dem gleichen Stand' && kalenderOffen(root)) draw(root); }).catch(() => {});
+  for (const id of ANBIETER_IDS) {
+    const st = await refreshCalendarStatus(id);
+    if (st?.linked && !ANBIETER[id].zustand.running && seitAbgleich(id) > 3 * 60 * 1000) {
+      syncCalendar({ reason: 'kalender', anbieter: id }).then((r) => { if (r?.summary && r.summary !== 'alles auf dem gleichen Stand' && kalenderOffen(root)) draw(root); }).catch(() => {});
+    }
   }
 }
 
@@ -291,8 +298,8 @@ function lokalerReiter() {
 function gruppeSchalten(gruppe) {
   const gr = filterGruppen(kalenderAlle());
   state.aus = gruppeUmschalten(state.aus, gr[gruppe]);
-  if (gruppe === 'kontovia' && gruppenStand(gr.kontovia, state.aus) === 'aus' && gr.google.length && gruppenStand(gr.google, state.aus) === 'aus') {
-    state.aus = gruppeUmschalten(state.aus, gr.google);
+  if (gruppe === 'kontovia' && gruppenStand(gr.kontovia, state.aus) === 'aus' && gr.fremd.length && gruppenStand(gr.fremd, state.aus) === 'aus') {
+    state.aus = gruppeUmschalten(state.aus, gr.fremd);
   }
 }
 
@@ -327,18 +334,22 @@ function kalenderOffen(root) {
 function syncBadge() {
   const text = statusText();
   if (!text) return '';
-  const fehler = !!(calState.lastError || calState.status?.lastError);
-  const warten = !!calState.status?.bestaetigen && !calState.running;
-  const laeuft = calState.running;
-  const titel = fehler ? (calState.lastError || calState.status?.lastError) : warten ? 'Mit einem Tipp bei Google bestätigen, dann läuft der Abgleich weiter' : 'Kalender-Abgleich öffnen';
+  const lage = statusLage();
+  const fehler = !!lage.fehler;
+  const warten = lage.warten.length > 0;
+  const laeuft = lage.laeuft;
+  const titel = fehler ? lage.fehler : warten
+    ? (lage.warten[0] === 'microsoft' ? 'Mit einem Tipp bei Microsoft bestätigen, dann läuft der Abgleich weiter' : 'Mit einem Tipp bei Google bestätigen, dann läuft der Abgleich weiter')
+    : 'Kalender-Abgleich öffnen';
   return `<button class="badge cal-sync ${fehler ? 'neg' : warten ? 'warn' : 'info'}${laeuft ? ' dreht' : ''}" id="calSyncBadge" title="${esc(titel)}">${icon('refresh', 12).__raw} ${esc(text)}</button>`;
 }
 
 async function syncBadgeKlick(root) {
-  if (!calState.status?.bestaetigen) { openCalendarSyncDialog(); return; }
+  const wartend = ANBIETER_IDS.find((id) => ANBIETER[id].zustand.status?.linked && ANBIETER[id].zustand.status?.bestaetigen);
+  if (!wartend) { openCalendarSyncDialog(); return; }
   // Ein Tipp genügt: bestätigen und gleich abgleichen.
-  if (!await bestaetigen()) return;
-  await syncCalendar({ reason: 'bestaetigt' }).catch(() => {});
+  if (!await bestaetigen(false, wartend)) return;
+  await syncCalendar({ reason: 'bestaetigt', anbieter: wartend }).catch(() => {});
   if (kalenderOffen(root)) draw(root);
 }
 
@@ -448,7 +459,7 @@ function draw(root, { bewegung = '' } = {}) {
       if (neu.has(key)) neu.delete(key); else neu.add(key);
       schalterWechsel(neu);
     });
-    b.addEventListener('dblclick', () => schalterWechsel(new Set([...gr.kontovia, ...gr.google].filter((x) => x !== key))));
+    b.addEventListener('dblclick', () => schalterWechsel(new Set([...gr.kontovia, ...gr.fremd].filter((x) => x !== key))));
   });
   $$('[data-gruppe]', root).forEach((b) => b.addEventListener('click', () => {
     gruppeSchalten(b.dataset.gruppe);
@@ -504,7 +515,7 @@ function reiterNachziehen(root) {
   const gr = filterGruppen(kalenderAlle());
   $$('[data-gruppe]', root).forEach((b) => b.setAttribute('aria-pressed', GEDRUECKT[gruppenStand(gr[b.dataset.gruppe] || [], state.aus)]));
   const alle = root.querySelector('#calAlle');
-  if (alle) alle.hidden = [...gr.kontovia, ...gr.google].every(zeigt);
+  if (alle) alle.hidden = [...gr.kontovia, ...gr.fremd].every(zeigt);
 }
 
 /** Was Kontovia außer den Terminen einträgt, je Art ein Schalter (Schlüssel aus lib/kalender.js ARTEN). */
@@ -526,6 +537,7 @@ const ARTEN_ANZEIGE = [
 function filterHtml(kal) {
   const lokal = kal.filter((k) => k.art === 'lokal');
   const google = kal.filter((k) => k.art === 'google');
+  const outlook = kal.filter((k) => k.art === 'outlook');
   const gr = filterGruppen(kal);
   const schalter = ({ key, name, farbe, titel, lesen = false, gesperrt = false }) => {
     const ein = zeigt(key);
@@ -553,8 +565,11 @@ function filterHtml(kal) {
     ${google.length ? gruppe('google', 'Google', 'Alle Google-Kalender ein- oder ausblenden', google.map((k) => schalter({
       key: k.key, name: k.name, farbe: k.color || 'var(--accent)', titel: `Google Kalender „${k.name}“${k.readOnly ? ', nur lesen' : ''}`, lesen: k.readOnly,
     }))) : ''}
+    ${outlook.length ? gruppe('outlook', 'Outlook', 'Alle Outlook-Kalender ein- oder ausblenden', outlook.map((k) => schalter({
+      key: k.key, name: k.name, farbe: k.color || 'var(--accent)', titel: `Outlook Kalender „${k.name}“${k.readOnly ? ', nur lesen' : ''}`, lesen: k.readOnly,
+    }))) : ''}
     ${geteilt}
-    <button type="button" class="chip cal-alle" id="calAlle" ${[...gr.kontovia, ...gr.google].every(zeigt) ? 'hidden' : ''}>Alle zeigen</button>
+    <button type="button" class="chip cal-alle" id="calAlle" ${[...gr.kontovia, ...gr.fremd].every(zeigt) ? 'hidden' : ''}>Alle zeigen</button>
     <span id="calHint" class="cal-hinweis">${hiddenHint()}</span>
     <span class="spacer"></span>
     ${verwaltenKnopf()}
@@ -598,7 +613,7 @@ function evHtml(e, { zeit = true } = {}) {
   if (e.isDue) return `<div class="cal-ev cal-due" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(money(e.amount))} € ${esc(e.type === 'income' ? '↓' : '↑')}</div>`;
   if (e.isEvent) return `<div class="cal-ev cal-event" data-tx="${esc(e.txId)}" title="${esc(e.title)}">${esc(e.title)}</div>`;
   const span = e.spanLength > 1 ? ` cal-span ${e.spanIndex === 0 ? 'span-start' : ''} ${e.spanIndex === e.spanLength - 1 ? 'span-end' : ''}` : '';
-  const hinweis = [e.title, e.spanLength > 1 ? `${fmtDate(e.spanStart)} bis ${fmtDate(e.spanEnd)}` : '', e.location, e.extern ? `Google Kalender „${kalenderName(e.extern)}“${e.nurLesen ? ', nur lesen' : ''}` : '', (e.tags || []).map((t) => '#' + t).join(' ')].filter(Boolean).join(' · ');
+  const hinweis = [e.title, e.spanLength > 1 ? `${fmtDate(e.spanStart)} bis ${fmtDate(e.spanEnd)}` : '', e.location, e.extern ? herkunftText(e.extern, e.nurLesen) : '', (e.tags || []).map((t) => '#' + t).join(' ')].filter(Boolean).join(' · ');
   // Was nur lesbar ist, lässt sich öffnen, aber nicht verschieben.
   return `<div class="cal-ev ${e.done ? 'done' : ''}${e.nurLesen ? ' cal-lesen' : ''}${span}" data-appt="${esc(e.id)}" data-occ="${esc(e.spanStart || e.occurrence)}" ${e.nurLesen ? '' : 'draggable="true"'} title="${esc(hinweis)}" ${e.farbe ? `style="--ev:${esc(e.farbe)}"` : ''}>${zeit && !e.allDay && e.startTime && (e.spanIndex ?? 0) === 0 ? `<span class="cal-ev-zeit">${esc(e.startTime)}</span> ` : ''}${esc(e.title)}</div>`;
 }
@@ -660,7 +675,7 @@ function weekHtml(from, to) {
     const evs = lage.map(({ e, von, bis, spalte, spalten: n }) => {
       const top = (von / 60) * STUNDE_PX;
       const h = Math.max(MIN_TERMIN_PX, ((bis - von) / 60) * STUNDE_PX - 2);
-      const hinweis = [e.title, `${e.startTime}${e.endTime ? ' bis ' + e.endTime : ''}`, e.location, e.extern ? `Google Kalender „${kalenderName(e.extern)}“${e.nurLesen ? ', nur lesen' : ''}` : ''].filter(Boolean).join(' · ');
+      const hinweis = [e.title, `${e.startTime}${e.endTime ? ' bis ' + e.endTime : ''}`, e.location, e.extern ? herkunftText(e.extern, e.nurLesen) : ''].filter(Boolean).join(' · ');
       // Der Text richtet sich nach dem Platz: Wie viele Zeilen passen, bestimmt, wie viel zu sehen ist.
       // Was nicht hineinpasst, wird mit „…“ gekürzt (der volle Text steht im Hinweis beim Überfahren).
       const zeilen = Math.max(1, Math.floor((h - 6) / 15));
@@ -988,34 +1003,38 @@ export function openAppointmentDialog(id, preset = {}) {
   /* Kalender: eigene Kalender immer, weitere Google-Kalender nur für neue
      Termine. Den Google-Kalender eines bestehenden Termins zu wechseln, ist
      nicht vorgesehen; bestehende zeigen, woher sie kommen. */
-  const weitere = calState.status?.linked && calState.status?.weitereErlaubt ? calendarSettings().weitere.filter((k) => !k.readOnly) : [];
+  const weitere = ANBIETER_IDS.filter((id) => ANBIETER[id].zustand.status?.linked && ANBIETER[id].zustand.status?.weitereErlaubt)
+    .flatMap((id) => calendarSettings(id).weitere.filter((k) => !k.readOnly).map((k) => ({ ...k, anbieter: id })));
+  const weitereGoogle = weitere.filter((k) => k.anbieter === 'google');
+  const weitereOutlook = weitere.filter((k) => k.anbieter === 'microsoft');
   const lokale = lokaleKalender(sel.settings());
   // Ein Termin aus einem mit dem Konto geteilten Kalender: Google gilt, Kontovia schreibt nie dorthin.
   const lesend = !isNew && nurLesen(existing);
   function kalenderFeld() {
     if (lesend) {
-      return `<div class="notice mb16 small">${icon('lock', 14).__raw} Aus dem geteilten Google Kalender
+      return `<div class="notice mb16 small">${icon('lock', 14).__raw} ${anbieterVon(a.extern) === 'microsoft' ? 'Aus dem geteilten Outlook Kalender' : 'Aus dem geteilten Google Kalender'}
         <strong>„${esc(kalenderName(a.extern))}“</strong>, den Kontovia nur anzeigt. Titel, Zeit, Ort und Notiz ändern sich nur dort.
         Kontakt, Projekt, Tags, Aufgaben und Buchungen können Sie hier trotzdem ergänzen.</div>`;
     }
     if (a.extern && !isNew) {
-      const aktiv = calendarSettings().weitere.some((k) => k.id === a.extern.calendarId);
-      return `<div class="notice mb16 small">${icon('calendar', 14).__raw} Aus Google Kalender
+      const aktiv = kalenderAktiv(a.extern);
+      return `<div class="notice mb16 small">${icon('calendar', 14).__raw} ${anbieterVon(a.extern) === 'microsoft' ? 'Aus Outlook Kalender' : 'Aus Google Kalender'}
         <strong>„${esc(kalenderName(a.extern))}“</strong>. ${aktiv
         ? 'Änderungen und Löschen gehen beim nächsten Abgleich auch dorthin.'
         : 'Dieser Kalender wird derzeit nicht abgeglichen; Änderungen bleiben in Kontovia.'}</div>`;
     }
     if (lokale.length < 2 && !weitere.length) return '';
-    const wahl = a.extern?.calendarId ? 'g:' + a.extern.calendarId : (a.calendarId || '');
+    const wahl = a.extern?.calendarId ? kalenderSchluessel(a) : (a.calendarId || '');
     return `<div class="field">
         <label>Kalender</label>
         <select id="t_kalender">
           ${lokale.length > 1 && weitere.length ? '<optgroup label="Meine Kalender">' : ''}
           ${lokale.map((k) => `<option value="${esc(k.id)}" ${k.id === wahl ? 'selected' : ''}>${esc(k.name)}</option>`).join('')}
           ${lokale.length > 1 && weitere.length ? '</optgroup>' : ''}
-          ${isNew && weitere.length ? `<optgroup label="Google Kalender">${weitere.map((k) => `<option value="g:${esc(k.id)}" ${'g:' + k.id === wahl ? 'selected' : ''}>${esc(k.name || k.id)}</option>`).join('')}</optgroup>` : ''}
+          ${isNew && weitereGoogle.length ? `<optgroup label="Google Kalender">${weitereGoogle.map((k) => `<option value="g:${esc(k.id)}" ${'g:' + k.id === wahl ? 'selected' : ''}>${esc(k.name || k.id)}</option>`).join('')}</optgroup>` : ''}
+          ${isNew && weitereOutlook.length ? `<optgroup label="Outlook Kalender">${weitereOutlook.map((k) => `<option value="m:${esc(k.id)}" ${'m:' + k.id === wahl ? 'selected' : ''}>${esc(k.name || k.id)}</option>`).join('')}</optgroup>` : ''}
         </select>
-        <span class="hint">${weitere.length ? 'Ein Google-Kalender trägt den Termin direkt dort ein.' : 'Kalender lassen sich einzeln ein- und ausblenden.'}</span>
+        <span class="hint">${weitereOutlook.length && !weitereGoogle.length ? 'Ein Outlook-Kalender trägt den Termin direkt dort ein.' : weitere.length ? 'Ein Google-Kalender trägt den Termin direkt dort ein.' : 'Kalender lassen sich einzeln ein- und ausblenden.'}</span>
       </div>`;
   }
 
@@ -1311,9 +1330,10 @@ export function openAppointmentDialog(id, preset = {}) {
     const kal = form.querySelector('#t_kalender');
     if (kal) {
       const wert = kal.value;
-      if (wert.startsWith('g:')) {
-        const k = weitere.find((x) => x.id === wert.slice(2));
-        if (k) { a.extern = { calendarId: k.id, eventId: eventIdFor(a.id), calendarName: k.name || '' }; a.calendarId = ''; }
+      if (wert.startsWith('g:') || wert.startsWith('m:')) {
+        const anbieter = wert.startsWith('m:') ? 'microsoft' : 'google';
+        const k = weitere.find((x) => x.id === wert.slice(2) && x.anbieter === anbieter);
+        if (k) { a.extern = { calendarId: k.id, eventId: eventIdFor(a.id, anbieter), calendarName: k.name || '', ...(anbieter === 'microsoft' ? { anbieter } : {}) }; a.calendarId = ''; }
       } else {
         if (isNew) delete a.extern;
         a.calendarId = wert;
@@ -1355,9 +1375,13 @@ export function openAppointmentDialog(id, preset = {}) {
   });
   m.root.querySelector('#btnDel')?.addEventListener('click', async () => {
     const auchGoogle = lesend
-      ? ` Im geteilten Google Kalender „${kalenderName(a.extern)}“ bleibt er bestehen; Kontovia blendet ihn nur hier aus.`
-      : a.extern && calendarSettings().weitere.some((k) => k.id === a.extern.calendarId)
-        ? ` Beim nächsten Abgleich wird er auch in Google Kalender „${kalenderName(a.extern)}“ gelöscht.` : '';
+      ? (anbieterVon(a.extern) === 'microsoft'
+        ? ` Im geteilten Outlook Kalender „${kalenderName(a.extern)}“ bleibt er bestehen; Kontovia blendet ihn nur hier aus.`
+        : ` Im geteilten Google Kalender „${kalenderName(a.extern)}“ bleibt er bestehen; Kontovia blendet ihn nur hier aus.`)
+      : a.extern && kalenderAktiv(a.extern)
+        ? (anbieterVon(a.extern) === 'microsoft'
+          ? ` Beim nächsten Abgleich wird er auch in Outlook Kalender „${kalenderName(a.extern)}“ gelöscht.`
+          : ` Beim nächsten Abgleich wird er auch in Google Kalender „${kalenderName(a.extern)}“ gelöscht.`) : '';
     if (!await confirmDialog({ title: 'Termin löschen?', text: `Der Termin wird entfernt. Verknüpfte Buchungen${todosVorher.size ? ' und Aufgaben' : ''} bleiben erhalten.${auchGoogle}`, confirmLabel: 'Löschen', danger: true })) return;
     fertig = true;
     await deleteAppointment(a.id);
@@ -1387,9 +1411,22 @@ export function openAppointmentDialog(id, preset = {}) {
   ausgangslage = stand();
 }
 
-/** Anzeigename des Google-Kalenders, aus dem ein Termin stammt. */
+/** Anzeigename des fremden Kalenders (Google oder Outlook), aus dem ein Termin stammt. */
 function kalenderName(extern) {
-  return calendarSettings().weitere.find((k) => k.id === extern?.calendarId)?.name || extern?.calendarName || 'weiterer Kalender';
+  return alleWeitere().find((k) => k.id === extern?.calendarId && k.anbieter === anbieterVon(extern))?.name || extern?.calendarName || 'weiterer Kalender';
+}
+
+/** Herkunft eines Termins als Hinweistext: „Google Kalender „Name““ oder „Outlook Kalender „Name““. */
+function herkunftText(extern, nurLesenFlag) {
+  const n = kalenderName(extern);
+  return anbieterVon(extern) === 'microsoft'
+    ? `Outlook Kalender „${n}“${nurLesenFlag ? ', nur lesen' : ''}`
+    : `Google Kalender „${n}“${nurLesenFlag ? ', nur lesen' : ''}`;
+}
+
+/** Wird dieser Kalender des Termins gerade abgeglichen? */
+function kalenderAktiv(extern) {
+  return alleWeitere().some((k) => k.id === extern?.calendarId && k.anbieter === anbieterVon(extern));
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1413,7 +1450,7 @@ export function openKalenderVerwaltung() {
       onClose: () => { if (!fertig) resolve(false); },
     });
     const host = m.root.querySelector('#kalListe');
-    const weitere = calendarSettings().weitere;
+    const weitere = alleWeitere();
     const anzahl = (id) => sel.appointments().filter((a) => !a.extern && (a.calendarId || '') === id).length;
     const zeichnen = () => {
       host.innerHTML = html`
@@ -1432,7 +1469,7 @@ export function openKalenderVerwaltung() {
             </div>`).join(''))}
         </div>
         <button type="button" class="btn sm mt8" id="kalNeu">${icon('plus', 14)} Neuer Kalender</button>
-        ${weitere.length ? raw(`<hr class="sep"><p class="small muted mt0 mb0">Google-Kalender (${esc(weitere.map((k) => k.name || k.id).join(', '))}) verwalten Sie unter „Abgleich“: dort auswählen, lösen und auf Wunsch die von Kontovia angelegten Einträge löschen.</p>`) : ''}`;
+        ${weitere.length ? raw(`<hr class="sep"><p class="small muted mt0 mb0">Kalender aus Google und Outlook (${esc(weitere.map((k) => k.name || k.id).join(', '))}) verwalten Sie unter „Abgleich“: dort auswählen, lösen und auf Wunsch die von Kontovia angelegten Einträge löschen.</p>`) : ''}`;
       host.querySelectorAll('[data-kal-name]').forEach((inp) => inp.addEventListener('input', () => { liste[Number(inp.dataset.kalName)].name = inp.value; }));
       host.querySelectorAll('[data-kal-farbe]').forEach((sl) => sl.addEventListener('change', () => {
         liste[Number(sl.dataset.kalFarbe)].color = sl.value;
@@ -1466,7 +1503,7 @@ export function openKalenderVerwaltung() {
       }, { entity: 'einstellungen', summary: `Kalender: ${[standard.name, ...eigene.map((k) => k.name)].join(', ')}` });
       await saveNow();
       // Reiter und Ausblendungen entfernter Kalender aufräumen.
-      for (const k of [...state.aus]) if (!k.startsWith('g:') && !ARTEN.includes(k) && k && !bleiben.has(k)) state.aus.delete(k);
+      for (const k of [...state.aus]) if (!k.startsWith('g:') && !k.startsWith('m:') && !ARTEN.includes(k) && k && !bleiben.has(k)) state.aus.delete(k);
       merken();
       m.close();
       ok('Kalender gespeichert');

@@ -1,15 +1,17 @@
 /**
- * Kontovia – Kalender mit Google und anderen Programmen abgleichen.
+ * Kontovia – Kalender mit Google, Outlook und anderen Programmen abgleichen.
  *
- * Zwei Wege:
+ * Drei Wege:
  *   Google Kalender  laufender Abgleich in beide Richtungen, mit dem
  *                    eigenen Kalender „Kontovia“ und auf Wunsch mit weiteren
  *                    Kalendern des Kontos (Hauptkalender usw.); mit dem
  *                    Konto geteilte Kalender werden nur angezeigt. In der
  *                    Web-Fassung gilt der Zugriff eine Stunde und wird dann
  *                    mit einem Tipp bestätigt (src/web/gcal.js).
+ *   Outlook Kalender dasselbe für Microsoft 365 und Outlook.com (src/web/mscal.js);
+ *                    jeder Anbieter hat eigene Einstellungen und Zustand (lib/gcalsync.js).
  *   .ics-Datei       Export und Import von Hand, überall – auch für Apple
- *                    Kalender und Outlook
+ *                    Kalender
  */
 
 import { html, raw, esc, int, fmtDateTime, todayISO } from '../lib/util.js';
@@ -17,9 +19,9 @@ import { icon, modal, confirmDialog, ok, err, warn } from '../lib/ui.js';
 import { store, sel, commit, saveNow, applyCalendarChanges } from '../lib/store.js';
 import { derivedEntries } from '../lib/gcal.js';
 import { toIcs, parseIcs, appointmentIdForUid } from '../lib/ics.js';
-import { kalenderListe, kalenderSchluessel, lokaleKalender, googleFarbe, kalenderAuswahl } from '../lib/kalender.js';
+import { kalenderListe, kalenderSchluessel, lokaleKalender, googleFarbe, kalenderAuswahl, anbieterVon } from '../lib/kalender.js';
 import {
-  calState, syncCalendar, startCalendarSync, stopCalendarSync,
+  calState, msState, ANBIETER, ANBIETER_IDS, alleWeitere, syncCalendar, startCalendarSync, stopCalendarSync,
   refreshCalendarStatus, calendarSettings, saveCalendarSettings, timeZone, stillZuruecksetzen,
 } from '../lib/gcalsync.js';
 import { refresh } from '../lib/router.js';
@@ -30,13 +32,36 @@ const api = window.kontovia;
 /* Kurzstatus für Kalenderansicht                                              */
 /* -------------------------------------------------------------------------- */
 
-export function statusText(st = calState.status) {
-  if (calState.running) return 'Google: Abgleich läuft …';
+/** Kurzstatus eines Anbieters; leer, wenn er nicht verbunden ist. */
+function statusTeil(anbieter) {
+  const Z = ANBIETER[anbieter].zustand;
+  const st = Z.status;
+  if (Z.running) return anbieter === 'microsoft' ? 'Outlook: Abgleich läuft …' : 'Google: Abgleich läuft …';
   if (!st?.linked) return '';
-  if (st.bestaetigen) return 'Google: bitte kurz bestätigen';
-  if (calState.lastError || st.lastError) return 'Google: Fehler beim Abgleich';
-  const at = calState.lastAt || st.lastSyncAt;
-  return at ? `Google: abgeglichen ${fmtDateTime(at)}` : 'Google: verbunden';
+  if (st.bestaetigen) return anbieter === 'microsoft' ? 'Outlook: bitte kurz bestätigen' : 'Google: bitte kurz bestätigen';
+  if (Z.lastError || st.lastError) return anbieter === 'microsoft' ? 'Outlook: Fehler beim Abgleich' : 'Google: Fehler beim Abgleich';
+  const at = Z.lastAt || st.lastSyncAt;
+  return at ? (anbieter === 'microsoft' ? `Outlook: abgeglichen ${fmtDateTime(at)}` : `Google: abgeglichen ${fmtDateTime(at)}`) : (anbieter === 'microsoft' ? 'Outlook: verbunden' : 'Google: verbunden');
+}
+
+/** Kurzstatus für die Kopfleiste der Kalenderansicht: bei zwei Konten beide, durch „ · “ getrennt. */
+export function statusText() {
+  return ANBIETER_IDS.map(statusTeil).filter(Boolean).join(' · ');
+}
+
+/**
+ * Lage aller verbundenen Anbieter für den Hinweis in der Kopfleiste:
+ * `fehler` (Text des ersten Fehlers), `warten` (Anbieter, die einen Tipp brauchen), `laeuft`.
+ */
+export function statusLage() {
+  const verbunden = ANBIETER_IDS.filter((id) => ANBIETER[id].zustand.status?.linked);
+  const fehlerAnbieter = verbunden.find((id) => ANBIETER[id].zustand.lastError || ANBIETER[id].zustand.status?.lastError);
+  const warten = verbunden.filter((id) => ANBIETER[id].zustand.status?.bestaetigen && !ANBIETER[id].zustand.running);
+  return {
+    fehler: fehlerAnbieter ? (ANBIETER[fehlerAnbieter].zustand.lastError || ANBIETER[fehlerAnbieter].zustand.status?.lastError) : '',
+    warten,
+    laeuft: verbunden.some((id) => ANBIETER[id].zustand.running),
+  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -47,6 +72,7 @@ export function statusText(st = calState.status) {
 export async function renderCalendarCard(el) {
   if (!el) return;
   const st = await refreshCalendarStatus();
+  const ms = await refreshCalendarStatus('microsoft');
   const cfg = calendarSettings();
   const optionen = html`
     <div class="stack mt8" style="gap:6px">
@@ -58,7 +84,7 @@ export async function renderCalendarCard(el) {
 
   el.innerHTML = html`
     <div class="card">
-      <div class="card-head"><h2 data-krone="kalender">${icon('calendar', 16)} Kalender-Abgleich</h2><span class="sub">Google Kalender und Kalenderdateien</span></div>
+      <div class="card-head"><h2 data-krone="kalender">${icon('calendar', 16)} Kalender-Abgleich</h2><span class="sub">Google Kalender, Outlook und Kalenderdateien</span></div>
       <div class="card-body">
         <div class="grid c2">
           <div>
@@ -92,7 +118,7 @@ export async function renderCalendarCard(el) {
           </div>
           <div>
             <p class="small mt0" style="line-height:1.6"><strong>Kalenderdatei (.ics):</strong> für
-            Apple Kalender, Outlook oder ein zweites Google-Konto. Der Export enthält
+            Apple Kalender, ein zweites Google-Konto oder Outlook auf dem Computer. Der Export enthält
             alle Termine; beim Import werden bereits übernommene Termine erkannt und aktualisiert
             statt doppelt angelegt.</p>
             <div class="row wrap" style="gap:8px">
@@ -104,9 +130,30 @@ export async function renderCalendarCard(el) {
           </div>
         </div>
       </div>
-    </div>`;
+    </div>
+    ${raw(outlookKarte(ms))}`;
 
   const rerender = () => renderCalendarCard(el);
+  el.querySelector('[data-cal="ms-connect"]')?.addEventListener('click', async () => { if (await connectOutlook()) rerender(); });
+  el.querySelector('[data-cal="ms-disconnect"]')?.addEventListener('click', async () => { if (await disconnectOutlook()) rerender(); });
+  el.querySelector('[data-cal="ms-sync"]')?.addEventListener('click', async (e) => {
+    e.target.disabled = true;
+    await manualSync('microsoft');
+    rerender();
+  });
+  el.querySelector('[data-cal="ms-waehlen"]')?.addEventListener('click', async () => {
+    await openOutlookAuswahl();
+    rerender();
+  });
+  el.querySelectorAll('[data-ms-loesen]').forEach((b) => b.addEventListener('click', async () => {
+    await kalenderLoesen([b.dataset.msLoesen], { anbieter: 'microsoft' });
+    rerender();
+  }));
+  el.querySelectorAll('[data-ms-opt]').forEach((c) => c.addEventListener('change', async () => {
+    await saveCalendarSettings({ [c.dataset.msOpt]: c.checked }, { anbieter: 'microsoft' });
+    ok('Gespeichert', 'Gilt ab dem nächsten Abgleich.');
+    syncCalendar({ reason: 'einstellung', anbieter: 'microsoft' }).catch(() => {}).finally(rerender);
+  }));
   el.querySelector('[data-cal="connect"]')?.addEventListener('click', async () => { if (await connectGoogle()) rerender(); });
   el.querySelector('[data-cal="disconnect"]')?.addEventListener('click', async () => { if (await disconnectGoogle()) rerender(); });
   el.querySelector('[data-cal="sync"]')?.addEventListener('click', async (e) => {
@@ -168,11 +215,15 @@ function weitereAbschnitt(st, cfg) {
  * @param {{speichern?:boolean}} o  speichern: die Auswahl selbst fortschreiben (sonst tut es der Aufrufer)
  * @returns {Promise<boolean>} false, wenn abgebrochen
  */
-export async function kalenderLoesen(ids, { speichern = true } = {}) {
-  const cfg = calendarSettings();
+export async function kalenderLoesen(ids, { speichern = true, anbieter = 'google' } = {}) {
+  const outlook = anbieter === 'microsoft';
+  const T = (google, microsoft) => (outlook ? microsoft : google);
+  const ap = ANBIETER[anbieter].schnittstelle();
+  const Z = ANBIETER[anbieter].zustand;
+  const cfg = calendarSettings(anbieter);
   const kalender = ids.map((id) => cfg.weitere.find((k) => k.id === id) || { id, name: id });
-  const betroffen = sel.appointments().filter((a) => a.extern && ids.includes(a.extern.calendarId));
-  // Von Kontovia angelegt: die Ereigniskennung ist aus der Terminkennung berechnet (kv…), nicht von Google vergeben.
+  const betroffen = sel.appointments().filter((a) => a.extern && anbieterVon(a.extern) === anbieter && ids.includes(a.extern.calendarId));
+  // Von Kontovia angelegt: die Ereigniskennung ist aus der Terminkennung berechnet (kv…), nicht vom Anbieter vergeben.
   const eigene = betroffen.filter((a) => String(a.extern.eventId || '').startsWith('kv') && !a.id.startsWith('gcal_') && !a.id.startsWith('gx'));
   const namen = kalender.map((k) => k.name || k.id).join(', ');
   const wahl = await new Promise((resolve) => {
@@ -181,10 +232,12 @@ export async function kalenderLoesen(ids, { speichern = true } = {}) {
       title: ids.length > 1 ? 'Kalender lösen?' : `Kalender „${namen}“ lösen?`,
       size: 'slim',
       body: html`
-        <p class="mt0" style="line-height:1.6">Kontovia gleicht ${ids.length > 1 ? 'diese Kalender' : 'diesen Kalender'} danach nicht mehr ab. Fremde Termine in Google bleiben in jedem Fall unberührt.</p>
-        <label class="check mb8"><input type="checkbox" id="l_lokal" ${betroffen.length ? 'checked' : 'disabled'}> ${int(betroffen.length)} Termine aus diesem Kalender aus Kontovia entfernen (in Google bleiben sie)</label>
-        <label class="check mb8"><input type="checkbox" id="l_google" ${eigene.length ? '' : 'disabled'}> ${int(eigene.length)} von Kontovia dort angelegte Einträge in Google löschen</label>
-        <p class="tiny muted mt8 mb0">Gelöscht werden in Google nur Einträge, die Kontovia selbst angelegt hat. Was Sie oder andere dort eingetragen haben, bleibt.</p>`,
+        <p class="mt0" style="line-height:1.6">${T(
+          `Kontovia gleicht ${ids.length > 1 ? 'diese Kalender' : 'diesen Kalender'} danach nicht mehr ab. Fremde Termine in Google bleiben in jedem Fall unberührt.`,
+          `Kontovia gleicht ${ids.length > 1 ? 'diese Kalender' : 'diesen Kalender'} danach nicht mehr ab. Fremde Termine in Outlook bleiben in jedem Fall unberührt.`)}</p>
+        <label class="check mb8"><input type="checkbox" id="l_lokal" ${betroffen.length ? 'checked' : 'disabled'}> ${int(betroffen.length)} ${T('Termine aus diesem Kalender aus Kontovia entfernen (in Google bleiben sie)', 'Termine aus diesem Kalender aus Kontovia entfernen (in Outlook bleiben sie)')}</label>
+        <label class="check mb8"><input type="checkbox" id="l_google" ${eigene.length ? '' : 'disabled'}> ${int(eigene.length)} ${T('von Kontovia dort angelegte Einträge in Google löschen', 'von Kontovia dort angelegte Einträge in Outlook löschen')}</label>
+        <p class="tiny muted mt8 mb0">${T('Gelöscht werden in Google nur Einträge, die Kontovia selbst angelegt hat. Was Sie oder andere dort eingetragen haben, bleibt.', 'Gelöscht werden in Outlook nur Einträge, die Kontovia selbst angelegt hat. Was Sie oder andere dort eingetragen haben, bleibt.')}</p>`,
       foot: '<button class="btn" data-no>Abbrechen</button><button class="btn danger" data-yes>Lösen</button>',
       onClose: () => { if (!settled) resolve(null); },
     });
@@ -199,24 +252,24 @@ export async function kalenderLoesen(ids, { speichern = true } = {}) {
   if (!wahl) return false;
   let geloescht = 0;
   if (wahl.google && eigene.length) {
-    if (calState.status?.bestaetigen && !await bestaetigen()) { warn('Nicht gelöscht', 'Ohne Bestätigung bei Google bleiben die Einträge dort stehen.'); }
+    if (Z.status?.bestaetigen && !await bestaetigen(false, anbieter)) { warn('Nicht gelöscht', T('Ohne Bestätigung bei Google bleiben die Einträge dort stehen.', 'Ohne Bestätigung bei Microsoft bleiben die Einträge dort stehen.')); }
     else {
       try {
         const ops = eigene.map((a) => ({ kind: 'delete', calendarId: a.extern.calendarId, eventId: a.extern.eventId, apptId: a.id }));
-        const res = await api.gcal.push(ops);
+        const res = await ap.push(ops);
         geloescht = res.filter((r) => r?.ok).length;
         const fehler = res.find((r) => r && !r.ok);
-        if (fehler) warn('Nicht alles gelöscht', `${int(res.length - geloescht)} Einträge blieben in Google: ${fehler.error || ''}`);
+        if (fehler) warn('Nicht alles gelöscht', T(`${int(res.length - geloescht)} Einträge blieben in Google: ${fehler.error || ''}`, `${int(res.length - geloescht)} Einträge blieben in Outlook: ${fehler.error || ''}`));
       } catch (e) {
-        err('Löschen in Google fehlgeschlagen', e.message);
+        err(T('Löschen in Google fehlgeschlagen', 'Löschen in Outlook fehlgeschlagen'), e.message);
       }
     }
   }
   if (wahl.lokal && betroffen.length) {
-    await applyCalendarChanges({ removals: betroffen.map((a) => a.id), ohneGrabstein: true, summary: `Google Kalender: ${betroffen.length} Termine gelöster Kalender entfernt` });
+    await applyCalendarChanges({ removals: betroffen.map((a) => a.id), ohneGrabstein: true, summary: T(`Google Kalender: ${betroffen.length} Termine gelöster Kalender entfernt`, `Outlook Kalender: ${betroffen.length} Termine gelöster Kalender entfernt`) });
   }
-  if (speichern) await saveCalendarSettings({ weitere: cfg.weitere.filter((k) => !ids.includes(k.id)) });
-  ok('Kalender gelöst', [namen, wahl.lokal && betroffen.length ? `${int(betroffen.length)} Termine aus Kontovia entfernt` : '', geloescht ? `${int(geloescht)} Einträge in Google gelöscht` : ''].filter(Boolean).join(' · '));
+  if (speichern) await saveCalendarSettings({ weitere: cfg.weitere.filter((k) => !ids.includes(k.id)) }, { anbieter });
+  ok('Kalender gelöst', [namen, wahl.lokal && betroffen.length ? `${int(betroffen.length)} Termine aus Kontovia entfernt` : '', geloescht ? T(`${int(geloescht)} Einträge in Google gelöscht`, `${int(geloescht)} Einträge in Outlook gelöscht`) : ''].filter(Boolean).join(' · '));
   refresh();
   return true;
 }
@@ -406,26 +459,28 @@ export function openCalendarSyncDialog() {
  * Web-Fassung: neuer Zugriff für eine Stunde. Muss direkt aus einem Tipp
  * kommen, sonst blockiert der Browser das Fenster von Google.
  */
-export async function bestaetigen(umleiten = false) {
+export async function bestaetigen(umleiten = false, anbieter = 'google') {
+  const outlook = anbieter === 'microsoft';
   try {
-    await api.gcal.bestaetigen({ umleiten });
+    await ANBIETER[anbieter].schnittstelle().bestaetigen({ umleiten });
     stillZuruecksetzen();
-    await refreshCalendarStatus();
+    await refreshCalendarStatus(anbieter);
     return true;
   } catch (e) {
-    if (await umleitenFragen(e)) return bestaetigen(true);
-    if (e.code !== 'ABGEBROCHEN') err('Bestätigung bei Google fehlgeschlagen', e.message);
+    if (!outlook && await umleitenFragen(e)) return bestaetigen(true);
+    if (e.code !== 'ABGEBROCHEN') err(outlook ? 'Bestätigung bei Microsoft fehlgeschlagen' : 'Bestätigung bei Google fehlgeschlagen', e.message);
     return false;
   }
 }
 
-export async function manualSync() {
+export async function manualSync(anbieter = 'google') {
+  const outlook = anbieter === 'microsoft';
   try {
-    if (calState.status?.bestaetigen && !await bestaetigen()) return null;
-    const r = await syncCalendar({ reason: 'manuell' });
+    if (ANBIETER[anbieter].zustand.status?.bestaetigen && !await bestaetigen(false, anbieter)) return null;
+    const r = await syncCalendar({ reason: 'manuell', anbieter });
     if (r.skipped) {
-      warn('Kein Abgleich', r.skipped === 'nicht-verbunden' ? 'Google Kalender ist nicht verbunden.'
-        : r.skipped === 'bestaetigen' ? 'Der Abgleich wartet auf eine kurze Bestätigung bei Google.' : r.skipped);
+      warn('Kein Abgleich', r.skipped === 'nicht-verbunden' ? (outlook ? 'Outlook Kalender ist nicht verbunden.' : 'Google Kalender ist nicht verbunden.')
+        : r.skipped === 'bestaetigen' ? (outlook ? 'Der Abgleich wartet auf eine kurze Bestätigung bei Microsoft.' : 'Der Abgleich wartet auf eine kurze Bestätigung bei Google.') : r.skipped);
     }
     else ok('Kalender abgeglichen', r.summary);
     return r;
@@ -594,7 +649,7 @@ export async function disconnectGoogle() {
   // Kalenders) braucht es einen gültigen Zugriff. Ohne ihn wird nur hier getrennt.
   if (calState.status?.bestaetigen) await api.gcal.bestaetigen?.().catch(() => {});
   try {
-    stopCalendarSync();
+    stopCalendarSync('google');
     const res = await api.gcal.disconnect({ deleteCalendar: loeschen });
     if (res.deletedCalendar) await saveCalendarSettings({ calendarId: '' });
     calState.lastError = null;
@@ -609,13 +664,247 @@ export async function disconnectGoogle() {
 }
 
 /* -------------------------------------------------------------------------- */
+/* Outlook Kalender                                                            */
+/* -------------------------------------------------------------------------- */
+
+/** Karte „Outlook Kalender“ in Einstellungen → Kalender-Abgleich. */
+function outlookKarte(st) {
+  const cfg = calendarSettings('microsoft');
+  const Z = msState;
+  let inhalt;
+  if (st?.available === false) {
+    inhalt = `<div class="notice">
+      <strong>Outlook Kalender lässt sich hier nicht verbinden.</strong> Auf iPhone und iPad geht das in der App vom
+      Home-Bildschirm nicht; im Browser schon. Termine lassen sich weiterhin als Kalenderdatei (.ics) übertragen.
+    </div>`;
+  } else if (st?.linked) {
+    inhalt = html`
+      <div class="notice ok">
+        <strong>Verbunden</strong> mit ${st.email || 'Ihrem Outlook-Konto'} · Kalender „${st.calendarName || 'Kontovia'}“<br>
+        <span class="small">${Z.running ? 'Abgleich läuft …' : (st.lastSyncAt ? `Zuletzt abgeglichen ${fmtDateTime(st.lastSyncAt)}` : 'Noch nicht abgeglichen')}${Z.lastSummary ? ` · ${Z.lastSummary}` : ''}</span>
+      </div>
+      ${st.bestaetigen ? raw(`<div class="notice warn mt8">Der Abgleich wartet auf eine kurze Bestätigung
+        bei Microsoft. Im Browser gilt der Zugriff auf den Kalender jeweils eine Stunde; danach genügt ein Tipp.</div>`) : ''}
+      ${!st.bestaetigen && (Z.lastError || st.lastError) ? raw(`<div class="notice danger mt8">${esc(Z.lastError || st.lastError)}</div>`) : ''}
+      <div class="row wrap mt16" style="gap:8px">
+        <button class="btn primary" data-cal="ms-sync" data-premium="kalender">${icon('refresh', 15)} ${st.bestaetigen ? 'Bestätigen und abgleichen' : 'Jetzt abgleichen'}</button>
+        <button class="btn danger" data-cal="ms-disconnect">Trennen</button>
+      </div>
+      <div class="stack mt8" style="gap:6px">
+        <label class="check"><input type="checkbox" data-ms-opt="includeEvents" ${cfg.includeEvents ? 'checked' : ''}> Veranstaltungstermine aus Anzahlungen mit übertragen</label>
+        <label class="check"><input type="checkbox" data-ms-opt="includeDue" ${cfg.includeDue ? 'checked' : ''}> Fälligkeiten offener Rechnungen mit übertragen</label>
+        <label class="check"><input type="checkbox" data-ms-opt="sendNotes" ${cfg.sendNotes ? 'checked' : ''}> Notizen der Termine mit übertragen</label>
+        <span class="hint small muted">Beträge, Buchungen, Kontakte und Belege gehen nie an Microsoft.</span>
+      </div>
+      <hr class="sep">
+      <strong style="font-size:13px">Weitere Outlook-Kalender</strong>
+      <p class="small mt8 mb8" style="line-height:1.6">${cfg.weitere.length
+        ? 'Eigene Kalender werden in beide Richtungen abgeglichen, mit Ihnen geteilte, nur lesbare Kalender nur angezeigt. Termine ab gut einem Jahr zurück. „Lösen“ beendet den Abgleich eines Kalenders; dabei können Sie die von Kontovia dort angelegten Einträge mit löschen lassen, fremde Termine bleiben immer unberührt.'
+        : 'Noch kein weiterer Kalender ausgewählt.'}</p>
+      ${raw(cfg.weitere.map((k) => `<div class="row mb8" style="gap:8px"><span style="flex:1;min-width:0" class="truncate"><span class="cal-dot" style="background:${esc(k.color || googleFarbe(k.id))}"></span> ${esc(k.name || k.id)}${k.readOnly ? ' <span class="badge tiny">nur lesen</span>' : ''}</span>
+        <button class="btn sm" data-ms-loesen="${esc(k.id)}">Lösen</button></div>`).join(''))}
+      <button class="btn mt8" data-cal="ms-waehlen" data-premium="kalender">${icon('calendar', 15)} Kalender auswählen</button>`;
+  } else {
+    inhalt = html`
+      <p class="small mt0" style="line-height:1.6">Kontovia legt in Ihrem Outlook-Konto (Microsoft 365 oder Outlook.com) einen eigenen
+      Kalender <strong>„Kontovia“</strong> an und gleicht Ihre Termine in beide Richtungen damit ab. Was Sie dort im Kalender
+      „Kontovia“ eintragen, erscheint hier. Auf Wunsch kommen Ihre übrigen Outlook-Kalender dazu, ebenfalls in beide Richtungen.</p>
+      ${st?.lastError ? raw(`<div class="notice warn mb8">${esc(st.lastError)}</div>`) : ''}
+      <button class="btn primary" data-cal="ms-connect" data-premium="kalender">${icon('calendar', 15)} Mit Outlook Kalender verbinden</button>`;
+  }
+  return html`
+    <div class="card mt16">
+      <div class="card-head"><h2>${icon('calendar', 16)} Outlook Kalender</h2><span class="sub">Microsoft 365 und Outlook.com</span></div>
+      <div class="card-body">${raw(inhalt)}</div>
+    </div>`;
+}
+
+function outlookVerbindenDialog() {
+  const cfg = calendarSettings('microsoft');
+  return new Promise((resolve) => {
+    let settled = false;
+    const m = modal({
+      title: 'Mit Outlook Kalender verbinden',
+      body: html`
+        <p class="mt0" style="line-height:1.6">Kontovia legt in Ihrem Outlook-Konto einen eigenen Kalender
+        <strong>„Kontovia“</strong> an und gleicht Ihre Termine in beide Richtungen damit ab. Auf Ihre
+        übrigen Kalender greift Kontovia nur zu, wenn Sie das unten ankreuzen.</p>
+        <div class="notice warn">
+          <strong>Was dafür an Microsoft geht:</strong> Titel, Datum, Uhrzeit, Ort und Wiederholung Ihrer
+          Termine, auf Wunsch auch die Notiz. Das geschieht unverschlüsselt, sonst könnte Outlook die
+          Termine nicht anzeigen. <strong>Nicht</strong> übertragen werden Beträge, Buchungen, Kontakte und Belege.
+          Stehen Namen von Kunden im Titel, gibt Kontovia sie damit an Microsoft weiter; für die
+          geschäftliche Nutzung ist ein Konto mit Auftragsverarbeitungsvertrag (Microsoft 365) die saubere Lösung.
+        </div>
+        <div class="stack mt16" style="gap:6px">
+          <label class="check"><input type="checkbox" id="o_events" ${cfg.includeEvents ? 'checked' : ''}> Veranstaltungstermine aus Anzahlungen mit übertragen (ohne Beträge)</label>
+          <label class="check"><input type="checkbox" id="o_due" ${cfg.includeDue ? 'checked' : ''}> Fälligkeiten offener Rechnungen mit übertragen (ohne Beträge)</label>
+          <label class="check"><input type="checkbox" id="o_notes" ${cfg.sendNotes ? 'checked' : ''}> Notizen der Termine mit übertragen</label>
+          <label class="check"><input type="checkbox" id="o_andere"> Auch meine anderen Outlook-Kalender einbeziehen (in beide Richtungen, mit mir geteilte nur lesend). Welche, wählen Sie danach</label>
+        </div>
+        <p class="small muted mt16 mb0" style="line-height:1.6">Es öffnet sich die Anmeldung bei Microsoft in einem kleinen Fenster.
+        Im Browser gilt der Zugriff auf den Kalender jeweils eine Stunde; danach genügt ein Tipp. Die Verbindung lässt sich jederzeit
+        unter Einstellungen → Kalender-Abgleich trennen.</p>`,
+      foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Mit Outlook verbinden</button>',
+      onClose: () => { if (!settled) resolve(null); },
+    });
+    m.root.querySelector('[data-no]').addEventListener('click', () => { settled = true; m.close(); resolve(null); });
+    m.root.querySelector('[data-yes]').addEventListener('click', () => {
+      settled = true;
+      const wahl = {
+        includeEvents: m.root.querySelector('#o_events').checked,
+        includeDue: m.root.querySelector('#o_due').checked,
+        sendNotes: m.root.querySelector('#o_notes').checked,
+        andere: m.root.querySelector('#o_andere').checked,
+      };
+      m.close();
+      resolve(wahl);
+    });
+  });
+}
+
+export async function connectOutlook() {
+  const wahl = await outlookVerbindenDialog();
+  if (!wahl) return false;
+  const hinweis = modal({
+    title: 'Anmeldung bei Microsoft',
+    size: 'slim',
+    body: `<p class="mt0" style="line-height:1.6">Bitte melden Sie sich bei Microsoft an und
+      erlauben Sie den Zugriff auf den Kalender. Dieser Hinweis schließt sich danach von selbst.</p>
+      <p class="small muted mb0">Nach fünf Minuten ohne Anmeldung bricht Kontovia den Versuch ab.</p>`,
+    foot: '<button class="btn" data-stop>Abbrechen</button><button class="btn" data-x>Ausblenden</button>',
+  });
+  hinweis.root.querySelector('[data-x]').addEventListener('click', () => hinweis.close());
+  hinweis.root.querySelector('[data-stop]').addEventListener('click', () => {
+    hinweis.close();
+    api.mscal.cancel().catch(() => {});
+  });
+  const { andere, ...einstellungen } = wahl;
+  try {
+    const res = await api.mscal.connect({ calendarIdHint: calendarSettings('microsoft').calendarId, timeZone: timeZone() });
+    await saveCalendarSettings({ ...einstellungen, calendarId: res.calendarId, account: res.email }, { anbieter: 'microsoft' });
+    hinweis.close();
+    ok('Outlook Kalender verbunden', `${res.email} · Kalender „${res.calendarName}“${res.created ? ' angelegt' : ''}`);
+    const r = await syncCalendar({ reason: 'erstverbindung', anbieter: 'microsoft' }).catch((e) => { err('Erster Abgleich fehlgeschlagen', e.message); return null; });
+    if (r?.summary) ok('Kalender abgeglichen', r.summary);
+    await startCalendarSync();
+    if (andere) await openOutlookAuswahl();
+    refresh();
+    return true;
+  } catch (e) {
+    hinweis.close();
+    if (e.code !== 'ABGEBROCHEN') err('Verbinden fehlgeschlagen', e.message);
+    return false;
+  }
+}
+
+export async function disconnectOutlook() {
+  const wahl = await new Promise((resolve) => {
+    let settled = false;
+    const m = modal({
+      title: 'Outlook Kalender trennen?',
+      size: 'slim',
+      body: `<p class="mt0" style="line-height:1.6">Kontovia gleicht danach nicht mehr mit Outlook ab. Ihre Termine in Kontovia
+        bleiben unverändert. Die Freigabe selbst bleibt in Ihrem Microsoft-Konto eingetragen; dort können Sie sie bei den
+        Berechtigungen für Apps entziehen. Ist Outlook Kalender auch auf einem anderen Gerät verbunden, läuft er dort weiter.</p>
+        <label class="check"><input type="checkbox" id="o_delete"> Auch den Kalender „Kontovia“ in Outlook löschen</label>
+        <p class="tiny muted mt8 mb0">Nur ankreuzen, wenn kein anderes Gerät mehr mit diesem Kalender arbeitet.</p>`,
+      foot: '<button class="btn" data-no>Abbrechen</button><button class="btn danger" data-yes>Trennen</button>',
+      onClose: () => { if (!settled) resolve(null); },
+    });
+    m.root.querySelector('[data-no]').addEventListener('click', () => { settled = true; m.close(); resolve(null); });
+    m.root.querySelector('[data-yes]').addEventListener('click', () => {
+      settled = true;
+      const loeschen = m.root.querySelector('#o_delete').checked;
+      m.close();
+      resolve({ loeschen });
+    });
+  });
+  if (!wahl) return false;
+  // Zum Löschen des Kalenders braucht es einen gültigen Zugriff; ohne ihn wird nur hier getrennt.
+  if (wahl.loeschen && msState.status?.bestaetigen) await api.mscal.bestaetigen().catch(() => {});
+  try {
+    stopCalendarSync('microsoft');
+    const res = await api.mscal.disconnect({ deleteCalendar: wahl.loeschen });
+    if (res.deletedCalendar) await saveCalendarSettings({ calendarId: '' }, { anbieter: 'microsoft' });
+    msState.lastError = null;
+    msState.lastSummary = '';
+    await refreshCalendarStatus('microsoft');
+    ok('Outlook Kalender getrennt', res.deletedCalendar ? 'Der Kalender „Kontovia“ wurde in Outlook gelöscht.' : '');
+    return true;
+  } catch (e) {
+    err('Trennen fehlgeschlagen', e.message);
+    return false;
+  }
+}
+
+/** Auswahl der weiteren Outlook-Kalender, die abgeglichen werden. */
+export async function openOutlookAuswahl() {
+  if (msState.status?.bestaetigen && !await bestaetigen(false, 'microsoft')) return false;
+  let kontoListe;
+  try {
+    kontoListe = await api.mscal.calendars();
+  } catch (e) {
+    err('Kalender nicht abrufbar', e.message);
+    return false;
+  }
+  const cfg = calendarSettings('microsoft');
+  const bisher = new Set(cfg.weitere.map((k) => k.id));
+  const auswahl = kalenderAuswahl({ liste: kontoListe, weitere: cfg.weitere, abgewaehlt: [] });
+  const { liste, nurLesend } = auswahl;
+  const gruppen = [
+    ['Meine Kalender', liste.filter((k) => !k.geteilt)],
+    ['Mit mir geteilt', liste.filter((k) => k.geteilt)],
+  ].filter(([, l]) => l.length);
+  const zeile = (k) => `
+    <label class="check cal-wahl">
+      <input type="checkbox" value="${esc(k.id)}" ${bisher.has(k.id) ? 'checked' : ''}>
+      <span class="cal-dot" style="background:${esc(k.color || googleFarbe(k.id))}"></span>
+      <span class="cal-wahl-name">${esc(k.name)}${k.primary ? ' <span class="muted small">(Hauptkalender)</span>' : ''}</span>
+      ${nurLesend(k) ? '<span class="badge tiny">nur lesen</span>' : k.geteilt ? '<span class="badge tiny">geteilt</span>' : ''}
+    </label>`;
+  const wahl = await new Promise((resolve) => {
+    let settled = false;
+    const m = modal({
+      title: 'Weitere Outlook-Kalender abgleichen',
+      body: html`
+        <p class="mt0 small" style="line-height:1.6">Die Termine der gewählten Kalender erscheinen in Kontovia,
+        ab gut einem Jahr zurück. Eigene Kalender gleicht Kontovia in beide Richtungen ab: Ändern oder löschen Sie einen
+        Termin hier oder in Outlook, gilt das beim nächsten Abgleich auf beiden Seiten. Mit Ihnen geteilte
+        Kalender zeigt Kontovia nur an und schreibt nie hinein. Wer einen solchen Termin hier löscht, blendet ihn
+        nur in Kontovia aus.</p>
+        ${liste.length ? raw(gruppen.map(([titel, l]) => `
+          <div class="cal-wahl-gruppe"><h3 class="cal-wahl-titel">${esc(titel)}</h3>${l.map((k) => zeile(k)).join('')}</div>`).join(''))
+          : raw('<p class="muted small">Es gibt keine weiteren Kalender, die Kontovia lesen darf.</p>')}`,
+      foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Übernehmen</button>',
+      onClose: () => { if (!settled) resolve(null); },
+    });
+    m.root.querySelector('[data-no]').addEventListener('click', () => { settled = true; m.close(); resolve(null); });
+    m.root.querySelector('[data-yes]').addEventListener('click', () => {
+      settled = true;
+      const ids = new Set([...m.root.querySelectorAll('input[type=checkbox][value]:checked')].map((c) => c.value));
+      m.close();
+      resolve(auswahl.uebernehmen(ids));
+    });
+  });
+  if (!wahl) return false;
+  const weg = [...bisher].filter((id) => !wahl.weitere.some((k) => k.id === id));
+  if (weg.length && !await kalenderLoesen(weg, { speichern: false, anbieter: 'microsoft' })) return false;
+  await saveCalendarSettings({ weitere: wahl.weitere }, { anbieter: 'microsoft' });
+  ok('Auswahl gespeichert', wahl.weitere.length ? wahl.weitere.map((k) => k.name).join(', ') : 'Kein weiterer Kalender');
+  const r = await syncCalendar({ reason: 'auswahl', anbieter: 'microsoft' }).catch((e) => { err('Kalenderabgleich fehlgeschlagen', e.message); return null; });
+  if (r?.summary) ok('Kalender abgeglichen', r.summary);
+  refresh();
+  return true;
+}
+
+/* -------------------------------------------------------------------------- */
 /* Kalenderdateien                                                             */
 /* -------------------------------------------------------------------------- */
 
 /** Welche Kalender in die Datei sollen; bei nur einem Kalender ohne Rückfrage. */
 function exportAuswahl() {
-  const cfg = calendarSettings();
-  const kal = kalenderListe({ settings: sel.settings(), weitere: cfg.weitere, appointments: sel.appointments() });
+  const kal = kalenderListe({ settings: sel.settings(), weitere: alleWeitere(), appointments: sel.appointments() });
   if (kal.length < 2) return Promise.resolve({ keys: kal.map((k) => k.key), mitBuchungen: true });
   return new Promise((resolve) => {
     let settled = false;
@@ -624,7 +913,7 @@ function exportAuswahl() {
       size: 'slim',
       body: html`
         <p class="mt0 small" style="line-height:1.6">Alle gewählten Kalender kommen in eine Datei. Für je eine Datei pro Kalender wiederholen Sie den Export.</p>
-        ${raw(kal.map((k) => `<label class="check mb8"><input type="checkbox" value="${esc(k.key)}" checked> <span class="cal-dot" style="background:${esc(k.color || 'var(--accent)')}"></span> ${esc(k.name)}${k.art === 'google' ? ' <span class="tiny muted">Google</span>' : ''} <span class="tiny muted">(${int(k.anzahl)})</span></label>`).join(''))}
+        ${raw(kal.map((k) => `<label class="check mb8"><input type="checkbox" value="${esc(k.key)}" checked> <span class="cal-dot" style="background:${esc(k.color || 'var(--accent)')}"></span> ${esc(k.name)}${k.art === 'google' ? ' <span class="tiny muted">Google</span>' : k.art === 'outlook' ? ' <span class="tiny muted">Outlook</span>' : ''} <span class="tiny muted">(${int(k.anzahl)})</span></label>`).join(''))}
         <hr class="sep">
         <label class="check"><input type="checkbox" id="x_buchungen" checked> Veranstaltungen und Fälligkeiten aus Buchungen mitnehmen</label>`,
       foot: '<button class="btn" data-no>Abbrechen</button><button class="btn primary" data-yes>Exportieren</button>',
@@ -648,7 +937,7 @@ export async function exportIcs() {
   const keys = new Set(wahl.keys);
   const termine = sel.appointments().filter((a) => keys.has(kalenderSchluessel(a)));
   const derived = wahl.mitBuchungen ? derivedEntries(store.db, { events: cfg.includeEvents, due: cfg.includeDue }) : [];
-  const einer = wahl.keys.length === 1 ? (wahl.kal || kalenderListe({ settings: sel.settings(), weitere: cfg.weitere })).find((k) => k.key === wahl.keys[0]) : null;
+  const einer = wahl.keys.length === 1 ? (wahl.kal || kalenderListe({ settings: sel.settings(), weitere: alleWeitere() })).find((k) => k.key === wahl.keys[0]) : null;
   const firma = store.db.settings.companyName ? `Kontovia: ${store.db.settings.companyName}` : 'Kontovia';
   const text = toIcs(termine, { derived, name: einer ? `${firma} · ${einer.name}` : firma, color: einer?.color || '' });
   try {

@@ -18,6 +18,7 @@ import { Cloud } from './cloud.js';
 import * as W from './weiterleitung.js';
 import * as G from './gcal.js';
 import * as MV from './mailversand.js';
+import * as MC from './mscal.js';
 import * as BE from './belegeingang.js';
 import * as Z from './sperre.js';
 import * as UE from './uebergabe.js';
@@ -65,6 +66,8 @@ vault.beschrifter = (db, geoeffnet) => KO.beschriften({
 const cloud = new Cloud(vault, { zeigeCode });
 const gcal = new G.GoogleCalendar(vault, { clientId: BUILTIN.googleWeb?.clientId || '' });
 gcal.rueckkehr(googleRueckkehr);
+/* Outlook Kalender (SEC-86): Abgleich wie bei Google, über die Schnittstelle von Microsoft. */
+const mscal = new MC.OutlookCalendar(vault, { clientId: BUILTIN.microsoft?.clientId || '' });
 const mail = new MV.MailVersand(vault, { googleClientId: BUILTIN.googleWeb?.clientId || '', microsoftClientId: BUILTIN.microsoft?.clientId || '' });
 /* Belege holen (SEC-62): Eingangsordner auf dem Gerät und Outlook-Postfach (nur lesen). */
 const eingangsordner = new BE.Eingangsordner();
@@ -225,6 +228,7 @@ function doLock(reason) {
 function nachSperre(reason) {
   if (reason !== 'aktualisierung') UE.verwerfen().catch(() => {});
   gcal.vergessen();
+  mscal.vergessen();
   mail.vergessen();
   postfach.vergessen();
   // Der Assistent bricht ab und verwirft, was er von dieser Sitzung gesehen hat.
@@ -1170,6 +1174,22 @@ const api = {
     pullWeitere: handle(async (opts = {}) => kopie(await gcal.pullWeitere(opts))),
     push: handle(async (ops) => kopie(await gcal.push(ops))),
     finish: handle(async (opts = {}) => kopie(await gcal.finish(opts))),
+  },
+
+  /* Outlook Kalender (mscal.js): Abgleich in beide Richtungen wie bei Google, ohne
+     Weiterleitung und ohne stille Erneuerung. connect und bestaetigen öffnen das
+     Fenster bei Microsoft und müssen direkt aus einem Tipp kommen. */
+  mscal: {
+    status: handle(async () => (vault.isLocked ? { available: true, linked: false } : mscal.status()), { needsUnlock: false }),
+    connect: handle(async (opts = {}) => mscal.connect({ calendarIdHint: str(opts.calendarIdHint, 300), timeZone: str(opts.timeZone, 80) })),
+    bestaetigen: handle(async () => mscal.bestaetigen()),
+    cancel: handle(async () => mscal.abbrechen(), { needsUnlock: false }),
+    disconnect: handle(async (opts = {}) => mscal.disconnect({ deleteCalendar: !!opts.deleteCalendar })),
+    pull: handle(async (opts = {}) => kopie(await mscal.pull({ timeZone: str(opts.timeZone, 80) }))),
+    calendars: handle(async () => kopie(await mscal.kalenderListe())),
+    pullWeitere: handle(async (opts = {}) => kopie(await mscal.pullWeitere(opts))),
+    push: handle(async (ops) => kopie(await mscal.push(ops))),
+    finish: handle(async (opts = {}) => kopie(await mscal.finish(opts))),
   },
 
   /* E-Mails direkt senden über Gmail oder Microsoft (mailversand.js). senden()

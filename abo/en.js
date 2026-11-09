@@ -310,7 +310,7 @@ export default {
   "Mahnwesen mit Erinnerung und Mahnstufen": "Dunning with reminders and dunning levels",
   "Direkt aus Gmail oder Outlook senden": "Send directly from Gmail or Outlook",
   "Assistent auf dem Gerät (Vorschau)": "Assistant on your device (preview)",
-  "Google Kalender abgleichen": "Sync Google Calendar",
+  "Google Kalender und Outlook abgleichen": "Sync Google Calendar and Outlook",
   "3 Benutzer und 5 Geräte": "3 users and 5 devices",
   "10 Benutzer mit Rollen": "10 users with roles",
   "Bis zu 5 Firmen getrennt führen": "Keep up to 5 companies separate",
