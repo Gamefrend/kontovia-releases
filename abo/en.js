@@ -146,7 +146,6 @@ export default {
   "RE-2026-041 fällig": "INV-2026-041 due",
   "Termin Studio Nord": "Appointment Studio Nord",
   "Fristen, die Sie nicht verpassen.": "Deadlines you won't miss.",
-  "Steuertermine, Fälligkeiten und Aufgaben in einem Kalender, auf Wunsch abgeglichen mit Google Kalender.": "Tax dates, due dates and tasks in one calendar, synced with Google Calendar if you like.",
   "Und vieles mehr": "And much more",
   "Wiederkehrende Buchungen": "Recurring transactions",
   "Anlagen und Abschreibungen": "Assets and depreciation",

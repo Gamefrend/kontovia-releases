@@ -41,7 +41,7 @@ export function renderKalenderKarte(el) {
           <div>
             <strong style="font-size:13px">Erinnerungen</strong>
             <p class="small mt8" style="line-height:1.6">${erinnerungText}</p>
-            <p class="tiny muted" style="line-height:1.6">Erinnerungen gibt es, solange Kontovia geöffnet und entsperrt ist, auch im Hintergrund. Bei geschlossenem Programm kann Kontovia nicht erinnern: Dafür bräuchte es einen Dienst im Netz, und den gibt es bewusst nicht. Wer das braucht, nimmt die Termine per Kalenderdatei in einen anderen Kalender mit; die Erinnerungen gehen mit. Zu Google Kalender gehen Erinnerungen nicht, dort stellen Sie sie selbst ein.</p>
+            <p class="tiny muted" style="line-height:1.6">Erinnerungen gibt es, solange Kontovia geöffnet und entsperrt ist, auch im Hintergrund. Bei geschlossenem Programm kann Kontovia nicht erinnern: Dafür bräuchte es einen Dienst im Netz, und den gibt es bewusst nicht. Wer das braucht, nimmt die Termine per Kalenderdatei in einen anderen Kalender mit; die Erinnerungen gehen mit. Zu Google Kalender und Outlook gehen Erinnerungen nicht, dort stellen Sie sie selbst ein.</p>
             <div class="row wrap" style="gap:8px">
               ${!st.aus && !st.geraet && st.moeglich && st.erlaubnis !== 'denied' ? raw(`<button class="btn primary" id="erinGeraet">${icon('bolt', 15).__raw} Benachrichtigungen des Geräts erlauben</button>`) : ''}
               ${st.geraet ? raw(`<button class="btn" id="erinNurProgramm">Nur im Programm</button>`) : ''}

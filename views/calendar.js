@@ -199,7 +199,7 @@ export async function render(root, params, { actions } = {}) {
       <button data-mode="agenda" class="${state.mode === 'agenda' ? 'active' : ''}" aria-pressed="${state.mode === 'agenda'}">Liste</button>
     </div>
     <button class="btn" id="calShow" aria-haspopup="dialog" aria-expanded="false" title="Was der Kalender zeigt">${icon('eye', 16)} Anzeige ${icon('down', 14)}</button>
-    <button class="btn" id="calSync" title="Mit Google Kalender oder per Kalenderdatei (.ics) abgleichen">${icon('refresh', 16)} Abgleich</button>
+    <button class="btn" id="calSync" title="Mit Google Kalender, Outlook oder per Kalenderdatei (.ics) abgleichen">${icon('refresh', 16)} Abgleich</button>
     <button class="btn primary" id="newAppt">${icon('plus', 16)} Neuer Termin</button>`;
   $$('[data-mode]', actions).forEach((b) => b.addEventListener('click', () => {
     if (state.mode === b.dataset.mode) return;

@@ -956,7 +956,7 @@ function wire(root) {
     const yes = await confirmDialog({
       title: 'Sicherung wiederherstellen?',
       text: 'Der aktuelle Datenbestand wird vollständig durch den Inhalt der Sicherung ersetzt. Erstellen Sie vorher eine Sicherung des jetzigen Standes, wenn Sie ihn behalten wollen.'
-        + ' Ist der Cloud-Abgleich eingerichtet, gilt der wiederhergestellte Stand beim nächsten Abgleich auch für Ihre anderen Geräte: Was nach der Sicherung angelegt und schon abgeglichen wurde, verschwindet dann auch dort. Die Verbindungen dieses Geräts (Cloud, Google Kalender) bleiben bestehen.',
+        + ' Ist der Cloud-Abgleich eingerichtet, gilt der wiederhergestellte Stand beim nächsten Abgleich auch für Ihre anderen Geräte: Was nach der Sicherung angelegt und schon abgeglichen wurde, verschwindet dann auch dort. Die Verbindungen dieses Geräts (Cloud, Google Kalender, Outlook Kalender) bleiben bestehen.',
       confirmLabel: 'Weiter zur Auswahl', danger: true,
     });
     if (!yes) return;

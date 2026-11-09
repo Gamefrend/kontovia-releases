@@ -473,13 +473,13 @@ function anleitung(root) {
         <p><strong>Mehrere Kalender, Tags, Filter:</strong> Unter <em>Kalender verwalten</em> legen Sie
         eigene Kalender mit Farbe an, etwa Beruflich und Privat. Die Reiter über dem Kalender zeigen alle
         zusammen oder einen allein; unter <em>Anzeige</em> blenden Sie einzelne Kalender aus und filtern nach
-        Tags. Weitere Google-Kalender erscheinen als eigene Reiter.</p>
+        Tags. Weitere Kalender aus Google und Outlook erscheinen als eigene Reiter.</p>
         <p><strong>Erinnerungen:</strong> Jeder Termin kann eine Erinnerung tragen. Sie erscheint als Hinweis
         im Programm und, wenn Sie das unter Einstellungen → Kalender erlauben, als Benachrichtigung des Geräts.
         Das gilt, solange Kontovia geöffnet und entsperrt ist, auch im Hintergrund. Bei geschlossenem Programm
         kann Kontovia nicht erinnern; dafür bräuchte es einen Dienst im Netz, und den gibt es bewusst nicht.
         Wer das braucht, nimmt die Termine per Kalenderdatei in einen anderen Kalender mit, die Erinnerungen gehen mit.
-        Zu Google Kalender gehen Erinnerungen nicht, dort stellen Sie sie selbst ein.</p>
+        Zu Google Kalender und Outlook gehen Erinnerungen nicht, dort stellen Sie sie selbst ein.</p>
         ${raw(`<p><strong>Google Kalender:</strong> Unter <em>Abgleich</em> oben im
         Kalender oder unter Einstellungen → Kalender-Abgleich verbinden Sie Kontovia mit Ihrem
         Google-Konto. Kontovia legt dort einen eigenen Kalender „Kontovia“ an und gleicht in beide
@@ -488,7 +488,12 @@ function anleitung(root) {
         Kontovia nur ein, wenn Sie das ausdrücklich einschalten. Beträge, Buchungen und Kontakte
         gehen nie an Google. Einen weiteren Kalender lösen Sie unter <em>Abgleich</em> wieder; dabei können Sie
         die von Kontovia dort angelegten Einträge mit löschen lassen, fremde Termine bleiben immer unberührt.</p>
-        <p><strong>Outlook, Apple Kalender und andere Programme:</strong> ohne Konto per Kalenderdatei (.ics),
+        <p><strong>Outlook Kalender:</strong> Unter <em>Abgleich</em> oben im
+        Kalender oder unter Einstellungen → Kalender-Abgleich verbinden Sie Kontovia mit Ihrem
+        Outlook-Konto (Microsoft 365 oder Outlook.com). Kontovia legt dort einen eigenen Kalender
+        „Kontovia“ an und gleicht in beide Richtungen ab. Google und Outlook lassen sich gleichzeitig
+        nutzen. Beträge, Buchungen und Kontakte gehen nie an Microsoft.</p>
+        <p><strong>Apple Kalender und andere Programme:</strong> ohne Konto per Kalenderdatei (.ics),
         je Kalender oder alle zusammen. Der Export nimmt mehrere Tage, Erinnerungen, Tags und Wiederholungen mit,
         der Import erkennt schon übernommene Termine und aktualisiert sie. Aus Outlook: Datei → Kalender speichern;
         aus Apple Kalender: Ablage → Exportieren.</p>`)}
@@ -1070,7 +1075,7 @@ function cloud(root) {
               eine Stunde. Danach wartet der Abgleich, bis Sie kurz bestätigen: ein Tipp auf
               <em>Bestätigen und abgleichen</em>, meist ohne erneute Anmeldung.</li>
         </ul>
-        <p class="small muted mb0">Ohne Google-Konto übertragen Sie Termine als Kalenderdatei (.ics):
+        <p class="small muted mb0">Ohne Google- oder Outlook-Konto übertragen Sie Termine als Kalenderdatei (.ics):
         im Kalender über <em>Abgleich</em>. Die Datei öffnet Google Kalender, Apple Kalender oder
         Outlook.</p>`)}
       </div></div>
@@ -1157,7 +1162,7 @@ function recht(root) {
 
       <div class="card mt16" id="recht-datenschutz"><div class="card-body">
         <h2 class="mt0">Datenschutz</h2>
-        <p>Ohne Cloud-Abgleich, ohne Google Kalender und ohne Ihre Zustimmung zur Update-Suche
+        <p>Ohne Cloud-Abgleich, ohne Google Kalender oder Outlook Kalender und ohne Ihre Zustimmung zur Update-Suche
         und zur Nutzungsmessung verlässt nichts dieses Gerät. Es gibt keine
         Absturzberichte und kein Benutzerkonto beim Hersteller. Telemetrie und Nutzungsstatistik gibt es nur mit Ihrer Zustimmung.</p>
         <ul>
@@ -1172,6 +1177,9 @@ function recht(root) {
               Buchhaltung. Für die Anmeldung speichert Google zusätzlich Ihre E-Mail-Adresse.</li>
           ${raw(`<li><strong>Google Kalender:</strong> Titel, Zeit und Ort Ihrer Termine gehen
               unverschlüsselt an Google, damit der Kalender sie anzeigen kann. Beträge, Buchungen,
+              Kontakte und Belege nie.</li>`)}
+          ${raw(`<li><strong>Outlook Kalender:</strong> Titel, Zeit und Ort Ihrer Termine gehen
+              unverschlüsselt an Microsoft, damit der Kalender sie anzeigen kann. Beträge, Buchungen,
               Kontakte und Belege nie.</li>`)}
         </ul>
         <button class="btn" id="btnDatenschutz">${icon('file', 15)} Datenschutzhinweise lesen</button>

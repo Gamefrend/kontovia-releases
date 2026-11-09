@@ -1,11 +1,11 @@
 {
-  "version": "2.48.16",
-  "released": "2026-11-09T10:34:38.555Z",
-  "notes": "Outlook Kalender abgleichen\n\n- Neu unter Einstellungen › Kalender-Abgleich: Ihr Outlook-Konto (Microsoft 365 oder Outlook.com) gleicht Kontovia in beide Richtungen ab, wie Google Kalender.\n- Auf Wunsch kommen weitere Outlook-Kalender dazu. Mit Ihnen geteilte Kalender zeigt Kontovia nur an.\n- Beträge, Buchungen, Kontakte und Belege gehen nie an Microsoft.\n- Google und Outlook lassen sich gleichzeitig nutzen. Apple Kalender bleibt bei der Kalenderdatei (.ics).",
+  "version": "2.48.17",
+  "released": "2026-11-09T10:47:31.098Z",
+  "notes": "Hilfe nennt den Outlook-Abgleich\n\n- Die Hilfe beschreibt jetzt den Abgleich mit Outlook Kalender neben Google Kalender. Auch der Abschnitt zum Datenschutz in der Hilfe nennt beide.\n- Erinnerungen gehen weder zu Google Kalender noch zu Outlook; dort stellen Sie sie selbst ein.",
   "files": [
     {
       "path": ".well-known/security.txt",
-      "sha256": "259509c126df7415d269324dfee754512f7a9abf422dd7f0d4888bac6b6f2020",
+      "sha256": "7207e6906b4a437c33703ae911d744f3eb48fd604be74e69b11bacf435e7ebca",
       "size": 389
     },
     {
@@ -25,8 +25,8 @@
     },
     {
       "path": "abo/en.js",
-      "sha256": "317816dedf0bb48fe3fb1882ab3a427233d75112ee1f2a277519e3465781c69a",
-      "size": 28857
+      "sha256": "0fd8ee90f842020d83485520678d650d6813eaf552d459c7baa32e3f132dd550",
+      "size": 28655
     },
     {
       "path": "abo/index.html",
@@ -590,8 +590,8 @@
     },
     {
       "path": "lib/sprache/en.js",
-      "sha256": "4bc8f36b80e8574ffc24a8ba85a2b8a627b4b05813ccfabdeed01de979e0e90f",
-      "size": 2483
+      "sha256": "47910824801d78e6dfc845cfbfefae2c426d5672ba03119ae9c7612ac3aa8b84",
+      "size": 2532
     },
     {
       "path": "lib/sprache/en/t01.js",
@@ -810,13 +810,18 @@
     },
     {
       "path": "lib/sprache/en/zusatz-sec85.js",
-      "sha256": "e6795fb787e57617be49765263ba6e35168de61d96a5c6ea9f158ea4aa33ff40",
-      "size": 24905
+      "sha256": "5d014bedf02f19b4bdee7a2566b3cee420e3e08d9a282c7f1126a7c976784b92",
+      "size": 25022
     },
     {
       "path": "lib/sprache/en/zusatz-sec86.js",
       "sha256": "b96015e5a3df7731ff6910919f490c34b2a864b48dc18d1dfca4f3788e70f74c",
       "size": 18674
+    },
+    {
+      "path": "lib/sprache/en/zusatz-sec97.js",
+      "sha256": "ad78bd609439f3fe0bef737139baa24fde00b7bb685d82ace94d40bf28253a3e",
+      "size": 4928
     },
     {
       "path": "lib/sprache/en/zusatz.js",
@@ -915,8 +920,8 @@
     },
     {
       "path": "lib/versionen.js",
-      "sha256": "83812b55467680e7e39be5221ec2991db301546caf27e69bb075ac04b6cb1803",
-      "size": 69339
+      "sha256": "9d7c509d11f959982ac8c259d6ad9c967f9dc4d6df2703907792a1ca87aa0be9",
+      "size": 69722
     },
     {
       "path": "lib/waehrung.js",
@@ -955,12 +960,12 @@
     },
     {
       "path": "manifest.webmanifest",
-      "sha256": "08767a65086289166a2799cadb1d9621c69c30f9b04d5d72d2c2af34be27da7e",
+      "sha256": "8a3d80e69b12e44216ed8ad0e029c9eb05924fd92b4901c4658b524226dac074",
       "size": 2811
     },
     {
       "path": "recht/DATENSCHUTZ.md",
-      "sha256": "9a28c62abc3492b05b070c109b3ed238a47f529c44cb90aa67f47bbc7bcaf323",
+      "sha256": "91e109e13a13f53c190e16fe8fc2597ad8558bc0531361b6c1ae4802d4addd0c",
       "size": 47720
     },
     {
@@ -980,7 +985,7 @@
     },
     {
       "path": "recht/datenschutz.html",
-      "sha256": "83a7fbbc8cd7dbe1ea5218ef23632005bdda538e9f72845714deb28bb8ae78ca",
+      "sha256": "96e22551a6a36f4b9d2b7f78dee28d46cabd5d3f6cf3f0e6fd6c3749f6c3dd93",
       "size": 51874
     },
     {
@@ -1005,12 +1010,12 @@
     },
     {
       "path": "sbom.json",
-      "sha256": "d15ef6219a06c4331d95deaa1d7da8755ac0a6d95e78a0312b436ba1697606b3",
+      "sha256": "e057589d05e5e75c8a5066be8ba1a99cac76a031918fef7026f84e334e532bc1",
       "size": 28338
     },
     {
       "path": "security.txt",
-      "sha256": "259509c126df7415d269324dfee754512f7a9abf422dd7f0d4888bac6b6f2020",
+      "sha256": "7207e6906b4a437c33703ae911d744f3eb48fd604be74e69b11bacf435e7ebca",
       "size": 389
     },
     {
@@ -1050,8 +1055,8 @@
     },
     {
       "path": "views/calendar.js",
-      "sha256": "211d882176852eea3a54ed6a8e61721f08556490050a82a69d95cd575363df16",
-      "size": 85747
+      "sha256": "46e5afe14785496cab01148670eb9a827c705658a540015b889901aad412e366",
+      "size": 85756
     },
     {
       "path": "views/calendarsync.js",
@@ -1090,8 +1095,8 @@
     },
     {
       "path": "views/help.js",
-      "sha256": "79370844691721ef62360e06172876c89f80336861550e2615ba1f8554811f51",
-      "size": 110242
+      "sha256": "856a8d30dd609676a0674754c80e509d7b339df2f75da928f61ac2dcf382274e",
+      "size": 111000
     },
     {
       "path": "views/importexport.js",
@@ -1105,8 +1110,8 @@
     },
     {
       "path": "views/kalendereinstellungen.js",
-      "sha256": "1e9d9e29ac2aa46d08c4bbddcd5dc89a83050f829fa4dcbd8f71cc6cd7bc7c1b",
-      "size": 5040
+      "sha256": "f6b29bccdea75f4796ad0cb9fac8a0a69be4d3e9cc9e8c26fd466e592d1e4c0e",
+      "size": 5052
     },
     {
       "path": "views/kassenbuch.js",
@@ -1170,8 +1175,8 @@
     },
     {
       "path": "views/settings.js",
-      "sha256": "6b85cdce72d1dfa23128a8534f6e680ff25696c4697c5c674ff7e25bb3f6dc8d",
-      "size": 67394
+      "sha256": "da57dbbe91f0e58d180a834a4a3f18d051261a5ae0414a711413cf417d2a2fc6",
+      "size": 67412
     },
     {
       "path": "views/spruenge.js",
@@ -1205,7 +1210,7 @@
     },
     {
       "path": "web/aktualisierung.js",
-      "sha256": "7a51dd210e05ec226e93f01d81620473abb650cce14837ce2f1eb8d1350527bb",
+      "sha256": "4990e894987d3d029a9976c880142d83e25930b48831ee9be4e1ee117c575d1d",
       "size": 10045
     },
     {
